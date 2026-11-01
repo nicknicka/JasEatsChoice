@@ -15,6 +15,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
+import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
+import com.xx.jaseatschoicejava.config.AiModelConfig;
+import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
+import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 
@@ -46,6 +51,15 @@ public class GlmVisionRecognizer implements ContentRecognizer {
 
     @Autowired
     private ZhipuAIConfig zhipuAIConfig;
+
+    @Autowired
+    private AIConfig aiConfig;
+
+    @Autowired
+    private AiRuntimeKeyStore runtimeKeyStore;
+
+    @Autowired
+    private DynamicAiModelRegistry registry;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -207,14 +221,15 @@ public class GlmVisionRecognizer implements ContentRecognizer {
             Map<String, Object> requestBody = buildVideoApiRequest(content);
 
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + zhipuAIConfig.getApiKey());
+            AiModelConfig activeConfig = registry.current().config();
+            headers.set("Authorization", "Bearer " + activeKey());
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             // 设置较长超时（视频理解耗时较长）
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
             ResponseEntity<Map> response = restTemplate.exchange(
-                zhipuAIConfig.getBaseUrl(),
+                videoBaseUrl(activeConfig),
                 HttpMethod.POST,
                 entity,
                 Map.class
@@ -249,12 +264,30 @@ public class GlmVisionRecognizer implements ContentRecognizer {
         }
     }
 
+    private String activeKey() {
+        return AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig, runtimeKeyStore);
+    }
+
+    private String videoModel(AiModelConfig activeConfig) {
+        return activeConfig != null && hasText(activeConfig.getVisionModel())
+            ? activeConfig.getVisionModel() : zhipuAIConfig.getVisionModel();
+    }
+
+    private String videoBaseUrl(AiModelConfig activeConfig) {
+        return activeConfig != null && hasText(activeConfig.getBaseUrl())
+            ? activeConfig.getBaseUrl() : zhipuAIConfig.getBaseUrl();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
     /**
      * 构建智谱视频理解API请求体
      */
     private Map<String, Object> buildVideoApiRequest(FetchedContent content) {
         Map<String, Object> request = new HashMap<>();
-        request.put("model", zhipuAIConfig.getVisionModel());
+        request.put("model", videoModel(registry.current().config()));
         request.put("max_tokens", 2048);
 
         List<Map<String, Object>> contentParts = new ArrayList<>();

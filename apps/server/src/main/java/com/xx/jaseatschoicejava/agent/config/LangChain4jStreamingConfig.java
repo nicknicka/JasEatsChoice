@@ -35,8 +35,8 @@ public class LangChain4jStreamingConfig {
     @Resource
     private AIConfig aiConfig;
 
-    @Resource(name = "chatModelProvider")
-    private ChatModelProvider chatModelProvider;
+    @Resource
+    private DynamicAiModelRegistry dynamicAiModelRegistry;
 
     private StreamingChatModel streamingChatLanguageModel;
 
@@ -45,15 +45,8 @@ public class LangChain4jStreamingConfig {
      */
     @Bean(destroyMethod = "")
     public StreamingChatModel streamingChatLanguageModel() {
-        if (chatModelProvider == null || !chatModelProvider.isAvailable()) {
-            log.warn("AI API Key 未配置，StreamingChatModel 降级为占位实现：流式接口会直接回调错误");
-            this.streamingChatLanguageModel = new NoopStreamingChatModel();
-            return this.streamingChatLanguageModel;
-        }
-
-        log.info("初始化StreamingChatModel（供应商：{}），模型：{}", aiConfig.getProvider(), aiConfig.getModel());
-
-        this.streamingChatLanguageModel = chatModelProvider.buildStreamingModel();
+        log.info("初始化StreamingChatModel动态代理（供应商：{}），模型：{}", aiConfig.getProvider(), aiConfig.getModel());
+        this.streamingChatLanguageModel = dynamicAiModelRegistry.streamingModel();
         return this.streamingChatLanguageModel;
     }
 

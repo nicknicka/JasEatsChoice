@@ -3,12 +3,15 @@ package com.xx.jaseatschoicejava.rag;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+
+import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class AnnouncementRagStartupTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-        .withUserConfiguration(AnnouncementRagConfig.class);
+        .withUserConfiguration(AnnouncementRagConfig.class)
+        .withBean("aiRuntimeKeyStore", AiRuntimeKeyStore.class, () -> new AiRuntimeKeyStore(""));
 
     @Test
     void disabledRag_startsInDisabledState() {

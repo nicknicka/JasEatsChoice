@@ -522,7 +522,15 @@ export const ADMIN_API = {
   UPDATE_CONFIG: '/admin/settings/config/:configId',
   DELETE_CONFIG: '/admin/settings/config/:configId',
   BATCH_UPDATE_CONFIG: '/admin/settings/config/batch',
-  REFRESH_CONFIG_CACHE: '/admin/settings/config/refresh'
+  REFRESH_CONFIG_CACHE: '/admin/settings/config/refresh',
+
+  // AI 配置
+  AI_RUNTIME: '/admin/settings/ai/current',
+  AI_CONNECTIVITY_TEST: '/admin/settings/ai/connectivity-test',
+  AI_CANDIDATE_TEST: '/admin/settings/ai/test',
+  AI_ACTIVATE: '/admin/settings/ai/activate',
+  AI_PREVIOUS_SUMMARY: '/admin/settings/ai/previous-summary',
+  AI_ROLLBACK: '/admin/settings/ai/rollback'
 }
 
 // ==================== 轮播图相关 ====================

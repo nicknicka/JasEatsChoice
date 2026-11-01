@@ -1568,3 +1568,108 @@ export function refreshSystemConfigCache() {
       throw error
     })
 }
+
+/**
+ * 获取当前 AI 运行时配置快照（只读，不含 API key 明文）
+ * @returns {Promise} AI 运行时配置
+ */
+export function getAiRuntimeConfig() {
+  console.log('[管理员API] 获取 AI 运行时配置')
+  return api
+    .get(API.ADMIN.AI_RUNTIME)
+    .then((response) => {
+      console.log('[管理员API] 获取 AI 运行时配置成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取 AI 运行时配置失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 测试当前 AI 配置连通性
+ * @returns {Promise} 连通性测试结果
+ */
+export function testAiConnectivity() {
+  console.log('[管理员API] 测试 AI 配置连通性')
+  return api
+    .post(API.ADMIN.AI_CONNECTIVITY_TEST)
+    .then((response) => {
+      console.log('[管理员API] 测试 AI 配置连通性完成')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 测试 AI 配置连通性失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 测试候选 AI 配置（不持久化）
+ * @param {Object} candidate 非密钥候选配置
+ * @returns {Promise} 连通性测试结果
+ */
+export function testAiCandidate(candidate) {
+  console.log('[管理员API] 测试候选 AI 配置')
+  return api
+    .post(API.ADMIN.AI_CANDIDATE_TEST, candidate)
+    .then((response) => {
+      console.log('[管理员API] 测试候选 AI 配置完成')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 测试候选 AI 配置失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 获取上一版有效 AI 配置摘要
+ * @returns {Promise} 上一版 AI 配置摘要
+ */
+export function getAiPreviousConfigSummary() {
+  console.log('[管理员API] 获取上一版 AI 配置摘要')
+  return api
+    .get(API.ADMIN.AI_PREVIOUS_SUMMARY)
+    .then((response) => {
+      console.log('[管理员API] 获取上一版 AI 配置摘要成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 获取上一版 AI 配置摘要失败:', error)
+      throw error
+    })
+}
+
+/**
+ * 回滚到上一版有效 AI 配置
+ * @returns {Promise} 回滚后的 AI 运行时配置
+ */
+export function rollbackAiConfig() {
+  console.log('[管理员API] 回滚 AI 配置')
+  return api
+    .post(API.ADMIN.AI_ROLLBACK)
+    .then((response) => {
+      console.log('[管理员API] 回滚 AI 配置成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 回滚 AI 配置失败:', error)
+      throw error
+    })
+}
+
+export function activateAiConfig(candidate) {
+  console.log('[管理员API] 保存并激活 AI 配置')
+  return api
+    .post(API.ADMIN.AI_ACTIVATE, candidate)
+    .then((response) => {
+      console.log('[管理员API] 保存并激活 AI 配置成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 保存并激活 AI 配置失败:', error)
+      throw error
+    })
+}

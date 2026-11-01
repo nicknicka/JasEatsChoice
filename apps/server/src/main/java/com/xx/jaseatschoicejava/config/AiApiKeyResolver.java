@@ -1,11 +1,22 @@
 package com.xx.jaseatschoicejava.config;
 
 /**
- * 统一解析智谱 AI key：供应商专属 key 优先，通用 AI key 兜底。
+ * 统一解析 AI key：运行时文件优先，供应商专属 key 次之，通用 AI key 兜底。
  */
 public final class AiApiKeyResolver {
 
     private AiApiKeyResolver() {
+    }
+
+    public static String resolve(
+            ZhipuAIConfig zhipuAIConfig,
+            AIConfig aiConfig,
+            AiRuntimeKeyStore runtimeKeyStore) {
+        String runtimeKey = runtimeKeyStore == null ? "" : runtimeKeyStore.readKey();
+        if (hasText(runtimeKey)) {
+            return runtimeKey;
+        }
+        return resolve(zhipuAIConfig, aiConfig);
     }
 
     public static String resolve(ZhipuAIConfig zhipuAIConfig, AIConfig aiConfig) {
