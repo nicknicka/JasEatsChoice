@@ -1,5 +1,7 @@
 package com.xx.jaseatschoicejava.rag;
 
+import java.time.Duration;
+
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,7 +11,6 @@ import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
-import dev.langchain4j.community.model.zhipu.ZhipuAiEmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import io.qdrant.client.QdrantClient;
 import io.qdrant.client.QdrantGrpcClient;
@@ -30,30 +31,31 @@ public class AnnouncementRagConfig {
         AnnouncementRagProperties properties,
         ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
-        AiRuntimeKeyStore runtimeKeyStore) {
-        return new AnnouncementRagRuntimeEmbeddingModel(
-            properties, zhipuAIConfig, aiConfig, runtimeKeyStore);
+        AiRuntimeKeyStore runtimeKeyStore,
+        AnnouncementEmbeddingModelFactory embeddingModelFactory) {
+        return new AnnouncementRagRuntimeEmbeddingModel(() ->
+            configuredEmbeddingModel(
+                properties, zhipuAIConfig, aiConfig, runtimeKeyStore, embeddingModelFactory));
     }
 
     EmbeddingModel configuredEmbeddingModel(
         AnnouncementRagProperties properties,
         ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
-        AiRuntimeKeyStore runtimeKeyStore) {
+        AiRuntimeKeyStore runtimeKeyStore,
+        AnnouncementEmbeddingModelFactory embeddingModelFactory) {
         String apiKey = AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig, runtimeKeyStore);
         if (apiKey.isBlank()) {
             return new AnnouncementRagDisabledEmbeddingModel();
         }
 
-        String baseUrl = properties.getEmbedding().getBaseUrl();
-        return ZhipuAiEmbeddingModel.builder()
-            .apiKey(apiKey)
-            .model(properties.getEmbedding().getModel())
-            .dimensions(properties.getEmbedding().getDimensions())
-            .baseUrl(baseUrl == null || baseUrl.isBlank() ? null : baseUrl)
-            .connectTimeout(java.time.Duration.ofMillis(zhipuAIConfig.getTimeout()))
-            .readTimeout(java.time.Duration.ofMillis(zhipuAIConfig.getTimeout()))
-            .build();
+        AnnouncementRagProperties.Embedding embedding = properties.getEmbedding();
+        return embeddingModelFactory.build(
+            apiKey,
+            embedding.getModel(),
+            embedding.getDimensions(),
+            embedding.getBaseUrl(),
+            Duration.ofMillis(zhipuAIConfig.getTimeout()));
     }
 
     @Bean
