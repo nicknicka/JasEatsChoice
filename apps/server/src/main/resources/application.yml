@@ -233,6 +233,11 @@ zhipuai:
   timeout: ${AI_TIMEOUT:30000}
 
 announcement-rag:
+  enabled: ${ANNOUNCEMENT_RAG_ENABLED:true}
+  qdrant:
+    host: ${QDRANT_HOST:localhost}
+    port: ${QDRANT_PORT:6334}
+    collection: ${QDRANT_COLLECTION:jaseats_knowledge_v1}
   embedding:
     provider: ${AI_EMBEDDING_PROVIDER:zhipu}
     model: ${AI_EMBEDDING_MODEL:embedding-3}
