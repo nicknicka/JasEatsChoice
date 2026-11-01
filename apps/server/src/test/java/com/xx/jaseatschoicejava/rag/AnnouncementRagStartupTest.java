@@ -84,6 +84,29 @@ class AnnouncementRagStartupTest {
     }
 
     @Test
+    void applicationYmlBindsAnnouncementRagQdrantFromEnvironmentStyleKeys() throws Exception {
+        var loader = new org.springframework.boot.env.YamlPropertySourceLoader();
+        var sources = loader.load(
+            "application", new org.springframework.core.io.ClassPathResource("application.yml"));
+        var environment = new org.springframework.mock.env.MockEnvironment();
+        environment.getPropertySources().addLast(sources.get(0));
+        environment.setProperty("ANNOUNCEMENT_RAG_ENABLED", "false");
+        environment.setProperty("QDRANT_HOST", "qdrant");
+        environment.setProperty("QDRANT_PORT", "6334");
+        environment.setProperty("QDRANT_COLLECTION", "test_collection");
+
+        AnnouncementRagProperties properties = org.springframework.boot.context.properties.bind.Binder.get(environment)
+            .bind("announcement-rag",
+                org.springframework.boot.context.properties.bind.Bindable.of(AnnouncementRagProperties.class))
+            .get();
+
+        assertThat(properties.isEnabled()).isFalse();
+        assertThat(properties.getQdrant().getHost()).isEqualTo("qdrant");
+        assertThat(properties.getQdrant().getPort()).isEqualTo(6334);
+        assertThat(properties.getQdrant().getCollection()).isEqualTo("test_collection");
+    }
+
+    @Test
     void keylessOpenAiCompatibleEndpointPassesConfigurationGate() {
         contextRunner
             .withPropertyValues(
