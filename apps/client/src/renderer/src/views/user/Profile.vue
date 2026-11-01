@@ -21,20 +21,14 @@
       <el-empty :description="profileError" />
     </el-card>
 
-    <el-card v-else class="profile-card scale-in">
-      <!-- 顶部头像区域 -->
-      <div class="profile-header fade-in-up">
-        <!-- 单独拎出的名字 -->
-        <div class="user-name-container">
-          <h3 class="user-name">{{ userInfo.nickname || '未设置' }}</h3>
-        </div>
-
-        <div class="profile-content">
+    <el-card v-else class="profile-card scale-in" shadow="never">
+      <section class="profile-hero fade-in-up">
+        <div class="profile-hero__identity">
           <div class="avatar-wrapper">
             <CommonAvatar
               :avatar-url="avatarSrc"
               :fallback-text="userInfo.nickname || '未设置'"
-              :size="120"
+              :size="108"
               :show-upload="true"
               :show-upload-button="false"
               :click-to-enlarge="true"
@@ -43,97 +37,120 @@
             />
           </div>
 
-          <div class="user-info-section">
-            <div class="user-basic-info">
-              <div class="user-stats">
-                <div class="stat-row">
-                  <div class="stat-item">
-                    <span class="stat-label">手机号</span>
-                    <span class="stat-value">{{ userInfo.phone || '未绑定' }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">所在地</span>
-                    <span class="stat-value">{{ userInfo.location || '未设置' }}</span>
-                  </div>
-                </div>
-                <div class="stat-row">
-                  <div class="stat-item">
-                    <span class="stat-label">今日摄入</span>
-                    <span class="stat-value calorie-highlight">{{ todayCalorieDisplay }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">本周均衡度</span>
-                    <span class="stat-value balance-highlight">{{ weekBalanceDisplay }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="action-buttons">
-              <el-button
-                type="primary"
-                size="small"
-                class="action-btn upload-avatar-btn"
-                @click="triggerAvatarUpload"
-              >
-                <el-icon><Camera /></el-icon>
-                <span style="margin-left: 5px">更换头像</span>
-              </el-button>
-              <el-button
-                type="primary"
-                size="small"
-                class="action-btn share-btn"
-                @click="shareProfile"
-              >
-                <el-icon><Share /></el-icon>
-                <span style="margin-left: 5px">分享</span>
-              </el-button>
-              <el-button
-                type="primary"
-                size="small"
-                class="action-btn edit-btn"
-                @click="editProfile"
-              >
-                <el-icon><Edit /></el-icon>
-                <span style="margin-left: 5px">编辑资料</span>
-              </el-button>
+          <div class="identity-copy">
+            <span class="identity-label">个人资料</span>
+            <h3 class="user-name">{{ userInfo.nickname || '未设置' }}</h3>
+            <div class="identity-meta">
+              <span class="meta-chip">
+                <el-icon><Iphone /></el-icon>
+                <span>{{ userInfo.phone || '未绑定手机号' }}</span>
+              </span>
+              <span class="meta-chip">
+                <el-icon><Location /></el-icon>
+                <span>{{ userInfo.location || '未设置所在地' }}</span>
+              </span>
             </div>
           </div>
         </div>
-      </div>
 
-      <el-divider />
-
-      <div class="order-module fade-in-up delay-100">
-        <h3 class="module-title">
-          <el-icon><Document /></el-icon>
-          <span>订单模块</span>
-        </h3>
-        <div class="order-stats">
-          <div class="order-stat-card stagger-item" @click="goToOrdersByStatus('processing')">
-            <div class="stat-value order-in-progress number-scroll">{{ userInfo.orders?.inProgress || 0 }}笔</div>
-            <div class="stat-label">进行中订单</div>
-          </div>
-          <div class="order-stat-card stagger-item" @click="goToOrdersByStatus('pending')">
-            <div class="stat-value order-pending number-scroll">{{ userInfo.orders?.pending || 0 }}笔</div>
-            <div class="stat-label">待确认订单</div>
-          </div>
-          <div class="order-stat-card stagger-item" @click="goToOrdersByStatus('pendingComment')">
-            <div class="stat-value order-pending-comment number-scroll">
-              {{ userInfo.orders?.pendingComment || 0 }}笔
-            </div>
-            <div class="stat-label">待评价订单</div>
-          </div>
-        </div>
-        <div style="display: flex; justify-content: flex-end; margin-top: 10px">
-          <el-button type="primary" size="small" @click="goToAllOrders">
-            <el-icon><Search /></el-icon>
-            <span style="margin-left: 5px">查看所有订单</span>
+        <div class="profile-actions">
+          <el-button round class="action-btn upload-avatar-btn" @click="triggerAvatarUpload">
+            <el-icon><Camera /></el-icon>
+            <span>更换头像</span>
+          </el-button>
+          <el-button round class="action-btn share-btn" @click="shareProfile">
+            <el-icon><Share /></el-icon>
+            <span>分享</span>
+          </el-button>
+          <el-button round type="primary" class="action-btn edit-btn" @click="editProfile">
+            <el-icon><Edit /></el-icon>
+            <span>编辑资料</span>
           </el-button>
         </div>
-      </div>
 
-      <el-divider />
+        <div class="profile-metrics">
+          <div class="metric-card metric-card--calorie">
+            <div class="metric-icon">
+              <el-icon><DataLine /></el-icon>
+            </div>
+            <div class="metric-content">
+              <el-statistic title="今日摄入" :value="userInfo.todayCalorie || 0">
+                <template #suffix>kcal</template>
+              </el-statistic>
+            </div>
+          </div>
+
+          <div class="metric-card metric-card--balance">
+            <div class="metric-icon">
+              <el-icon><Check /></el-icon>
+            </div>
+            <div class="metric-content">
+              <el-statistic title="本周均衡度" :value="userInfo.weekBalance || 0">
+                <template #suffix>%</template>
+              </el-statistic>
+              <el-progress
+                :percentage="Math.min(userInfo.weekBalance || 0, 100)"
+                :show-text="false"
+                :stroke-width="5"
+                color="#7BAE7F"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <el-divider class="page-divider" />
+
+      <section class="order-module fade-in-up delay-100">
+        <div class="module-heading">
+          <div>
+            <h3 class="module-title">
+              <el-icon><Document /></el-icon>
+              <span>订单模块</span>
+            </h3>
+            <p class="module-subtitle">查看订单进度与历史记录</p>
+          </div>
+          <el-button round plain class="module-action" @click="goToAllOrders">
+            <el-icon><Search /></el-icon>
+            <span>查看所有订单</span>
+          </el-button>
+        </div>
+
+        <div class="order-stats">
+          <el-card
+            shadow="hover"
+            class="order-stat-card order-stat-card--progress"
+            @click="goToOrdersByStatus('processing')"
+          >
+            <el-statistic :value="userInfo.orders?.inProgress || 0">
+              <template #suffix>笔</template>
+            </el-statistic>
+            <div class="order-label">进行中订单</div>
+          </el-card>
+          <el-card
+            shadow="hover"
+            class="order-stat-card order-stat-card--pending"
+            @click="goToOrdersByStatus('pending')"
+          >
+            <el-statistic :value="userInfo.orders?.pending || 0">
+              <template #suffix>笔</template>
+            </el-statistic>
+            <div class="order-label">待确认订单</div>
+          </el-card>
+          <el-card
+            shadow="hover"
+            class="order-stat-card order-stat-card--comment"
+            @click="goToOrdersByStatus('pendingComment')"
+          >
+            <el-statistic :value="userInfo.orders?.pendingComment || 0">
+              <template #suffix>笔</template>
+            </el-statistic>
+            <div class="order-label">待评价订单</div>
+          </el-card>
+        </div>
+      </section>
+
+      <el-divider class="page-divider" />
 
       <div class="wallet-module fade-in-up delay-200">
         <h3 class="module-title">
@@ -656,18 +673,6 @@ const commonAvatarRef = ref(null)
 // 头像来源 - 统一使用userStore中的头像信息
 const avatarSrc = computed(() => {
   return userInfo.value.avatar
-})
-
-// 今日摄入显示
-const todayCalorieDisplay = computed(() => {
-  const calorie = userInfo.value.todayCalorie || 0
-  return `${calorie}kcal`
-})
-
-// 本周均衡度显示
-const weekBalanceDisplay = computed(() => {
-  const balance = userInfo.value.weekBalance || 0
-  return `${balance}%`
 })
 
 // 格式化数字显示（保留两位小数）
@@ -1495,187 +1500,352 @@ defineExpose({
   letter-spacing: -0.3px;
 }
 
-/* 顶部头像区域 */
-.profile-header {
+/* 顶部资料与订单区域 */
+.profile-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  box-shadow: 0 18px 50px -32px fade(@nordic-text, 42%);
+  background: @nordic-surface;
+  border: 1px solid @nordic-border;
+
+  :deep(.el-card__body) {
+    padding: 0;
+  }
+}
+
+.profile-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'identity actions'
+    'metrics metrics';
+  gap: 24px 28px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 0% 0%, fade(@nordic-accent-light, 76%), transparent 35%),
+    linear-gradient(135deg, @nordic-surface 0%, fade(@nordic-bg, 72%) 100%);
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    right: -90px;
+    top: -150px;
+    border-radius: 50%;
+    background: fade(@nordic-accent-light, 42%);
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    right: 15%;
+    bottom: -110px;
+    border-radius: 50%;
+    background: fade(@nordic-green-light, 56%);
+    pointer-events: none;
+  }
+}
+
+.profile-hero__identity {
+  grid-area: identity;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: @nordic-space-lg;
-  padding: @nordic-space-lg;
-  flex-wrap: wrap;
-}
-
-.user-name-container {
-  width: 100%;
-  text-align: center;
-}
-
-.user-name {
-  font-size: @nordic-text-2xl;
-  font-weight: 800;
-  margin: 10px 0 20px 0;
-  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  display: inline-block;
-  letter-spacing: 1px;
-  line-height: 1.2;
-}
-
-/* 头像和用户信息内容区 */
-.profile-content {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-evenly;
-  align-items: center;
-  gap: clamp(25px, 5vw, 45px);
-  width: 100%;
-  flex-wrap: wrap;
+  gap: 22px;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .avatar-wrapper {
+  flex: 0 0 auto;
   position: relative;
-  flex-shrink: 0;
 }
 
-.user-info-section {
-  min-width: 300px;
-  padding-right: @nordic-space-lg;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+.identity-copy {
+  min-width: 0;
 }
 
-.user-basic-info {
-  margin-bottom: @nordic-space-lg;
+.identity-label {
+  display: inline-flex;
+  margin-bottom: 7px;
+  color: @nordic-accent-dark;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-/* 用户统计信息 */
-.user-stats {
-  font-size: @nordic-text-base;
-  margin-bottom: @nordic-space-lg;
-}
-
-.stat-row {
-  display: flex;
-  gap: clamp(25px, 4vw, 40px);
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: @nordic-space-xs;
-  text-align: center;
-  min-width: clamp(120px, 20vw, 140px);
-}
-
-.stat-label {
-  font-size: @nordic-text-base;
-  font-weight: 500;
-  color: @nordic-text-secondary;
-}
-
-.user-stats .stat-label {
-  color: @nordic-text-secondary;
-  margin-bottom: 5px;
-}
-
-.stat-value {
-  font-size: @nordic-text-md;
-  font-weight: 600;
+.user-name {
+  margin: 0;
   color: @nordic-text;
+  font-family: Georgia, 'Noto Serif SC', 'Songti SC', STSong, serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  line-height: 1.12;
 }
 
-.user-stats .stat-value {
-  font-weight: bold;
-  color: @nordic-red;
-}
-
-.calorie-highlight {
-  color: @nordic-red;
-}
-
-.balance-highlight {
-  color: @nordic-green;
-}
-
-/* 操作按钮 */
-.action-buttons {
+.identity-meta {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 7px 11px;
+  color: @nordic-text-secondary;
+  background: fade(@nordic-surface, 82%);
+  border: 1px solid fade(@nordic-border, 90%);
+  border-radius: 999px;
+  font-size: 12px;
+
+  .el-icon {
+    flex: 0 0 auto;
+    color: @nordic-accent;
+  }
+
+  span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.profile-actions {
+  grid-area: actions;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
 }
 
 .action-btn {
-  transition: all @nordic-transition-fast ease;
+  height: 38px;
+  padding: 0 15px;
+  border-color: fade(@nordic-border, 95%);
+  color: @nordic-text-secondary;
+  background: fade(@nordic-surface, 84%);
+  font-weight: 600;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: @nordic-accent-dark;
+    background: @nordic-surface;
+    border-color: fade(@nordic-accent, 34%);
+    transform: translateY(-1px);
+    box-shadow: 0 7px 18px -12px fade(@nordic-text, 38%);
+  }
+
+  &.edit-btn {
+    color: @nordic-white;
+    background: @nordic-accent;
+    border-color: @nordic-accent;
+
+    &:hover {
+      color: @nordic-white;
+      background: @nordic-accent-dark;
+      border-color: @nordic-accent-dark;
+    }
+  }
 }
 
-.action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px @nordic-shadow-hover;
+.profile-metrics {
+  grid-area: metrics;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  position: relative;
+  z-index: 1;
 }
 
-/* 订单统计 */
-.order-stats {
+.metric-card {
+  min-width: 0;
+  min-height: 96px;
   display: flex;
-  flex-wrap: wrap;
-  gap: @nordic-space-lg;
-  margin-bottom: @nordic-space-lg;
+  align-items: center;
+  gap: 16px;
+  padding: 17px 20px;
+  background: fade(@nordic-surface, 84%);
+  border: 1px solid fade(@nordic-border, 92%);
+  border-radius: 16px;
+  box-shadow: 0 8px 22px -18px fade(@nordic-text, 30%);
+
+  :deep(.el-statistic__head) {
+    margin-bottom: 3px;
+    color: @nordic-text-muted;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  :deep(.el-statistic__number) {
+    color: @nordic-text;
+    font-size: 28px;
+    font-weight: 750;
+    letter-spacing: -0.6px;
+    line-height: 1.05;
+  }
+
+  :deep(.el-statistic__suffix) {
+    margin-left: 4px;
+    color: @nordic-text-muted;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+}
+
+.metric-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.metric-content .el-progress {
+  width: 100%;
+  margin-top: 7px;
+}
+
+.metric-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  font-size: 19px;
+}
+
+.metric-card--calorie {
+  .metric-icon {
+    color: @nordic-accent-dark;
+    background: @nordic-accent-light;
+  }
+}
+
+.metric-card--balance {
+  .metric-icon {
+    color: @nordic-green-dark;
+    background: @nordic-green-light;
+  }
+}
+
+.page-divider {
+  margin: 0 !important;
+  border-color: @nordic-border;
+}
+
+.order-module {
+  padding: 24px 32px 32px;
+}
+
+.module-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.module-subtitle {
+  margin: 4px 0 0;
+  color: @nordic-text-muted;
+  font-size: 12px;
+}
+
+.module-action {
+  flex: 0 0 auto;
+  color: @nordic-accent-dark;
+  border-color: fade(@nordic-accent, 28%);
+  background: @nordic-surface;
+
+  &:hover {
+    color: @nordic-white;
+    background: @nordic-accent;
+    border-color: @nordic-accent;
+  }
+}
+
+.order-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .order-stat-card {
-  flex: 1;
-  min-width: 140px;
-  padding: @nordic-space-lg;
-  background: @nordic-surface;
-  border-radius: @nordic-radius-lg;
-  border: 1px solid @nordic-border;
-  text-align: center;
-  box-shadow: 0 1px 4px @nordic-shadow;
-  transition:
-    transform @nordic-transition-slow ease,
-    box-shadow @nordic-transition-slow ease;
+  min-width: 0;
+  border-radius: 16px;
+  border: 1px solid fade(@nordic-border, 95%);
   cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+
+  :deep(.el-card__body) {
+    padding: 20px;
+  }
+
+  :deep(.el-statistic__number) {
+    color: @nordic-text;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.8px;
+  }
+
+  :deep(.el-statistic__suffix) {
+    margin-left: 3px;
+    color: @nordic-text-muted;
+    font-size: 12px;
+  }
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px @nordic-shadow-hover;
-  }
-
-  .stat-value {
-    font-size: @nordic-text-2xl;
-    color: @nordic-text;
-    margin-bottom: 6px;
-  }
-
-  .stat-label {
-    font-size: @nordic-text-base;
-    color: @nordic-text-secondary;
-    margin-bottom: 2px;
+    transform: translateY(-3px);
   }
 }
 
-.order-in-progress {
-  color: @nordic-blue;
+.order-label {
+  margin-top: 5px;
+  color: @nordic-text-secondary;
+  font-size: 13px;
+  font-weight: 500;
 }
 
-.order-pending {
-  color: @nordic-yellow;
+.order-stat-card--progress {
+  background: linear-gradient(135deg, fade(@nordic-blue-light, 74%), @nordic-surface 84%);
+
+  :deep(.el-statistic__number) { color: @nordic-blue; }
 }
 
-.order-pending-comment {
-  color: @nordic-accent;
+.order-stat-card--pending {
+  background: linear-gradient(135deg, fade(@nordic-yellow-light, 82%), @nordic-surface 84%);
+
+  :deep(.el-statistic__number) { color: @nordic-yellow-dark; }
+}
+
+.order-stat-card--comment {
+  background: linear-gradient(135deg, fade(@nordic-accent-light, 70%), @nordic-surface 84%);
+
+  :deep(.el-statistic__number) { color: @nordic-accent-dark; }
 }
 
 /* 钱包模块 */
 .wallet-card {
   background: linear-gradient(135deg, @nordic-yellow-light 0%, @nordic-accent-light 100%);
   padding: 25px;
+  min-width: 0;
   border-radius: @nordic-radius-lg;
   box-shadow: 0 1px 4px @nordic-shadow;
   border: 1px solid @nordic-border;
@@ -1715,7 +1885,7 @@ defineExpose({
 }
 
 .balance-number {
-  font-size: 3.429rem;
+  font-size: clamp(2.3rem, 4.5vw, 3.429rem);
   font-weight: 700;
   color: @nordic-yellow-dark;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -1727,18 +1897,27 @@ defineExpose({
   font-weight: 500;
 }
 
+.wallet-module {
+  padding: 0 32px 32px;
+}
+
 .wallet-summary {
-  display: flex;
-  gap: 30px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
   padding-top: 15px;
   border-top: 1px solid @nordic-divider;
-  flex-wrap: wrap;
 }
 
 .summary-item {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+
+.summary-value {
+  white-space: nowrap;
 }
 
 .summary-label {
@@ -1757,6 +1936,10 @@ defineExpose({
   margin-bottom: @nordic-space-lg;
 }
 
+.other-modules {
+  padding: 0 32px 32px;
+}
+
 .module-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -1764,6 +1947,7 @@ defineExpose({
 }
 
 .module-item-card {
+  min-width: 0;
   background: @nordic-blue-light;
   padding: @nordic-space-lg;
   border-radius: @nordic-radius-lg;
@@ -1782,6 +1966,8 @@ defineExpose({
 }
 
 .module-item-content {
+  min-width: 0;
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1811,6 +1997,7 @@ defineExpose({
 }
 
 .module-item-desc {
+  overflow-wrap: anywhere;
   font-size: @nordic-text-base;
   color: @nordic-text-secondary;
 }
@@ -1822,14 +2009,16 @@ defineExpose({
 
 /* 底部操作按钮 */
 .bottom-actions {
-  margin-top: @nordic-space-xl;
+  margin-top: 0;
+  padding: 0 32px 32px;
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 15px;
 
   .el-button {
-    flex: 1;
-    min-width: 120px;
+    flex: 0 1 190px;
+    min-width: 150px;
     height: 40px;
     border-radius: @nordic-radius-sm;
     font-weight: 600;
@@ -2222,31 +2411,130 @@ defineExpose({
 }
 
 /* 响应式优化 */
-@media (max-width: @nordic-breakpoint-md) {
-  .profile-content {
+@media (max-width: 1200px) {
+  .profile-hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'identity'
+      'actions'
+      'metrics';
+    gap: 18px;
+    padding: 24px;
+  }
+
+  .profile-actions {
+    justify-content: flex-start;
+  }
+
+  .order-module {
+    padding: 20px 24px 26px;
+  }
+
+  .wallet-module,
+  .other-modules {
+    padding: 0 24px 26px;
+  }
+
+  .bottom-actions {
+    padding: 0 24px 26px;
+  }
+
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .module-item-card {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 900px) {
+  .profile-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .wallet-summary {
+    gap: 12px;
+  }
+
+  .wallet-card {
+    padding: 20px;
+  }
+
+  .module-item-card {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
+    gap: 12px;
   }
 
-  .user-info-section {
-    align-items: center;
-    padding-right: 0;
-    min-width: auto;
-    width: 100%;
+  .module-item-btn {
+    align-self: flex-start;
+    padding-left: 0;
   }
 
-  .action-buttons {
-    justify-content: center;
-    width: 100%;
-  }
-
-  .action-btn {
-    flex: 1;
-    min-width: 100px;
+  .bottom-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
   }
 
   .bottom-actions .el-button {
-    min-width: 100px;
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: @nordic-breakpoint-md) {
+  .profile-card {
+    border-radius: 18px;
+  }
+
+  .profile-hero {
+    padding: 20px;
+  }
+
+  .profile-hero__identity {
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .user-name {
+    font-size: 28px;
+  }
+
+  .profile-actions {
+    width: 100%;
+  }
+
+  .profile-actions .el-button {
+    flex: 1 1 120px;
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .order-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wallet-summary .summary-item:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .module-grid {
+    gap: @nordic-space-md;
+  }
+
+  .bottom-actions {
+    padding: 0 20px 20px;
   }
 }
 </style>

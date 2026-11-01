@@ -206,6 +206,8 @@ const handleCloseDialog = () => {
 </script>
 
 <style scoped>
+@import '../assets/css/nordic-theme.less';
+
 .avatar-container {
   position: relative;
   display: inline-block; /* 确保容器只占内容宽度 */
@@ -230,10 +232,10 @@ const handleCloseDialog = () => {
   /* 更柔和的渐变背景，增加透明度过渡 */
   background: radial-gradient(
     circle at center,
-    rgba(255, 221, 187, 0.6) 0%,
-    rgba(255, 200, 180, 0.4) 30%,
-    rgba(187, 224, 255, 0.3) 60%,
-    rgba(204, 204, 255, 0.15) 100%
+    fade(@nordic-accent-light, 70%) 0%,
+    fade(@nordic-accent-light, 38%) 38%,
+    fade(@nordic-accent, 14%) 70%,
+    fade(@nordic-accent, 0%) 100%
   );
   /* 增强模糊效果，使光晕更晕染 */
   filter: blur(28px);
@@ -248,20 +250,20 @@ const handleCloseDialog = () => {
 }
 
 .user-avatar {
-  background-color: #fff;
+  background-color: @nordic-surface;
   transition:
     transform 0.27s linear,
     box-shadow 0.27s linear;
   box-sizing: border-box; /* 确保边框不影响尺寸 */
   border-radius: 50%; /* 确保是圆形 */
   /* 添加一个白色的细边框，让头像和渐变背景有区分 */
-  border: 3px solid rgba(255, 255, 255, 0.95);
+  border: 3px solid fade(@nordic-surface, 95%);
   /* 移除多重发光阴影，避免与外层模糊背景冲突 */
   box-shadow: none;
 }
 
 .avatar-error-class {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
   box-shadow: none;
   /* 渐变文字效果 */
   -webkit-background-clip: text;

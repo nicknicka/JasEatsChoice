@@ -232,6 +232,14 @@ const currentMenu = computed(() => {
   return menuData[userRole.value] ? menuData[userRole.value] : menuData.user || []
 })
 
+// 默认只展开当前激活项所在的分组，避免多个分组同时展开撑出滚动条
+const defaultOpenedMenus = computed(() => {
+  const activeParent = currentMenu.value.find((menuItem) =>
+    menuItem.children?.some((childItem) => childItem.index === activeMenuIndex.value)
+  )
+  return activeParent ? [activeParent.index] : []
+})
+
 // 智能匹配父级菜单 - 根据路径模式匹配到相关的父级菜单
 const smartMatchParentMenu = (path, role) => {
   // 用户端路径映射
@@ -360,7 +368,7 @@ const updateActiveMenuIndex = () => {
   }
 
   // 重置侧边栏宽度为默认值，防止自动展开菜单时宽度变宽
-  sidebarWidth.value = '200px' // 这里的默认宽度要和初始化时一致
+  sidebarWidth.value = '224px' // 这里的默认宽度要和初始化时一致
 
   // 延迟更新菜单激活状态，确保DOM已渲染完成
   nextTick(() => {
@@ -420,7 +428,7 @@ const handleMenuItemClick = (menuItem) => {
 // 头像放大弹窗
 const showLargeAvatar = ref(false)
 
-const sidebarWidth = ref('200px')
+const sidebarWidth = ref('224px')
 
 // 跟踪所有展开的子菜单索引
 const openedMenus = ref(new Set())
@@ -428,7 +436,7 @@ const openedMenus = ref(new Set())
 // 监听菜单展开事件 - 展开时增宽，给二级菜单足够空间
 const handleMenuOpen = (index) => {
   openedMenus.value.add(index)
-  sidebarWidth.value = '240px' // 有菜单展开时保持较宽
+  sidebarWidth.value = '224px' // 有菜单展开时保持较宽
 }
 
 // 监听菜单关闭事件 - 只有当所有菜单都关闭时才恢复较窄宽度
@@ -437,7 +445,7 @@ const handleMenuClose = (index) => {
 
   // 只有当所有子菜单都关闭时，才恢复较窄宽度
   if (openedMenus.value.size === 0) {
-    sidebarWidth.value = '200px'
+    sidebarWidth.value = '224px'
   }
 
   // 确保菜单关闭后，包含激活子菜单的一级菜单组仍然保持激活状态
@@ -470,7 +478,7 @@ const toggleRole = () => {
 
     // 重置展开的菜单状态
     openedMenus.value.clear()
-    sidebarWidth.value = '200px'
+    sidebarWidth.value = '224px'
 
     // 跳转对应页面
     if (userRole.value === 'user') {
@@ -489,7 +497,7 @@ onMounted(() => {
   try {
     // 初始化时重置展开菜单状态
     openedMenus.value.clear()
-    sidebarWidth.value = '200px'
+    sidebarWidth.value = '224px'
 
     if (!userStore.userInfo || userStore.userInfo.avatar === '') {
       userStore.fetchUserInfo()
@@ -588,7 +596,7 @@ watch(
 
       // 重置展开的菜单状态
       openedMenus.value.clear()
-      sidebarWidth.value = '200px'
+      sidebarWidth.value = '224px'
 
       // Update user info based on role (using Pinia store)
       if (userRole.value === 'merchant') {
@@ -783,7 +791,15 @@ const handleSearch = (value) => {
         class="logo"
         @click="() => navigateTo(userRole === 'merchant' ? '/merchant/home' : '/user/home')"
       >
-        佳食宜选
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 3v7a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V3" />
+            <path d="M7 12v9" />
+            <path d="M16 3v18" />
+            <path d="M16 3c2.2 1.1 3.2 2.8 3.2 5.2 0 2-1.1 3.4-3.2 4.3" />
+          </svg>
+        </span>
+        <span>佳食宜选</span>
       </div>
       <div class="search-box">
         <el-icon class="search-icon"><Search /></el-icon>
@@ -826,8 +842,8 @@ const handleSearch = (value) => {
       <el-aside :width="sidebarWidth" class="sidebar-menu">
         <div class="avatar-section">
           <CommonAvatar
-            :size="80"
-            class="user-avatar"
+            :size="42"
+            class="sidebar-avatar"
             :avatar-url="userRole === 'merchant' ? userStore.merchantInfo?.avatar : userStore.userInfo?.avatar"
             :fallback-text="
               userRole === 'merchant'
@@ -838,12 +854,15 @@ const handleSearch = (value) => {
             :click-to-enlarge="true"
           >
           </CommonAvatar>
-          <div class="username">
-            {{
-              userRole === 'merchant'
-                ? userStore.merchantInfo?.nickname
-                : userStore.userInfo?.nickname
-            }}
+          <div class="profile-copy">
+            <div class="profile-name">
+              {{
+                userRole === 'merchant'
+                  ? userStore.merchantInfo?.nickname
+                  : userStore.userInfo?.nickname
+              }}
+            </div>
+            <div class="profile-meta">{{ userRole === 'merchant' ? '商家账号' : '普通用户' }}</div>
           </div>
         </div>
 
@@ -852,7 +871,9 @@ const handleSearch = (value) => {
           <el-menu
             v-model:default-active="activeMenuIndex"
             class="custom-menu menu-list"
-            :key="userRole"
+            :key="userRole + '-' + defaultOpenedMenus.join('-')"
+            :default-openeds="defaultOpenedMenus"
+            unique-opened
             @select="handleMenuSelect"
             @open="handleMenuOpen"
             @close="handleMenuClose"
@@ -876,9 +897,6 @@ const handleSearch = (value) => {
                     :index="childItem.index"
                     @click="handleMenuItemClick(childItem)"
                   >
-                    <el-icon>
-                      <component :is="childItem.icon" />
-                    </el-icon>
                     <template #title>
                       <div class="menu-item-with-badge">
                         <span class="menu-text">{{ childItem.name }}</span>
@@ -974,18 +992,7 @@ const handleSearch = (value) => {
 <style scoped lang="less">
 @import '../assets/css/nordic-theme.less';
 
-// ===== Savour 设计系统变量 =====
-@savour-bg: #F6F3ED;
-@savour-surface: #FFFFFF;
-@savour-text: #2D2A26;
-@savour-text-sec: #8A857E;
-@savour-text-muted: #B5AFA6;
-@savour-accent: #C67B5C;
-@savour-accent-hover: #B56A4A;
-@savour-accent-light: #F4E6DE;
-@savour-green: #7BAE7F;
-@savour-gold: #D4A855;
-@savour-border: #E8E2D8;
+// ===== 局部布局变量 =====
 @savour-radius: 16px;
 @savour-radius-lg: 24px;
 @savour-pill: 100px;
@@ -1033,15 +1040,10 @@ const handleSearch = (value) => {
   }
 }
 
-@keyframes avatar-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(198, 123, 92, 0.2); }
-  50% { box-shadow: 0 0 0 8px rgba(198, 123, 92, 0); }
-}
-
 .app-container {
   height: 100vh;
   width: 100%;
-  background: @savour-bg;
+  background: @nordic-bg;
   position: relative;
 
   // 噪点纹理覆盖层
@@ -1065,8 +1067,8 @@ const handleSearch = (value) => {
   justify-content: space-between;
   padding: 0 @nordic-space-lg;
   height: 64px;
-  background: linear-gradient(180deg, @savour-surface 0%, rgba(255, 255, 255, 0.95) 100%);
-  border-bottom: 1px solid @savour-border;
+  background: linear-gradient(180deg, @nordic-surface 0%, fade(@nordic-surface, 95%) 100%);
+  border-bottom: 1px solid @nordic-border;
   position: relative;
   z-index: 100;
   animation: nav-slide-down 0.4s ease both;
@@ -1081,7 +1083,7 @@ const handleSearch = (value) => {
     left: 0;
     right: 0;
     height: 8px;
-    background: linear-gradient(180deg, rgba(45, 42, 38, 0.03) 0%, transparent 100%);
+    background: linear-gradient(180deg, fade(@nordic-text, 3%) 0%, transparent 100%);
     pointer-events: none;
   }
 
@@ -1089,7 +1091,7 @@ const handleSearch = (value) => {
     .font-display();
     font-size: 22px;
     font-weight: 700;
-    color: @savour-accent;
+    color: @nordic-accent;
     cursor: pointer;
     -webkit-app-region: no-drag;
     letter-spacing: -0.3px;
@@ -1101,14 +1103,23 @@ const handleSearch = (value) => {
     margin-left: -16px;
     border-radius: @savour-radius;
 
-    &::before {
-      content: '🍽';
-      font-size: 24px;
-      filter: drop-shadow(0 2px 4px rgba(198, 123, 92, 0.3));
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      color: @nordic-accent;
+      background: @nordic-accent-light;
+      border-radius: 11px;
+
+      svg {
+        width: 21px;
+        height: 21px;
+      }
     }
 
     &:hover {
-      background: @savour-accent-light;
+      background: @nordic-accent-light;
       transform: translateY(-1px);
     }
 
@@ -1124,33 +1135,33 @@ const handleSearch = (value) => {
     height: 42px;
     margin: 0 @nordic-space-lg;
     padding: 0 16px;
-    background: @savour-bg;
-    border: 1.5px solid @savour-border;
+    background: @nordic-bg;
+    border: 1.5px solid @nordic-border;
     border-radius: @savour-pill;
     transition: all 0.25s ease;
     -webkit-app-region: no-drag;
 
     &:hover {
-      border-color: @savour-accent;
-      box-shadow: 0 2px 8px rgba(198, 123, 92, 0.08);
+      border-color: @nordic-accent;
+      box-shadow: 0 2px 8px fade(@nordic-accent, 8%);
     }
 
     &:focus-within {
-      border-color: @savour-accent;
-      background: @savour-surface;
-      box-shadow: 0 4px 16px rgba(198, 123, 92, 0.12);
+      border-color: @nordic-accent;
+      background: @nordic-surface;
+      box-shadow: 0 4px 16px fade(@nordic-accent, 12%);
     }
 
     .search-icon {
       font-size: 18px;
-      color: @savour-text-muted;
+      color: @nordic-text-muted;
       margin-right: 10px;
       flex-shrink: 0;
       transition: color 0.25s ease;
     }
 
     &:focus-within .search-icon {
-      color: @savour-accent;
+      color: @nordic-accent;
     }
 
     .search-input-native {
@@ -1159,11 +1170,11 @@ const handleSearch = (value) => {
       border: none;
       background: transparent;
       font-size: @nordic-text-base;
-      color: @savour-text;
+      color: @nordic-text;
       outline: none;
 
       &::placeholder {
-        color: @savour-text-muted;
+        color: @nordic-text-muted;
       }
     }
 
@@ -1174,7 +1185,7 @@ const handleSearch = (value) => {
       width: 24px;
       height: 24px;
       border: none;
-      background: @savour-border;
+      background: @nordic-border;
       border-radius: 50%;
       cursor: pointer;
       opacity: 0;
@@ -1184,14 +1195,14 @@ const handleSearch = (value) => {
 
       .el-icon {
         font-size: 12px;
-        color: @savour-text-sec;
+        color: @nordic-text-secondary;
       }
 
       &:hover {
-        background: @savour-accent-light;
+        background: @nordic-accent-light;
 
         .el-icon {
-          color: @savour-accent;
+          color: @nordic-accent;
         }
       }
     }
@@ -1216,29 +1227,29 @@ const handleSearch = (value) => {
       gap: 8px;
       padding: 8px 16px;
       border-radius: @savour-radius;
-      background: @savour-bg;
-      border: 1.5px solid @savour-border;
+      background: @nordic-bg;
+      border: 1.5px solid @nordic-border;
       transition: all 0.25s ease;
       font-size: @nordic-text-base;
 
       &:hover {
-        border-color: @savour-accent;
-        background: @savour-accent-light;
+        border-color: @nordic-accent;
+        background: @nordic-accent-light;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(198, 123, 92, 0.15);
+        box-shadow: 0 4px 12px fade(@nordic-accent, 15%);
       }
 
       .user-icon,
       .merchant-icon {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         font-size: 18px;
-        color: @savour-text-sec;
+        color: @nordic-text-secondary;
       }
 
       .icon-enlarged {
         transform: scale(1.25);
-        color: @savour-accent;
-        filter: drop-shadow(0 2px 4px rgba(198, 123, 92, 0.3));
+        color: @nordic-accent;
+        filter: drop-shadow(0 2px 4px fade(@nordic-accent, 30%));
       }
     }
 
@@ -1248,17 +1259,17 @@ const handleSearch = (value) => {
       gap: 6px;
       padding: 8px 16px;
       border-radius: @savour-radius;
-      background: @savour-accent;
+      background: @nordic-accent;
       border: none;
-      color: #fff;
+      color: @nordic-white;
       font-weight: 600;
       font-size: @nordic-text-sm;
       transition: all 0.25s ease;
 
       &:hover {
-        background: @savour-accent-hover;
+        background: @nordic-accent-dark;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(198, 123, 92, 0.3);
+        box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
       }
 
       .el-icon {
@@ -1275,9 +1286,10 @@ const handleSearch = (value) => {
 
 // ===== 侧边栏 =====
 .sidebar-menu {
-  background: linear-gradient(180deg, @savour-surface 0%, rgba(255, 255, 255, 0.98) 100%);
-  border-right: 1px solid @savour-border;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background:
+    radial-gradient(circle at 50% -8%, fade(@nordic-accent-light, 88%), transparent 34%),
+    linear-gradient(180deg, @nordic-surface 0%, fade(@nordic-surface, 98%) 100%);
+  border-right: 1px solid @nordic-border;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -1289,51 +1301,103 @@ const handleSearch = (value) => {
     content: '';
     position: absolute;
     top: 0;
-    right: -8px;
+    right: -9px;
     bottom: 0;
-    width: 8px;
-    background: linear-gradient(90deg, transparent 0%, rgba(45, 42, 38, 0.02) 100%);
+    width: 9px;
+    background: linear-gradient(90deg, fade(@nordic-text, 2.5%) 0%, transparent 100%);
     pointer-events: none;
   }
 
   .avatar-section {
-    text-align: center;
-    padding: @nordic-space-lg 0;
-    border-bottom: 1px solid @savour-border;
-    background: linear-gradient(180deg, @savour-accent-light 0%, @savour-surface 100%);
+    flex: 0 0 66px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 0 14px;
+    border-bottom: 1px solid @nordic-border;
+    background: linear-gradient(180deg, fade(@nordic-accent-light, 58%) 0%, fade(@nordic-surface, 0%) 100%);
 
-    .user-avatar {
-      animation: avatar-pulse 3s ease-in-out infinite;
+    :deep(.sidebar-avatar) {
+      width: 42px !important;
+      height: 42px !important;
+      flex: 0 0 42px;
+      display: block;
+      padding: 0 !important;
+      border-radius: 14px;
       cursor: pointer;
-      transition: transform 0.3s ease;
+      transition: transform 0.25s ease;
+
+      &::after {
+        display: none;
+      }
 
       &:hover {
-        transform: scale(1.05);
+        transform: translateY(-1px);
+      }
+
+      .el-avatar,
+      .el-skeleton {
+        width: 42px !important;
+        height: 42px !important;
+        border-radius: 14px !important;
+      }
+
+      .el-avatar {
+        background: linear-gradient(145deg, lighten(@nordic-accent-light, 8%), @nordic-accent-light);
+        border: 1px solid fade(@nordic-accent, 22%);
+        box-shadow: 0 3px 12px fade(@nordic-accent, 12%);
+      }
+
+      .avatar-error-class {
+        background: none;
+        -webkit-text-fill-color: currentColor;
+        color: @nordic-accent;
+        font-family: 'Georgia', 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+        font-size: 16px;
+        font-weight: 700;
       }
     }
 
-    .username {
-      margin-top: @nordic-space-sm;
-      .font-display();
-      font-size: @nordic-text-md;
-      font-weight: 600;
-      color: @savour-text;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      width: 100%;
-      line-height: 1.4;
-      text-align: center;
+    .profile-copy {
+      min-width: 0;
+      flex: 1;
+      text-align: left;
     }
+
+    .profile-name {
+      .font-display();
+      overflow: hidden;
+      margin-bottom: 2px;
+      color: @nordic-text;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.2;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .profile-meta {
+      color: @nordic-text-muted;
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
   }
 
   .menu-content {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding: @nordic-space-sm 0;
+    padding: 10px 0 12px;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+
+    &:hover {
+      scrollbar-color: darken(@nordic-border, 8%) transparent;
+    }
 
     &::-webkit-scrollbar {
-      width: 4px;
+      width: 6px;
     }
 
     &::-webkit-scrollbar-track {
@@ -1341,19 +1405,22 @@ const handleSearch = (value) => {
     }
 
     &::-webkit-scrollbar-thumb {
-      background: @savour-border;
-      border-radius: 2px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background-clip: padding-box;
+    }
 
-      &:hover {
-        background: @savour-text-muted;
-      }
+    &:hover::-webkit-scrollbar-thumb {
+      background: darken(@nordic-border, 8%);
+      background-clip: padding-box;
     }
 
     .menu-list {
-      border: none;
+      height: auto;
+      overflow: visible;
       background: transparent;
-      height: 100%;
-      overflow-y: auto;
+      border: none;
     }
   }
 
@@ -1363,87 +1430,112 @@ const handleSearch = (value) => {
 
     :deep(.el-menu-item),
     :deep(.el-sub-menu__title) {
+      height: 40px;
+      margin: 0 10px 1px;
+      padding: 0 10px !important;
+      color: @nordic-text-secondary;
+      background: transparent;
+      border-radius: 10px;
       font-size: @nordic-text-base !important;
-      color: @savour-text;
-      border-radius: 0;
-      margin: 2px @nordic-space-sm;
-      transition: all 0.25s ease;
+      font-weight: 560;
+      line-height: 40px;
+      transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
       position: relative;
 
       &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 3px;
-        height: 0;
-        background: @savour-accent;
-        border-radius: 0 2px 2px 0;
-        transition: height 0.25s ease;
+        display: none;
       }
 
       &:hover {
-        background: @savour-accent-light;
-        color: @savour-accent;
-
-        &::before {
-          height: 60%;
-        }
+        color: darken(@nordic-accent, 8%);
+        background: fade(@nordic-accent-light, 62%);
       }
 
       .el-icon {
-        color: @savour-text-sec;
-        transition: color 0.25s ease;
+        width: 19px;
+        margin-right: 11px;
+        color: currentColor;
+        font-size: 19px;
+        opacity: 0.82;
+        transition: color 0.18s ease, opacity 0.18s ease;
       }
 
       &:hover .el-icon {
-        color: @savour-accent;
+        opacity: 1;
       }
     }
 
-    :deep(.el-menu-item.is-active),
-    :deep(.el-sub-menu__title.is-active) {
-      background: @savour-accent-light !important;
-      color: @savour-accent !important;
-      font-weight: 600;
-
-      &::before {
-        height: 70%;
-      }
+    :deep(.el-menu-item.is-active) {
+      color: darken(@nordic-accent, 8%) !important;
+      background: @nordic-accent-light !important;
+      font-weight: 650;
+      box-shadow: inset 0 0 0 1px fade(@nordic-accent, 8%);
 
       .el-icon {
-        color: @savour-accent;
+        color: currentColor;
+        opacity: 1;
       }
     }
 
-    :deep(.el-sub-menu) {
-      .el-menu {
-        background: rgba(246, 243, 237, 0.5);
-        padding: 4px 0;
+    :deep(.el-sub-menu__title.is-active),
+    :deep(.el-sub-menu.is-opened > .el-sub-menu__title) {
+      color: @nordic-text !important;
+      background: transparent !important;
+    }
+
+    :deep(.el-sub-menu .el-menu) {
+      margin: 1px 10px 6px 28px;
+      padding-left: 12px;
+      background: transparent;
+      border-left: 1px solid @nordic-border;
+    }
+
+    :deep(.el-sub-menu .el-menu-item) {
+      height: 34px;
+      margin: 0;
+      padding: 0 9px !important;
+      color: @nordic-text-secondary;
+      background: transparent;
+      border-radius: 8px;
+      font-size: @nordic-text-sm !important;
+      font-weight: 430;
+      line-height: 34px;
+
+      &::before {
+        display: none;
       }
 
-      .el-menu-item {
-        padding-left: 52px !important;
-        font-size: @nordic-text-sm !important;
+      &:hover {
+        color: darken(@nordic-accent, 8%);
+        background: fade(@nordic-accent-light, 62%);
+      }
+
+      &.is-active {
+        color: darken(@nordic-accent, 8%) !important;
+        background: @nordic-accent-light !important;
+        font-weight: 650;
+        box-shadow: none;
 
         &::before {
-          left: 32px;
-        }
-      }
-
-      &.is-opened {
-        > .el-sub-menu__title {
-          .el-sub-menu__icon-arrow {
-            transform: rotate(180deg);
-          }
+          content: '';
+          display: block;
+          position: absolute;
+          left: -16px;
+          top: 50%;
+          width: 7px;
+          height: 7px;
+          background: @nordic-accent;
+          border: 2px solid @nordic-surface;
+          border-radius: 50%;
+          transform: translateY(-50%);
+          box-shadow: 0 0 0 1px fade(@nordic-accent, 20%);
         }
       }
     }
 
     :deep(.el-sub-menu__icon-arrow) {
-      color: @savour-text-muted;
-      transition: transform 0.25s ease;
+      color: @nordic-text-muted;
+      transition: transform 0.25s ease, color 0.25s ease;
     }
   }
 
@@ -1463,51 +1555,37 @@ const handleSearch = (value) => {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #E25B45, #FF7B5C);
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      height: 18px;
-      line-height: 18px;
-      padding: 0 6px;
       min-width: 18px;
-      border-radius: 9px;
-      white-space: nowrap;
+      height: 18px;
+      padding: 0 5px;
+      color: @nordic-white;
+      background: @nordic-accent;
+      border-radius: 999px;
       flex-shrink: 0;
-      box-shadow: 0 2px 6px rgba(226, 91, 69, 0.3);
+      font-size: 10px;
+      font-weight: 750;
+      line-height: 18px;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px fade(@nordic-accent, 20%);
     }
   }
 
   .setting-menu-container {
-    border-top: 1px solid @savour-border;
     flex-shrink: 0;
-    background: linear-gradient(180deg, transparent 0%, rgba(246, 243, 237, 0.3) 100%);
+    padding: 9px 0 12px;
+    background: linear-gradient(180deg, fade(@nordic-surface, 0%) 0%, @nordic-surface 34%);
+    border-top: 1px solid @nordic-border;
 
     .setting-menu-list {
-      border: none;
       background: transparent;
+      border: none;
 
       .setting-menu-item {
         background: transparent;
-        border-radius: 0;
-        margin: 2px @nordic-space-sm;
+        border-radius: 10px;
 
         &::before {
-          content: '';
-          position: absolute;
-          left: 0;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 3px;
-          height: 0;
-          background: @savour-text-muted;
-          border-radius: 0 2px 2px 0;
-          transition: height 0.25s ease;
-        }
-
-        &:hover::before {
-          height: 60%;
-          background: @savour-text-sec;
+          display: none;
         }
       }
     }
@@ -1517,7 +1595,7 @@ const handleSearch = (value) => {
 .content-area {
   flex: 1;
   padding: 0;
-  background: @savour-bg;
+  background: @nordic-bg;
   overflow-y: auto;
   position: relative;
 }

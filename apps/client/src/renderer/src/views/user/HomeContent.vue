@@ -19,6 +19,7 @@ import {
   MagicStick
 } from '@element-plus/icons-vue'
 import CommonMapLocationPicker from '../../components/CommonMapLocationPicker.vue'
+import BitsCarousel from '../../components/BitsCarousel.vue'
 import { useRouter } from 'vue-router'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
@@ -972,54 +973,62 @@ watch(
         </div>
 
         <!-- 推荐卡片 -->
-        <div v-else class="recs-scroll">
-          <div
-            v-for="(dish, index) in filteredDishes"
-            :key="index"
-            class="rec-card"
-            @click="handleDishClick(dish)"
-            tabindex="0"
-            @keyup.enter="handleDishClick(dish)"
-            :style="{ animationDelay: `${index * 0.1}s` }"
-          >
-            <div class="rec-card-image">
-              <img :src="dish.image || defaultDishImage" :alt="dish.name" loading="lazy" @error="handleImageError" />
-              <span class="rec-category-badge">{{ dish.category || '推荐' }}</span>
-              <div class="rec-card-overlay">
-                <div class="rec-card-top">
-                  <button class="rec-action-btn" @click="shareDish(dish, $event)" title="分享">
-                    <el-icon><Share /></el-icon>
-                  </button>
-                  <button
-                    class="rec-action-btn"
-                    :class="{ 'is-fav': isFavorite(dish) }"
-                    @click="toggleFavorite(dish, $event)"
-                    :title="isFavorite(dish) ? '取消收藏' : '收藏'"
-                  >
-                    <el-icon><Star /></el-icon>
-                  </button>
-                </div>
-                <div class="rec-card-bottom">
-                  <h3 class="rec-dish-name">{{ dish.name }}</h3>
-                  <div class="rec-dish-meta">
-                    <span class="rec-kcal">{{ dish.kcal }} kcal</span>
-                    <span v-if="dish.tags" class="rec-tags">{{ dish.tags }}</span>
+        <BitsCarousel
+          v-else
+          :items="filteredDishes"
+          :base-width="300"
+          :aspect-ratio="0.94"
+          :gap="16"
+          :arrows="false"
+          indicator="bars"
+          loop
+        >
+          <template #default="{ item: dish }">
+            <div
+              class="rec-card"
+              @click="handleDishClick(dish)"
+              tabindex="0"
+              @keyup.enter="handleDishClick(dish)"
+            >
+              <div class="rec-card-image">
+                <img :src="dish.image || defaultDishImage" :alt="dish.name" loading="lazy" @error="handleImageError" />
+                <span class="rec-category-badge">{{ dish.category || '推荐' }}</span>
+                <div class="rec-card-overlay">
+                  <div class="rec-card-top">
+                    <button class="rec-action-btn" @click="shareDish(dish, $event)" title="分享">
+                      <el-icon><Share /></el-icon>
+                    </button>
+                    <button
+                      class="rec-action-btn"
+                      :class="{ 'is-fav': isFavorite(dish) }"
+                      @click="toggleFavorite(dish, $event)"
+                      :title="isFavorite(dish) ? '取消收藏' : '收藏'"
+                    >
+                      <el-icon><Star /></el-icon>
+                    </button>
                   </div>
-                  <div class="rec-rating">
-                    <el-rate
-                      v-if="dish.rating && dish.rating > 0"
-                      v-model="dish.rating"
-                      disabled
-                      show-score
-                      size="small"
-                    />
-                    <span v-else class="no-rating">暂无评分</span>
+                  <div class="rec-card-bottom">
+                    <h3 class="rec-dish-name">{{ dish.name }}</h3>
+                    <div class="rec-dish-meta">
+                      <span class="rec-kcal">{{ dish.kcal }} kcal</span>
+                      <span v-if="dish.tags" class="rec-tags">{{ dish.tags }}</span>
+                    </div>
+                    <div class="rec-rating">
+                      <el-rate
+                        v-if="dish.rating && dish.rating > 0"
+                        v-model="dish.rating"
+                        disabled
+                        show-score
+                        size="small"
+                      />
+                      <span v-else class="no-rating">暂无评分</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </template>
+        </BitsCarousel>
       </section>
 
       <!-- 今日热点 -->
@@ -1075,48 +1084,56 @@ watch(
         </div>
 
         <!-- 教程卡片 -->
-        <div v-else class="tuts-scroll">
-          <div
-            v-for="(tutorial, index) in featuredTutorials.slice(0, 4)"
-            :key="index"
-            class="tut-card"
-            @click="handleTutorialClick(tutorial)"
-            tabindex="0"
-            @keyup.enter="handleTutorialClick(tutorial)"
-            :style="{ animationDelay: `${index * 0.08}s` }"
-          >
-            <div class="tut-image">
-              <img
-                :src="tutorial.thumbnail || defaultTutorialThumbnail"
-                :alt="tutorial.name || tutorial.title"
-                loading="lazy"
-                @error="handleTutorialImageError"
-              />
-              <div class="tut-type-badge">
-                <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
-                <span v-else>💡</span>
+        <BitsCarousel
+          v-else
+          :items="featuredTutorials.slice(0, 4)"
+          :base-width="260"
+          :aspect-ratio="1.1"
+          :gap="16"
+          :arrows="false"
+          indicator="bars"
+          loop
+        >
+          <template #default="{ item: tutorial }">
+            <div
+              class="tut-card"
+              @click="handleTutorialClick(tutorial)"
+              tabindex="0"
+              @keyup.enter="handleTutorialClick(tutorial)"
+            >
+              <div class="tut-image">
+                <img
+                  :src="tutorial.thumbnail || defaultTutorialThumbnail"
+                  :alt="tutorial.name || tutorial.title"
+                  loading="lazy"
+                  @error="handleTutorialImageError"
+                />
+                <div class="tut-type-badge">
+                  <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
+                  <span v-else>💡</span>
+                </div>
+              </div>
+              <div class="tut-info">
+                <div class="tut-badges">
+                  <el-tag v-if="tutorial.source_type === 'ADMIN' && tutorial.is_official" type="danger" size="small" effect="dark">
+                    <el-icon><Check /></el-icon> 官方
+                  </el-tag>
+                  <el-tag v-if="tutorial.source_type === 'MERCHANT'" type="warning" size="small" effect="plain">
+                    <el-icon><Shop /></el-icon> {{ tutorial.merchantName || '商家' }}
+                  </el-tag>
+                  <el-tag v-if="tutorial.source_type === 'AI_GENERATED'" :type="tutorial.review_status === 'APPROVED' ? 'success' : 'info'" size="small" effect="plain">
+                    <el-icon><MagicStick /></el-icon> AI
+                  </el-tag>
+                </div>
+                <h4 class="tut-title">{{ tutorial.name || tutorial.title }}</h4>
+                <div class="tut-meta">
+                  <span class="tut-duration">{{ tutorial.duration || '5分钟' }}</span>
+                  <el-rate v-if="tutorial.rating" v-model="tutorial.rating" disabled size="small" show-score />
+                </div>
               </div>
             </div>
-            <div class="tut-info">
-              <div class="tut-badges">
-                <el-tag v-if="tutorial.source_type === 'ADMIN' && tutorial.is_official" type="danger" size="small" effect="dark">
-                  <el-icon><Check /></el-icon> 官方
-                </el-tag>
-                <el-tag v-if="tutorial.source_type === 'MERCHANT'" type="warning" size="small" effect="plain">
-                  <el-icon><Shop /></el-icon> {{ tutorial.merchantName || '商家' }}
-                </el-tag>
-                <el-tag v-if="tutorial.source_type === 'AI_GENERATED'" :type="tutorial.review_status === 'APPROVED' ? 'success' : 'info'" size="small" effect="plain">
-                  <el-icon><MagicStick /></el-icon> AI
-                </el-tag>
-              </div>
-              <h4 class="tut-title">{{ tutorial.name || tutorial.title }}</h4>
-              <div class="tut-meta">
-                <span class="tut-duration">{{ tutorial.duration || '5分钟' }}</span>
-                <el-rate v-if="tutorial.rating" v-model="tutorial.rating" disabled size="small" show-score />
-              </div>
-            </div>
-          </div>
-        </div>
+          </template>
+        </BitsCarousel>
       </section>
 
       <div class="bottom-spacer"></div>
@@ -1609,8 +1626,8 @@ watch(
 }
 
 .rec-card {
-  flex: 0 0 300px;
-  scroll-snap-align: start;
+  width: 100%;
+  height: 100%;
   border-radius: @savour-radius;
   overflow: hidden;
   cursor: pointer;
@@ -1618,16 +1635,17 @@ watch(
   background: @savour-surface;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.8) inset,
-    0 8px 24px rgba(45, 42, 38, 0.06);
+    0 20px 46px -26px rgba(45, 42, 38, 0.38),
+    0 8px 20px -12px rgba(45, 42, 38, 0.22);
   transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-  animation: savour-scale-in 0.4s ease both;
 
   &:hover {
     transform: translateY(-6px);
     border-color: rgba(198, 123, 92, 0.45);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.9) inset,
-      0 14px 36px rgba(45, 42, 38, 0.14);
+      0 28px 60px -28px rgba(45, 42, 38, 0.48),
+      0 12px 26px -14px rgba(45, 42, 38, 0.3);
 
     .rec-card-image img { transform: scale(1.06); }
     .rec-action-btn { opacity: 1; transform: translateY(0); }
@@ -1636,7 +1654,7 @@ watch(
   .rec-card-image {
     position: relative;
     width: 100%;
-    height: 320px;
+    height: 100%;
     overflow: hidden;
 
     img {
@@ -1917,19 +1935,26 @@ watch(
 }
 
 .tut-card {
-  flex: 0 0 260px;
-  scroll-snap-align: start;
+  width: 100%;
+  height: 100%;
   background: @savour-surface;
   border-radius: @savour-radius;
   overflow: hidden;
   cursor: pointer;
   border: 1px solid @savour-border;
-  transition: all 0.3s ease;
-  animation: savour-scale-in 0.4s ease both;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 20px 46px -26px rgba(45, 42, 38, 0.34),
+    0 8px 20px -12px rgba(45, 42, 38, 0.2);
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(45, 42, 38, 0.1);
+    border-color: rgba(198, 123, 92, 0.32);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 28px 60px -28px rgba(45, 42, 38, 0.44),
+      0 12px 26px -14px rgba(45, 42, 38, 0.26);
 
     .tut-image img { transform: scale(1.05); }
   }
