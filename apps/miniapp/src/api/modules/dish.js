@@ -65,7 +65,7 @@ export const dishApi = {
    * GET /v1/dishes/categories
    * @returns {Promise} 返回分类列表
    */
-  getCategories: () => get(DISH_API.GET_CATEGORIES),
+  getCategories: (params) => get(DISH_API.GET_CATEGORIES, params),
 
   /**
    * 获取菜品食材

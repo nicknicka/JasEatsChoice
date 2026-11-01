@@ -41,20 +41,23 @@
       <!-- 菜品分类 -->
       <view class="form-item">
         <text class="label required">菜品分类</text>
-        <picker
-          mode="selector"
-          :range="categories"
-          range-key="label"
-          :value="categoryIndex"
-          @change="onCategoryChange"
-        >
-          <view class="picker">
-            <text class="picker-value" :class="{ placeholder: !formData.category }">
-              {{ formData.category || '请选择分类' }}
-            </text>
-            <uni-icons type="arrowright" size="16" color="#999"></uni-icons>
-          </view>
-        </picker>
+        <input
+          class="input"
+          v-model="formData.category"
+          placeholder="请输入分类，也可点下方常用分类"
+          maxlength="20"
+        />
+        <view class="category-quick">
+          <text
+            v-for="cat in categories"
+            :key="cat.value"
+            class="category-quick-item"
+            :class="{ active: formData.category === cat.label }"
+            @tap="selectCategory(cat)"
+          >
+            {{ cat.label }}
+          </text>
+        </view>
       </view>
 
       <!-- 菜品简介 -->
@@ -318,17 +321,14 @@ const categories = ref([
   { label: '小吃', value: 'snack' }
 ])
 
-const categoryIndex = ref(-1)
-
 // 口味标签
 const tasteTags = ref(['微辣', '中辣', '特辣', '不辣', '酸', '甜', '清淡'])
 
 /**
- * 选择分类
+ * 选择常用分类
  */
-const onCategoryChange = (e) => {
-  categoryIndex.value = e.detail.value
-  formData.value.category = categories.value[e.detail.value].label
+const selectCategory = (cat) => {
+  formData.value.category = cat.label
 }
 
 /**
@@ -717,23 +717,24 @@ const submitDish = async () => {
   color: #999;
 }
 
-/* 选择器 */
-.picker {
+/* 常用分类快捷选择 */
+.category-quick {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 80rpx;
-  padding: 0 20rpx;
-  background: #F5F5F5;
-  border-radius: 8rpx;
+  flex-wrap: wrap;
+  gap: 15rpx;
+  margin-top: 15rpx;
 }
 
-.picker-value {
-  font-size: 28rpx;
-  color: #333;
+.category-quick-item {
+  padding: 8rpx 24rpx;
+  background: #F5F5F5;
+  border-radius: 30rpx;
+  font-size: 24rpx;
+  color: #666;
 
-  &.placeholder {
-    color: #999;
+  &.active {
+    background: rgba(255, 107, 53, 0.1);
+    color: #FF6B35;
   }
 }
 
