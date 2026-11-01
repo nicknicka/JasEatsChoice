@@ -1,9 +1,9 @@
 # 公告 RAG 发布验收记录（Issue #149）
 
-- 验收日期：2026-10-31
-- 证据分支：`codex/149-release-hardening`（票内证据，已包含于集成基线 `254c9d1`）
-- 基线：`codex/144-announcement-rag` @ `5b115fd`
-- 结论：**未达到完整发布验收通过**。失败恢复、重建补齐、降级与数据边界已由自动化测试验证；真实智谱 LLM/Embedding 冒烟被有效凭据缺失阻塞。
+- 验收日期：2026-10-31（自动化与边界）；2026-11-01（真实端到端冒烟）
+- 证据分支：`codex/149-release-hardening`（自动化）；`codex/149-aligned-token-and-real-smoke`（真实冒烟）
+- 基线：自动化 `codex/144-announcement-rag` @ `5b115fd`；真实冒烟 main（含 #166/#167/#168）
+- 结论：**通过**。失败恢复、重建补齐、降级与数据边界由自动化测试验证；用户端与商家端真实 AI 聊天冒烟通过，回答包含公告标题与有效期，且其他商家与过期公告未出现。
 
 ## 配置前置条件
 
@@ -51,37 +51,51 @@ JAVA_HOME=$(/usr/libexec/java_home -v 21) ./apps/server/mvnw -f apps/server/pom.
 - `RagKnowledgeService.rebuildAllAnnouncements()` 现在会先按 `sourceType=announcement` 清理既有向量，再按数据库当前状态重建，避免公告硬删除同步失败后留下孤儿向量。
 - RAG 未初始化时全量重建返回 `0`，不再访问空 embedding store。
 
-## 真实端到端冒烟尝试
+## 真实端到端冒烟（2026-11-01）
 
-使用独立 compose 项目 `codex149` 启动 MySQL/Redis/Qdrant，并用本地构建 JAR 启动后端：
+### 配置前置条件
 
-- `/api/actuator/health` 返回 `UP`，DB、Redis 正常。
-- Qdrant REST `/collections` 确认 `jaseats_knowledge_v1` 已创建。
-- 使用种子账号完成管理员登录和带上下文的用户/商家登录。
-- 临时创建平台公告、本商家公告、其他商家公告、过期公告共 4 条。
-- 调用 `/api/agent/supervisor/chat` 分别执行用户端与商家端提问。
+1. 本地 OpenAI 兼容 embedding 端点：Ollama `bge-m3`（1024 维），监听 `11434`。
+2. 聊天模型：OpenAI 兼容网关（`glm-5.3-solo`）。
+3. 隔离验证栈 `codex149`（MySQL / Redis / Qdrant v1.17.0），后端以宿主机进程运行。
+4. `CAPTCHA_TEST_FIXED_CODE_ENABLED=true` 配合固定验证码，供自动化登录使用。
+5. 运行时 key 由 `AI_ACTIVE_KEY_FILE` 指向的文件提供；`AI_API_KEY` 保持为空。
 
-结果：
+### 冒烟数据（均为临时构造）
 
-- 4 条临时公告全部通过对应 API 删除，`finally` 清理错误为 0。
-- 删除后按临时公告 `contentId` 查询 Qdrant，结果为空，确认向量不残留。
-- 用户端与商家端 AI 回答均为空，后端日志显示智谱 Embedding/LLM 调用返回 HTTP 401 语义错误：智谱 `code=1000`（身份验证失败）。
-- 因此无法验证“回答包含公告标题和有效期”与“不包含其他商家/过期公告标题”这两个真实 LLM 冒烟断言。
-
-## 未通过项与后续动作
-
-| 项目 | 状态 | 阻塞原因 |
+| 类型 | 标题 | 可见范围 |
 |---|---|---|
-| 用户端真实 AI 聊天包含临时平台公告标题与有效期 | 未通过 | 有效智谱凭据不可用 |
-| 商家端真实 AI 聊天包含自家公告标题与有效期 | 未通过 | 有效智谱凭据不可用 |
-| 真实检索隔离断言（其他商家/过期标题不出现） | 未通过 | 依赖上述 LLM/Embedding 真实调用 |
-| 自动化降级、写入、恢复、幂等与隔离测试 | 通过 | 无 |
-| 临时数据清理与 Qdrant 向量残留检查 | 通过 | 无 |
+| 平台公告 | `codex149 平台满减活动` | 用户端 + 商家端 |
+| 本商家公告 | `codex149 本店满赠` | 仅该商家 |
+| 其他商家公告 | `codex149 其他店活动` | 仅其他商家（不应出现） |
+| 过期公告 | `codex149 已过期活动` | 已过期（不应出现） |
 
-获得有效智谱 key（`AI_API_KEY`）后，需重跑真实冒烟；只有用户端/商家端回答断言通过后，才可将 Issue #149 视为完整验收通过。
+平台公告通过管理端 API 真实创建（触发自动索引）；其余为构造数据，经全量重建写入向量库。索引结果中过期公告被正确排除（`isIndexable` 阶段即过滤）。
 
-## 冒烟栈收尾证据
+### 结果
 
-- 临时公告数据库计数：`0`（条件：`title like 'codex149%'`）。
-- Qdrant `jaseats_knowledge_v1` 点数：`0`。
-- 独立验证栈已执行 `docker compose --project-name codex149 down -v`；容器、网络和数据卷均已删除。
+**用户端**（普通用户身份提问「现在有什么平台满减活动？」）：
+
+- 回答包含《codex149 平台满减活动》及有效期 `2026-11-01 00:00 至 2026-12-31 23:59`
+- 未出现本店公告、其他商家公告、过期公告标题
+
+**商家端**（商家身份提问「我店里现在有什么活动？」）：
+
+- 回答包含《codex149 本店满赠》与《codex149 平台满减活动》及各自有效期
+- 未出现其他商家公告、过期公告标题
+
+### 顺带修复的阻断缺陷
+
+真实冒烟最初无法进行：密码登录签发的是自定义 base64 token（`phone:timestamp:jaseatschoice`），而 `JwtAuthenticationFilter` 与 `AgentChatContextResolver` 都只按标准 JWT 解析（微信登录路径本来就是标准 JWT）。结果是走密码登录的用户既无法通过认证，也无法为 AI 聊天建立用户/商家上下文，检索工具直接返回「公告检索暂不可用」。
+
+已修复：`UserController.generateJWTToken` 改为调用 `jwtUtil.generateToken(userId, phone)`，与微信登录、认证过滤器、聊天上下文解析三处对齐。
+
+### 清理与收尾
+
+- 临时公告删除后执行全量重建，向量库中无 `codex149` 残留（仅剩种子公告）
+- 隔离栈 `codex149` 已 `docker compose --project-name codex149 down -v`
+- Ollama 服务已停止；`bge-m3` 模型保留在 `~/.ollama/models`
+
+## 未通过项
+
+无。

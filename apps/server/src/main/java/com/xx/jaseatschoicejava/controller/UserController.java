@@ -332,17 +332,9 @@ public class UserController {
      * 生成JWT Token
      */
     private String generateJWTToken(User user) {
-        // 简单的JWT token生成逻辑
-        // 实际项目中应该使用 io.jsonwebtoken 库
-        try {
-            long timestamp = System.currentTimeMillis();
-            String tokenSignature = user.getPhone() + ":" + timestamp + ":jaseatschoice";
-            String token = java.util.Base64.getEncoder().encodeToString(tokenSignature.getBytes());
-            return token;
-        } catch (Exception e) {
-            log.error("生成token失败", e);
-            return user.getPhone() + ":" + System.currentTimeMillis();
-        }
+        // 与微信登录、JwtAuthenticationFilter、AgentChatContextResolver 保持一致：
+        // 必须签发标准 JWT，否则认证与 AI 聊天上下文都无法解析该 token。
+        return jwtUtil.generateToken(user.getUserId(), user.getPhone());
     }
 
     /**
