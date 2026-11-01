@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.agent.tools.announcement;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,7 @@ import com.xx.jaseatschoicejava.rag.RagKnowledgeService;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agentic.scope.AgenticScope;
+import dev.langchain4j.invocation.LangChain4jManaged;
 
 /**
  * 公告知识检索工具。
@@ -46,10 +48,10 @@ public class AnnouncementKnowledgeTools {
         返回公告标题、原文片段和有效期；没有命中时明确说明未查询到。
         """)
     public String searchAnnouncements(
-        AgenticScope scope,
         @P("检索问题或关键词") String query,
         @P(value = "返回数量，可选", required = false) Integer limit
     ) {
+        AgenticScope scope = currentScope();
         if (scope == null) {
             return "公告检索暂不可用，请重新登录后再试。";
         }
@@ -78,6 +80,19 @@ public class AnnouncementKnowledgeTools {
             log.warn("公告知识检索失败", exception);
             return "公告检索暂不可用，请稍后再试。";
         }
+    }
+
+    /**
+     * 读取当前 Agentic 托管上下文里的 scope。
+     *
+     * 不能把 AgenticScope 声明成工具参数：那类托管参数只在 Agentic 调用链内可用，
+     * 客服 Agent 被直连调用时 prepareArguments 会因 managedParameters() 为 null 抛 NPE。
+     * 这里主动读取同一份托管上下文，拿不到时按“失败关闭”处理。
+     */
+    private AgenticScope currentScope() {
+        Map<Class<? extends LangChain4jManaged>, LangChain4jManaged> managed =
+            LangChain4jManaged.current();
+        return managed == null ? null : (AgenticScope) managed.get(AgenticScope.class);
     }
 
     private RagAudience audience(AgenticScope scope, String audienceValue) {
