@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -22,6 +23,7 @@ import com.xx.jaseatschoicejava.rag.RagKnowledgeService;
 
 import dev.langchain4j.agentic.scope.AgentInvocation;
 import dev.langchain4j.agentic.scope.AgenticScope;
+import dev.langchain4j.invocation.LangChain4jManaged;
 
 class AnnouncementKnowledgeToolsTest {
 
@@ -33,7 +35,7 @@ class AnnouncementKnowledgeToolsTest {
         AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
         when(knowledgeService.search(any())).thenReturn(List.of());
 
-        tools.searchAnnouncements(scope, "有什么满减活动", 3);
+        search(scope, "有什么满减活动", 3);
 
         ArgumentCaptor<RagKnowledgeQuery> captor = ArgumentCaptor.forClass(RagKnowledgeQuery.class);
         verify(knowledgeService).search(captor.capture());
@@ -47,7 +49,7 @@ class AnnouncementKnowledgeToolsTest {
         AgenticScope scope = scopeFor(AgentChatContext.merchant("2002", "merchant-2"));
         when(knowledgeService.search(any())).thenReturn(List.of());
 
-        tools.searchAnnouncements(scope, "平台对商家的上架规则", 2);
+        search(scope, "平台对商家的上架规则", 2);
 
         ArgumentCaptor<RagKnowledgeQuery> captor = ArgumentCaptor.forClass(RagKnowledgeQuery.class);
         verify(knowledgeService).search(captor.capture());
@@ -61,7 +63,7 @@ class AnnouncementKnowledgeToolsTest {
         AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
         when(knowledgeService.search(any())).thenReturn(List.of());
 
-        tools.searchAnnouncements(scope, "平台活动", null);
+        search(scope, "平台活动", null);
 
         ArgumentCaptor<RagKnowledgeQuery> captor = ArgumentCaptor.forClass(RagKnowledgeQuery.class);
         verify(knowledgeService).search(captor.capture());
@@ -75,7 +77,7 @@ class AnnouncementKnowledgeToolsTest {
         AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
         when(knowledgeService.search(any())).thenReturn(List.of(result()));
 
-        String answer = tools.searchAnnouncements(scope, "周末活动", null);
+        String answer = search(scope, "周末活动", null);
 
         assertThat(answer).contains("周末满减");
         assertThat(answer).contains("2026-10-01 00:00");
@@ -91,14 +93,14 @@ class AnnouncementKnowledgeToolsTest {
         AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
         when(knowledgeService.search(any())).thenReturn(List.of());
 
-        String answer = tools.searchAnnouncements(scope, "不存在的话题", null);
+        String answer = search(scope, "不存在的话题", null);
 
         assertThat(answer).isEqualTo("未查询到相关有效公告。");
     }
 
     @Test
     void missingScopeFailsClosed() {
-        String answer = tools.searchAnnouncements(null, "平台活动", null);
+        String answer = tools.searchAnnouncements("平台活动", null);
 
         assertThat(answer).isEqualTo("公告检索暂不可用，请重新登录后再试。");
         verifyNoInteractions(knowledgeService);
@@ -109,7 +111,7 @@ class AnnouncementKnowledgeToolsTest {
         AgenticScope scope = scopeFor(AgentChatContext.customer("1001"));
         when(knowledgeService.search(any())).thenThrow(new IllegalStateException("qdrant unavailable"));
 
-        String answer = tools.searchAnnouncements(scope, "平台活动", null);
+        String answer = search(scope, "平台活动", null);
 
         assertThat(answer).isEqualTo("公告检索暂不可用，请稍后再试。");
     }
@@ -118,6 +120,18 @@ class AnnouncementKnowledgeToolsTest {
         dev.langchain4j.agentic.scope.AgenticScope recordingScope = new RecordingScope();
         new AgentChatContextListener(context).afterAgenticScopeCreated(recordingScope);
         return recordingScope;
+    }
+
+    /**
+     * 按框架的方式提供 Agentic 托管上下文后再调用工具。
+     */
+    private String search(AgenticScope scope, String query, Integer limit) {
+        LangChain4jManaged.setCurrent(Map.of(AgenticScope.class, scope));
+        try {
+            return tools.searchAnnouncements(query, limit);
+        } finally {
+            LangChain4jManaged.removeCurrent();
+        }
     }
 
     private RagKnowledgeResult result() {

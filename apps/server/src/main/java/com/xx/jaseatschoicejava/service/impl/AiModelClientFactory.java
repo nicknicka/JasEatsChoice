@@ -51,5 +51,7 @@ public interface AiModelClientFactory {
 
     StreamingChatModel buildStreamingModel(AiModelConfig config);
 
+    StreamingChatModel buildStreamingModel(AiModelConfig config, String candidateApiKey);
+
     AiCapabilitiesDTO capabilities(AiModelConfig config);
 }

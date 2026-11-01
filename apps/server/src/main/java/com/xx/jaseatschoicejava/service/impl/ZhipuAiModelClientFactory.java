@@ -161,11 +161,17 @@ public class ZhipuAiModelClientFactory implements AiModelClientFactory {
 
     @Override
     public StreamingChatModel buildStreamingModel(AiModelConfig config) {
-        if (!hasKey()) {
+        return buildStreamingModel(config, null);
+    }
+
+    @Override
+    public StreamingChatModel buildStreamingModel(AiModelConfig config, String candidateApiKey) {
+        String apiKey = key(candidateApiKey);
+        if (!hasText(apiKey)) {
             return new NoopStreamingChatModel();
         }
         var builder = ZhipuAiStreamingChatModel.builder()
-            .apiKey(key())
+            .apiKey(apiKey)
             .model(config.getModel())
             .temperature(config.getTemperature())
             .connectTimeout(Duration.ofMillis(config.getTimeoutMs()))

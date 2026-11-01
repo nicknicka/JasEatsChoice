@@ -223,7 +223,12 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
 
     @Override
     public StreamingChatModel buildStreamingModel(AiModelConfig config) {
-        String key = key(null);
+        return buildStreamingModel(config, null);
+    }
+
+    @Override
+    public StreamingChatModel buildStreamingModel(AiModelConfig config, String candidateApiKey) {
+        String key = key(candidateApiKey);
         if (!hasKey(key) || !hasText(config.getBaseUrl())) {
             return new NoopStreamingChatModel();
         }
