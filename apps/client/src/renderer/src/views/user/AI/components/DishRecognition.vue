@@ -249,6 +249,7 @@
 <script setup>
 import { ref, watch, h } from 'vue'
 import { ElMessage } from 'element-plus'
+import { API_CONFIG } from '../../../../config'
 import { validateImageFile } from '../../../../utils/imageValidator'
 import { useDishRecognitionTask } from '../../../../composables/useDishRecognitionTask'
 
@@ -386,21 +387,87 @@ const handleDragLeave = (event) => {
   isDragging.value = false
 }
 
-const handleDrop = (event) => {
+const DROP_IMAGE_ERROR = '未能识别拖入的图片，请拖入本地图片或网页中的图片'
+
+/**
+ * 从拖拽数据里取出图片地址（从网页拖入图片时 dataTransfer.files 为空，只有 URL）
+ */
+const extractDroppedImageUrl = (dataTransfer) => {
+  if (!dataTransfer) return ''
+
+  const uriList = dataTransfer.getData('text/uri-list')
+  if (uriList) {
+    const firstUrl = uriList.split(/\r?\n/).find((line) => line && !line.startsWith('#'))
+    if (firstUrl) return firstUrl.trim()
+  }
+
+  const html = dataTransfer.getData('text/html')
+  const imgMatch = html && html.match(/<img[^>]+src\s*=\s*["']([^"']+)["']/i)
+  if (imgMatch) return imgMatch[1]
+
+  return (dataTransfer.getData('text/plain') || '').trim()
+}
+
+/**
+ * 把图片地址转成 File；外站图片浏览器直连会被 CORS 拦住，统一走后端代理取字节
+ */
+const toImageFile = async (imageUrl) => {
+  const response = imageUrl.startsWith('data:')
+    ? await fetch(imageUrl)
+    : await fetch(`${API_CONFIG.baseURL}${API_CONFIG.ai.fetchRemoteImage}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: imageUrl })
+      })
+
+  if (!response.ok) {
+    const message = await response
+      .json()
+      .then((body) => body?.message)
+      .catch(() => '')
+    throw new Error(message || '图片下载失败')
+  }
+
+  const blob = await response.blob()
+  // 响应头可能带 charset 参数（image/png;charset=UTF-8），只取 MIME 主类型做白名单校验
+  const mimeType = (blob.type || '').split(';')[0].trim()
+  if (!mimeType.startsWith('image/')) {
+    throw new Error('拖入的地址不是图片')
+  }
+
+  const extension = (mimeType.split('/')[1] || 'jpg').split('+')[0]
+  return new File([blob], `dropped-image.${extension}`, { type: mimeType })
+}
+
+const handleDrop = async (event) => {
   event.preventDefault()
   isDragging.value = false
 
-  const file = event.dataTransfer.files[0]
-  if (file) {
-    const validation = validateImageFile(file)
-    if (!validation.valid) {
-      ElMessage.error(validation.error)
+  let file = event.dataTransfer?.files?.[0]
+
+  if (!file) {
+    const imageUrl = extractDroppedImageUrl(event.dataTransfer)
+    if (!imageUrl) {
+      ElMessage.error(DROP_IMAGE_ERROR)
       return
     }
 
-    if (setImageFile(file)) {
-      ElMessage.success('图片上传成功')
+    try {
+      file = await toImageFile(imageUrl)
+    } catch (error) {
+      ElMessage.error(error?.message || DROP_IMAGE_ERROR)
+      return
     }
+  }
+
+  const validation = validateImageFile(file)
+  if (!validation.valid) {
+    ElMessage.error(validation.error)
+    return
+  }
+
+  if (setImageFile(file)) {
+    ElMessage.success('图片上传成功')
   }
 }
 </script>

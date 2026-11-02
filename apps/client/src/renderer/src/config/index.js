@@ -101,6 +101,7 @@ export const API_CONFIG = {
     capabilities: '/v1/ai/capabilities',
     nutrient: '/v1/ai/nutrient',
     recognizeDish: '/v1/ai/dish-recognize',
+    fetchRemoteImage: '/v1/ai/fetch-remote-image',
     history: '/v1/ai/chat/history',
     save: '/v1/ai/chat/save',
     clear: '/v1/ai/chat/clear',
