@@ -14,17 +14,17 @@ public class AnnouncementRagInfrastructure {
 
     private final AnnouncementRagProperties properties;
     private final Supplier<AnnouncementEmbeddingConfig> embeddingConfig;
-    private final EmbeddingModel embeddingModel;
+    private final Supplier<EmbeddingModel> embeddingModel;
     private final QdrantClient qdrantClient;
-    private EmbeddingStore<TextSegment> embeddingStore;
+    private volatile EmbeddingStore<TextSegment> embeddingStore;
     private AnnouncementEmbeddingConfig initializedWith;
-    private AnnouncementRagStatus status = new AnnouncementRagStatus(
+    private volatile AnnouncementRagStatus status = new AnnouncementRagStatus(
         AnnouncementRagState.DISABLED, "初始化未执行");
 
     public AnnouncementRagInfrastructure(
         AnnouncementRagProperties properties,
         Supplier<AnnouncementEmbeddingConfig> embeddingConfig,
-        EmbeddingModel embeddingModel,
+        Supplier<EmbeddingModel> embeddingModel,
         QdrantClient qdrantClient) {
         this.properties = properties;
         this.embeddingConfig = embeddingConfig;
@@ -39,18 +39,18 @@ public class AnnouncementRagInfrastructure {
 
     public synchronized void initialize() {
         if (!properties.isEnabled()) {
-            status = new AnnouncementRagStatus(AnnouncementRagState.DISABLED, "公告 RAG 已显式关闭");
+            updateStatus(AnnouncementRagState.DISABLED, "公告 RAG 已显式关闭");
             return;
         }
         AnnouncementEmbeddingConfig config = currentEmbeddingConfig();
         if (config == null) {
             embeddingStore = null;
             initializedWith = null;
-            status = new AnnouncementRagStatus(AnnouncementRagState.NOT_CONFIGURED, "公告 RAG Embedding 未配置");
+            updateStatus(AnnouncementRagState.NOT_CONFIGURED, "公告 RAG Embedding 未配置");
             return;
         }
         if (qdrantClient == null) {
-            status = new AnnouncementRagStatus(AnnouncementRagState.UNAVAILABLE, "Qdrant 客户端未初始化");
+            updateStatus(AnnouncementRagState.UNAVAILABLE, "Qdrant 客户端未初始化");
             return;
         }
         try {
@@ -58,26 +58,53 @@ public class AnnouncementRagInfrastructure {
             embeddingStore = new QdrantEmbeddingStore(
                 qdrantClient, properties.getQdrant().getCollection(), "text");
             initializedWith = config;
-            status = new AnnouncementRagStatus(AnnouncementRagState.READY, "公告 RAG 初始化完成");
+            updateStatus(AnnouncementRagState.READY, "公告 RAG 初始化完成");
         }
         catch (IllegalStateException exception) {
             embeddingStore = null;
-            status = new AnnouncementRagStatus(AnnouncementRagState.UNAVAILABLE, exception.getMessage());
+            updateStatus(AnnouncementRagState.UNAVAILABLE, exception.getMessage());
             throw exception;
         }
         catch (Exception exception) {
             embeddingStore = null;
-            status = new AnnouncementRagStatus(AnnouncementRagState.UNAVAILABLE,
-                "Qdrant 不可用: " + exception.getMessage());
+            updateStatus(AnnouncementRagState.UNAVAILABLE, "Qdrant 不可用: " + exception.getMessage());
         }
+    }
+
+    /**
+     * 重建流程接管状态期间，初始化成功不得把它改回就绪——否则重建中的检索窗口会被重新打开。
+     */
+    private void updateStatus(AnnouncementRagState state, String reason) {
+        if (state == AnnouncementRagState.READY && status.state() == AnnouncementRagState.REBUILDING) {
+            return;
+        }
+        status = new AnnouncementRagStatus(state, reason);
     }
 
     public AnnouncementRagStatus status() {
         return status;
     }
 
+    /**
+     * 进入「重建中」：公告检索失败关闭，不返回可能基于旧向量的结果。
+     */
+    public synchronized void markRebuilding(String reason) {
+        status = new AnnouncementRagStatus(AnnouncementRagState.REBUILDING, reason);
+    }
+
+    public synchronized void markReady(String reason) {
+        status = new AnnouncementRagStatus(AnnouncementRagState.READY, reason);
+    }
+
+    public synchronized void markUnavailable(String reason) {
+        status = new AnnouncementRagStatus(AnnouncementRagState.UNAVAILABLE, reason);
+    }
+
+    /**
+     * 检索/索引侧每次调用前解析 Embedding 客户端；惰性解析同时避免与运行时配置互相依赖成环。
+     */
     public EmbeddingModel embeddingModel() {
-        return embeddingModel;
+        return embeddingModel == null ? null : embeddingModel.get();
     }
 
     /**

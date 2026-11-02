@@ -531,7 +531,8 @@ export const ADMIN_API = {
   AI_MODELS: '/admin/settings/ai/models',
   AI_ACTIVATE: '/admin/settings/ai/activate',
   AI_PREVIOUS_SUMMARY: '/admin/settings/ai/previous-summary',
-  AI_ROLLBACK: '/admin/settings/ai/rollback'
+  AI_ROLLBACK: '/admin/settings/ai/rollback',
+  AI_EMBEDDING_REBUILD: '/admin/settings/ai/embedding/rebuild'
 }
 
 // ==================== 轮播图相关 ====================

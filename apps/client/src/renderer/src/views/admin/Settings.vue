@@ -11,7 +11,8 @@ import {
   discoverAiModels,
   getAiPreviousConfigSummary,
   rollbackAiConfig,
-  activateAiConfig
+  activateAiConfig,
+  rebuildEmbeddingIndex
 } from '@/api/admin'
 
 const activeTab = ref('system')
@@ -45,6 +46,8 @@ const aiLoading = ref(false)
 const testingAi = ref(false)
 const activatingAi = ref(false)
 const rollingBackAi = ref(false)
+const refreshingAiState = ref(false)
+const rebuildingEmbedding = ref(false)
 const aiAdvanced = ref(false)
 const aiDiscoveredModels = ref([])
 const loadingAiModels = ref(false)
@@ -96,6 +99,26 @@ const aiConfig = ref({
     providers: [],
     keyStatus: { configured: false, fingerprint: '', updatedAt: '' }
   }
+})
+
+// #188 公告索引重建状态展示；状态字段可能为 null/缺失（老后端），按未知兜底
+const EMBEDDING_STATE_LABELS = {
+  READY: { label: '就绪', type: 'success' },
+  REBUILDING: { label: '重建中', type: 'warning' },
+  UNAVAILABLE: { label: '不可用', type: 'danger' },
+  NOT_CONFIGURED: { label: '未配置', type: 'info' },
+  DISABLED: { label: '已关闭', type: 'info' }
+}
+
+const embeddingStateMeta = computed(() => {
+  const state = aiConfig.value.embedding?.state
+  if (state && EMBEDDING_STATE_LABELS[state]) {
+    return EMBEDDING_STATE_LABELS[state]
+  }
+  if (typeof state === 'string' && state.trim()) {
+    return { label: state, type: 'info' }
+  }
+  return { label: '未知', type: 'info' }
 })
 
 // 配置键映射
@@ -435,6 +458,41 @@ async function saveAndActivateAi() {
 }
 
 /**
+ * 刷新 AI 运行时状态（只刷新展示，不改变候选配置以外的其它行为）
+ */
+async function refreshAiState() {
+  refreshingAiState.value = true
+  try {
+    const response = await getAiRuntimeConfig()
+    if (response.success && response.data) {
+      applyAiSnapshot(response.data)
+    }
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || '刷新 AI 状态失败')
+  } finally {
+    refreshingAiState.value = false
+  }
+}
+
+/**
+ * 重试公告 Embedding 索引重建
+ */
+async function retryEmbeddingRebuild() {
+  rebuildingEmbedding.value = true
+  try {
+    const response = await rebuildEmbeddingIndex()
+    if (response.success && response.data) {
+      applyAiSnapshot(response.data)
+      ElMessage.success('已触发公告索引重建')
+    }
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || '重试重建失败')
+  } finally {
+    rebuildingEmbedding.value = false
+  }
+}
+
+/**
  * 测试当前 AI 配置连通性
  */
 async function runAiConnectivityTest() {
@@ -607,6 +665,23 @@ onMounted(async () => {
                   指纹：{{ aiConfig.embedding.keyStatus.fingerprint }}
                 </span>
                 <span class="key-status">更新时间：{{ aiConfig.embedding.keyStatus.updatedAt || '-' }}</span>
+              </div>
+              <div class="embedding-state">
+                <span class="key-status">索引状态：</span>
+                <el-tag :type="embeddingStateMeta.type">{{ embeddingStateMeta.label }}</el-tag>
+                <span v-if="aiConfig.embedding.statusReason" class="embedding-state-reason">
+                  {{ aiConfig.embedding.statusReason }}
+                </span>
+                <el-button :icon="Refresh" :loading="refreshingAiState" @click="refreshAiState">
+                  刷新状态
+                </el-button>
+                <el-button
+                  type="primary"
+                  :loading="rebuildingEmbedding"
+                  @click="retryEmbeddingRebuild"
+                >
+                  重试重建
+                </el-button>
               </div>
             </div>
 
@@ -859,6 +934,18 @@ onMounted(async () => {
 
   .embedding-key-status {
     margin-top: 10px;
+  }
+
+  .embedding-state {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .embedding-state-reason {
+    color: #606266;
   }
 
   .capability-tags,

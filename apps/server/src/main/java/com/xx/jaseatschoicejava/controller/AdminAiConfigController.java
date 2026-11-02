@@ -78,6 +78,14 @@ public class AdminAiConfigController {
         return ResponseResult.success(aiRuntimeConfigService.getPreviousConfigSummary());
     }
 
+    @ApiOperation("重试重建公告索引")
+    @PostMapping("/embedding/rebuild")
+    @PreAuthorize("hasAnyAuthority('admin:setting:ai')")
+    public ResponseResult<AiRuntimeConfigSnapshot> rebuildEmbeddingIndex() {
+        return ResponseResult.success(aiRuntimeConfigService.rebuildEmbeddingIndex(
+            SecurityUtil.getCurrentPhone()));
+    }
+
     @ApiOperation("回滚到上一版有效 AI 配置")
     @PostMapping("/rollback")
     @PreAuthorize("hasAnyAuthority('admin:setting:ai')")

@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.rag;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
@@ -18,7 +19,8 @@ import io.qdrant.client.QdrantClient;
  * 公告 Embedding 运行时实现。
  *
  * 配置与密钥都按调用时解析：换地址/密钥后，检索与索引下一次调用就用新端点，不需要重启；
- * 只有换模型需要重建索引，维度不一致需要新建 collection。
+ * 换模型会改变向量空间，激活后自动触发全量重建索引（重建期间公告检索失败关闭）；
+ * 维度与现有 collection 不一致由 {@link #validate} 拒绝，需要新建 collection。
  */
 public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRuntime {
 
@@ -31,6 +33,7 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
     private final AIConfig aiConfig;
     private final List<AnnouncementEmbeddingModelFactory> factories;
     private final QdrantClient qdrantClient;
+    private final AnnouncementIndexRebuilder indexRebuilder;
 
     public AnnouncementRagEmbeddingRuntime(
             AnnouncementRagProperties properties,
@@ -39,7 +42,8 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
             ZhipuAIConfig zhipuAIConfig,
             AIConfig aiConfig,
             List<AnnouncementEmbeddingModelFactory> factories,
-            QdrantClient qdrantClient) {
+            QdrantClient qdrantClient,
+            AnnouncementIndexRebuilder indexRebuilder) {
         this.properties = properties;
         this.holder = holder;
         this.embeddingKeyStore = embeddingKeyStore;
@@ -47,6 +51,28 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
         this.aiConfig = aiConfig;
         this.factories = factories;
         this.qdrantClient = qdrantClient;
+        this.indexRebuilder = indexRebuilder;
+    }
+
+    /**
+     * 某份配置在当前密钥环境下是否可用；可用时返回该配置，否则返回 null。
+     *
+     * 供基础设施按调用判断「是否已配置」，避免基础设施反向依赖运行时实例。
+     */
+    static AnnouncementEmbeddingConfig usableConfig(
+            AnnouncementEmbeddingConfig config,
+            AiEmbeddingRuntimeKeyStore embeddingKeyStore,
+            ZhipuAIConfig zhipuAIConfig,
+            AIConfig aiConfig,
+            List<AnnouncementEmbeddingModelFactory> factories) {
+        if (config == null) {
+            return null;
+        }
+        AnnouncementEmbeddingModelFactory factory =
+            AnnouncementRagConfig.selectEmbeddingModelFactory(factories, config.provider());
+        String apiKey = AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig,
+            embeddingKeyStore == null ? "" : embeddingKeyStore.readKey());
+        return factory.isConfigured(apiKey, config.baseUrl()) ? config : null;
     }
 
     /**
@@ -66,8 +92,7 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
      * 当前生效配置；缺少服务地址或密钥时返回 null。
      */
     public AnnouncementEmbeddingConfig usable() {
-        AnnouncementEmbeddingConfig config = holder.current();
-        return factory(config.provider()).isConfigured(apiKey(null), config.baseUrl()) ? config : null;
+        return usableConfig(holder.current(), embeddingKeyStore, zhipuAIConfig, aiConfig, factories);
     }
 
     @Override
@@ -105,9 +130,43 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
         }
     }
 
+    /**
+     * 启动/重启恢复：索引本来就是按这份配置建的，因此只设为当前生效值，不触发重建。
+     */
     @Override
     public void activate(AnnouncementEmbeddingConfig config) {
         holder.update(config);
+    }
+
+    /**
+     * 管理员切换或回滚配置：换模型（或维度）会改变向量空间，旧向量对新模型无意义，
+     * 因此生效后立刻触发全量重建——重建期间公告检索失败关闭，绝不拿旧向量凑答案。
+     *
+     * @return 是否因此触发了索引重建
+     */
+    @Override
+    public boolean switchConfig(AnnouncementEmbeddingConfig config) {
+        AnnouncementEmbeddingConfig previous = holder.current();
+        boolean vectorSpaceChanged = !Objects.equals(previous.model(), config.model())
+            || previous.dimensions() != config.dimensions();
+        holder.update(config);
+        if (vectorSpaceChanged && indexRebuilder != null) {
+            indexRebuilder.requestRebuild();
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public AnnouncementRagStatus status() {
+        return indexRebuilder == null ? null : indexRebuilder.status();
+    }
+
+    @Override
+    public void rebuildIndex() {
+        if (indexRebuilder != null) {
+            indexRebuilder.requestRebuild();
+        }
     }
 
     @Override

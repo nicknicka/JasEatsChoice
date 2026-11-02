@@ -34,6 +34,12 @@ public class AiEmbeddingSnapshot {
     @ApiModelProperty("后端已实现的 Embedding provider 列表")
     private List<String> providers;
 
+    @ApiModelProperty("公告 RAG 状态：READY / REBUILDING / UNAVAILABLE / NOT_CONFIGURED / DISABLED")
+    private String state;
+
+    @ApiModelProperty("状态原因，失败时为失败原因")
+    private String statusReason;
+
     @ApiModelProperty("Embedding key 脱敏状态")
     private AiRuntimeConfigSnapshot.AiKeyStatus keyStatus;
 }

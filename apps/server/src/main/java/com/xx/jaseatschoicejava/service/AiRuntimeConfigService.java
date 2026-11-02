@@ -28,4 +28,9 @@ public interface AiRuntimeConfigService {
     AiPreviousConfigSummary getPreviousConfigSummary();
 
     AiRuntimeConfigSnapshot rollbackToPrevious(String operator);
+
+    /**
+     * 手动重试公告索引重建，返回包含当前 RAG 状态的最新快照。
+     */
+    AiRuntimeConfigSnapshot rebuildEmbeddingIndex(String operator);
 }

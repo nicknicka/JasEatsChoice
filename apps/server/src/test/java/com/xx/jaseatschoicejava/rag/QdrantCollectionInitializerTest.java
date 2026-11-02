@@ -70,11 +70,12 @@ class QdrantCollectionInitializerTest {
                 new AIConfig(),
                 java.util.List.of(new ZhipuAnnouncementEmbeddingModelFactory(),
                     new OpenAiCompatibleAnnouncementEmbeddingModelFactory()),
-                client);
+                client,
+                null);
             AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
                 properties,
                 runtime::usable,
-                new AnnouncementRagRuntimeEmbeddingModel(runtime::model),
+                () -> new AnnouncementRagRuntimeEmbeddingModel(runtime::model),
                 client);
             infrastructure.initialize();
 

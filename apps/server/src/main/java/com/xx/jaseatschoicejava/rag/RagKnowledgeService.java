@@ -8,7 +8,9 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,10 @@ public class RagKnowledgeService {
 
     private final AnnouncementService announcementService;
     private final AnnouncementRagInfrastructure infrastructure;
+    /**
+     * 重建期间发生变更、需要重建收尾补索引的公告。
+     */
+    private final Set<String> pendingAnnouncements = ConcurrentHashMap.newKeySet();
     private final EmbeddingModel fixedEmbeddingModel;
     private final EmbeddingStore<TextSegment> fixedEmbeddingStore;
 
@@ -69,7 +75,42 @@ public class RagKnowledgeService {
         return infrastructure == null ? fixedEmbeddingStore : infrastructure.embeddingStore();
     }
 
+    /**
+     * 公告变更入口。
+     *
+     * 重建期间先记账：全量重建会先清空集合再写回，若此时直接写入会被覆盖。重建结束后由
+     * {@link #drainPendingAnnouncements()} 补索引；写入侧再做一次状态双检，覆盖「记账与重建收尾并发」的窗口。
+     */
     public void syncAnnouncement(String announcementId) {
+        if (isRebuilding()) {
+            pendingAnnouncements.add(announcementId);
+            if (isRebuilding()) {
+                return;
+            }
+            pendingAnnouncements.remove(announcementId);
+        }
+        syncAnnouncementNow(announcementId);
+    }
+
+    /**
+     * 把重建期间记账的公告补进索引，返回本次补索引的条数。
+     */
+    public int drainPendingAnnouncements() {
+        if (pendingAnnouncements.isEmpty()) {
+            return 0;
+        }
+        List<String> batch = new ArrayList<>(pendingAnnouncements);
+        pendingAnnouncements.removeAll(batch);
+        batch.forEach(this::syncAnnouncementNow);
+        return batch.size();
+    }
+
+    private boolean isRebuilding() {
+        return infrastructure != null
+            && infrastructure.status().state() == AnnouncementRagState.REBUILDING;
+    }
+
+    private void syncAnnouncementNow(String announcementId) {
         try {
             Announcement announcement = announcementService.getById(announcementId);
             if (announcement == null) {
@@ -114,6 +155,12 @@ public class RagKnowledgeService {
         if (query.audience() == null || (query.audience() == RagAudience.MERCHANT
             && (query.merchantId() == null || query.merchantId().isBlank()))) {
             return List.of();
+        }
+        if (infrastructure != null) {
+            AnnouncementRagStatus status = infrastructure.status();
+            if (status.state() != AnnouncementRagState.READY) {
+                throw new IllegalStateException("公告检索暂不可用：" + status.reason());
+            }
         }
 
         Embedding queryEmbedding = embeddingModel().embed(query.query()).content();
