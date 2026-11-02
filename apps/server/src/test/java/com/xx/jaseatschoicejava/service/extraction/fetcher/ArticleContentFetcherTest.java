@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.jsoup.Connection;
@@ -159,6 +160,49 @@ class ArticleContentFetcherTest {
         when(connection.timeout(anyInt())).thenReturn(connection);
         when(connection.followRedirects(true)).thenReturn(connection);
         when(connection.get()).thenReturn(document);
+
+        try (MockedStatic<Jsoup> jsoup = mockStatic(Jsoup.class)) {
+            jsoup.when(() -> Jsoup.connect(url)).thenReturn(connection);
+            return fetcher.fetch(url, USER_ID);
+        }
+    }
+
+    @Test
+    void fetch_whenXiaohongshuFetchFailsWithUserSession_shouldMarkAuthRequired() throws Exception {
+        XhsSessionStore store = mock(XhsSessionStore.class);
+        when(store.read(USER_ID)).thenReturn(USER_COOKIE);
+
+        FetchedContent result = fetchThrowing(store);
+
+        assertTrue(result.isAuthRequired());
+        assertEquals("小红书抓取失败，登录态可能已失效，请重新绑定后重试", result.getErrorMessage());
+        // 5xx 可能是平台瞬时故障，不据此标记失效
+        verify(store, never()).markExpired(anyString());
+    }
+
+    @Test
+    void fetch_whenXiaohongshuFetchFailsWithoutUserSession_shouldKeepFetchFailure() throws Exception {
+        XhsSessionStore store = mock(XhsSessionStore.class);
+        when(store.read(USER_ID)).thenReturn("");
+
+        FetchedContent result = fetchThrowing(store);
+
+        assertFalse(result.isAuthRequired());
+        assertTrue(result.getErrorMessage().startsWith("抓取失败:"));
+        verify(store, never()).markExpired(anyString());
+    }
+
+    private FetchedContent fetchThrowing(XhsSessionStore store) throws Exception {
+        ArticleContentFetcher fetcher = new ArticleContentFetcher();
+        ReflectionTestUtils.setField(fetcher, "xhsCookie", "");
+        ReflectionTestUtils.setField(fetcher, "xhsSessionStore", store);
+
+        String url = "https://www.xiaohongshu.com/explore/123";
+        Connection connection = mock(Connection.class);
+        when(connection.userAgent(anyString())).thenReturn(connection);
+        when(connection.timeout(anyInt())).thenReturn(connection);
+        when(connection.followRedirects(true)).thenReturn(connection);
+        when(connection.get()).thenThrow(new RuntimeException("HTTP error fetching URL. Status=500"));
 
         try (MockedStatic<Jsoup> jsoup = mockStatic(Jsoup.class)) {
             jsoup.when(() -> Jsoup.connect(url)).thenReturn(connection);

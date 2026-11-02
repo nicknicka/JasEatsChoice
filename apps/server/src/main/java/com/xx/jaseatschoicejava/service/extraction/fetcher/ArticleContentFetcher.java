@@ -128,6 +128,23 @@ public class ArticleContentFetcher implements ContentFetcher {
 
         } catch (IOException | RuntimeException e) {
             log.error("抓取文章内容失败: {}", url, e);
+
+            // 实测：带无效的小红书登录态时，平台返回 HTTP 500 空 body（而不是 302 到 /login），
+            // 抓取阶段就抛异常。此时若本次确实用了用户级登录态，更可能是登录态无效，
+            // 表达成可自愈的“需要重新绑定”，避免用户停在“解析失败”上无路可走。
+            //
+            // 注意：这里**不** markExpired——5xx 同样可能是平台侧瞬时故障，
+            // 标失效会让用户白白重绑；真正的失效判定仍以 #198 的 /login 登录墙为准。
+            if (isXiaohongshuHost(url) && !readUserCookie(userId).isEmpty()) {
+                return FetchedContent.builder()
+                    .contentType(ContentType.ARTICLE)
+                    .platform(ContentPlatform.XIAOHONGSHU)
+                    .fetchSuccess(false)
+                    .authRequired(true)
+                    .errorMessage("小红书抓取失败，登录态可能已失效，请重新绑定后重试")
+                    .build();
+            }
+
             return FetchedContent.builder()
                 .fetchSuccess(false)
                 .errorMessage("抓取失败: " + e.getMessage())
