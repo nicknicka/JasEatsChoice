@@ -66,6 +66,12 @@ const api = {
   disconnectWebSocket: () => {
     ipcRenderer.invoke('websocket:disconnect')
   },
+  // 小红书登录窗口：桌面端打开官方登录页获取登录态，Web 版不支持
+  xhs: {
+    supported: true,
+    login: () => ipcRenderer.invoke('xhs:login'),
+    clear: () => ipcRenderer.invoke('xhs:clear')
+  },
   // Image upload functionality
   uploadImage: (imageData) => {
     return ipcRenderer.invoke('user:uploadImage', imageData)
