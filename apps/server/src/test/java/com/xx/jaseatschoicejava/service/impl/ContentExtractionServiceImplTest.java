@@ -82,7 +82,7 @@ class ContentExtractionServiceImplTest {
         ExtractionTask task = pendingTask();
         ContentSource source = pendingSource();
         source.setPlatform(ContentPlatform.XIAOHONGSHU.getCode());
-        String message = "小红书正文需要登录态：请在 deploy/.env 配置 XHS_COOKIE 后重试";
+        String message = "小红书正文需要登录态：请绑定小红书账号后重试";
         FetchedContent authRequiredContent = FetchedContent.builder()
             .fetchSuccess(true)
             .authRequired(true)

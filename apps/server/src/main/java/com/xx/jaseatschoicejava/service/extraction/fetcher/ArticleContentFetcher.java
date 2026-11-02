@@ -85,8 +85,9 @@ public class ArticleContentFetcher implements ContentFetcher {
 
             // 按平台提取正文和图片
             ExtractedArticle article = extractArticleContent(doc, platform);
+            boolean hasLoginState = !resolveCookieHeader(realUrl, userId).isEmpty();
             String missingContentMessage = describeMissingXiaohongshuContent(
-                platform, article.textContent(), article.imageUrls());
+                platform, article.textContent(), article.imageUrls(), hasLoginState);
 
             // 下载图片转Base64
             List<String> imageBase64List = downloadImagesAsBase64(article.imageUrls);
@@ -194,9 +195,10 @@ public class ArticleContentFetcher implements ContentFetcher {
     }
 
     /**
-     * 小红书未取到正文时给出可操作的提示（Cookie 未配置 / 已失效）。
+     * 小红书未取到正文时给出可操作的提示，按本次抓取是否带了登录态分两种文案。
      */
-    private String describeMissingXiaohongshuContent(ContentPlatform platform, String textContent, List<String> imageUrls) {
+    private String describeMissingXiaohongshuContent(ContentPlatform platform, String textContent,
+                                                     List<String> imageUrls, boolean hasLoginState) {
         if (platform != ContentPlatform.XIAOHONGSHU) {
             return null;
         }
@@ -206,9 +208,9 @@ public class ArticleContentFetcher implements ContentFetcher {
             return null;
         }
 
-        return xhsCookie == null || xhsCookie.isBlank()
-            ? "小红书正文需要登录态：请在 deploy/.env 配置 XHS_COOKIE 后重试"
-            : "小红书未返回正文，XHS_COOKIE 可能已过期，请重新复制 Cookie 后重试";
+        return hasLoginState
+            ? "小红书未返回正文，登录态可能已失效，请重新绑定后重试"
+            : "小红书正文需要登录态：请绑定小红书账号后重试";
     }
 
     /**

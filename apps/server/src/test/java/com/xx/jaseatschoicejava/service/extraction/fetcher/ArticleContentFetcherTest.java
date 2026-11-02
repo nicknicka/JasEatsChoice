@@ -80,24 +80,40 @@ class ArticleContentFetcherTest {
     }
 
     @Test
-    void fetch_whenXiaohongshuCookieMissing_shouldMarkAuthRequired() throws Exception {
+    void fetch_whenNoLoginState_shouldAskToBind() throws Exception {
         FetchedContent result = fetchMissingXiaohongshuContent("");
 
         assertTrue(result.isAuthRequired());
-        assertEquals("小红书正文需要登录态：请在 deploy/.env 配置 XHS_COOKIE 后重试", result.getErrorMessage());
+        assertEquals("小红书正文需要登录态：请绑定小红书账号后重试", result.getErrorMessage());
     }
 
     @Test
-    void fetch_whenXiaohongshuCookieMayBeExpired_shouldMarkAuthRequired() throws Exception {
+    void fetch_whenGlobalCookiePresentButNoContent_shouldAskToRebind() throws Exception {
         FetchedContent result = fetchMissingXiaohongshuContent(GLOBAL_COOKIE);
 
         assertTrue(result.isAuthRequired());
-        assertEquals("小红书未返回正文，XHS_COOKIE 可能已过期，请重新复制 Cookie 后重试", result.getErrorMessage());
+        assertEquals("小红书未返回正文，登录态可能已失效，请重新绑定后重试", result.getErrorMessage());
+    }
+
+    @Test
+    void fetch_whenUserSessionPresentButNoContent_shouldAskToRebind() throws Exception {
+        XhsSessionStore store = mock(XhsSessionStore.class);
+        when(store.read(USER_ID)).thenReturn(USER_COOKIE);
+
+        FetchedContent result = fetchMissingXiaohongshuContent("", store);
+
+        assertTrue(result.isAuthRequired());
+        assertEquals("小红书未返回正文，登录态可能已失效，请重新绑定后重试", result.getErrorMessage());
     }
 
     private FetchedContent fetchMissingXiaohongshuContent(String cookie) throws Exception {
+        return fetchMissingXiaohongshuContent(cookie, null);
+    }
+
+    private FetchedContent fetchMissingXiaohongshuContent(String cookie, XhsSessionStore store) throws Exception {
         ArticleContentFetcher fetcher = new ArticleContentFetcher();
         ReflectionTestUtils.setField(fetcher, "xhsCookie", cookie);
+        ReflectionTestUtils.setField(fetcher, "xhsSessionStore", store);
 
         String url = "https://www.xiaohongshu.com/explore/123";
         Document document = mock(Document.class);
