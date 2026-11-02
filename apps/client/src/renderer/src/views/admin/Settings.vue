@@ -58,7 +58,14 @@ const aiCandidate = ref({
   baseUrl: '',
   timeoutMs: 30000,
   temperature: 0.7,
-  apiKey: ''
+  apiKey: '',
+  embedding: {
+    provider: '',
+    model: '',
+    dimensions: 1024,
+    baseUrl: '',
+    apiKey: ''
+  }
 })
 const aiConfig = ref({
   provider: '',
@@ -80,7 +87,15 @@ const aiConfig = ref({
     unavailableMessage: ''
   },
   supportedModels: [],
-  providers: []
+  providers: [],
+  embedding: {
+    provider: '',
+    model: '',
+    dimensions: 1024,
+    baseUrl: '',
+    providers: [],
+    keyStatus: { configured: false, fingerprint: '', updatedAt: '' }
+  }
 })
 
 // 配置键映射
@@ -278,7 +293,13 @@ function applyAiSnapshot(snapshot = {}) {
     keyStatus: snapshot.keyStatus || aiConfig.value.keyStatus,
     capabilities: snapshot.capabilities || aiConfig.value.capabilities,
     supportedModels: snapshot.supportedModels || [],
-    providers: snapshot.providers || []
+    providers: snapshot.providers || [],
+    embedding: {
+      ...aiConfig.value.embedding,
+      ...(snapshot.embedding || {}),
+      providers: snapshot.embedding?.providers || aiConfig.value.embedding.providers,
+      keyStatus: snapshot.embedding?.keyStatus || aiConfig.value.embedding.keyStatus
+    }
   }
   resetAiCandidateFromCurrent(aiConfig.value)
 }
@@ -292,7 +313,14 @@ function resetAiCandidateFromCurrent(config = {}) {
     baseUrl: config.baseUrl || '',
     timeoutMs: config.timeoutMs || 30000,
     temperature: config.temperature || 0.7,
-    apiKey: ''
+    apiKey: '',
+    embedding: {
+      provider: config.embedding?.provider || '',
+      model: config.embedding?.model || '',
+      dimensions: config.embedding?.dimensions || 1024,
+      baseUrl: config.embedding?.baseUrl || '',
+      apiKey: ''
+    }
   }
 }
 
@@ -563,6 +591,25 @@ onMounted(async () => {
               <el-descriptions-item label="温度">{{ aiConfig.temperature }}</el-descriptions-item>
             </el-descriptions>
 
+            <h4>Embedding 配置</h4>
+            <div class="embedding-summary">
+              <el-descriptions :column="2" border>
+                <el-descriptions-item label="Embedding Provider">{{ aiConfig.embedding.provider || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="Embedding 模型">{{ aiConfig.embedding.model || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="向量维度">{{ aiConfig.embedding.dimensions }}</el-descriptions-item>
+                <el-descriptions-item label="服务地址">{{ aiConfig.embedding.baseUrl || '供应商默认' }}</el-descriptions-item>
+              </el-descriptions>
+              <div class="embedding-key-status">
+                <el-tag :type="aiConfig.embedding.keyStatus.configured ? 'success' : 'danger'">
+                  {{ aiConfig.embedding.keyStatus.configured ? '已配置' : '未配置' }}
+                </el-tag>
+                <span v-if="aiConfig.embedding.keyStatus.configured" class="key-status">
+                  指纹：{{ aiConfig.embedding.keyStatus.fingerprint }}
+                </span>
+                <span class="key-status">更新时间：{{ aiConfig.embedding.keyStatus.updatedAt || '-' }}</span>
+              </div>
+            </div>
+
             <h4>上一版有效配置</h4>
             <el-descriptions v-if="previousAiConfig" :column="2" border>
               <el-descriptions-item label="版本">{{ previousAiConfig.version || '-' }}</el-descriptions-item>
@@ -697,6 +744,41 @@ onMounted(async () => {
                 </el-select>
               </el-form-item>
 
+              <div class="embedding-candidate">
+                <el-form-item label="Embedding Provider">
+                  <el-select v-model="aiCandidate.embedding.provider" placeholder="选择后端支持的 Provider">
+                    <el-option
+                      v-for="provider in aiConfig.embedding.providers"
+                      :key="provider"
+                      :label="provider"
+                      :value="provider"
+                    />
+                  </el-select>
+                </el-form-item>
+
+                <el-form-item label="Embedding 模型">
+                  <el-input v-model="aiCandidate.embedding.model" placeholder="例如 bge-m3" />
+                </el-form-item>
+
+                <el-form-item label="向量维度">
+                  <el-input-number v-model="aiCandidate.embedding.dimensions" :min="1" />
+                </el-form-item>
+
+                <el-form-item label="服务地址">
+                  <el-input v-model="aiCandidate.embedding.baseUrl" placeholder="留空使用供应商默认地址" />
+                </el-form-item>
+
+                <el-form-item label="Embedding API Key">
+                  <el-input
+                    v-model="aiCandidate.embedding.apiKey"
+                    type="password"
+                    show-password
+                    autocomplete="new-password"
+                    placeholder="输入新 Embedding key；留空沿用当前"
+                  />
+                </el-form-item>
+              </div>
+
               <el-form-item>
                 <el-switch v-model="aiAdvanced" active-text="高级设置" />
               </el-form-item>
@@ -726,7 +808,7 @@ onMounted(async () => {
 
             <el-alert
               title="热切换说明"
-              description="新请求立即使用新模型；正在执行的请求继续使用旧模型。候选 key 测试成功后写入运行时密钥文件，并优先于 AI_API_KEY。Embedding 模型与向量维度不在线切换。页面只显示状态和不可逆指纹，不显示明文 key。"
+              description="新请求立即使用新模型；正在执行的请求继续使用旧模型。候选 key 测试成功后写入运行时密钥文件，并优先于 AI_API_KEY。页面只显示状态和不可逆指纹，不显示明文 key。"
               type="warning"
               show-icon
               :closable="false"
@@ -769,6 +851,14 @@ onMounted(async () => {
   .key-status {
     margin-left: 10px;
     color: #606266;
+  }
+
+  .embedding-summary {
+    margin-bottom: 8px;
+  }
+
+  .embedding-key-status {
+    margin-top: 10px;
   }
 
   .capability-tags,

@@ -1,13 +1,11 @@
 package com.xx.jaseatschoicejava.service.impl;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,8 +14,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AIConfig;
+import com.xx.jaseatschoicejava.config.AiEmbeddingRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
+import com.xx.jaseatschoicejava.dto.AiEmbeddingCandidateDTO;
+import com.xx.jaseatschoicejava.dto.AiEmbeddingSnapshot;
 import com.xx.jaseatschoicejava.dto.AiConfigAuditEvent;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiModelOption;
@@ -25,10 +26,13 @@ import com.xx.jaseatschoicejava.dto.AiPreviousConfigSummary;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigHistory;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.exception.BusinessException;
+import com.xx.jaseatschoicejava.rag.AnnouncementEmbeddingConfig;
+import com.xx.jaseatschoicejava.service.AnnouncementEmbeddingRuntime;
 import com.xx.jaseatschoicejava.service.AiConfigAuditService;
 import com.xx.jaseatschoicejava.service.AiConfigHistoryStore;
 import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
 import com.xx.jaseatschoicejava.service.SystemConfigService;
+import com.xx.jaseatschoicejava.util.SecretFingerprint;
 
 import dev.langchain4j.model.chat.ChatModel;
 import jakarta.annotation.PostConstruct;
@@ -52,6 +56,8 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     private final AiRuntimeKeyStore runtimeKeyStore;
     private final AiConfigAuditService auditService;
     private final AiConfigHistoryStore historyStore;
+    private final AnnouncementEmbeddingRuntime embeddingRuntime;
+    private final AiEmbeddingRuntimeKeyStore embeddingKeyStore;
     private volatile long version = 1L;
     private volatile String updatedAt = LocalDateTime.now().withNano(0).toString();
     private AiRuntimeConfigHistory configHistory = AiRuntimeConfigHistory.builder()
@@ -69,7 +75,9 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             ObjectMapper objectMapper,
             AiRuntimeKeyStore runtimeKeyStore,
             AiConfigAuditService auditService,
-            AiConfigHistoryStore historyStore) {
+            AiConfigHistoryStore historyStore,
+            AnnouncementEmbeddingRuntime embeddingRuntime,
+            AiEmbeddingRuntimeKeyStore embeddingKeyStore) {
         this.aiConfig = aiConfig;
         this.systemConfigService = systemConfigService;
         this.registry = registry;
@@ -78,6 +86,8 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         this.runtimeKeyStore = runtimeKeyStore;
         this.auditService = auditService;
         this.historyStore = historyStore;
+        this.embeddingRuntime = embeddingRuntime;
+        this.embeddingKeyStore = embeddingKeyStore;
     }
 
     @PostConstruct
@@ -106,7 +116,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             .timeoutMs(previous.getConfig().getTimeoutMs())
             .temperature(previous.getConfig().getTemperature())
             .keyConfigured(hasText(apiKey))
-            .keyFingerprint(hasText(apiKey) ? shortSha256(apiKey) : null)
+            .keyFingerprint(hasText(apiKey) ? SecretFingerprint.shortSha256(apiKey) : null)
             .build();
     }
 
@@ -128,6 +138,11 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         AiModelClientFactory adapter = adapter(previous.getConfig().getProvider());
         try {
             pingRoles(adapter, previous.getConfig(), null);
+            validateEmbeddingForRollback(previous.getConfig());
+        } catch (BusinessException businessException) {
+            recordAudit("ROLLBACK_FAILED", version, null, currentConfig(), null, operator,
+                null, "FAILED", businessException.getMessage());
+            throw businessException;
         } catch (Exception exception) {
             recordAudit("ROLLBACK_FAILED", version, null, currentConfig(), null, operator,
                 null, "FAILED", "上一版配置测试失败，请重新输入有效 key");
@@ -180,6 +195,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         DynamicAiModelRegistry.ActiveModels clients = activeClients(
             adapter, previous.getConfig(), null, rollbackVersion);
         registry.activate(clients);
+        activateEmbedding(previous.getConfig());
         configHistory = restored;
         version = rollbackVersion;
         updatedAt = now;
@@ -216,6 +232,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             .capabilities(adapter.capabilities(config))
             .supportedModels(supportedModels)
             .providers(providerRegistry.options())
+            .embedding(embeddingSnapshot(config))
             .build();
     }
 
@@ -258,6 +275,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         }
         try {
             pingRoles(adapter, config, candidateKey);
+            validateEmbeddingCandidate(candidate);
             return new AiConnectivityResult(true, "连接成功", testedAt(), config.getModel());
         } catch (Exception exception) {
             return failure(config.getModel(), safeMessage(exception, apiKey));
@@ -272,6 +290,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     @Override
     public synchronized AiRuntimeConfigSnapshot saveAndActivate(
             AiModelCandidateDTO candidate, String operator) {
+        validateEmbeddingVectorSpaceChange(candidate);
         AiConnectivityResult testResult = testCandidateConnectivity(candidate);
         if (!testResult.isSuccess()) {
             recordAudit("SAVE_FAILED", null, null, null, candidate, operator, testResult,
@@ -280,22 +299,27 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         }
 
         AiModelConfig config = validatedConfig(candidate);
+        AiModelConfig targetConfig = withCandidateEmbedding(config, candidate);
         AiModelClientFactory adapter = adapter(config.getProvider());
         String candidateKey = candidateKey(candidate);
+        String candidateEmbeddingKey = candidateEmbeddingKey(candidate);
         String previousKey = activeKey();
+        String previousEmbeddingKey = currentEmbeddingKey();
         String previousDatabaseValue = databaseConfigValue();
         long nextVersion = version + 1;
         DynamicAiModelRegistry.ActiveModels clients;
         try {
-            clients = activeClients(adapter, config, candidateKey, nextVersion);
+            clients = activeClients(adapter, targetConfig, candidateKey, nextVersion);
             if (candidateKey != null) {
                 if (runtimeKeyStore == null) {
                     throw new IllegalStateException("AI_ACTIVE_KEY_FILE 未配置");
                 }
                 runtimeKeyStore.writeKey(candidateKey);
             }
+            writeEmbeddingKey(candidateEmbeddingKey);
         } catch (Exception exception) {
             rollbackRuntimeKey(candidateKey, previousKey);
+            rollbackEmbeddingKey(candidateEmbeddingKey, previousEmbeddingKey);
             if (exception instanceof BusinessException businessException) {
                 recordAudit("SAVE_FAILED", version, null, currentConfig(), candidate, operator,
                     testResult, "FAILED", businessException.getMessage());
@@ -309,15 +333,17 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         boolean saved;
         try {
             saved = systemConfigService != null && systemConfigService.setConfigValue(
-                CONFIG_KEY, writeConfigValue(config), "AI 模型运行时配置", CONFIG_GROUP);
+                CONFIG_KEY, writeConfigValue(targetConfig), "AI 模型运行时配置", CONFIG_GROUP);
         } catch (Exception exception) {
             rollbackRuntimeKey(candidateKey, previousKey);
+            rollbackEmbeddingKey(candidateEmbeddingKey, previousEmbeddingKey);
             recordAudit("SAVE_FAILED", version, null, currentConfig(), candidate, operator,
                 testResult, "FAILED", "AI 配置保存失败");
             throw new BusinessException("AI_CONFIG_SAVE_FAILED", "AI 配置保存失败");
         }
         if (!saved) {
             rollbackRuntimeKey(candidateKey, previousKey);
+            rollbackEmbeddingKey(candidateEmbeddingKey, previousEmbeddingKey);
             recordAudit("SAVE_FAILED", version, null, currentConfig(), candidate, operator,
                 testResult, "FAILED", "AI 配置保存失败");
             throw new BusinessException("AI_CONFIG_SAVE_FAILED", "AI 配置保存失败");
@@ -341,6 +367,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             persistHistory(history);
         } catch (Exception exception) {
             rollbackRuntimeKey(candidateKey, previousKey);
+            rollbackEmbeddingKey(candidateEmbeddingKey, previousEmbeddingKey);
             restoreDatabaseConfig(previousDatabaseValue);
             recordAudit("SAVE_FAILED", previousVersion, null, previousConfig, candidate, operator,
                 testResult, "FAILED", "AI 配置历史保存失败");
@@ -349,6 +376,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         }
 
         registry.activate(clients);
+        activateEmbedding(targetConfig);
         version = nextVersion;
         updatedAt = now;
         configHistory = history;
@@ -390,6 +418,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             adapter.buildStreamingModel(config),
             nextVersion);
         registry.activate(clients);
+        activateEmbedding(config);
         version = nextVersion;
         updatedAt = configHistory.getActiveUpdatedAt() != null
             ? configHistory.getActiveUpdatedAt()
@@ -453,7 +482,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             .updatedAt(updatedAt)
             .config(config)
             .keyConfigured(hasText(apiKey))
-            .keyFingerprint(hasText(apiKey) ? shortSha256(apiKey) : null)
+            .keyFingerprint(hasText(apiKey) ? SecretFingerprint.shortSha256(apiKey) : null)
             .build();
     }
 
@@ -461,14 +490,14 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         String provider = bootstrapProvider();
         AiModelConfig fallback = adapter(provider).environmentConfig(aiConfig);
         if (databaseConfigs == null || !hasText(databaseConfigs.get(CONFIG_KEY))) {
-            return fallback;
+            return withEmbedding(fallback, null);
         }
         try {
             AiModelConfig dbConfig = objectMapper.readValue(
                 databaseConfigs.get(CONFIG_KEY), AiModelConfig.class);
             String dbProvider = hasText(dbConfig.getProvider()) ? dbConfig.getProvider() : provider;
             AiModelConfig providerFallback = adapter(dbProvider).environmentConfig(aiConfig);
-            return AiModelConfig.builder()
+            AiModelConfig effective = AiModelConfig.builder()
                 .provider(dbProvider)
                 .model(hasText(dbConfig.getModel()) ? dbConfig.getModel() : providerFallback.getModel())
                 .supervisorModel(hasText(dbConfig.getSupervisorModel())
@@ -481,10 +510,29 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
                 .temperature(dbConfig.getTemperature() >= 0 ? dbConfig.getTemperature()
                     : providerFallback.getTemperature())
                 .build();
+            return withEmbedding(effective, dbConfig);
         } catch (Exception exception) {
             log.warn("AI 数据库配置无效，回退环境变量", exception);
-            return fallback;
+            return withEmbedding(fallback, null);
         }
+    }
+
+    /**
+     * 把持久化的 Embedding 配置与环境变量兜底合并。首次上线与历史配置没有 Embedding 字段，
+     * 由环境变量补齐，因此未配置 Embedding 时应用仍能启动、只有公告检索降级。
+     */
+    private AiModelConfig withEmbedding(AiModelConfig config, AiModelConfig persisted) {
+        if (embeddingRuntime == null) {
+            return config;
+        }
+        AnnouncementEmbeddingConfig effective = embeddingRuntime.effective(
+            persisted == null ? null : embeddingConfig(persisted));
+        return config.toBuilder()
+            .embeddingProvider(effective.provider())
+            .embeddingModel(effective.model())
+            .embeddingDimensions(effective.dimensions())
+            .embeddingBaseUrl(effective.baseUrl())
+            .build();
     }
 
     private AiModelConfig validatedConfig(AiModelCandidateDTO candidate) {
@@ -556,6 +604,163 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         }
     }
 
+    /**
+     * 候选带 Embedding 配置、且与当前生效值不同时才校验：先聊天连通性，再做一次真实 Embedding 调用，
+     * 并比对现有 collection 维度。换模型在本切片直接拒绝——旧向量与新模型不在同一向量空间，
+     * 必须先重建索引（后续切片），维度不一致同样拒绝并提示需要新建 collection。
+     */
+    private void validateEmbeddingCandidate(AiModelCandidateDTO candidate) {
+        if (embeddingRuntime == null || candidate == null || candidate.getEmbedding() == null) {
+            return;
+        }
+        AnnouncementEmbeddingConfig target = embeddingCandidate(candidate.getEmbedding());
+        AnnouncementEmbeddingConfig current = currentEmbeddingConfig();
+        if (target.equals(current) && !hasText(candidate.getEmbedding().getApiKey())) {
+            return;
+        }
+        validateEmbeddingVectorSpaceChange(candidate);
+        embeddingRuntime.validate(target, candidate.getEmbedding().getApiKey());
+    }
+
+    /**
+     * 换模型会改变向量空间，旧向量对新模型无意义；本切片没有重建能力，直接拒绝保存。
+     */
+    private void validateEmbeddingVectorSpaceChange(AiModelCandidateDTO candidate) {
+        if (embeddingRuntime == null || candidate == null || candidate.getEmbedding() == null) {
+            return;
+        }
+        AnnouncementEmbeddingConfig target = embeddingCandidate(candidate.getEmbedding());
+        if (!Objects.equals(currentEmbeddingConfig().model(), target.model())) {
+            throw new BusinessException("EMBEDDING_MODEL_REBUILD_REQUIRED",
+                "更换公告 Embedding 模型需要重建索引，当前版本只能在线切换供应商、服务地址与密钥");
+        }
+    }
+
+    private void validateEmbeddingForRollback(AiModelConfig previousConfig) {
+        if (embeddingRuntime == null || !hasText(previousConfig.getEmbeddingProvider())) {
+            return;
+        }
+        AnnouncementEmbeddingConfig target = embeddingConfig(previousConfig);
+        if (!Objects.equals(currentEmbeddingConfig().model(), target.model())) {
+            throw new BusinessException("EMBEDDING_MODEL_REBUILD_REQUIRED",
+                "回滚到不同的公告 Embedding 模型需要重建索引，当前版本暂不支持");
+        }
+        embeddingRuntime.validate(target, null);
+    }
+
+    private AiModelConfig withCandidateEmbedding(AiModelConfig config, AiModelCandidateDTO candidate) {
+        if (candidate.getEmbedding() == null) {
+            AiModelConfig current = currentConfig();
+            return config.toBuilder()
+                .embeddingProvider(current.getEmbeddingProvider())
+                .embeddingModel(current.getEmbeddingModel())
+                .embeddingDimensions(current.getEmbeddingDimensions())
+                .embeddingBaseUrl(current.getEmbeddingBaseUrl())
+                .build();
+        }
+        AnnouncementEmbeddingConfig target = embeddingCandidate(candidate.getEmbedding());
+        return config.toBuilder()
+            .embeddingProvider(target.provider())
+            .embeddingModel(target.model())
+            .embeddingDimensions(target.dimensions())
+            .embeddingBaseUrl(target.baseUrl())
+            .build();
+    }
+
+    private AnnouncementEmbeddingConfig embeddingCandidate(AiEmbeddingCandidateDTO candidate) {
+        if (!hasText(candidate.getProvider()) || !hasText(candidate.getModel())) {
+            throw new BusinessException("AI_CONFIG_INVALID", "Embedding provider 与模型名不能为空");
+        }
+        int dimensions = candidate.getDimensions() == null ? 0 : candidate.getDimensions();
+        if (dimensions <= 0) {
+            throw new BusinessException("AI_CONFIG_INVALID", "Embedding 向量维度必须大于 0");
+        }
+        return new AnnouncementEmbeddingConfig(
+            candidate.getProvider().trim(),
+            candidate.getModel().trim(),
+            dimensions,
+            candidate.getBaseUrl() == null ? "" : candidate.getBaseUrl().trim());
+    }
+
+    private AnnouncementEmbeddingConfig embeddingConfig(AiModelConfig config) {
+        return new AnnouncementEmbeddingConfig(
+            config.getEmbeddingProvider(),
+            config.getEmbeddingModel(),
+            config.getEmbeddingDimensions(),
+            config.getEmbeddingBaseUrl());
+    }
+
+    private AnnouncementEmbeddingConfig currentEmbeddingConfig() {
+        return embeddingConfig(currentConfig());
+    }
+
+    private void activateEmbedding(AiModelConfig config) {
+        if (embeddingRuntime == null || config == null || !hasText(config.getEmbeddingProvider())) {
+            return;
+        }
+        embeddingRuntime.activate(embeddingConfig(config));
+    }
+
+    private String candidateEmbeddingKey(AiModelCandidateDTO candidate) {
+        if (candidate == null || candidate.getEmbedding() == null
+                || !hasText(candidate.getEmbedding().getApiKey())) {
+            return null;
+        }
+        return candidate.getEmbedding().getApiKey().trim();
+    }
+
+    private String currentEmbeddingKey() {
+        return embeddingKeyStore == null ? "" : embeddingKeyStore.readKey();
+    }
+
+    private void writeEmbeddingKey(String candidateKey) {
+        if (candidateKey == null) {
+            return;
+        }
+        if (embeddingKeyStore == null) {
+            throw new IllegalStateException("AI_EMBEDDING_ACTIVE_KEY_FILE 未配置");
+        }
+        embeddingKeyStore.writeKey(candidateKey);
+    }
+
+    private void rollbackEmbeddingKey(String candidateKey, String previousKey) {
+        if (candidateKey == null || embeddingKeyStore == null) {
+            return;
+        }
+        try {
+            if (embeddingKeyStore.exists() && hasText(previousKey)) {
+                embeddingKeyStore.writeKey(previousKey);
+            } else {
+                embeddingKeyStore.deleteKey();
+            }
+        } catch (Exception exception) {
+            log.error("Embedding key 回滚失败", exception);
+        }
+    }
+
+    private AiEmbeddingSnapshot embeddingSnapshot(AiModelConfig config) {
+        return AiEmbeddingSnapshot.builder()
+            .provider(config.getEmbeddingProvider())
+            .model(config.getEmbeddingModel())
+            .dimensions(config.getEmbeddingDimensions())
+            .baseUrl(config.getEmbeddingBaseUrl() == null ? "" : config.getEmbeddingBaseUrl())
+            .providers(embeddingRuntime == null ? List.of() : embeddingRuntime.providers())
+            .keyStatus(embeddingKeyStatus())
+            .build();
+    }
+
+    private AiRuntimeConfigSnapshot.AiKeyStatus embeddingKeyStatus() {
+        if (embeddingRuntime == null) {
+            return new AiRuntimeConfigSnapshot.AiKeyStatus(false, null, null);
+        }
+        AnnouncementEmbeddingRuntime.KeyStatus status = embeddingRuntime.keyStatus();
+        String keyUpdatedAt = status.updatedAt();
+        return new AiRuntimeConfigSnapshot.AiKeyStatus(
+            status.configured(),
+            status.fingerprint(),
+            hasText(keyUpdatedAt) ? keyUpdatedAt : updatedAt);
+    }
+
     private String bootstrapProvider() {
         if (hasText(aiConfig.getProvider())) {
             return aiConfig.getProvider();
@@ -614,19 +819,9 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         String key = apiKey.trim();
         return new AiRuntimeConfigSnapshot.AiKeyStatus(
             true,
-            shortSha256(key),
+            SecretFingerprint.shortSha256(key),
             hasText(keyUpdatedAt) ? keyUpdatedAt : updatedAt
         );
-    }
-
-    private String shortSha256(String value) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hash, 0, 6);
-        } catch (Exception exception) {
-            return "unavailable";
-        }
     }
 
     private String safeMessage(Exception exception, String apiKey) {
@@ -688,7 +883,11 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         summary.put("timeoutMs", config.getTimeoutMs());
         summary.put("temperature", config.getTemperature());
         summary.put("keyConfigured", hasText(key));
-        summary.put("keyFingerprint", hasText(key) ? shortSha256(key) : null);
+        summary.put("keyFingerprint", hasText(key) ? SecretFingerprint.shortSha256(key) : null);
+        summary.put("embeddingProvider", config.getEmbeddingProvider());
+        summary.put("embeddingModel", config.getEmbeddingModel());
+        summary.put("embeddingDimensions", config.getEmbeddingDimensions());
+        summary.put("embeddingBaseUrl", config.getEmbeddingBaseUrl());
         return summary;
     }
 
@@ -704,7 +903,17 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         summary.put("keyChanged", hasText(candidate.getApiKey()));
         summary.put("keyConfigured", hasText(candidate.getApiKey()) || hasText(key));
         summary.put("keyFingerprint", hasText(candidate.getApiKey())
-            ? shortSha256(candidate.getApiKey()) : (hasText(key) ? shortSha256(key) : null));
+            ? SecretFingerprint.shortSha256(candidate.getApiKey()) : (hasText(key) ? SecretFingerprint.shortSha256(key) : null));
+        AiEmbeddingCandidateDTO embedding = candidate.getEmbedding();
+        if (embedding != null) {
+            summary.put("embeddingProvider", embedding.getProvider());
+            summary.put("embeddingModel", embedding.getModel());
+            summary.put("embeddingDimensions", embedding.getDimensions());
+            summary.put("embeddingBaseUrl", embedding.getBaseUrl());
+            summary.put("embeddingKeyChanged", hasText(embedding.getApiKey()));
+        }
+        summary.put("embeddingKeyConfigured",
+            embeddingRuntime != null && embeddingRuntime.keyStatus().configured());
         return summary;
     }
 

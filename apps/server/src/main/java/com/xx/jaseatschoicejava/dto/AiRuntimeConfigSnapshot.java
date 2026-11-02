@@ -60,6 +60,9 @@ public class AiRuntimeConfigSnapshot {
     @ApiModelProperty("后端已实现的 provider 列表")
     private List<AiProviderOption> providers;
 
+    @ApiModelProperty("当前生效的公告 Embedding 配置")
+    private AiEmbeddingSnapshot embedding;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

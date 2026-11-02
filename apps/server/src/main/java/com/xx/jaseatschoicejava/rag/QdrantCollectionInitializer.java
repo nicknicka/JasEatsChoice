@@ -28,8 +28,15 @@ public class QdrantCollectionInitializer {
         this.properties = properties;
     }
 
-    public void initialize() throws Exception {
-        int dimensions = properties.getEmbedding().getDimensions();
+    /**
+     * 当前 collection 的向量维度；collection 不存在时返回 null。
+     */
+    public Integer currentDimension() throws Exception {
+        Collections.CollectionInfo info = getCollectionInfo(properties.getQdrant().getCollection());
+        return info == null ? null : existingDimension(info);
+    }
+
+    public void initialize(int dimensions) throws Exception {
         if (dimensions <= 0) {
             throw new IllegalStateException("公告 RAG embedding 维度必须大于 0，当前为 " + dimensions);
         }
@@ -51,7 +58,7 @@ public class QdrantCollectionInitializer {
             int existingDimensions = existingDimension(info);
             if (existingDimensions != dimensions) {
                 throw new IllegalStateException("公告 RAG collection " + collectionName
-                    + " 向量维度为 " + existingDimensions + "，与配置的 embedding 维度 " + dimensions + " 不兼容");
+                    + " 向量维度为 " + existingDimensions + "，与当前配置的 embedding 维度 " + dimensions + " 不兼容");
             }
         }
 

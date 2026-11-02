@@ -20,4 +20,8 @@ public class AiModelConfig {
     private String baseUrl;
     private int timeoutMs;
     private double temperature;
+    private String embeddingProvider;
+    private String embeddingModel;
+    private int embeddingDimensions;
+    private String embeddingBaseUrl;
 }

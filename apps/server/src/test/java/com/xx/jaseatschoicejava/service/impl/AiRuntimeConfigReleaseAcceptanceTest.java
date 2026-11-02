@@ -217,7 +217,7 @@ class AiRuntimeConfigReleaseAcceptanceTest {
     private AiRuntimeConfigServiceImpl service(Path keyPath) {
         return new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService,
             new DynamicAiModelRegistry(), new AiProviderRegistry(java.util.List.of(modelFactory)),
-            new ObjectMapper(), new AiRuntimeKeyStore(keyPath.toString()), null, historyStore);
+            new ObjectMapper(), new AiRuntimeKeyStore(keyPath.toString()), null, historyStore, null, null);
     }
 
     private AiRuntimeKeyStore keyStore(Path keyPath) {

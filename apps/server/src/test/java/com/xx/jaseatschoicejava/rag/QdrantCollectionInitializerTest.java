@@ -32,8 +32,8 @@ class QdrantCollectionInitializerTest {
         AnnouncementRagProperties properties = properties("it-" + UUID.randomUUID());
         try (QdrantClient client = client()) {
             QdrantCollectionInitializer initializer = new QdrantCollectionInitializer(client, properties);
-            initializer.initialize();
-            initializer.initialize();
+            initializer.initialize(4);
+            initializer.initialize(4);
 
             var info = client.getCollectionInfoAsync(properties.getQdrant().getCollection()).get();
             assertEquals(4, info.getConfig().getParams().getVectorsConfig().getParams().getSize());
@@ -62,9 +62,20 @@ class QdrantCollectionInitializerTest {
         ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
         zhipuConfig.setApiKey("test-key");
         try (QdrantClient client = client()) {
+            AnnouncementRagEmbeddingRuntime runtime = new AnnouncementRagEmbeddingRuntime(
+                properties,
+                new AnnouncementEmbeddingConfigHolder(properties),
+                null,
+                zhipuConfig,
+                new AIConfig(),
+                java.util.List.of(new ZhipuAnnouncementEmbeddingModelFactory(),
+                    new OpenAiCompatibleAnnouncementEmbeddingModelFactory()),
+                client);
             AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
-                properties, true,
-                new AnnouncementRagConfig().announcementEmbeddingModel(properties, zhipuConfig, new AIConfig(), null, new com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry(), java.util.List.of(new ZhipuAnnouncementEmbeddingModelFactory(), new OpenAiCompatibleAnnouncementEmbeddingModelFactory())), client);
+                properties,
+                runtime::usable,
+                new AnnouncementRagRuntimeEmbeddingModel(runtime::model),
+                client);
             infrastructure.initialize();
 
             assertEquals(AnnouncementRagState.READY, infrastructure.status().state());
@@ -86,10 +97,11 @@ class QdrantCollectionInitializerTest {
             properties.getEmbedding().setDimensions(4);
 
             QdrantCollectionInitializer initializer = new QdrantCollectionInitializer(client, properties);
-            IllegalStateException error = assertThrows(IllegalStateException.class, initializer::initialize);
+            IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> initializer.initialize(4));
 
             assertEquals("公告 RAG collection " + properties.getQdrant().getCollection()
-                + " 向量维度为 3，与配置的 embedding 维度 4 不兼容", error.getMessage());
+                + " 向量维度为 3，与当前配置的 embedding 维度 4 不兼容", error.getMessage());
         }
     }
 

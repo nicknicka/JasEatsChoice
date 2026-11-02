@@ -115,7 +115,7 @@ class AiRuntimeConfigRollbackServiceTest {
         });
 service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry,
             new AiProviderRegistry(java.util.List.of(modelFactory)), new ObjectMapper(), keyStore,
-            auditService, historyStore);
+            auditService, historyStore, null, null);
         service.initialize();
     }
 

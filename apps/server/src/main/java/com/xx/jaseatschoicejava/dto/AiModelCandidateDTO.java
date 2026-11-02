@@ -40,4 +40,7 @@ public class AiModelCandidateDTO {
 
     @ApiModelProperty("候选 API key；成功激活前不持久化，响应不回传")
     private String apiKey;
+
+    @ApiModelProperty("公告 Embedding 候选配置；为空表示不改动")
+    private AiEmbeddingCandidateDTO embedding;
 }

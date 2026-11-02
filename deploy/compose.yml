@@ -15,6 +15,7 @@ x-app-env: &app-env
   - AI_PROVIDER=${AI_PROVIDER:-zhipu}
   - AI_API_KEY=${AI_API_KEY:-}
   - AI_ACTIVE_KEY_FILE=/app/runtime/secrets/ai/active-key
+  - AI_EMBEDDING_ACTIVE_KEY_FILE=/app/runtime/secrets/ai/embedding-key
   - AI_MODEL=${AI_MODEL:-glm-4-flash}
   - AI_SUPERVISOR_MODEL=${AI_SUPERVISOR_MODEL:-glm-4-flash}
   - AI_VISION_MODEL=${AI_VISION_MODEL:-glm-4.1v-thinking-flash}

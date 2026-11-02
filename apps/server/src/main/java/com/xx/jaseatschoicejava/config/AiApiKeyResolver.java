@@ -13,6 +13,17 @@ public final class AiApiKeyResolver {
             AIConfig aiConfig,
             AiRuntimeKeyStore runtimeKeyStore) {
         String runtimeKey = runtimeKeyStore == null ? "" : runtimeKeyStore.readKey();
+        return resolve(zhipuAIConfig, aiConfig, runtimeKey);
+    }
+
+    /**
+     * 运行时密钥槽位优先，其次供应商专属 key，最后通用 AI key。
+     * Embedding 使用自己的运行时槽位，因此传自己的 key 进来即可。
+     */
+    public static String resolve(
+            ZhipuAIConfig zhipuAIConfig,
+            AIConfig aiConfig,
+            String runtimeKey) {
         if (hasText(runtimeKey)) {
             return runtimeKey;
         }
