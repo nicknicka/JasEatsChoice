@@ -1,6 +1,10 @@
 package com.xx.jaseatschoicejava.controller;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -8,6 +12,7 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +21,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import cn.hutool.http.HttpException;
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
@@ -49,6 +58,9 @@ public class AIController {
     private static final long SSE_TIMEOUT_MS = 300000L;
     private static final String AI_NOT_CONFIGURED_CODE = "AI_NOT_CONFIGURED";
     private static final String AI_VISION_NOT_CONFIGURED_CODE = "AI_VISION_NOT_CONFIGURED";
+    private static final long MAX_REMOTE_IMAGE_BYTES = 10 * 1024 * 1024;
+    private static final int MAX_REMOTE_IMAGE_REDIRECTS = 3;
+    private static final int REMOTE_IMAGE_TIMEOUT_MS = 15000;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -161,6 +173,188 @@ public class AIController {
             log.error("菜品识别失败", e);
             return ResponseResult.fail("500", "菜品识别失败：" + e.getMessage());
         }
+    }
+
+    /**
+     * 代理下载远端图片。
+     *
+     * 路由: /v1/ai/fetch-remote-image
+     * 用途: 用户从网页拖入图片时，浏览器直连外站 CDN 会被 CORS 拦住，统一由后端取回字节。
+     */
+    @ApiOperation(value = "代理下载远端图片", notes = "供从网页拖入图片时使用，规避浏览器 CORS 限制")
+    @PostMapping("/fetch-remote-image")
+    public ResponseEntity<Object> fetchRemoteImage(@RequestBody Map<String, Object> params) {
+        String rawUrl = params.get("url") instanceof String value ? value.trim() : "";
+        if (rawUrl.isEmpty()) {
+            return ResponseEntity.badRequest().body(ResponseResult.fail("400", "图片地址不能为空"));
+        }
+
+        String url = normalizeRemoteImageUrl(rawUrl);
+        if (url == null) {
+            return ResponseEntity.badRequest().body(ResponseResult.fail("400", "仅支持 http/https 图片地址"));
+        }
+
+        byte[] imageBytes;
+        try {
+            imageBytes = downloadRemoteImage(url);
+        } catch (IOException e) {
+            log.warn("代理下载图片失败: {} - {}", url, e.getMessage());
+            return ResponseEntity.badRequest().body(ResponseResult.fail("400", e.getMessage()));
+        }
+
+        if (imageBytes == null || imageBytes.length == 0) {
+            return ResponseEntity.badRequest().body(ResponseResult.fail("400", "图片内容为空"));
+        }
+        if (imageBytes.length > MAX_REMOTE_IMAGE_BYTES) {
+            return ResponseEntity.badRequest().body(ResponseResult.fail("400", "图片超过 10MB 限制"));
+        }
+
+        String contentType = detectImageContentType(imageBytes);
+        if (contentType == null) {
+            return ResponseEntity.badRequest().body(ResponseResult.fail("400", "拖入的地址不是图片"));
+        }
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(contentType))
+            .body(imageBytes);
+    }
+
+    /**
+     * 下载远端图片字节。逐跳校验目标地址，避免被重定向到内网（SSRF）。
+     */
+    private byte[] downloadRemoteImage(String url) throws IOException {
+        String currentUrl = url;
+
+        for (int hop = 0; hop <= MAX_REMOTE_IMAGE_REDIRECTS; hop++) {
+            URI uri = parseHttpUri(currentUrl);
+            if (!isPublicHost(uri.getHost())) {
+                throw new IOException("不允许访问内网地址");
+            }
+
+            HttpResponse response;
+            try {
+                response = HttpRequest.get(currentUrl)
+                    .setFollowRedirects(false)
+                    .timeout(REMOTE_IMAGE_TIMEOUT_MS)
+                    .execute();
+            } catch (HttpException e) {
+                throw new IOException("图片下载失败：" + e.getMessage());
+            }
+            int status = response.getStatus();
+
+            if (status >= 300 && status < 400) {
+                String location = response.header("Location");
+                if (location == null || location.isBlank()) {
+                    throw new IOException("图片下载失败：重定向地址缺失");
+                }
+                currentUrl = uri.resolve(location).toString();
+                continue;
+            }
+
+            if (status != 200) {
+                throw new IOException("图片下载失败：HTTP " + status);
+            }
+
+            return response.bodyBytes();
+        }
+
+        throw new IOException("图片地址重定向次数过多");
+    }
+
+    private URI parseHttpUri(String url) throws IOException {
+        URI uri;
+        try {
+            uri = new URI(url);
+        } catch (URISyntaxException e) {
+            throw new IOException("图片地址格式不正确");
+        }
+
+        String scheme = uri.getScheme();
+        if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+            throw new IOException("仅支持 http/https 图片地址");
+        }
+        return uri;
+    }
+
+    /**
+     * 只有域名解析出的全部地址都是公网地址时才放行。
+     */
+    private boolean isPublicHost(String host) {
+        if (host == null || host.isBlank()) {
+            return false;
+        }
+
+        InetAddress[] addresses;
+        try {
+            addresses = InetAddress.getAllByName(host);
+        } catch (UnknownHostException e) {
+            return false;
+        }
+
+        if (addresses.length == 0) {
+            return false;
+        }
+
+        for (InetAddress address : addresses) {
+            if (isBlockedAddress(address)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isBlockedAddress(InetAddress address) {
+        if (address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
+            || address.isSiteLocalAddress() || address.isMulticastAddress()) {
+            return true;
+        }
+
+        byte[] bytes = address.getAddress();
+        if (bytes.length == 4) {
+            int first = bytes[0] & 0xFF;
+            int second = bytes[1] & 0xFF;
+            // 0.0.0.0/8 与 100.64.0.0/10（运营商级 NAT）
+            return first == 0 || (first == 100 && second >= 64 && second <= 127);
+        }
+
+        // IPv6 唯一本地地址 fc00::/7
+        return (bytes[0] & 0xFE) == 0xFC;
+    }
+
+    /**
+     * 补全协议相对（//host/x.png）与缺省协议的图片地址。
+     */
+    private String normalizeRemoteImageUrl(String rawUrl) {
+        if (rawUrl.startsWith("//")) {
+            return "https:" + rawUrl;
+        }
+        if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+            return rawUrl;
+        }
+        return null;
+    }
+
+    /**
+     * 按魔数判定图片类型，只接受前端校验白名单内的格式。
+     */
+    private String detectImageContentType(byte[] bytes) {
+        if (bytes.length < 12) {
+            return null;
+        }
+        if ((bytes[0] & 0xFF) == 0xFF && (bytes[1] & 0xFF) == 0xD8) {
+            return "image/jpeg";
+        }
+        if ((bytes[0] & 0xFF) == 0x89 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G') {
+            return "image/png";
+        }
+        if (bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F') {
+            return "image/gif";
+        }
+        if (bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+            && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P') {
+            return "image/webp";
+        }
+        return null;
     }
 
     // ==================== 食谱优化 ====================

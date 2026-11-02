@@ -359,6 +359,16 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             ContentFetcher fetcher = fetcherFactory.getFetcher(platform, contentType);
             FetchedContent fetchedContent = fetcher.fetch(source.getContentUrl());
 
+            // 抓不到任何可用内容时直接失败：继续往下走只会写入一条空记录
+            if (!fetchedContent.hasText() && !fetchedContent.hasImages() && !fetchedContent.hasVideo()) {
+                String detail = fetchedContent.getErrorMessage();
+                throw new ExtractionParseException(
+                    detail != null && !detail.isBlank()
+                        ? detail
+                        : "未能从链接获取到内容，可能需要登录或链接已失效",
+                    null, null);
+            }
+
             // 3. AI识别（Layer 2）
             log.info("AI识别: fetchSuccess={}, hasImages={}, hasVideo={}, hasText={}",
                 fetchedContent.isFetchSuccess(),
@@ -371,6 +381,11 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
             // 4. 解析结果（Layer 3）
             Map<String, Object> extractionResult = parseExtractionResult(aiResponse);
+
+            // AI 判定不是菜谱时不应落库：否则会生成一条“未命名菜品”的空记录
+            if (Boolean.FALSE.equals(extractionResult.get("isRecipe"))) {
+                throw new ExtractionParseException("该内容不是菜谱，无法提取", aiResponse, null);
+            }
 
             // 5. 补充抓取到的元数据
             if (fetchedContent.getTitle() != null && !fetchedContent.getTitle().isEmpty()) {

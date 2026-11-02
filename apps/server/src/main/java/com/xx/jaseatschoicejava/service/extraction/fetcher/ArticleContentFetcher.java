@@ -1,16 +1,20 @@
 package com.xx.jaseatschoicejava.service.extraction.fetcher;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.xx.jaseatschoicejava.enums.ContentPlatform;
@@ -36,6 +40,12 @@ public class ArticleContentFetcher implements ContentFetcher {
     private static final int MAX_IMAGES = 5;
     private static final long MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
+    /**
+     * 小红书登录态 Cookie（来自 deploy/.env 的 XHS_COOKIE）。未配置时为空，小红书链接会明确报错。
+     */
+    @Value("${XHS_COOKIE:}")
+    private String xhsCookie;
+
     @Override
     public boolean canHandle(ContentPlatform platform, ContentType contentType) {
         // 处理所有 ARTICLE 类型，以及 OTHER 平台的兜底
@@ -52,12 +62,8 @@ public class ArticleContentFetcher implements ContentFetcher {
             String realUrl = resolveRedirect(url);
             ContentPlatform platform = ContentPlatform.parseFromUrl(realUrl);
 
-            // 抓取网页
-            Document doc = Jsoup.connect(realUrl)
-                .userAgent(USER_AGENT)
-                .timeout(TIMEOUT_MS)
-                .followRedirects(true)
-                .get();
+            // 抓取网页（小红书正文必须带登录态，否则会被重定向到登录页）
+            Document doc = newConnection(realUrl, TIMEOUT_MS).get();
 
             // 提取标题
             String title = extractTitle(doc);
@@ -85,6 +91,7 @@ public class ArticleContentFetcher implements ContentFetcher {
                 .contentType(ContentType.ARTICLE)
                 .platform(platform)
                 .fetchSuccess(true)
+                .errorMessage(describeMissingXiaohongshuContent(platform, article))
                 .build();
 
         } catch (IOException | RuntimeException e) {
@@ -106,17 +113,75 @@ public class ArticleContentFetcher implements ContentFetcher {
             String lowerUrl = url.toLowerCase();
             if (lowerUrl.contains("t.cn") || lowerUrl.contains("bit.ly")
                 || lowerUrl.contains("dwz.cn") || lowerUrl.contains("xhslink.com")) {
-                var response = Jsoup.connect(url)
-                    .userAgent(USER_AGENT)
-                    .timeout(10000)
-                    .followRedirects(true)
-                    .execute();
+                var response = newConnection(url, 10000).execute();
                 return response.url().toString();
             }
         } catch (IOException | RuntimeException e) {
             log.warn("解析重定向失败，使用原始URL: {}", url);
         }
         return url;
+    }
+
+    /**
+     * 构造抓取连接；只有小红书相关域名才附带登录态 Cookie，避免把凭据发给其他站点。
+     */
+    private Connection newConnection(String url, int timeoutMs) {
+        Connection connection = Jsoup.connect(url)
+            .userAgent(USER_AGENT)
+            .timeout(timeoutMs)
+            .followRedirects(true);
+
+        String cookie = resolveCookieHeader(url);
+        if (!cookie.isEmpty()) {
+            connection.header("Cookie", cookie);
+        }
+        return connection;
+    }
+
+    private String resolveCookieHeader(String url) {
+        if (xhsCookie == null || xhsCookie.isBlank()) {
+            return "";
+        }
+
+        return isXiaohongshuHost(url) ? xhsCookie.trim() : "";
+    }
+
+    /**
+     * 按 host 精确判断，避免把 Cookie 发给形如 example.com/xiaohongshu.com.png 的第三方地址。
+     */
+    private boolean isXiaohongshuHost(String url) {
+        String host;
+        try {
+            host = new URI(url).getHost();
+        } catch (URISyntaxException e) {
+            return false;
+        }
+
+        if (host == null) {
+            return false;
+        }
+
+        String lowerHost = host.toLowerCase();
+        return lowerHost.equals("xiaohongshu.com") || lowerHost.endsWith(".xiaohongshu.com")
+            || lowerHost.equals("xhslink.com") || lowerHost.endsWith(".xhslink.com");
+    }
+
+    /**
+     * 小红书未取到正文时给出可操作的提示（Cookie 未配置 / 已失效）。
+     */
+    private String describeMissingXiaohongshuContent(ContentPlatform platform, ExtractedArticle article) {
+        if (platform != ContentPlatform.XIAOHONGSHU) {
+            return null;
+        }
+
+        boolean hasText = article.textContent() != null && !article.textContent().isBlank();
+        if (hasText || !article.imageUrls().isEmpty()) {
+            return null;
+        }
+
+        return xhsCookie == null || xhsCookie.isBlank()
+            ? "小红书正文需要登录态：请在 deploy/.env 配置 XHS_COOKIE 后重试"
+            : "小红书未返回正文，XHS_COOKIE 可能已过期，请重新复制 Cookie 后重试";
     }
 
     /**
@@ -157,7 +222,9 @@ public class ArticleContentFetcher implements ContentFetcher {
     private String extractCoverImage(Document doc) {
         Element ogImage = doc.selectFirst("meta[property=og:image]");
         if (ogImage != null && !ogImage.attr("content").isEmpty()) {
-            return ogImage.attr("content");
+            // og:image 常写成协议相对地址（//host/x.png）或站内相对路径，补全后才能下载转存
+            String absolute = ogImage.absUrl("content");
+            return absolute.isEmpty() ? ogImage.attr("content") : absolute;
         }
         Element firstImg = doc.selectFirst("img[src]");
         return firstImg != null ? firstImg.attr("abs:src") : "";

@@ -71,6 +71,90 @@ class ContentExtractionServiceImplTest {
     }
 
     @Test
+    void processPendingTasks_whenFetchedNothing_shouldMarkParseFailedWithoutCallingAi() {
+        ExtractionTask task = pendingTask();
+        ContentSource source = pendingSource();
+        FetchedContent emptyContent = FetchedContent.builder()
+            .fetchSuccess(true)
+            .contentType(ContentType.ARTICLE)
+            .platform(ContentPlatform.XIAOHONGSHU)
+            .build();
+
+        when(extractionTaskMapper.selectPendingTasks()).thenReturn(List.of(task));
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+        when(fetcherFactory.getFetcher(any(ContentPlatform.class), any(ContentType.class))).thenReturn(contentFetcher);
+        when(contentFetcher.fetch(anyString())).thenReturn(emptyContent);
+        when(extractionTaskMapper.updateById(any(ExtractionTask.class))).thenReturn(1);
+        when(contentSourceMapper.updateById(any(ContentSource.class))).thenReturn(1);
+
+        int processedCount = service.processPendingTasks();
+
+        assertEquals(0, processedCount);
+        assertEquals("FAILED", task.getTaskStatus());
+        assertEquals("未能从链接获取到内容，可能需要登录或链接已失效", task.getErrorMessage());
+        assertEquals(ExtractionStatus.PARSE_FAILED.getCode(), source.getExtractionStatus());
+        assertFalse(source.getIsExtracted());
+        verify(contentRecognizer, never()).recognize(any(FetchedContent.class));
+        verify(contentExtractionMapper, never()).insert(any(ContentExtraction.class));
+    }
+
+    @Test
+    void processPendingTasks_whenAiSaysNotRecipe_shouldMarkParseFailedWithoutInsert() {
+        ExtractionTask task = pendingTask();
+        ContentSource source = pendingSource();
+        FetchedContent fetchedContent = FetchedContent.builder()
+            .textContent("正文内容")
+            .fetchSuccess(true)
+            .contentType(ContentType.ARTICLE)
+            .platform(ContentPlatform.XIAOHONGSHU)
+            .build();
+        String notRecipe = "{\"isRecipe\": false, \"dishName\": \"\", \"ingredients\": [], \"steps\": []}";
+
+        when(extractionTaskMapper.selectPendingTasks()).thenReturn(List.of(task));
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+        when(fetcherFactory.getFetcher(any(ContentPlatform.class), any(ContentType.class))).thenReturn(contentFetcher);
+        when(contentFetcher.fetch(anyString())).thenReturn(fetchedContent);
+        when(contentRecognizer.recognize(fetchedContent)).thenReturn(notRecipe);
+        when(extractionTaskMapper.updateById(any(ExtractionTask.class))).thenReturn(1);
+        when(contentSourceMapper.updateById(any(ContentSource.class))).thenReturn(1);
+
+        int processedCount = service.processPendingTasks();
+
+        assertEquals(0, processedCount);
+        assertEquals("FAILED", task.getTaskStatus());
+        assertEquals("该内容不是菜谱，无法提取", task.getErrorMessage());
+        assertEquals(ExtractionStatus.PARSE_FAILED.getCode(), source.getExtractionStatus());
+        verify(contentExtractionMapper, never()).insert(any(ContentExtraction.class));
+    }
+
+    private ExtractionTask pendingTask() {
+        ExtractionTask task = new ExtractionTask();
+        task.setId("task-1");
+        task.setSourceId("source-1");
+        task.setTaskType("EXTRACT");
+        task.setTaskStatus("PENDING");
+        task.setRetryCount(0);
+        task.setPriority(0);
+        task.setCreatedAt(LocalDateTime.now());
+        task.setUpdatedAt(LocalDateTime.now());
+        return task;
+    }
+
+    private ContentSource pendingSource() {
+        ContentSource source = new ContentSource();
+        source.setId("source-1");
+        source.setUserId("user-1");
+        source.setContentUrl("https://example.com/article/1");
+        source.setContentType(ContentType.ARTICLE.getCode());
+        source.setPlatform(ContentPlatform.DOUYIN.getCode());
+        source.setExtractionStatus(ExtractionStatus.PENDING.getCode());
+        source.setIsExtracted(false);
+        source.setCreatedAt(LocalDateTime.now());
+        source.setUpdatedAt(LocalDateTime.now());
+        return source;
+    }
+
+    @Test
     void processPendingTasks_whenAiResponseInvalid_shouldMarkParseFailed() {
         ExtractionTask task = new ExtractionTask();
         task.setId("task-1");
