@@ -323,7 +323,8 @@ const processingSources = computed(() => {
 // 已完成的提取
 const completedSources = computed(() => {
   return sources.value.filter(s =>
-    s.extractionStatus === 'SUCCESS' || s.extractionStatus === 'FAILED' || s.extractionStatus === 'PARSE_FAILED'
+    s.extractionStatus === 'SUCCESS' || s.extractionStatus === 'FAILED'
+      || s.extractionStatus === 'PARSE_FAILED' || s.extractionStatus === 'AUTH_REQUIRED'
   )
 })
 
@@ -375,7 +376,11 @@ const handleViewDetail = (source) => {
     selectedExtractionId.value = source.extractionId
     detailDialogVisible.value = true
   } else {
-    ElMessage.info(source.extractionStatus === 'PARSE_FAILED' ? '内容解析失败，请查看错误信息' : '内容正在提取中，请稍后查看')
+    if (source.extractionStatus === 'AUTH_REQUIRED') {
+      ElMessage.warning('需要登录小红书后重试')
+    } else {
+      ElMessage.info(source.extractionStatus === 'PARSE_FAILED' ? '内容解析失败，请查看错误信息' : '内容正在提取中，请稍后查看')
+    }
   }
 }
 
@@ -455,7 +460,8 @@ const getStatusClass = (status) => {
     'PROCESSING': 'processing',
     'SUCCESS': 'success',
     'FAILED': 'failed',
-    'PARSE_FAILED': 'failed'
+    'PARSE_FAILED': 'failed',
+    'AUTH_REQUIRED': 'auth-required'
   }
   return classMap[status] || 'pending'
 }
@@ -1164,6 +1170,11 @@ onUnmounted(() => {
   &.failed {
     background: @nordic-red-light;
     color: #C45C5C;
+  }
+
+  &.auth-required {
+    background: @nordic-yellow-light;
+    color: @nordic-yellow-dark;
   }
 }
 </style>

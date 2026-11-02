@@ -359,6 +359,29 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             ContentFetcher fetcher = fetcherFactory.getFetcher(platform, contentType);
             FetchedContent fetchedContent = fetcher.fetch(source.getContentUrl());
 
+            // 缺登录态是可自愈的最终状态，不进入解析失败，也不继续调用 AI。
+            if (fetchedContent.isAuthRequired()) {
+                String detail = fetchedContent.getErrorMessage() != null
+                    && !fetchedContent.getErrorMessage().isBlank()
+                    ? fetchedContent.getErrorMessage()
+                    : "需要登录小红书后重试";
+
+                task.setTaskStatus("FAILED");
+                task.setErrorMessage(detail);
+                task.setEndTime(LocalDateTime.now());
+                task.setUpdatedAt(LocalDateTime.now());
+                extractionTaskMapper.updateById(task);
+
+                source.setExtractionStatus(ExtractionStatus.AUTH_REQUIRED.getCode());
+                source.setIsExtracted(false);
+                source.setErrorMessage(detail);
+                source.setUpdatedAt(LocalDateTime.now());
+                contentSourceMapper.updateById(source);
+
+                log.info("提取任务需要登录态: taskId={}, sourceId={}", task.getId(), source.getId());
+                return;
+            }
+
             // 抓不到任何可用内容时直接失败：继续往下走只会写入一条空记录
             if (!fetchedContent.hasText() && !fetchedContent.hasImages() && !fetchedContent.hasVideo()) {
                 String detail = fetchedContent.getErrorMessage();

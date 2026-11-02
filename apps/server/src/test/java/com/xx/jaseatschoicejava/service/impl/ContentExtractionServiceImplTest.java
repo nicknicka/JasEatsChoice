@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
@@ -68,6 +69,46 @@ class ContentExtractionServiceImplTest {
 
         ExtractionParseException cause = (ExtractionParseException) exception.getCause();
         assertEquals("AI识别结果解析失败: AI返回内容为空", cause.getMessage());
+    }
+
+    @Test
+    void authRequiredStatus_shouldBeFinalButNotFailed() {
+        assertTrue(ExtractionStatus.AUTH_REQUIRED.isFinalStatus());
+        assertFalse(ExtractionStatus.AUTH_REQUIRED.isFailed());
+    }
+
+    @Test
+    void processPendingTasks_whenAuthRequired_shouldMarkAuthRequiredWithoutCallingAi() {
+        ExtractionTask task = pendingTask();
+        ContentSource source = pendingSource();
+        source.setPlatform(ContentPlatform.XIAOHONGSHU.getCode());
+        String message = "小红书正文需要登录态：请在 deploy/.env 配置 XHS_COOKIE 后重试";
+        FetchedContent authRequiredContent = FetchedContent.builder()
+            .fetchSuccess(true)
+            .authRequired(true)
+            .errorMessage(message)
+            .contentType(ContentType.ARTICLE)
+            .platform(ContentPlatform.XIAOHONGSHU)
+            .build();
+
+        when(extractionTaskMapper.selectPendingTasks()).thenReturn(List.of(task));
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+        when(fetcherFactory.getFetcher(any(ContentPlatform.class), any(ContentType.class))).thenReturn(contentFetcher);
+        when(contentFetcher.fetch(anyString())).thenReturn(authRequiredContent);
+        when(extractionTaskMapper.updateById(any(ExtractionTask.class))).thenReturn(1);
+        when(contentSourceMapper.updateById(any(ContentSource.class))).thenReturn(1);
+
+        int processedCount = service.processPendingTasks();
+
+        assertEquals(1, processedCount);
+        assertEquals("FAILED", task.getTaskStatus());
+        assertEquals(message, task.getErrorMessage());
+        assertNotNull(task.getEndTime());
+        assertEquals(ExtractionStatus.AUTH_REQUIRED.getCode(), source.getExtractionStatus());
+        assertEquals(message, source.getErrorMessage());
+        assertFalse(source.getIsExtracted());
+        verify(contentRecognizer, never()).recognize(any(FetchedContent.class));
+        verify(contentExtractionMapper, never()).insert(any(ContentExtraction.class));
     }
 
     @Test
