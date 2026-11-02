@@ -23,7 +23,8 @@ public interface ContentFetcher {
      * 抓取内容
      *
      * @param url 内容URL
+     * @param userId 发起抓取的用户ID，用于读取用户级登录态
      * @return 抓取结果
      */
-    FetchedContent fetch(String url);
+    FetchedContent fetch(String url, String userId);
 }

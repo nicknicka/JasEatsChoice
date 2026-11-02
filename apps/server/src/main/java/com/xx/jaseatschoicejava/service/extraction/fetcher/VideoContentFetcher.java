@@ -37,7 +37,7 @@ public class VideoContentFetcher implements ContentFetcher {
     }
 
     @Override
-    public FetchedContent fetch(String url) {
+    public FetchedContent fetch(String url, String userId) {
         log.info("开始抓取视频内容: {}", url);
 
         ContentPlatform platform = ContentPlatform.parseFromUrl(url);

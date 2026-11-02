@@ -357,7 +357,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             // 2. 抓取内容（Layer 1）
             log.info("抓取内容: platform={}, type={}, url={}", platform, contentType, source.getContentUrl());
             ContentFetcher fetcher = fetcherFactory.getFetcher(platform, contentType);
-            FetchedContent fetchedContent = fetcher.fetch(source.getContentUrl());
+            FetchedContent fetchedContent = fetcher.fetch(source.getContentUrl(), source.getUserId());
 
             // 缺登录态是可自愈的最终状态，不进入解析失败，也不继续调用 AI。
             if (fetchedContent.isAuthRequired()) {

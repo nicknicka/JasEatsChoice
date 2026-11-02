@@ -14,9 +14,11 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.xx.jaseatschoicejava.config.XhsSessionStore;
 import com.xx.jaseatschoicejava.enums.ContentPlatform;
 import com.xx.jaseatschoicejava.enums.ContentType;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
@@ -46,6 +48,12 @@ public class ArticleContentFetcher implements ContentFetcher {
     @Value("${XHS_COOKIE:}")
     private String xhsCookie;
 
+    /**
+     * 用户级小红书登录态，优先于全局 XHS_COOKIE。
+     */
+    @Autowired
+    private XhsSessionStore xhsSessionStore;
+
     @Override
     public boolean canHandle(ContentPlatform platform, ContentType contentType) {
         // 处理所有 ARTICLE 类型，以及 OTHER 平台的兜底
@@ -54,16 +62,16 @@ public class ArticleContentFetcher implements ContentFetcher {
     }
 
     @Override
-    public FetchedContent fetch(String url) {
+    public FetchedContent fetch(String url, String userId) {
         log.info("开始抓取文章内容: {}", url);
 
         try {
             // 解析重定向后的真实URL（短链接处理）
-            String realUrl = resolveRedirect(url);
+            String realUrl = resolveRedirect(url, userId);
             ContentPlatform platform = ContentPlatform.parseFromUrl(realUrl);
 
             // 抓取网页（小红书正文必须带登录态，否则会被重定向到登录页）
-            Document doc = newConnection(realUrl, TIMEOUT_MS).get();
+            Document doc = newConnection(realUrl, TIMEOUT_MS, userId).get();
 
             // 提取标题
             String title = extractTitle(doc);
@@ -110,13 +118,13 @@ public class ArticleContentFetcher implements ContentFetcher {
     /**
      * 解析重定向获取真实URL
      */
-    private String resolveRedirect(String url) {
+    private String resolveRedirect(String url, String userId) {
         try {
             // 对于短链接，尝试跟随重定向
             String lowerUrl = url.toLowerCase();
             if (lowerUrl.contains("t.cn") || lowerUrl.contains("bit.ly")
                 || lowerUrl.contains("dwz.cn") || lowerUrl.contains("xhslink.com")) {
-                var response = newConnection(url, 10000).execute();
+                var response = newConnection(url, 10000, userId).execute();
                 return response.url().toString();
             }
         } catch (IOException | RuntimeException e) {
@@ -128,25 +136,41 @@ public class ArticleContentFetcher implements ContentFetcher {
     /**
      * 构造抓取连接；只有小红书相关域名才附带登录态 Cookie，避免把凭据发给其他站点。
      */
-    private Connection newConnection(String url, int timeoutMs) {
+    private Connection newConnection(String url, int timeoutMs, String userId) {
         Connection connection = Jsoup.connect(url)
             .userAgent(USER_AGENT)
             .timeout(timeoutMs)
             .followRedirects(true);
 
-        String cookie = resolveCookieHeader(url);
+        String cookie = resolveCookieHeader(url, userId);
         if (!cookie.isEmpty()) {
             connection.header("Cookie", cookie);
         }
         return connection;
     }
 
-    private String resolveCookieHeader(String url) {
-        if (xhsCookie == null || xhsCookie.isBlank()) {
+    /**
+     * 登录态优先级：用户级 store → 全局 XHS_COOKIE → 无；仍只对小红书域名发送。
+     */
+    private String resolveCookieHeader(String url, String userId) {
+        if (!isXiaohongshuHost(url)) {
             return "";
         }
 
-        return isXiaohongshuHost(url) ? xhsCookie.trim() : "";
+        String userCookie = readUserCookie(userId);
+        if (!userCookie.isEmpty()) {
+            return userCookie;
+        }
+
+        return xhsCookie == null ? "" : xhsCookie.trim();
+    }
+
+    private String readUserCookie(String userId) {
+        if (xhsSessionStore == null || userId == null || userId.isBlank()) {
+            return "";
+        }
+        String cookie = xhsSessionStore.read(userId);
+        return cookie == null ? "" : cookie.trim();
     }
 
     /**

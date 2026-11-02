@@ -1,8 +1,11 @@
 package com.xx.jaseatschoicejava.controller;
 
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.config.XhsSessionStore;
 import com.xx.jaseatschoicejava.dto.ContentExtractionUpdateDTO;
 import com.xx.jaseatschoicejava.dto.ContentSourceCreateDTO;
+import com.xx.jaseatschoicejava.dto.XhsSessionBindDTO;
+import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.service.ContentExtractionService;
 import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 import com.xx.jaseatschoicejava.vo.ContentExtractionDetailVO;
@@ -13,7 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 内容提取控制器
@@ -29,6 +34,11 @@ public class ContentExtractionController {
 
     @Autowired
     private ContentExtractionService contentExtractionService;
+
+    @Autowired
+    private XhsSessionStore xhsSessionStore;
+
+    private static final int MAX_XHS_SESSION_LENGTH = 8192;
 
     /**
      * 添加内容源并开始提取
@@ -182,6 +192,75 @@ public class ContentExtractionController {
 
         boolean success = contentExtractionService.deleteContentSource(sourceId, userId);
         return ResponseResult.success(success);
+    }
+
+    /**
+     * 查询当前用户是否已绑定小红书登录态。
+     *
+     * @param request HTTP请求
+     * @return 绑定状态，绝不返回登录态本体
+     */
+    @GetMapping("/xhs-session")
+    public ResponseResult<Map<String, Object>> getXhsSession(HttpServletRequest request) {
+        String userId = resolveUserId(request);
+        boolean bound = xhsSessionStore.exists(userId);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("bound", bound);
+        data.put("updatedAt", bound ? xhsSessionStore.updatedAt(userId) : null);
+        data.put("status", bound ? "active" : "none");
+        return ResponseResult.success(data);
+    }
+
+    /**
+     * 绑定当前用户的小红书登录态。
+     *
+     * @param dto 登录态
+     * @param request HTTP请求
+     * @return 绑定结果
+     */
+    @PostMapping("/xhs-session")
+    public ResponseResult<Map<String, Object>> bindXhsSession(
+            @RequestBody XhsSessionBindDTO dto,
+            HttpServletRequest request) {
+        String userId = resolveUserId(request);
+        String cookie = dto == null ? null : dto.getCookie();
+        validateXhsCookie(cookie);
+
+        xhsSessionStore.write(userId, cookie);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("bound", true);
+        data.put("updatedAt", xhsSessionStore.updatedAt(userId));
+        return ResponseResult.success(data);
+    }
+
+    /**
+     * 解绑当前用户的小红书登录态。
+     *
+     * @param request HTTP请求
+     * @return 解绑结果
+     */
+    @DeleteMapping("/xhs-session")
+    public ResponseResult<Map<String, Object>> unbindXhsSession(HttpServletRequest request) {
+        String userId = resolveUserId(request);
+        xhsSessionStore.delete(userId);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("bound", false);
+        return ResponseResult.success(data);
+    }
+
+    private void validateXhsCookie(String cookie) {
+        if (cookie == null || cookie.isBlank()) {
+            throw new BusinessException("XHS_SESSION_EMPTY", "小红书登录态不能为空");
+        }
+        if (cookie.length() > MAX_XHS_SESSION_LENGTH) {
+            throw new BusinessException("XHS_SESSION_TOO_LONG", "小红书登录态长度不能超过 " + MAX_XHS_SESSION_LENGTH);
+        }
+        if (!cookie.contains("web_session")) {
+            throw new BusinessException("XHS_SESSION_INVALID", "小红书登录态缺少 web_session");
+        }
     }
 
     private String resolveUserId(HttpServletRequest request) {

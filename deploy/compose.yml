@@ -35,6 +35,7 @@ x-app-env: &app-env
   - MAIL_USERNAME=${MAIL_USERNAME:-}
   - MAIL_PASSWORD=${MAIL_PASSWORD:-}
   - XHS_COOKIE=${XHS_COOKIE:-}
+  - XHS_SESSION_DIR=/app/runtime/secrets/xhs
   - CAPTCHA_TEST_FIXED_CODE_ENABLED=${CAPTCHA_TEST_FIXED_CODE_ENABLED:-false}
   - CAPTCHA_TEST_FIXED_CODE=${CAPTCHA_TEST_FIXED_CODE:-}
   - FILE_UPLOAD_PATH=/data/uploads/
@@ -111,6 +112,7 @@ services:
     volumes:
       - uploads:/data/uploads
       - ai-runtime-keys:/app/runtime/secrets/ai
+      - xhs-sessions:/app/runtime/secrets/xhs
     depends_on:
       mysql:
         condition: service_healthy
@@ -155,6 +157,7 @@ networks:
 
 volumes:
   ai-runtime-keys:
+  xhs-sessions:
   mysql-data:
   redis-data:
   qdrant-data:
