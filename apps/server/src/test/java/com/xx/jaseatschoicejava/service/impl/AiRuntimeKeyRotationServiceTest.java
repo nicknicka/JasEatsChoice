@@ -103,7 +103,7 @@ class AiRuntimeKeyRotationServiceTest {
         });
 service = new AiRuntimeConfigServiceImpl(
             aiConfig, systemConfigService, registry, new AiProviderRegistry(java.util.List.of(modelFactory)),
-            new ObjectMapper(), keyStore, null, null);
+            new ObjectMapper(), keyStore, null, null, null, null);
         service.initialize();
     }
 

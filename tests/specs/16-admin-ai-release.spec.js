@@ -6,6 +6,12 @@ const { markRunning, markPassed, markFailed, updateSummary } = require('../utils
 const SECRET_KEY = 'e2e-fake-key-98765432109876543210'
 const ACTIVE_FINGERPRINT = '8d43aa55aa4f'
 const NEW_FINGERPRINT = 'a5a1ba577d2c'
+const EMBED_PROVIDER = 'openai-compatible'
+const EMBED_MODEL = 'bge-m3'
+const EMBED_DIMENSIONS = 1024
+const EMBED_BASE_URL = 'http://host.docker.internal:11434/v1'
+const NEW_EMBED_BASE_URL = 'http://embedding-new.example.com:11434/v1'
+const EMBED_FINGERPRINT = '3c9f1a2b7d4e'
 
 function snapshot(model, version, fingerprint) {
   return {
@@ -29,7 +35,15 @@ function snapshot(model, version, fingerprint) {
       unavailableMessage: ''
     },
     supportedModels: ['glm-4-flash', 'glm-4.6v-flash', 'glm-4.1v-thinking-flash'],
-    providers: [{ code: 'zhipu', name: '智谱', models: ['glm-4-flash', 'glm-4.6v-flash', 'glm-4.1v-thinking-flash'] }]
+    providers: [{ code: 'zhipu', name: '智谱', models: ['glm-4-flash', 'glm-4.6v-flash', 'glm-4.1v-thinking-flash'] }],
+    embedding: {
+      provider: EMBED_PROVIDER,
+      model: EMBED_MODEL,
+      dimensions: EMBED_DIMENSIONS,
+      baseUrl: EMBED_BASE_URL,
+      providers: ['zhipu', 'openai-compatible'],
+      keyStatus: { configured: true, fingerprint: EMBED_FINGERPRINT, updatedAt: '2026-10-31T08:35:00' }
+    }
   }
 }
 
@@ -53,6 +67,7 @@ test.describe('AI 热加载发布验收', () => {
       keyFingerprint: ACTIVE_FINGERPRINT
     }
     const apiResponses = []
+    const capturedRequests = {}
 
     page.on('response', async response => {
       if (!new URL(response.url()).pathname.startsWith('/api/admin/')) return
@@ -71,10 +86,14 @@ test.describe('AI 热加载发布验收', () => {
         { id: 'glm-4.6v-flash', name: 'glm-4.6v-flash', supportsImages: true },
         { id: 'glm-4.1v-thinking-flash', name: 'glm-4.1v-thinking-flash', supportsImages: true }
       ] } }))
-    await page.route('**/api/admin/settings/ai/test', route =>
-      route.fulfill({ json: { success: true, data: { success: true, message: '连接成功', model: candidateModel, testedAt: '2026-10-31T09:01:00' } } }))
-    await page.route('**/api/admin/settings/ai/activate', route =>
-      route.fulfill({ json: { success: true, data: snapshot(candidateModel, 3, NEW_FINGERPRINT) } }))
+    await page.route('**/api/admin/settings/ai/test', route => {
+      capturedRequests.test = route.request().postDataJSON()
+      return route.fulfill({ json: { success: true, data: { success: true, message: '连接成功', model: candidateModel, testedAt: '2026-10-31T09:01:00' } } })
+    })
+    await page.route('**/api/admin/settings/ai/activate', route => {
+      capturedRequests.activate = route.request().postDataJSON()
+      return route.fulfill({ json: { success: true, data: snapshot(candidateModel, 3, NEW_FINGERPRINT) } })
+    })
     await page.route('**/api/admin/settings/ai/rollback', route =>
       route.fulfill({ json: { success: true, data: activeSnapshot } }))
 
@@ -95,11 +114,20 @@ test.describe('AI 热加载发布验收', () => {
       const aiSection = page.locator('.el-tab-pane').filter({ hasText: '当前配置' })
 
       await expect(page.getByText('首期仅支持单后端实例')).toBeVisible()
+      await expect(page.getByText('Embedding 模型与向量维度不在线切换')).toHaveCount(0)
+
+      const embeddingSummary = aiSection.locator('.embedding-summary')
+      await expect(embeddingSummary.getByText(EMBED_PROVIDER)).toBeVisible()
+      await expect(embeddingSummary.getByText(EMBED_MODEL)).toBeVisible()
+      await expect(embeddingSummary.getByText(String(EMBED_DIMENSIONS))).toBeVisible()
+      await expect(embeddingSummary.getByText(`指纹：${EMBED_FINGERPRINT}`)).toBeVisible()
+
       await expect(aiSection.getByText(currentModel).first()).toBeVisible()
       await expect(aiSection.getByText(`指纹：${ACTIVE_FINGERPRINT}`)).toBeVisible()
       await expect(aiSection.getByText('更新时间：2026-10-31T08:30:00')).toBeVisible()
 
-      const formItem = label => aiSection.locator('.el-form-item').filter({ hasText: label })
+      const formItem = label => aiSection.locator('.el-form-item').filter({ hasText: label, hasNotText: 'Embedding' })
+      const embeddingItem = label => aiSection.locator('.embedding-candidate .el-form-item').filter({ hasText: label })
       await formItem('API Key').locator('input[type="password"]').fill(SECRET_KEY)
 
       await formItem('Provider').locator('.el-select').click()
@@ -125,6 +153,15 @@ test.describe('AI 热加载发布验收', () => {
         formItem('测试候选配置').getByRole('button', { name: '测试候选配置' }).click()
       ])
       await expect(aiSection.getByText('连通成功')).toBeVisible()
+      expect(capturedRequests.test.embedding).toMatchObject({
+        provider: EMBED_PROVIDER,
+        model: EMBED_MODEL,
+        dimensions: EMBED_DIMENSIONS,
+        baseUrl: EMBED_BASE_URL,
+        apiKey: ''
+      })
+
+      await embeddingItem('服务地址').locator('input').fill(NEW_EMBED_BASE_URL)
 
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/activate'),
@@ -133,6 +170,13 @@ test.describe('AI 热加载发布验收', () => {
       await expect(aiSection.getByText(candidateModel).first()).toBeVisible()
       await expect(aiSection.getByText(`指纹：${NEW_FINGERPRINT}`)).toBeVisible()
       await expect(formItem('API Key').locator('input[type="password"]')).toHaveValue('')
+      expect(capturedRequests.activate.embedding).toMatchObject({
+        provider: EMBED_PROVIDER,
+        model: EMBED_MODEL,
+        dimensions: EMBED_DIMENSIONS,
+        baseUrl: NEW_EMBED_BASE_URL,
+        apiKey: ''
+      })
 
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/rollback'),

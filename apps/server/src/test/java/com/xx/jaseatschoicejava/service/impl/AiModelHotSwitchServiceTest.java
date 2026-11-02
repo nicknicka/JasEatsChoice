@@ -96,7 +96,7 @@ class AiModelHotSwitchServiceTest {
         });
 service = new AiRuntimeConfigServiceImpl(
             aiConfig, systemConfigService, registry, new AiProviderRegistry(java.util.List.of(modelFactory)),
-            new ObjectMapper(), null, null, null);
+            new ObjectMapper(), null, null, null, null, null);
         service.initialize();
     }
 

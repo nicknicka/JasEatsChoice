@@ -92,7 +92,7 @@ class AiRuntimeConfigServiceTest {
             return aiConfig.getApiKey() == null ? "" : aiConfig.getApiKey();
         });
         service = new AiRuntimeConfigServiceImpl(aiConfig, null, registry(),
-            new AiProviderRegistry(java.util.List.of(modelFactory)), new ObjectMapper(), null, null, null);
+            new AiProviderRegistry(java.util.List.of(modelFactory)), new ObjectMapper(), null, null, null, null, null);
     }
 
     private DynamicAiModelRegistry registry() {
@@ -263,7 +263,7 @@ class AiRuntimeConfigServiceTest {
             .thenReturn(true);
         AiRuntimeConfigServiceImpl activationService = new AiRuntimeConfigServiceImpl(
             aiConfig, systemConfigService, registry(), new AiProviderRegistry(List.of(modelFactory)),
-            new ObjectMapper(), keyStore, null, null);
+            new ObjectMapper(), keyStore, null, null, null, null);
 
         ChatModel chatModel = mock(ChatModel.class);
         when(chatModel.chat("ping")).thenReturn("pong");

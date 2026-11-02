@@ -2,24 +2,19 @@ package com.xx.jaseatschoicejava.rag;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
-import com.xx.jaseatschoicejava.config.AiModelConfig;
-import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
+import com.xx.jaseatschoicejava.config.AiEmbeddingRuntimeKeyStore;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class AnnouncementRagStartupTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
         .withUserConfiguration(AnnouncementRagConfig.class, ZhipuAnnouncementEmbeddingModelFactory.class,
-            OpenAiCompatibleAnnouncementEmbeddingModelFactory.class)
-        .withBean("aiRuntimeKeyStore", AiRuntimeKeyStore.class, () -> new AiRuntimeKeyStore(""))
-        .withBean(DynamicAiModelRegistry.class, DynamicAiModelRegistry::new);
+            OpenAiCompatibleAnnouncementEmbeddingModelFactory.class, AiEmbeddingRuntimeKeyStore.class);
 
     @Test
     void disabledRag_startsInDisabledState() {
@@ -62,24 +57,23 @@ class AnnouncementRagStartupTest {
     }
 
     @Test
-    void foreignRuntimeKeyDoesNotConfigureEmbedding(@TempDir Path tempDir) throws IOException {
-        AiRuntimeKeyStore keyStore = new AiRuntimeKeyStore(tempDir.resolve("active-key").toString());
-        keyStore.writeKey("third-party-chat-key");
-        DynamicAiModelRegistry registry = new DynamicAiModelRegistry();
-        registry.activate(AiModelConfig.builder().provider("openai-compatible").build(),
-            null, null, null, 1L);
+    void embeddingRuntimeKeyConfiguresEmbedding(@TempDir Path tempDir) {
+        AiEmbeddingRuntimeKeyStore embeddingKeyStore = new AiEmbeddingRuntimeKeyStore(
+            tempDir.resolve("embedding-active-key").toString());
+        embeddingKeyStore.writeKey("embedding-runtime-key");
 
         new ApplicationContextRunner()
             .withUserConfiguration(AnnouncementRagConfig.class, ZhipuAnnouncementEmbeddingModelFactory.class,
                 OpenAiCompatibleAnnouncementEmbeddingModelFactory.class)
-            .withBean("aiRuntimeKeyStore", AiRuntimeKeyStore.class, () -> keyStore)
-            .withBean(DynamicAiModelRegistry.class, () -> registry)
+            .withBean(AiEmbeddingRuntimeKeyStore.class, () -> embeddingKeyStore)
             .withPropertyValues(
                 "announcement-rag.enabled=true",
-                "zhipuai.api-key=")
+                "zhipuai.api-key=",
+                "announcement-rag.qdrant.host=localhost",
+                "announcement-rag.qdrant.port=1")
             .run(context -> {
                 AnnouncementRagStatus status = context.getBean(AnnouncementRagInfrastructure.class).status();
-                assertThat(status.state()).isEqualTo(AnnouncementRagState.NOT_CONFIGURED);
+                assertThat(status.state()).isEqualTo(AnnouncementRagState.UNAVAILABLE);
             });
     }
 

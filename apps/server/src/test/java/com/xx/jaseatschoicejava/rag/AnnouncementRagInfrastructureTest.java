@@ -11,13 +11,17 @@ import io.qdrant.client.QdrantGrpcClient;
 
 class AnnouncementRagInfrastructureTest {
 
+    private static AnnouncementEmbeddingConfig embeddingConfig() {
+        return new AnnouncementEmbeddingConfig("zhipu", "embedding-3", 2048, "");
+    }
+
     @Test
     void missingEmbeddingKey_reportsNotConfigured() {
         AnnouncementRagProperties properties = new AnnouncementRagProperties();
         ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
         zhipuConfig.setApiKey("");
         AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
-            properties, false, new AnnouncementRagDisabledEmbeddingModel(), null);
+            properties, () -> null, new AnnouncementRagDisabledEmbeddingModel(), null);
 
         infrastructure.initialize();
 
@@ -36,7 +40,8 @@ class AnnouncementRagInfrastructureTest {
         try (var qdrantClient = new QdrantClient(
             QdrantGrpcClient.newBuilder("localhost", unavailablePort, false).build())) {
             AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
-                properties, true, new AnnouncementRagDisabledEmbeddingModel(), qdrantClient);
+                properties, AnnouncementRagInfrastructureTest::embeddingConfig,
+                new AnnouncementRagDisabledEmbeddingModel(), qdrantClient);
 
             infrastructure.initialize();
 
@@ -49,7 +54,7 @@ class AnnouncementRagInfrastructureTest {
         AnnouncementRagProperties properties = new AnnouncementRagProperties();
         properties.setEnabled(false);
         AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
-            properties, false, new AnnouncementRagDisabledEmbeddingModel(), null);
+            properties, () -> null, new AnnouncementRagDisabledEmbeddingModel(), null);
 
         infrastructure.initialize();
 

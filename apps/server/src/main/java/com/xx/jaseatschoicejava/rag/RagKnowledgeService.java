@@ -36,11 +36,19 @@ public class RagKnowledgeService {
     private static final int MAX_SEARCH_RESULTS = 50;
 
     private final AnnouncementService announcementService;
-    private final EmbeddingModel embeddingModel;
-    private final EmbeddingStore<TextSegment> embeddingStore;
+    private final AnnouncementRagInfrastructure infrastructure;
+    private final EmbeddingModel fixedEmbeddingModel;
+    private final EmbeddingStore<TextSegment> fixedEmbeddingStore;
 
+    /**
+     * 生产路径每次都向基础设施要当前生效的 Embedding 客户端与 store，
+     * 否则切换配置后检索仍会拿着构造期固定下来的旧引用。
+     */
     public RagKnowledgeService(AnnouncementService announcementService, AnnouncementRagInfrastructure infrastructure) {
-        this(announcementService, infrastructure.embeddingModel(), infrastructure.embeddingStore());
+        this.announcementService = announcementService;
+        this.infrastructure = infrastructure;
+        this.fixedEmbeddingModel = null;
+        this.fixedEmbeddingStore = null;
     }
 
     RagKnowledgeService(
@@ -48,8 +56,17 @@ public class RagKnowledgeService {
         EmbeddingModel embeddingModel,
         EmbeddingStore<TextSegment> embeddingStore) {
         this.announcementService = announcementService;
-        this.embeddingModel = embeddingModel;
-        this.embeddingStore = embeddingStore;
+        this.infrastructure = null;
+        this.fixedEmbeddingModel = embeddingModel;
+        this.fixedEmbeddingStore = embeddingStore;
+    }
+
+    private EmbeddingModel embeddingModel() {
+        return infrastructure == null ? fixedEmbeddingModel : infrastructure.embeddingModel();
+    }
+
+    private EmbeddingStore<TextSegment> embeddingStore() {
+        return infrastructure == null ? fixedEmbeddingStore : infrastructure.embeddingStore();
     }
 
     public void syncAnnouncement(String announcementId) {
@@ -71,12 +88,12 @@ public class RagKnowledgeService {
     }
 
     public int rebuildAllAnnouncements() {
-        if (embeddingStore == null) {
+        if (embeddingStore() == null) {
             return 0;
         }
         List<Announcement> announcements = announcementService.list(
             new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>());
-        embeddingStore.removeAll(metadataKey("sourceType").isEqualTo("announcement"));
+        embeddingStore().removeAll(metadataKey("sourceType").isEqualTo("announcement"));
         announcements.forEach(this::synchronizeAnnouncement);
         return announcements.size();
     }
@@ -99,8 +116,12 @@ public class RagKnowledgeService {
             return List.of();
         }
 
-        Embedding queryEmbedding = embeddingModel.embed(query.query()).content();
-        var result = embeddingStore.search(EmbeddingSearchRequest.builder()
+        Embedding queryEmbedding = embeddingModel().embed(query.query()).content();
+        EmbeddingStore<TextSegment> store = embeddingStore();
+        if (store == null) {
+            throw new IllegalStateException("公告 RAG 向量库暂不可用");
+        }
+        var result = store.search(EmbeddingSearchRequest.builder()
             .queryEmbedding(queryEmbedding)
             .maxResults(MAX_SEARCH_RESULTS)
             .minScore(0d)
@@ -134,13 +155,13 @@ public class RagKnowledgeService {
         for (int index = 0; index < chunks.size(); index++) {
             segments.add(TextSegment.from(chunks.get(index), metadata.get(index)));
         }
-        List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
-        embeddingStore.removeAll(documentFilter(announcement.getId()));
-        embeddingStore.addAll(pointIds, embeddings, segments);
+        List<Embedding> embeddings = embeddingModel().embedAll(segments).content();
+        embeddingStore().removeAll(documentFilter(announcement.getId()));
+        embeddingStore().addAll(pointIds, embeddings, segments);
     }
 
     private void deleteAnnouncement(String announcementId) {
-        embeddingStore.removeAll(documentFilter(announcementId));
+        embeddingStore().removeAll(documentFilter(announcementId));
     }
 
     private String pointId(String announcementId, int chunkIndex) {
