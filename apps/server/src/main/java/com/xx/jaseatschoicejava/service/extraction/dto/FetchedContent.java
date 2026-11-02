@@ -52,6 +52,9 @@ public class FetchedContent {
     /** 是否抓取成功 */
     private boolean fetchSuccess;
 
+    /** 是否因缺少登录态而需要用户补充凭据 */
+    private boolean authRequired;
+
     /** 错误信息 */
     private String errorMessage;
 

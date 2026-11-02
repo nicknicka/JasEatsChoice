@@ -36,7 +36,12 @@ public enum ExtractionStatus {
     /**
      * 解析失败
      */
-    PARSE_FAILED("PARSE_FAILED", "解析失败");
+    PARSE_FAILED("PARSE_FAILED", "解析失败"),
+
+    /**
+     * 需要登录小红书
+     */
+    AUTH_REQUIRED("AUTH_REQUIRED", "需要登录小红书");
 
     /**
      * 状态代码
@@ -64,7 +69,7 @@ public enum ExtractionStatus {
      * 是否为最终状态
      */
     public boolean isFinalStatus() {
-        return this == SUCCESS || this == FAILED || this == PARSE_FAILED;
+        return this == SUCCESS || this == FAILED || this == PARSE_FAILED || this == AUTH_REQUIRED;
     }
 
     /**

@@ -77,6 +77,8 @@ public class ArticleContentFetcher implements ContentFetcher {
 
             // 按平台提取正文和图片
             ExtractedArticle article = extractArticleContent(doc, platform);
+            String missingContentMessage = describeMissingXiaohongshuContent(
+                platform, article.textContent(), article.imageUrls());
 
             // 下载图片转Base64
             List<String> imageBase64List = downloadImagesAsBase64(article.imageUrls);
@@ -91,7 +93,8 @@ public class ArticleContentFetcher implements ContentFetcher {
                 .contentType(ContentType.ARTICLE)
                 .platform(platform)
                 .fetchSuccess(true)
-                .errorMessage(describeMissingXiaohongshuContent(platform, article))
+                .authRequired(missingContentMessage != null)
+                .errorMessage(missingContentMessage)
                 .build();
 
         } catch (IOException | RuntimeException e) {
@@ -169,13 +172,13 @@ public class ArticleContentFetcher implements ContentFetcher {
     /**
      * 小红书未取到正文时给出可操作的提示（Cookie 未配置 / 已失效）。
      */
-    private String describeMissingXiaohongshuContent(ContentPlatform platform, ExtractedArticle article) {
+    private String describeMissingXiaohongshuContent(ContentPlatform platform, String textContent, List<String> imageUrls) {
         if (platform != ContentPlatform.XIAOHONGSHU) {
             return null;
         }
 
-        boolean hasText = article.textContent() != null && !article.textContent().isBlank();
-        if (hasText || !article.imageUrls().isEmpty()) {
+        boolean hasText = textContent != null && !textContent.isBlank();
+        if (hasText || !imageUrls.isEmpty()) {
             return null;
         }
 
