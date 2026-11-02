@@ -198,17 +198,18 @@ public class ContentExtractionController {
      * 查询当前用户是否已绑定小红书登录态。
      *
      * @param request HTTP请求
-     * @return 绑定状态，绝不返回登录态本体
+     * @return 绑定状态（active|expired|none），绝不返回登录态本体
      */
     @GetMapping("/xhs-session")
     public ResponseResult<Map<String, Object>> getXhsSession(HttpServletRequest request) {
         String userId = resolveUserId(request);
         boolean bound = xhsSessionStore.exists(userId);
+        boolean expired = bound && xhsSessionStore.isExpired(userId);
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("bound", bound);
         data.put("updatedAt", bound ? xhsSessionStore.updatedAt(userId) : null);
-        data.put("status", bound ? "active" : "none");
+        data.put("status", !bound ? "none" : expired ? "expired" : "active");
         return ResponseResult.success(data);
     }
 

@@ -14,6 +14,8 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -104,6 +106,64 @@ class ArticleContentFetcherTest {
 
         assertTrue(result.isAuthRequired());
         assertEquals("小红书未返回正文，登录态可能已失效，请重新绑定后重试", result.getErrorMessage());
+    }
+
+    @Test
+    void fetch_whenLoginWallWithoutUserSession_shouldAskToBind() throws Exception {
+        FetchedContent result = fetchOnLoginWall("", null);
+
+        assertTrue(result.isAuthRequired());
+        assertEquals("小红书正文需要登录态：请绑定小红书账号后重试", result.getErrorMessage());
+    }
+
+    @Test
+    void fetch_whenLoginWallWithUserSession_shouldMarkExpiredAndAskToRebind() throws Exception {
+        XhsSessionStore store = mock(XhsSessionStore.class);
+        when(store.read(USER_ID)).thenReturn(USER_COOKIE);
+
+        FetchedContent result = fetchOnLoginWall("", store);
+
+        assertTrue(result.isAuthRequired());
+        assertEquals("小红书登录态已失效，请重新绑定后重试", result.getErrorMessage());
+        verify(store).markExpired(USER_ID);
+    }
+
+    @Test
+    void fetch_whenLoginWallWithGlobalCookieOnly_shouldNotMarkExpired() throws Exception {
+        XhsSessionStore store = mock(XhsSessionStore.class);
+        when(store.read(USER_ID)).thenReturn("");
+
+        FetchedContent result = fetchOnLoginWall(GLOBAL_COOKIE, store);
+
+        assertTrue(result.isAuthRequired());
+        assertEquals("小红书正文需要登录态：请绑定小红书账号后重试", result.getErrorMessage());
+        verify(store, never()).markExpired(anyString());
+    }
+
+    /**
+     * 模拟未登录/登录态失效时小红书 302 到 /login 的场景：
+     * 登录页的最终 URL 命中 /login，必须显式判定为登录墙（authRequired=true），而不是“内容有问题”。
+     */
+    private FetchedContent fetchOnLoginWall(String cookie, XhsSessionStore store) throws Exception {
+        ArticleContentFetcher fetcher = new ArticleContentFetcher();
+        ReflectionTestUtils.setField(fetcher, "xhsCookie", cookie);
+        ReflectionTestUtils.setField(fetcher, "xhsSessionStore", store);
+
+        String url = "https://www.xiaohongshu.com/explore/123";
+        Document document = mock(Document.class);
+        when(document.location())
+            .thenReturn("https://www.xiaohongshu.com/login?redirectPath=%2Fexplore%2F123");
+
+        Connection connection = mock(Connection.class);
+        when(connection.userAgent(anyString())).thenReturn(connection);
+        when(connection.timeout(anyInt())).thenReturn(connection);
+        when(connection.followRedirects(true)).thenReturn(connection);
+        when(connection.get()).thenReturn(document);
+
+        try (MockedStatic<Jsoup> jsoup = mockStatic(Jsoup.class)) {
+            jsoup.when(() -> Jsoup.connect(url)).thenReturn(connection);
+            return fetcher.fetch(url, USER_ID);
+        }
     }
 
     private FetchedContent fetchMissingXiaohongshuContent(String cookie) throws Exception {

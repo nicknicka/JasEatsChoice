@@ -73,6 +73,26 @@ public class ArticleContentFetcher implements ContentFetcher {
             // 抓取网页（小红书正文必须带登录态，否则会被重定向到登录页）
             Document doc = newConnection(realUrl, TIMEOUT_MS, userId).get();
 
+            // 小红书未登录/登录态失效会被 302 到 /login?redirectPath=...，必须显式识别：
+            // 登录页里也会带图片 URL，不能靠“正文是否为空”间接推断登录墙。
+            if (isXhsLoginWall(platform, doc)) {
+                boolean usedUserSession = !readUserCookie(userId).isEmpty();
+                if (usedUserSession) {
+                    xhsSessionStore.markExpired(userId);
+                }
+                String message = usedUserSession
+                    ? "小红书登录态已失效，请重新绑定后重试"
+                    : "小红书正文需要登录态：请绑定小红书账号后重试";
+                log.info("小红书登录墙命中，判定需要登录态: url={}, usedUserSession={}", realUrl, usedUserSession);
+                return FetchedContent.builder()
+                    .contentType(ContentType.ARTICLE)
+                    .platform(platform)
+                    .fetchSuccess(true)
+                    .authRequired(true)
+                    .errorMessage(message)
+                    .build();
+            }
+
             // 提取标题
             String title = extractTitle(doc);
 
@@ -192,6 +212,27 @@ public class ArticleContentFetcher implements ContentFetcher {
         String lowerHost = host.toLowerCase();
         return lowerHost.equals("xiaohongshu.com") || lowerHost.endsWith(".xiaohongshu.com")
             || lowerHost.equals("xhslink.com") || lowerHost.endsWith(".xhslink.com");
+    }
+
+    /**
+     * 小红书登录墙识别：以 jsoup 的最终 URL（Document.location()）为主判据，
+     * 命中 /login 路径即视为未登录或登录态失效。
+     */
+    private boolean isXhsLoginWall(ContentPlatform platform, Document doc) {
+        return platform == ContentPlatform.XIAOHONGSHU && isLoginPath(doc.location());
+    }
+
+    private boolean isLoginPath(String location) {
+        if (location == null || location.isBlank()) {
+            return false;
+        }
+        String path;
+        try {
+            path = new URI(location).getPath();
+        } catch (URISyntaxException e) {
+            return false;
+        }
+        return path != null && (path.equals("/login") || path.startsWith("/login/"));
     }
 
     /**
