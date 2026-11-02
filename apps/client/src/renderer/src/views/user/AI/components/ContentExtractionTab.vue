@@ -232,6 +232,12 @@
       @success="handleAddSuccess"
     />
 
+    <!-- 小红书登录态绑定弹窗 -->
+    <xhs-session-dialog
+      v-model:visible="xhsDialogVisible"
+      @success="handleXhsBound"
+    />
+
     <!-- 提取详情弹窗 -->
     <extraction-detail-dialog
       v-model:visible="detailDialogVisible"
@@ -289,6 +295,7 @@ import { Plus, List } from '@element-plus/icons-vue'
 import ContentSourceList from '@/components/ContentSourceList.vue'
 import ContentExtractionDialog from '@/components/ContentExtractionDialog.vue'
 import ExtractionDetailDialog from '@/components/ExtractionDetailDialog.vue'
+import XhsSessionDialog from './XhsSessionDialog.vue'
 import contentExtractionApi from '@/api/contentExtraction'
 
 const loading = ref(false)
@@ -297,6 +304,8 @@ const addDialogVisible = ref(false)
 const detailDialogVisible = ref(false)
 const historyDialogVisible = ref(false)
 const selectedExtractionId = ref(null)
+const xhsDialogVisible = ref(false)
+const xhsDialogSource = ref(null)
 
 // 自动刷新定时器
 let refreshTimer = null
@@ -370,6 +379,27 @@ const handleAddSuccess = () => {
   startPolling()
 }
 
+// 绑定小红书登录态成功后自动重试该条
+const handleXhsBound = async () => {
+  const source = xhsDialogSource.value
+  if (!source) return
+
+  try {
+    const response = await contentExtractionApi.reExtract(source.id)
+    if (response.code === '200' || response.code === 200) {
+      ElMessage.success('已重新提交提取')
+    } else {
+      ElMessage.error(response.message || '重新提取失败')
+    }
+  } catch (error) {
+    const backendMessage = error?.data?.message || error?.response?.data?.message
+    ElMessage.error(backendMessage || error?.message || '重新提取失败，请稍后重试')
+  } finally {
+    loadSources()
+    startPolling()
+  }
+}
+
 // 查看详情
 const handleViewDetail = (source) => {
   if (source.extractionId) {
@@ -377,7 +407,8 @@ const handleViewDetail = (source) => {
     detailDialogVisible.value = true
   } else {
     if (source.extractionStatus === 'AUTH_REQUIRED') {
-      ElMessage.warning('需要登录小红书后重试')
+      xhsDialogSource.value = source
+      xhsDialogVisible.value = true
     } else {
       ElMessage.info(source.extractionStatus === 'PARSE_FAILED' ? '内容解析失败，请查看错误信息' : '内容正在提取中，请稍后查看')
     }
