@@ -101,7 +101,7 @@ class AnnouncementRagEmbeddingRuntimeTest {
 
         AnnouncementRagEmbeddingRuntime runtime = new AnnouncementRagEmbeddingRuntime(
             properties, holder, null, withKey("test-key"), new AIConfig(),
-            List.of(zhipuFactory, openAiFactory), null);
+            List.of(zhipuFactory, openAiFactory), null, null);
 
         runtime.model();
         holder.update(new AnnouncementEmbeddingConfig(
@@ -227,7 +227,7 @@ class AnnouncementRagEmbeddingRuntimeTest {
             List<AnnouncementEmbeddingModelFactory> factories) {
         return new AnnouncementRagEmbeddingRuntime(
             properties, new AnnouncementEmbeddingConfigHolder(properties), keyStore,
-            zhipuConfig, aiConfig, factories, null);
+            zhipuConfig, aiConfig, factories, null, null);
     }
 
     private ZhipuAIConfig withKey(String key) {

@@ -4,5 +4,6 @@ public enum AnnouncementRagState {
     DISABLED,
     NOT_CONFIGURED,
     UNAVAILABLE,
+    REBUILDING,
     READY
 }

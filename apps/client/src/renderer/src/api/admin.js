@@ -1661,6 +1661,24 @@ export function rollbackAiConfig() {
 }
 
 /**
+ * 重试公告 Embedding 索引重建
+ * @returns {Promise} 重建后的 AI 运行时配置快照
+ */
+export function rebuildEmbeddingIndex() {
+  console.log('[管理员API] 重试公告索引重建')
+  return api
+    .post(API.ADMIN.AI_EMBEDDING_REBUILD)
+    .then((response) => {
+      console.log('[管理员API] 重试公告索引重建成功')
+      return response
+    })
+    .catch((error) => {
+      console.error('[管理员API] 重试公告索引重建失败:', error)
+      throw error
+    })
+}
+
+/**
  * 获取 provider 当前可用模型列表（不持久化）
  * @param {Object} candidate 非密钥候选配置（provider/baseUrl/apiKey 等）
  * @returns {Promise} 模型选项数组

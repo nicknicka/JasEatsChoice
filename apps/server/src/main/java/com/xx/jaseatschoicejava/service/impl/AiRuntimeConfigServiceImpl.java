@@ -27,6 +27,7 @@ import com.xx.jaseatschoicejava.dto.AiRuntimeConfigHistory;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.rag.AnnouncementEmbeddingConfig;
+import com.xx.jaseatschoicejava.rag.AnnouncementRagStatus;
 import com.xx.jaseatschoicejava.service.AnnouncementEmbeddingRuntime;
 import com.xx.jaseatschoicejava.service.AiConfigAuditService;
 import com.xx.jaseatschoicejava.service.AiConfigHistoryStore;
@@ -195,12 +196,25 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         DynamicAiModelRegistry.ActiveModels clients = activeClients(
             adapter, previous.getConfig(), null, rollbackVersion);
         registry.activate(clients);
-        activateEmbedding(previous.getConfig());
+        boolean rebuildTriggered = switchEmbeddingConfig(previous.getConfig());
         configHistory = restored;
         version = rollbackVersion;
         updatedAt = now;
         recordAudit("ROLLBACK_SUCCEEDED", currentVersion, rollbackVersion, currentConfig,
-            previous.getConfig(), operator, null, "SUCCESS", "AI 配置已回滚");
+            previous.getConfig(), operator, null, "SUCCESS", rebuildTriggered
+                ? "AI 配置已回滚，已触发公告索引重建"
+                : "AI 配置已回滚");
+        return getCurrentSnapshot();
+    }
+
+    @Override
+    public synchronized AiRuntimeConfigSnapshot rebuildEmbeddingIndex(String operator) {
+        if (embeddingRuntime == null) {
+            throw new BusinessException("EMBEDDING_REBUILD_UNSUPPORTED", "公告索引重建不可用");
+        }
+        embeddingRuntime.rebuildIndex();
+        recordAudit("EMBEDDING_REBUILD_REQUESTED", version, version, currentConfig(), null, operator,
+            null, "SUCCESS", "管理员触发公告索引重建");
         return getCurrentSnapshot();
     }
 
@@ -290,7 +304,6 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     @Override
     public synchronized AiRuntimeConfigSnapshot saveAndActivate(
             AiModelCandidateDTO candidate, String operator) {
-        validateEmbeddingVectorSpaceChange(candidate);
         AiConnectivityResult testResult = testCandidateConnectivity(candidate);
         if (!testResult.isSuccess()) {
             recordAudit("SAVE_FAILED", null, null, null, candidate, operator, testResult,
@@ -376,12 +389,14 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         }
 
         registry.activate(clients);
-        activateEmbedding(targetConfig);
+        boolean rebuildTriggered = switchEmbeddingConfig(targetConfig);
         version = nextVersion;
         updatedAt = now;
         configHistory = history;
         recordAudit("ACTIVATED", previousVersion, nextVersion, previousConfig, candidate,
-            operator, testResult, "SUCCESS", "AI 配置已保存并激活");
+            operator, testResult, "SUCCESS", rebuildTriggered
+                ? "AI 配置已保存并激活，已触发公告索引重建"
+                : "AI 配置已保存并激活");
         return getCurrentSnapshot();
     }
 
@@ -618,34 +633,17 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         if (target.equals(current) && !hasText(candidate.getEmbedding().getApiKey())) {
             return;
         }
-        validateEmbeddingVectorSpaceChange(candidate);
         embeddingRuntime.validate(target, candidate.getEmbedding().getApiKey());
     }
 
     /**
-     * 换模型会改变向量空间，旧向量对新模型无意义；本切片没有重建能力，直接拒绝保存。
+     * 回滚与保存走同一条路径：先校验上一版 Embedding 配置可用，再切换生效并按需触发重建。
      */
-    private void validateEmbeddingVectorSpaceChange(AiModelCandidateDTO candidate) {
-        if (embeddingRuntime == null || candidate == null || candidate.getEmbedding() == null) {
-            return;
-        }
-        AnnouncementEmbeddingConfig target = embeddingCandidate(candidate.getEmbedding());
-        if (!Objects.equals(currentEmbeddingConfig().model(), target.model())) {
-            throw new BusinessException("EMBEDDING_MODEL_REBUILD_REQUIRED",
-                "更换公告 Embedding 模型需要重建索引，当前版本只能在线切换供应商、服务地址与密钥");
-        }
-    }
-
     private void validateEmbeddingForRollback(AiModelConfig previousConfig) {
         if (embeddingRuntime == null || !hasText(previousConfig.getEmbeddingProvider())) {
             return;
         }
-        AnnouncementEmbeddingConfig target = embeddingConfig(previousConfig);
-        if (!Objects.equals(currentEmbeddingConfig().model(), target.model())) {
-            throw new BusinessException("EMBEDDING_MODEL_REBUILD_REQUIRED",
-                "回滚到不同的公告 Embedding 模型需要重建索引，当前版本暂不支持");
-        }
-        embeddingRuntime.validate(target, null);
+        embeddingRuntime.validate(embeddingConfig(previousConfig), null);
     }
 
     private AiModelConfig withCandidateEmbedding(AiModelConfig config, AiModelCandidateDTO candidate) {
@@ -701,6 +699,16 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         embeddingRuntime.activate(embeddingConfig(config));
     }
 
+    /**
+     * 切换生效配置；Embedding 模型变化会触发公告索引重建。
+     */
+    private boolean switchEmbeddingConfig(AiModelConfig config) {
+        if (embeddingRuntime == null || config == null || !hasText(config.getEmbeddingProvider())) {
+            return false;
+        }
+        return embeddingRuntime.switchConfig(embeddingConfig(config));
+    }
+
     private String candidateEmbeddingKey(AiModelCandidateDTO candidate) {
         if (candidate == null || candidate.getEmbedding() == null
                 || !hasText(candidate.getEmbedding().getApiKey())) {
@@ -739,12 +747,15 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     }
 
     private AiEmbeddingSnapshot embeddingSnapshot(AiModelConfig config) {
+        AnnouncementRagStatus status = embeddingRuntime == null ? null : embeddingRuntime.status();
         return AiEmbeddingSnapshot.builder()
             .provider(config.getEmbeddingProvider())
             .model(config.getEmbeddingModel())
             .dimensions(config.getEmbeddingDimensions())
             .baseUrl(config.getEmbeddingBaseUrl() == null ? "" : config.getEmbeddingBaseUrl())
             .providers(embeddingRuntime == null ? List.of() : embeddingRuntime.providers())
+            .state(status == null ? null : status.state().name())
+            .statusReason(status == null ? null : status.reason())
             .keyStatus(embeddingKeyStatus())
             .build();
     }

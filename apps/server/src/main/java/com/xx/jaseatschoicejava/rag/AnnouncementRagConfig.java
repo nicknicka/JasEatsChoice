@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.rag;
 
 import java.util.List;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,7 +40,8 @@ public class AnnouncementRagConfig {
         ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
         List<AnnouncementEmbeddingModelFactory> embeddingModelFactories,
-        QdrantClient announcementQdrantClient) {
+        QdrantClient announcementQdrantClient,
+        AnnouncementIndexRebuilder announcementIndexRebuilder) {
         return new AnnouncementRagEmbeddingRuntime(
             properties,
             announcementEmbeddingConfigHolder,
@@ -47,7 +49,15 @@ public class AnnouncementRagConfig {
             zhipuAIConfig,
             aiConfig,
             embeddingModelFactories,
-            announcementQdrantClient);
+            announcementQdrantClient,
+            announcementIndexRebuilder);
+    }
+
+    @Bean
+    public AnnouncementIndexRebuilder announcementIndexRebuilder(
+        AnnouncementRagInfrastructure announcementRagInfrastructure,
+        RagKnowledgeService ragKnowledgeService) {
+        return new AnnouncementIndexRebuilder(announcementRagInfrastructure, ragKnowledgeService);
     }
 
     @Bean
@@ -59,11 +69,19 @@ public class AnnouncementRagConfig {
     @Bean
     public AnnouncementRagInfrastructure announcementRagInfrastructure(
         AnnouncementRagProperties properties,
-        AnnouncementRagEmbeddingRuntime announcementEmbeddingRuntime,
-        EmbeddingModel announcementEmbeddingModel,
+        AnnouncementEmbeddingConfigHolder announcementEmbeddingConfigHolder,
+        AiEmbeddingRuntimeKeyStore aiEmbeddingRuntimeKeyStore,
+        ZhipuAIConfig zhipuAIConfig,
+        AIConfig aiConfig,
+        List<AnnouncementEmbeddingModelFactory> embeddingModelFactories,
+        ObjectProvider<EmbeddingModel> announcementEmbeddingModel,
         QdrantClient announcementQdrantClient) {
         return new AnnouncementRagInfrastructure(
-            properties, announcementEmbeddingRuntime::usable, announcementEmbeddingModel,
+            properties,
+            () -> AnnouncementRagEmbeddingRuntime.usableConfig(
+                announcementEmbeddingConfigHolder.current(), aiEmbeddingRuntimeKeyStore,
+                zhipuAIConfig, aiConfig, embeddingModelFactories),
+            announcementEmbeddingModel::getObject,
             announcementQdrantClient);
     }
 

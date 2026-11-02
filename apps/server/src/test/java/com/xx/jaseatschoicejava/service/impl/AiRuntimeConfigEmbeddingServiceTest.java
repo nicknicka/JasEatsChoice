@@ -41,6 +41,8 @@ import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.rag.AnnouncementEmbeddingConfig;
+import com.xx.jaseatschoicejava.rag.AnnouncementRagState;
+import com.xx.jaseatschoicejava.rag.AnnouncementRagStatus;
 import com.xx.jaseatschoicejava.service.AnnouncementEmbeddingRuntime;
 import com.xx.jaseatschoicejava.service.SystemConfigService;
 
@@ -170,17 +172,46 @@ class AiRuntimeConfigEmbeddingServiceTest {
     }
 
     @Test
-    void switchingModelIsRejectedUntilIndexRebuildExists() {
+    void switchingModelSavesAndTriggersIndexRebuild() {
         AiRuntimeConfigServiceImpl service = service();
 
-        BusinessException error = assertThrows(BusinessException.class, () -> service.saveAndActivate(
-            candidate(embedding("zhipu", "bge-m3", 2048, "", EMBEDDING_KEY)), "admin"));
+        AiRuntimeConfigSnapshot snapshot = service.saveAndActivate(
+            candidate(embedding("zhipu", "bge-m3", 2048, "", EMBEDDING_KEY)), "admin");
 
-        assertEquals("EMBEDDING_MODEL_REBUILD_REQUIRED", error.getCode());
-        assertEquals(0, embeddingRuntime.validateCount);
-        assertEquals("", embeddingRuntime.activated.baseUrl());
-        assertNull(databaseConfigs.get(CONFIG_KEY));
-        assertFalse(embeddingKeyStore.exists());
+        assertEquals(1, embeddingRuntime.validateCount);
+        assertEquals(1, embeddingRuntime.rebuildRequests);
+        assertEquals("bge-m3", embeddingRuntime.activated.model());
+        assertEquals("bge-m3", snapshot.getEmbedding().getModel());
+        assertEquals("REBUILDING", snapshot.getEmbedding().getState());
+        assertTrue(databaseConfigs.get(CONFIG_KEY).contains("bge-m3"));
+    }
+
+    @Test
+    void changingOnlyKeyDoesNotTriggerIndexRebuild() {
+        AiRuntimeConfigServiceImpl service = service();
+
+        service.saveAndActivate(candidate(embedding(
+            "zhipu", "embedding-3", 2048, "", "rotated-embedding-key-2")), "admin");
+
+        assertEquals(0, embeddingRuntime.rebuildRequests);
+    }
+
+    @Test
+    void manualRebuildReturnsSnapshotWithStatusAndRecordsAudit() {
+        AiConfigAuditServiceImpl auditService = mock(AiConfigAuditServiceImpl.class);
+        AiRuntimeConfigServiceImpl service = new AiRuntimeConfigServiceImpl(
+            aiConfig, systemConfigService, registry, new AiProviderRegistry(List.of(modelFactory)),
+            new ObjectMapper(), chatKeyStore, auditService, null, embeddingRuntime, embeddingKeyStore);
+        service.initialize();
+        embeddingRuntime.state = AnnouncementRagState.REBUILDING;
+
+        AiRuntimeConfigSnapshot snapshot = service.rebuildEmbeddingIndex("admin");
+
+        assertEquals(1, embeddingRuntime.rebuildRequests);
+        assertEquals("REBUILDING", snapshot.getEmbedding().getState());
+        verify(auditService, org.mockito.Mockito.atLeastOnce())
+            .record(org.mockito.ArgumentMatchers.argThat(event ->
+                "EMBEDDING_REBUILD_REQUESTED".equals(event.getAction())));
     }
 
     @Test
@@ -304,8 +335,11 @@ class AiRuntimeConfigEmbeddingServiceTest {
 
         private AnnouncementEmbeddingConfig activated;
         private int validateCount;
+        private int rebuildRequests;
         private String lastCandidateKey;
         private boolean failValidation;
+        private AnnouncementRagState state = AnnouncementRagState.READY;
+        private String statusReason = "公告索引就绪";
 
         private StubEmbeddingRuntime(AiEmbeddingRuntimeKeyStore keyStore) {
             this.keyStore = keyStore;
@@ -335,6 +369,33 @@ class AiRuntimeConfigEmbeddingServiceTest {
         @Override
         public void activate(AnnouncementEmbeddingConfig config) {
             activated = config;
+        }
+
+        @Override
+        public boolean switchConfig(AnnouncementEmbeddingConfig config) {
+            boolean vectorSpaceChanged = activated != null
+                && (!activated.model().equals(config.model())
+                    || activated.dimensions() != config.dimensions());
+            activated = config;
+            if (vectorSpaceChanged) {
+                rebuildRequests++;
+                state = AnnouncementRagState.REBUILDING;
+                statusReason = "正在重建公告索引";
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void rebuildIndex() {
+            rebuildRequests++;
+            state = AnnouncementRagState.REBUILDING;
+            statusReason = "正在重建公告索引";
+        }
+
+        @Override
+        public AnnouncementRagStatus status() {
+            return new AnnouncementRagStatus(state, statusReason);
         }
 
         @Override

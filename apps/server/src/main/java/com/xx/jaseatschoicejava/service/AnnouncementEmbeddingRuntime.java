@@ -3,9 +3,10 @@ package com.xx.jaseatschoicejava.service;
 import java.util.List;
 
 import com.xx.jaseatschoicejava.rag.AnnouncementEmbeddingConfig;
+import com.xx.jaseatschoicejava.rag.AnnouncementRagStatus;
 
 /**
- * 公告 Embedding 运行时边界：生效配置的兜底合并、候选配置校验、切换生效与密钥状态。
+ * 公告 Embedding 运行时边界：生效配置的兜底合并、候选配置校验、切换生效、索引重建与状态。
  */
 public interface AnnouncementEmbeddingRuntime {
 
@@ -27,9 +28,26 @@ public interface AnnouncementEmbeddingRuntime {
     void validate(AnnouncementEmbeddingConfig candidate, String candidateKey);
 
     /**
-     * 让公告检索侧立即使用该配置。
+     * 启动/重启恢复：把该配置设为当前生效值，不触发重建（索引本来就是按它建的）。
      */
     void activate(AnnouncementEmbeddingConfig config);
+
+    /**
+     * 管理员切换或回滚配置：生效后按需触发索引重建。
+     *
+     * @return 是否因此触发了重建
+     */
+    boolean switchConfig(AnnouncementEmbeddingConfig config);
+
+    /**
+     * 手动重试一次公告索引重建（异步；已有重建在跑时忽略）。
+     */
+    void rebuildIndex();
+
+    /**
+     * 当前公告 RAG 状态，含「重建中」与失败原因。
+     */
+    AnnouncementRagStatus status();
 
     /**
      * 后端已实现的 Embedding provider 列表。

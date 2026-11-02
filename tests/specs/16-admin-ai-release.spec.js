@@ -12,8 +12,10 @@ const EMBED_DIMENSIONS = 1024
 const EMBED_BASE_URL = 'http://host.docker.internal:11434/v1'
 const NEW_EMBED_BASE_URL = 'http://embedding-new.example.com:11434/v1'
 const EMBED_FINGERPRINT = '3c9f1a2b7d4e'
+const NEW_EMBED_MODEL = 'bge-large-zh-v1.5'
+const EMBED_REBUILD_FAILURE = '公告索引重建失败：connection refused'
 
-function snapshot(model, version, fingerprint) {
+function snapshot(model, version, fingerprint, embeddingOverride = {}) {
   return {
     provider: 'zhipu',
     model,
@@ -42,7 +44,8 @@ function snapshot(model, version, fingerprint) {
       dimensions: EMBED_DIMENSIONS,
       baseUrl: EMBED_BASE_URL,
       providers: ['zhipu', 'openai-compatible'],
-      keyStatus: { configured: true, fingerprint: EMBED_FINGERPRINT, updatedAt: '2026-10-31T08:35:00' }
+      keyStatus: { configured: true, fingerprint: EMBED_FINGERPRINT, updatedAt: '2026-10-31T08:35:00' },
+      ...embeddingOverride
     }
   }
 }
@@ -52,7 +55,14 @@ test.describe('AI 热加载发布验收', () => {
     markRunning('16.1')
     const currentModel = 'glm-4-flash'
     const candidateModel = 'glm-4.1v-thinking-flash'
-    const activeSnapshot = snapshot(currentModel, 2, ACTIVE_FINGERPRINT)
+    const activeSnapshot = snapshot(currentModel, 2, ACTIVE_FINGERPRINT, { state: 'READY' })
+    const unavailableSnapshot = snapshot(candidateModel, 3, NEW_FINGERPRINT, {
+      model: NEW_EMBED_MODEL,
+      baseUrl: NEW_EMBED_BASE_URL,
+      state: 'UNAVAILABLE',
+      statusReason: EMBED_REBUILD_FAILURE
+    })
+    let currentCallCount = 0
     const previousSummary = {
       version: 1,
       updatedAt: '2026-10-31T08:00:00',
@@ -76,8 +86,12 @@ test.describe('AI 热加载发布验收', () => {
 
     await page.route('**/api/admin/settings/config/group/*', route =>
       route.fulfill({ json: { success: true, data: {} } }))
-    await page.route('**/api/admin/settings/ai/current', route =>
-      route.fulfill({ json: { success: true, data: activeSnapshot } }))
+    await page.route('**/api/admin/settings/ai/current', route => {
+      // #188 /current 需按调用次序返回不同快照：首屏 READY，刷新状态时返回 UNAVAILABLE
+      const payload = currentCallCount === 0 ? activeSnapshot : unavailableSnapshot
+      currentCallCount += 1
+      return route.fulfill({ json: { success: true, data: payload } })
+    })
     await page.route('**/api/admin/settings/ai/previous-summary', route =>
       route.fulfill({ json: { success: true, data: previousSummary } }))
     await page.route('**/api/admin/settings/ai/models', route =>
@@ -92,7 +106,22 @@ test.describe('AI 热加载发布验收', () => {
     })
     await page.route('**/api/admin/settings/ai/activate', route => {
       capturedRequests.activate = route.request().postDataJSON()
-      return route.fulfill({ json: { success: true, data: snapshot(candidateModel, 3, NEW_FINGERPRINT) } })
+      // #188 换 Embedding 模型保存后后端返回重建中的快照
+      return route.fulfill({ json: { success: true, data: snapshot(candidateModel, 3, NEW_FINGERPRINT, {
+        model: NEW_EMBED_MODEL,
+        baseUrl: NEW_EMBED_BASE_URL,
+        state: 'REBUILDING',
+        statusReason: '正在重建公告索引'
+      }) } })
+    })
+    let rebuildCalls = 0
+    await page.route('**/api/admin/settings/ai/embedding/rebuild', route => {
+      rebuildCalls += 1
+      return route.fulfill({ json: { success: true, data: snapshot(candidateModel, 3, NEW_FINGERPRINT, {
+        model: NEW_EMBED_MODEL,
+        baseUrl: NEW_EMBED_BASE_URL,
+        state: 'READY'
+      }) } })
     })
     await page.route('**/api/admin/settings/ai/rollback', route =>
       route.fulfill({ json: { success: true, data: activeSnapshot } }))
@@ -162,6 +191,7 @@ test.describe('AI 热加载发布验收', () => {
       })
 
       await embeddingItem('服务地址').locator('input').fill(NEW_EMBED_BASE_URL)
+      await embeddingItem('Embedding 模型').locator('input').fill(NEW_EMBED_MODEL)
 
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/activate'),
@@ -172,11 +202,26 @@ test.describe('AI 热加载发布验收', () => {
       await expect(formItem('API Key').locator('input[type="password"]')).toHaveValue('')
       expect(capturedRequests.activate.embedding).toMatchObject({
         provider: EMBED_PROVIDER,
-        model: EMBED_MODEL,
+        model: NEW_EMBED_MODEL,
         dimensions: EMBED_DIMENSIONS,
         baseUrl: NEW_EMBED_BASE_URL,
         apiKey: ''
       })
+      await expect(embeddingSummary.getByText('重建中')).toBeVisible()
+
+      await Promise.all([
+        page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/embedding/rebuild'),
+        page.getByRole('button', { name: '重试重建' }).click()
+      ])
+      await expect(embeddingSummary.getByText('就绪')).toBeVisible()
+      expect(rebuildCalls, '重试重建应发出请求').toBe(1)
+
+      await Promise.all([
+        page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/current'),
+        page.getByRole('button', { name: '刷新状态' }).click()
+      ])
+      await expect(embeddingSummary.getByText('不可用')).toBeVisible()
+      await expect(embeddingSummary.getByText(EMBED_REBUILD_FAILURE)).toBeVisible()
 
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/rollback'),

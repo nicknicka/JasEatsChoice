@@ -14,7 +14,9 @@ class AnnouncementRagStartupTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
         .withUserConfiguration(AnnouncementRagConfig.class, ZhipuAnnouncementEmbeddingModelFactory.class,
-            OpenAiCompatibleAnnouncementEmbeddingModelFactory.class, AiEmbeddingRuntimeKeyStore.class);
+            OpenAiCompatibleAnnouncementEmbeddingModelFactory.class, AiEmbeddingRuntimeKeyStore.class)
+        // 索引重建编排依赖检索服务；本用例只验证启动状态，用替身即可
+        .withBean(RagKnowledgeService.class, () -> org.mockito.Mockito.mock(RagKnowledgeService.class));
 
     @Test
     void disabledRag_startsInDisabledState() {
@@ -66,6 +68,7 @@ class AnnouncementRagStartupTest {
             .withUserConfiguration(AnnouncementRagConfig.class, ZhipuAnnouncementEmbeddingModelFactory.class,
                 OpenAiCompatibleAnnouncementEmbeddingModelFactory.class)
             .withBean(AiEmbeddingRuntimeKeyStore.class, () -> embeddingKeyStore)
+            .withBean(RagKnowledgeService.class, () -> org.mockito.Mockito.mock(RagKnowledgeService.class))
             .withPropertyValues(
                 "announcement-rag.enabled=true",
                 "zhipuai.api-key=",
