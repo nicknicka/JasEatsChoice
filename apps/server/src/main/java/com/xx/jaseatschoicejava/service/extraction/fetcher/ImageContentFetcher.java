@@ -33,7 +33,7 @@ public class ImageContentFetcher implements ContentFetcher {
     }
 
     @Override
-    public FetchedContent fetch(String url) {
+    public FetchedContent fetch(String url, String userId) {
         log.info("开始抓取图片内容: {}", url);
 
         try {
@@ -63,7 +63,7 @@ public class ImageContentFetcher implements ContentFetcher {
         } catch (RuntimeException e) {
             log.error("抓取图片内容失败: {}", url, e);
             // 降级：尝试用文章抓取器处理
-            return articleFetcher.fetch(url);
+            return articleFetcher.fetch(url, userId);
         }
     }
 

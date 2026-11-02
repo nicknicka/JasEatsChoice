@@ -82,7 +82,7 @@ class ContentExtractionServiceImplTest {
         ExtractionTask task = pendingTask();
         ContentSource source = pendingSource();
         source.setPlatform(ContentPlatform.XIAOHONGSHU.getCode());
-        String message = "小红书正文需要登录态：请在 deploy/.env 配置 XHS_COOKIE 后重试";
+        String message = "小红书正文需要登录态：请绑定小红书账号后重试";
         FetchedContent authRequiredContent = FetchedContent.builder()
             .fetchSuccess(true)
             .authRequired(true)
@@ -94,7 +94,7 @@ class ContentExtractionServiceImplTest {
         when(extractionTaskMapper.selectPendingTasks()).thenReturn(List.of(task));
         when(contentSourceMapper.selectById("source-1")).thenReturn(source);
         when(fetcherFactory.getFetcher(any(ContentPlatform.class), any(ContentType.class))).thenReturn(contentFetcher);
-        when(contentFetcher.fetch(anyString())).thenReturn(authRequiredContent);
+        when(contentFetcher.fetch(anyString(), anyString())).thenReturn(authRequiredContent);
         when(extractionTaskMapper.updateById(any(ExtractionTask.class))).thenReturn(1);
         when(contentSourceMapper.updateById(any(ContentSource.class))).thenReturn(1);
 
@@ -124,7 +124,7 @@ class ContentExtractionServiceImplTest {
         when(extractionTaskMapper.selectPendingTasks()).thenReturn(List.of(task));
         when(contentSourceMapper.selectById("source-1")).thenReturn(source);
         when(fetcherFactory.getFetcher(any(ContentPlatform.class), any(ContentType.class))).thenReturn(contentFetcher);
-        when(contentFetcher.fetch(anyString())).thenReturn(emptyContent);
+        when(contentFetcher.fetch(anyString(), anyString())).thenReturn(emptyContent);
         when(extractionTaskMapper.updateById(any(ExtractionTask.class))).thenReturn(1);
         when(contentSourceMapper.updateById(any(ContentSource.class))).thenReturn(1);
 
@@ -154,7 +154,7 @@ class ContentExtractionServiceImplTest {
         when(extractionTaskMapper.selectPendingTasks()).thenReturn(List.of(task));
         when(contentSourceMapper.selectById("source-1")).thenReturn(source);
         when(fetcherFactory.getFetcher(any(ContentPlatform.class), any(ContentType.class))).thenReturn(contentFetcher);
-        when(contentFetcher.fetch(anyString())).thenReturn(fetchedContent);
+        when(contentFetcher.fetch(anyString(), anyString())).thenReturn(fetchedContent);
         when(contentRecognizer.recognize(fetchedContent)).thenReturn(notRecipe);
         when(extractionTaskMapper.updateById(any(ExtractionTask.class))).thenReturn(1);
         when(contentSourceMapper.updateById(any(ContentSource.class))).thenReturn(1);
@@ -231,7 +231,7 @@ class ContentExtractionServiceImplTest {
         when(extractionTaskMapper.selectPendingTasks()).thenReturn(List.of(task));
         when(contentSourceMapper.selectById("source-1")).thenReturn(source);
         when(fetcherFactory.getFetcher(any(ContentPlatform.class), any(ContentType.class))).thenReturn(contentFetcher);
-        when(contentFetcher.fetch(anyString())).thenReturn(fetchedContent);
+        when(contentFetcher.fetch(anyString(), anyString())).thenReturn(fetchedContent);
         when(contentRecognizer.recognize(fetchedContent)).thenReturn("not json");
         when(extractionTaskMapper.updateById(any(ExtractionTask.class))).thenReturn(1);
         when(contentSourceMapper.updateById(any(ContentSource.class))).thenReturn(1);
