@@ -11,9 +11,21 @@
         <p>自动化读取平台内容存在账号风控风险，请知悉后再绑定。</p>
       </el-alert>
 
+      <el-alert
+        v-if="status === 'expired'"
+        type="error"
+        :closable="false"
+        show-icon
+        class="expired-alert"
+      >
+        <p>登录态已失效，请重新绑定。</p>
+      </el-alert>
+
       <div class="session-status">
         当前状态：
-        <span class="xhs-status" :class="{ bound }">{{ bound ? '已绑定' : '未绑定' }}</span>
+        <span class="xhs-status" :class="{ bound, expired: status === 'expired' }">
+          {{ status === 'expired' ? '已失效' : bound ? '已绑定' : '未绑定' }}
+        </span>
         <span v-if="bound && updatedAt" class="updated-at">（更新于 {{ formatUpdatedAt(updatedAt) }}）</span>
       </div>
 
@@ -64,6 +76,7 @@ const dialogVisible = computed({
 })
 
 const bound = ref(false)
+const status = ref('none')
 const updatedAt = ref('')
 const cookie = ref('')
 const confirmed = ref(false)
@@ -83,6 +96,7 @@ const loadStatus = async () => {
     const response = await contentExtractionApi.getXhsSession()
     if (isOk(response)) {
       bound.value = !!response.data?.bound
+      status.value = response.data?.status || 'none'
       updatedAt.value = response.data?.updatedAt || ''
     }
   } catch (error) {
@@ -126,6 +140,7 @@ const handleUnbind = async () => {
     const response = await contentExtractionApi.unbindXhsSession()
     if (isOk(response)) {
       bound.value = false
+      status.value = 'none'
       updatedAt.value = ''
       ElMessage.success('已解绑小红书登录态')
     } else {
@@ -168,6 +183,15 @@ const handleClose = () => {
 
 .xhs-status.bound {
   color: #07c160;
+}
+
+.xhs-status.expired {
+  color: #f56c6c;
+}
+
+.expired-alert p {
+  margin: 0;
+  line-height: 1.6;
 }
 
 .updated-at {

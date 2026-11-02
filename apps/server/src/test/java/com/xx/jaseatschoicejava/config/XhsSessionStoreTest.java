@@ -43,6 +43,52 @@ class XhsSessionStoreTest {
     }
 
     @Test
+    void notExpiredByDefault() {
+        XhsSessionStore store = new XhsSessionStore(tempDir.toString());
+        store.write("user-a", "a1=1; web_session=a");
+
+        assertFalse(store.isExpired("user-a"));
+    }
+
+    @Test
+    void writeAfterMarkExpiredClearsExpiredFlag() {
+        XhsSessionStore store = new XhsSessionStore(tempDir.toString());
+        store.write("user-a", "a1=1; web_session=a");
+
+        store.markExpired("user-a");
+        assertTrue(store.isExpired("user-a"));
+
+        store.write("user-a", "a1=2; web_session=b");
+        assertFalse(store.isExpired("user-a"));
+        assertEquals("a1=2; web_session=b", store.read("user-a"));
+    }
+
+    @Test
+    void deleteClearsExpiredFlag() {
+        XhsSessionStore store = new XhsSessionStore(tempDir.toString());
+        store.write("user-a", "a1=1; web_session=a");
+        store.markExpired("user-a");
+
+        store.delete("user-a");
+
+        assertFalse(store.isExpired("user-a"));
+        assertFalse(store.exists("user-a"));
+    }
+
+    @Test
+    void markExpiredDoesNotAffectOtherUsers() {
+        XhsSessionStore store = new XhsSessionStore(tempDir.toString());
+        store.write("user-a", "a1=1; web_session=a");
+        store.write("user-b", "a1=2; web_session=b");
+
+        store.markExpired("user-a");
+
+        assertTrue(store.isExpired("user-a"));
+        assertFalse(store.isExpired("user-b"));
+        assertEquals("a1=2; web_session=b", store.read("user-b"));
+    }
+
+    @Test
     void updatedAtIsNullWhenUnbound() {
         XhsSessionStore store = new XhsSessionStore(tempDir.toString());
 

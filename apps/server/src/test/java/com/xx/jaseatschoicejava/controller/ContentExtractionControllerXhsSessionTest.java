@@ -36,11 +36,14 @@ class ContentExtractionControllerXhsSessionTest {
 
     private MockMvc mockMvc;
 
+    private XhsSessionStore xhsSessionStore;
+
     @BeforeEach
     void setUp() {
         ContentExtractionController controller = new ContentExtractionController();
         ReflectionTestUtils.setField(controller, "contentExtractionService", mock(ContentExtractionService.class));
-        ReflectionTestUtils.setField(controller, "xhsSessionStore", new XhsSessionStore(tempDir.toString()));
+        xhsSessionStore = new XhsSessionStore(tempDir.toString());
+        ReflectionTestUtils.setField(controller, "xhsSessionStore", xhsSessionStore);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
             .setControllerAdvice(new GlobalExceptionHandler())
             .build();
@@ -76,6 +79,63 @@ class ContentExtractionControllerXhsSessionTest {
         String body = result.getResponse().getContentAsString();
         assertFalse(body.contains(SECRET), "GET 不能回传登录态本体");
         assertFalse(body.contains("web_session"), "GET 不能回传登录态本体");
+    }
+
+    @Test
+    void statusIsExpiredWhenSessionMarkedExpired() throws Exception {
+        mockMvc.perform(post("/v1/content-extraction/xhs-session")
+                .header(USER_HEADER, "user-a")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cookie\":\"" + SECRET + "\"}"))
+            .andExpect(status().isOk());
+
+        xhsSessionStore.markExpired("user-a");
+
+        MvcResult result = mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.bound").value(true))
+            .andExpect(jsonPath("$.data.status").value("expired"))
+            .andReturn();
+
+        String body = result.getResponse().getContentAsString();
+        assertFalse(body.contains(SECRET), "GET 不能回传登录态本体");
+        assertFalse(body.contains("web_session"), "GET 不能回传登录态本体");
+    }
+
+    @Test
+    void rebindingClearsExpiredStatus() throws Exception {
+        mockMvc.perform(post("/v1/content-extraction/xhs-session")
+                .header(USER_HEADER, "user-a")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cookie\":\"" + SECRET + "\"}"))
+            .andExpect(status().isOk());
+        xhsSessionStore.markExpired("user-a");
+
+        mockMvc.perform(post("/v1/content-extraction/xhs-session")
+                .header(USER_HEADER, "user-a")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cookie\":\"" + SECRET + "\"}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+            .andExpect(jsonPath("$.data.status").value("active"));
+    }
+
+    @Test
+    void unbindClearsExpiredStatus() throws Exception {
+        mockMvc.perform(post("/v1/content-extraction/xhs-session")
+                .header(USER_HEADER, "user-a")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cookie\":\"" + SECRET + "\"}"))
+            .andExpect(status().isOk());
+        xhsSessionStore.markExpired("user-a");
+
+        mockMvc.perform(delete("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+            .andExpect(jsonPath("$.data.bound").value(false))
+            .andExpect(jsonPath("$.data.status").value("none"));
     }
 
     @Test
