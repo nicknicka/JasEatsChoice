@@ -47,6 +47,27 @@ export default {
   },
 
   /**
+   * 获取小红书登录态绑定状态（服务端不返回登录态本体）
+   */
+  getXhsSession() {
+    return api.get('/v1/content-extraction/xhs-session')
+  },
+
+  /**
+   * 绑定小红书登录态
+   */
+  bindXhsSession(cookie) {
+    return api.post('/v1/content-extraction/xhs-session', { cookie })
+  },
+
+  /**
+   * 解绑小红书登录态
+   */
+  unbindXhsSession() {
+    return api.delete('/v1/content-extraction/xhs-session')
+  },
+
+  /**
    * 发布为食谱
    */
   publishAsRecipe(extractionId, data) {
