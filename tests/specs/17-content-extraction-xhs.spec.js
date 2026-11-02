@@ -7,14 +7,23 @@ const SESSION_PATH = '/api/v1/content-extraction/xhs-session'
 const AUTH_SOURCE_ID = 'e2e-xhs-auth-source'
 const AUTH_SOURCE_TITLE = 'E2E 需要登录小红书'
 
-async function authToken(page) {
-  return page.evaluate(() => localStorage.getItem('auth_token'))
+// 应用侧身份同时依赖 Authorization 与 X-User-Id（UserIdentityUtil 优先读后者），
+// 直连请求必须与之一致，否则会落到匿名兜底用户。
+async function authHeaders(page) {
+  const { token, userId } = await page.evaluate(() => ({
+    token: localStorage.getItem('auth_token'),
+    userId: localStorage.getItem('auth_userId')
+  }))
+  const headers = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  if (userId) headers['X-User-Id'] = userId
+  return headers
 }
 
 async function deleteSession(page) {
-  const token = await authToken(page)
-  if (!token) return
-  await page.request.delete(SESSION_PATH, { headers: { Authorization: `Bearer ${token}` } })
+  const headers = await authHeaders(page)
+  if (!headers.Authorization) return
+  await page.request.delete(SESSION_PATH, { headers })
 }
 
 // 真实 AUTH_REQUIRED 依赖小红书线上风控，不可控；这里注入固定来源保证入口可复现。
@@ -63,6 +72,8 @@ test.describe('模块十七：内容提取登录态绑定', () => {
       await deleteSession(page)
 
       await page.goto('/user/home/ai')
+      // 等默认 tab 挂载完成再切，否则点击可能早于 Vue 绑定事件被吞掉（与 08 spec 同款防竞态写法）
+      await expect(page.locator('#tab-btn-chat')).toHaveClass(/active/, { timeout: 10000 })
       await page.locator('#tab-btn-extraction').click()
 
       const card = page.locator('.source-card', { hasText: AUTH_SOURCE_TITLE }).first()
@@ -93,9 +104,8 @@ test.describe('模块十七：内容提取登录态绑定', () => {
       await expect.poll(() => reExtractCount, { timeout: 10000 }).toBeGreaterThan(0)
 
       // 绑定状态可从服务端读回
-      const token = await authToken(page)
       const statusResponse = await page.request.get(SESSION_PATH, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: await authHeaders(page)
       })
       const statusResult = await statusResponse.json()
       expect(statusResult.success).toBe(true)
