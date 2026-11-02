@@ -12,6 +12,12 @@ const WINDOW_SIZES = {
   MAIN: { width: 1200, height: 800 }
 }
 
+// 小红书登录窗口：独立 persist partition，与 App 自身登录态隔离，下次免重复登录
+const XHS_PARTITION = 'persist:xiaohongshu'
+const XHS_LOGIN_URL = 'https://www.xiaohongshu.com/login'
+const XHS_LOGIN_TIMEOUT = 5 * 60 * 1000
+const XHS_COOKIE_POLL_INTERVAL = 1000
+
 /**
  * 将窗口居中到屏幕
  */
@@ -57,6 +63,69 @@ let mainWindow
 let webSocketClient = null
 // 当前窗口状态：login / main
 let windowState = 'login'
+
+/**
+ * 打开小红书官方登录窗口，等用户自行登录。
+ * 轮询独立 partition 的 cookie，出现 web_session 即拼成 Cookie 串返回；
+ * 用户关窗或超过上限时返回取消。不接管账号密码，也不处理验证码。
+ */
+function openXhsLoginWindow() {
+  return new Promise((resolve) => {
+    const partitionSession = session.fromPartition(XHS_PARTITION)
+    const loginWindow = new BrowserWindow({
+      width: 1000,
+      height: 720,
+      autoHideMenuBar: true,
+      title: '小红书登录',
+      webPreferences: {
+        partition: XHS_PARTITION,
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true
+      }
+    })
+
+    let settled = false
+    let pollTimer = null
+    let timeoutTimer = null
+
+    const finish = (result) => {
+      if (settled) return
+      settled = true
+      if (pollTimer) clearInterval(pollTimer)
+      if (timeoutTimer) clearTimeout(timeoutTimer)
+      if (!loginWindow.isDestroyed()) loginWindow.close()
+      resolve(result)
+    }
+
+    const checkLoginState = async () => {
+      try {
+        const cookies = await partitionSession.cookies.get({ domain: 'xiaohongshu.com' })
+        if (cookies.some((cookie) => cookie.name === 'web_session')) {
+          const cookieHeader = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ')
+          finish({ cookie: cookieHeader })
+        }
+      } catch (error) {
+        // 只记录错误信息，绝不输出登录态
+        console.error('[Xhs] 读取小红书登录态失败:', error?.message)
+      }
+    }
+
+    // 用户手动关窗即视为取消
+    loginWindow.on('closed', () => finish({ canceled: true }))
+
+    pollTimer = setInterval(checkLoginState, XHS_COOKIE_POLL_INTERVAL)
+    timeoutTimer = setTimeout(() => finish({ canceled: true }), XHS_LOGIN_TIMEOUT)
+
+    loginWindow.loadURL(XHS_LOGIN_URL).catch((error) => {
+      console.error('[Xhs] 加载小红书登录页失败:', error?.message)
+      finish({ canceled: true })
+    })
+
+    // partition 里已有登录态时无需等首个轮询
+    checkLoginState()
+  })
+}
 
 function createWindow() {
   // 创建小窗口用于登录
@@ -294,6 +363,19 @@ app.whenReady().then(() => {
   ipcMain.handle('window:minimize', () => {
     if (mainWindow) {
       mainWindow.minimize()
+    }
+  })
+
+  // === 小红书登录窗口 IPC 通道 ===
+  ipcMain.handle('xhs:login', () => openXhsLoginWindow())
+
+  ipcMain.handle('xhs:clear', async () => {
+    try {
+      await session.fromPartition(XHS_PARTITION).clearStorageData({ storages: ['cookies'] })
+      return true
+    } catch (error) {
+      console.error('[Xhs] 清理小红书登录态失败:', error?.message)
+      return false
     }
   })
 

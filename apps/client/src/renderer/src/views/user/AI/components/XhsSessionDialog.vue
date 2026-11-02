@@ -39,6 +39,18 @@
       <el-checkbox v-model="confirmed" class="confirm-checkbox">
         我已了解：登录态保存在服务端用于抓取内容，可随时解绑；自动化读取平台内容存在账号风控风险。
       </el-checkbox>
+
+      <div v-if="xhsSupported" class="xhs-login-entry">
+        <el-button
+          type="primary"
+          :loading="opening"
+          :disabled="!confirmed"
+          @click="handleOpenLoginWindow"
+        >
+          打开小红书登录窗口
+        </el-button>
+        <span class="xhs-login-hint">也可打开官方登录窗口，登录成功后自动完成绑定</span>
+      </div>
     </div>
 
     <template #footer>
@@ -82,6 +94,9 @@ const cookie = ref('')
 const confirmed = ref(false)
 const submitting = ref(false)
 const unbinding = ref(false)
+const opening = ref(false)
+
+const xhsSupported = computed(() => window.api?.xhs?.supported === true)
 
 const isOk = (response) => response.code === '200' || response.code === 200
 
@@ -134,6 +149,30 @@ const handleBind = async () => {
   }
 }
 
+const handleOpenLoginWindow = async () => {
+  if (!xhsSupported.value || opening.value) return
+
+  opening.value = true
+  try {
+    const result = await window.api.xhs.login()
+    if (!result || result.canceled) {
+      ElMessage.info('已取消小红书登录')
+      return
+    }
+    if (!result.cookie) {
+      ElMessage.error('未获取到小红书登录态，请重试')
+      return
+    }
+    // 复用已有绑定逻辑：填好 Cookie 后直接提交，成功后照常自动重试
+    cookie.value = result.cookie
+    await handleBind()
+  } catch (error) {
+    ElMessage.error(error?.message || '打开小红书登录窗口失败')
+  } finally {
+    opening.value = false
+  }
+}
+
 const handleUnbind = async () => {
   unbinding.value = true
   try {
@@ -142,6 +181,13 @@ const handleUnbind = async () => {
       bound.value = false
       status.value = 'none'
       updatedAt.value = ''
+      if (xhsSupported.value) {
+        try {
+          await window.api.xhs.clear()
+        } catch (error) {
+          console.error('清理本地小红书登录态失败:', error)
+        }
+      }
       ElMessage.success('已解绑小红书登录态')
     } else {
       ElMessage.error(response.message || '解绑失败')
@@ -192,6 +238,19 @@ const handleClose = () => {
 .expired-alert p {
   margin: 0;
   line-height: 1.6;
+}
+
+.xhs-login-entry {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.xhs-login-hint {
+  font-size: 0.857rem /* 原值: 12px */;
+  color: #909399;
+  line-height: 1.5;
 }
 
 .updated-at {

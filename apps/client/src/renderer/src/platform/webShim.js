@@ -86,6 +86,8 @@
         return Promise.resolve(true)
       }
     },
+    // 小红书登录窗口只在 Electron 桌面端可用，Web 版明确声明不支持
+    xhs: { supported: false, login: async () => ({ canceled: true }), clear: async () => false },
     clipboard: {
       writeText: function (text) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
