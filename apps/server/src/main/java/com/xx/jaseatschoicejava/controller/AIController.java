@@ -88,75 +88,98 @@ public class AIController {
     @PostMapping(value = "/dish-recognize", consumes = "multipart/form-data")
     public ResponseResult<?> dishRecognize(@RequestParam("image") MultipartFile image,
                                           @RequestParam(value = "userId", required = false) String userId) {
+        if (image == null || image.isEmpty()) {
+            return ResponseResult.fail("400", "请上传菜品图片");
+        }
+        if (image.getSize() > MAX_REMOTE_IMAGE_BYTES) {
+            return ResponseResult.fail("413", "图片超过 10MB 限制");
+        }
+
+        byte[] imageBytes;
+        try {
+            imageBytes = image.getBytes();
+        } catch (IOException e) {
+            log.error("读取上传图片失败", e);
+            return ResponseResult.fail("400", "读取上传图片失败，请重新上传");
+        }
+
+        String contentType = detectSupportedImageContentType(imageBytes);
+        if (contentType == null) {
+            return ResponseResult.fail("415", "仅支持 JPEG、PNG 或 WebP 图片");
+        }
+
         if (!chatModelProvider.getCapabilities().isVision()) {
             return ResponseResult.fail(AI_VISION_NOT_CONFIGURED_CODE, "菜品识别暂未开放：请配置可用的视觉模型");
         }
 
+        String suffix = imageSuffix(contentType);
+        String uploadDir = fileUploadConfig.getUploadPath() + "dish-recognition/";
+        java.io.File directory = new java.io.File(uploadDir);
+        if (!directory.exists() && !directory.mkdirs()) {
+            log.error("创建菜品图片目录失败：{}", uploadDir);
+            return ResponseResult.fail("500", "保存上传图片失败，请稍后重试");
+        }
+
+        String fileName = java.util.UUID.randomUUID() + suffix;
+        java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir, fileName);
         try {
-            log.info("接收到菜品识别请求，文件名：{}, 大小：{}", image.getOriginalFilename(), image.getSize());
+            java.nio.file.Files.write(filePath, imageBytes);
+        } catch (IOException e) {
+            log.error("保存上传图片失败", e);
+            deleteQuietly(filePath);
+            return ResponseResult.fail("500", "保存上传图片失败，请稍后重试");
+        }
 
-            // 1. 读取图片字节数据
-            byte[] imageBytes;
-            try {
-                imageBytes = image.getBytes();
-            } catch (IOException e) {
-                log.error("读取上传图片失败", e);
-                return ResponseResult.fail("500", "读取上传图片失败：" + e.getMessage());
-            }
-
-            // 2. 将图片转为Base64编码（用于AI识别）
+        String imageUrl = fileUploadConfig.getServerUrl() + "/" + fileUploadConfig.getUrlPrefix()
+            + "dish-recognition/" + fileName;
+        try {
             String base64Data = java.util.Base64.getEncoder().encodeToString(imageBytes);
-            log.info("图片Base64编码长度：{} 字符", base64Data.length());
+            Map<String, Object> result = aiAssistantService.recognizeDishWithBase64(base64Data, contentType);
 
-            // 3. 保存图片文件
-            String uploadDir = fileUploadConfig.getUploadPath() + "dish-recognition/";
-            java.io.File directory = new java.io.File(uploadDir);
-            if (!directory.exists()) {
-                directory.mkdirs();
-            }
-
-            String originalFilename = image.getOriginalFilename();
-            String suffix = ".jpg";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
-            String fileName = java.util.UUID.randomUUID().toString() + suffix;
-            java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir + fileName);
-            try {
-                java.nio.file.Files.write(filePath, imageBytes);
-            } catch (IOException e) {
-                log.error("保存上传图片失败", e);
-                return ResponseResult.fail("500", "保存上传图片失败：" + e.getMessage());
-            }
-
-            // 4. 构建图片URL
-            String imageUrl = fileUploadConfig.getServerUrl() + "/" + fileUploadConfig.getUrlPrefix() + "dish-recognition/" + fileName;
-            log.info("图片上传成功，URL：{}", imageUrl);
-
-            // 5. 调用AI识别服务
-            Map<String, Object> result = aiAssistantService.recognizeDishWithBase64(base64Data);
-
-            // 6. 检查识别结果
             if (result == null) {
-                log.error("AI识别返回null结果");
+                deleteQuietly(filePath);
                 return ResponseResult.fail("500", "菜品识别失败：服务返回空结果");
             }
-
             if (Boolean.TRUE.equals(result.get("error"))) {
-                String errorMessage = (String) result.get("message");
-                log.error("AI识别失败：{}", errorMessage);
-                // 非菜品图片，返回特定错误码
+                deleteQuietly(filePath);
                 if (Boolean.TRUE.equals(result.get("notDish"))) {
-                    return ResponseResult.fail("4001", errorMessage != null ? errorMessage : "请上传菜品图片");
+                    String message = result.get("message") instanceof String value && !value.isBlank()
+                        ? value : "请上传食物图片";
+                    return ResponseResult.fail("4001", message);
                 }
-                return ResponseResult.fail("500", errorMessage != null ? errorMessage : "菜品识别失败");
+                String message = result.get("message") instanceof String value && !value.isBlank()
+                    ? value : "菜品识别失败，请稍后重试";
+                return ResponseResult.fail("500", message);
             }
 
             result.put("imageUrl", imageUrl);
             return ResponseResult.success(result);
         } catch (RuntimeException e) {
+            deleteQuietly(filePath);
             log.error("菜品识别失败", e);
-            return ResponseResult.fail("500", "菜品识别失败：" + e.getMessage());
+            return ResponseResult.fail("500", "菜品识别失败，请稍后重试");
+        }
+    }
+
+    private String detectSupportedImageContentType(byte[] bytes) {
+        String contentType = detectImageContentType(bytes);
+        return contentType != null && contentType.startsWith("image/") && contentType.matches("image/(jpeg|png|webp)")
+            ? contentType : null;
+    }
+
+    private String imageSuffix(String contentType) {
+        return switch (contentType) {
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            default -> ".jpg";
+        };
+    }
+
+    private void deleteQuietly(java.nio.file.Path filePath) {
+        try {
+            java.nio.file.Files.deleteIfExists(filePath);
+        } catch (IOException e) {
+            log.warn("清理菜品图片失败：{}", filePath, e);
         }
     }
 

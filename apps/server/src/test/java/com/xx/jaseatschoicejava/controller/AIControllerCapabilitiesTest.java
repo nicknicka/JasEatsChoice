@@ -61,7 +61,8 @@ class AIControllerCapabilitiesTest {
                 .build());
 
         ResponseResult<?> result = controller.dishRecognize(
-                new MockMultipartFile("image", "dish.jpg", "image/jpeg", new byte[] { 1, 2, 3 }),
+                new MockMultipartFile("image", "dish.jpg", "image/jpeg",
+                        new byte[] { (byte) 0xFF, (byte) 0xD8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }),
                 null);
 
         assertFalse(result.getSuccess());

@@ -58,7 +58,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         首先判断图片中是否包含食物/菜品。如果不是食物图片（如风景、人物、动物、物品等），请返回：
         {
           "isDish": false,
-          "reason": "只能识别食物图片，请确认上传的是食物图片"
+          "reason": "请上传食物图片"
         }
 
         如果图片中确实是食物/菜品，请返回以下JSON格式：
@@ -74,7 +74,8 @@ public class AiAssistantServiceImpl implements AiAssistantService {
           "ingredients": ["食材1", "食材2", "食材3"],
           "tags": ["标签1", "标签2"],
           "confidence": 置信度(0-1之间的小数),
-          "nutritionScore": 营养评分(1-10分)
+          "nutritionScore": 营养评分(1-10分),
+          "nutritionEstimated": true
         }
 
         注意：
@@ -82,7 +83,8 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         2. 卡路里和营养成分要根据菜品分量合理估算
         3. 食材列表要包含主要食材和调料
         4. 标签可以是菜系、口味、场景等
-        5. 只返回JSON，不要其他解释文字
+        5. nutritionEstimated 必须为 true
+        6. 只返回JSON，不要其他解释文字
         """;
 
     /**
@@ -148,7 +150,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     }
 
     @Override
-    public Map<String, Object> recognizeDishWithBase64(String imageBase64) {
+    public Map<String, Object> recognizeDishWithBase64(String imageBase64, String mimeType) {
         if (imageBase64 == null || imageBase64.isEmpty()) {
             log.error("图片Base64数据为空");
             return Map.of("error", true, "message", "图片数据不能为空");
@@ -159,37 +161,37 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         }
 
         try {
-            log.info("开始调用视觉模型进行菜品识别，Base64长度: {}", imageBase64.length());
+            log.info("开始调用视觉模型进行菜品识别，Base64长度: {}, MIME: {}", imageBase64.length(), mimeType);
 
-            // 构建多模态消息
             UserMessage userMessage = UserMessage.from(
                     TextContent.from(DISH_RECOGNITION_PROMPT),
-                    ImageContent.from(imageBase64, "image/jpeg")
+                    ImageContent.from(imageBase64, mimeType)
             );
 
-            // 调用视觉模型
             ChatResponse chatResponse = visionModel.chat(userMessage);
             String responseText = chatResponse.aiMessage().text();
+            if (responseText == null || responseText.isBlank()) {
+                return Map.of("error", true, "message", "视觉模型返回空结果，请稍后重试");
+            }
 
             log.info("视觉模型返回结果: {}", responseText.length() > 200 ? responseText.substring(0, 200) + "..." : responseText);
 
-            // 解析JSON响应
             Map<String, Object> result = parseDishRecognitionResult(responseText);
-
-            // 非菜品图片直接返回（parseDishRecognitionResult 已设置 error=true）
             if (Boolean.TRUE.equals(result.get("notDish"))) {
                 log.warn("非菜品图片: {}", result.get("message"));
                 return result;
             }
+            if (Boolean.TRUE.equals(result.get("error"))) {
+                return result;
+            }
 
             result.put("error", false);
-
             log.info("菜品识别成功: {}", result.get("name"));
             return result;
 
         } catch (Exception e) {
             log.error("菜品识别失败", e);
-            return Map.of("error", true, "message", "菜品识别失败：" + e.getMessage());
+            return Map.of("error", true, "message", "菜品识别失败，请稍后重试");
         }
     }
 
@@ -394,54 +396,67 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             // 解析为Map
             Map<String, Object> result = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
 
-            // 检查是否为非菜品图片
             Object isDishObj = result.get("isDish");
-            if (isDishObj != null) {
-                boolean isDish = Boolean.TRUE.equals(isDishObj);
-                if (!isDish) {
-                    String reason = (String) result.getOrDefault("reason", "图片中未检测到菜品");
-                    log.warn("图片不是菜品: {}", reason);
-                    Map<String, Object> notDishResult = new HashMap<>();
-                    notDishResult.put("error", true);
-                    notDishResult.put("notDish", true);
-                    notDishResult.put("message", reason);
-                    return notDishResult;
-                }
+            if (isDishObj == null) {
+                log.warn("菜品识别结果缺少 isDish 字段");
+                return Map.of("error", true, "message", "识别结果缺少菜品判定，请重试");
+            }
+            if (!Boolean.TRUE.equals(isDishObj)) {
+                String reason = result.get("reason") instanceof String value && !value.isBlank()
+                    ? value : "请上传食物图片";
+                log.warn("图片不是菜品: {}", reason);
+                return Map.of("error", true, "notDish", true, "message", reason);
             }
 
-            // 确保必要字段存在
-            result.putIfAbsent("name", "未知菜品");
-            result.putIfAbsent("calories", 0);
-            result.putIfAbsent("protein", 0);
-            result.putIfAbsent("fat", 0);
-            result.putIfAbsent("carbs", 0);
-            result.putIfAbsent("difficulty", "中等");
-            result.putIfAbsent("preparationTime", "30分钟");
-            result.putIfAbsent("ingredients", new ArrayList<>());
-            result.putIfAbsent("tags", new ArrayList<>());
-            result.putIfAbsent("confidence", 0.5);
-            result.putIfAbsent("nutritionScore", 7);
+            result.put("isDish", true);
+            result.put("name", result.get("name") instanceof String value && !value.isBlank() ? value : "未知菜品");
+            result.put("calories", normalizeNumber(result.get("calories"), 0));
+            result.put("protein", normalizeNumber(result.get("protein"), 0));
+            result.put("fat", normalizeNumber(result.get("fat"), 0));
+            result.put("carbs", normalizeNumber(result.get("carbs"), 0));
+            result.put("difficulty", result.get("difficulty") instanceof String value && !value.isBlank() ? value : "中等");
+            result.put("preparationTime", result.get("preparationTime") instanceof String value && !value.isBlank()
+                ? value : "30分钟");
+            result.put("ingredients", normalizeStringList(result.get("ingredients")));
+            result.put("tags", normalizeStringList(result.get("tags")));
+            result.put("confidence", normalizeNumber(result.get("confidence"), 0.5));
+            result.put("nutritionScore", normalizeNumber(result.get("nutritionScore"), 7));
+            result.put("nutritionEstimated", true);
 
             return result;
 
         } catch (IOException e) {
             log.error("解析菜品识别结果失败: {}", responseText, e);
-            // 返回默认值
-            Map<String, Object> defaultResult = new HashMap<>();
-            defaultResult.put("name", "识别失败");
-            defaultResult.put("calories", 0);
-            defaultResult.put("protein", 0);
-            defaultResult.put("fat", 0);
-            defaultResult.put("carbs", 0);
-            defaultResult.put("difficulty", "未知");
-            defaultResult.put("preparationTime", "未知");
-            defaultResult.put("ingredients", new ArrayList<>());
-            defaultResult.put("tags", new ArrayList<>());
-            defaultResult.put("confidence", 0);
-            defaultResult.put("nutritionScore", 0);
-            defaultResult.put("parseError", e.getMessage());
-            return defaultResult;
+            return Map.of("error", true, "message", "识别结果解析失败，请稍后重试");
         }
+    }
+
+    private Number normalizeNumber(Object value, Number fallback) {
+        if (value instanceof Number number) {
+            return number;
+        }
+        if (value instanceof String text) {
+            try {
+                return Double.valueOf(text.trim());
+            } catch (NumberFormatException ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
+    }
+
+    private List<String> normalizeStringList(Object value) {
+        if (value instanceof List<?> list) {
+            return list.stream()
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .filter(item -> !item.isBlank())
+                .toList();
+        }
+        if (value instanceof String text && !text.isBlank()) {
+            return List.of(text);
+        }
+        return List.of();
     }
 
     /**

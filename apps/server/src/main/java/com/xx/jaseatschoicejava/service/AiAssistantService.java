@@ -30,7 +30,17 @@ public interface AiAssistantService {
      * @param imageBase64 Base64编码的图片数据
      * @return 识别结果
      */
-    Map<String, Object> recognizeDishWithBase64(String imageBase64);
+    default Map<String, Object> recognizeDishWithBase64(String imageBase64) {
+        return recognizeDishWithBase64(imageBase64, "image/jpeg");
+    }
+
+    /**
+     * AI菜品识别（Base64编码，保留真实图片 MIME）
+     * @param imageBase64 Base64编码的图片数据
+     * @param mimeType 图片 MIME 类型
+     * @return 识别结果
+     */
+    Map<String, Object> recognizeDishWithBase64(String imageBase64, String mimeType);
 
     /**
      * AI食谱优化

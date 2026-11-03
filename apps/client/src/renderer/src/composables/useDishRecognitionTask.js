@@ -8,6 +8,7 @@ const selectedFile = ref(null)
 const recognitionLoading = ref(false)
 const recognitionProgress = ref(0)
 const recognitionResult = ref(null)
+const recognitionError = ref(null)
 
 let progressTimer = null
 let runningTask = null
@@ -26,6 +27,7 @@ const isNonDishRecognitionResult = (result) => {
 }
 
 const mapRecognitionResult = (data) => ({
+  isDish: data.isDish === true,
   name: data.name || '未知菜品',
   calories: Number(data.calories) || 0,
   protein: Number(data.protein) || 0,
@@ -36,7 +38,49 @@ const mapRecognitionResult = (data) => ({
   ingredients: Array.isArray(data.ingredients) ? data.ingredients : [],
   tags: Array.isArray(data.tags) ? data.tags : [],
   confidence: Number(data.confidence) || 0,
-  nutritionScore: Number(data.nutritionScore) || 0
+  nutritionScore: Number(data.nutritionScore) || 0,
+  nutritionEstimated: data.nutritionEstimated === true,
+  imageUrl: data.imageUrl || ''
+})
+
+const compressImageFile = (file) => new Promise((resolve, reject) => {
+  const supportedTypes = ['image/jpeg', 'image/png', 'image/webp']
+  const sourceType = file.type === 'image/jpg' ? 'image/jpeg' : file.type
+  if (!supportedTypes.includes(sourceType)) {
+    reject(new Error('仅支持 JPEG、PNG 或 WebP 图片'))
+    return
+  }
+
+  const objectUrl = URL.createObjectURL(file)
+  const image = new Image()
+  image.onload = () => {
+    const maxEdge = 1600
+    const scale = Math.min(1, maxEdge / Math.max(image.naturalWidth, image.naturalHeight))
+    const width = Math.max(1, Math.round(image.naturalWidth * scale))
+    const height = Math.max(1, Math.round(image.naturalHeight * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d')
+    context.drawImage(image, 0, 0, width, height)
+    canvas.toBlob((blob) => {
+      URL.revokeObjectURL(objectUrl)
+      if (!blob) {
+        reject(new Error('图片压缩失败，请重试'))
+        return
+      }
+      const extension = sourceType.split('/')[1]
+      resolve(new File([blob], `${file.name.replace(/\.[^.]+$/, '') || 'dish-image'}.${extension}`, {
+        type: sourceType,
+        lastModified: Date.now()
+      }))
+    }, sourceType, 0.82)
+  }
+  image.onerror = () => {
+    URL.revokeObjectURL(objectUrl)
+    reject(new Error('图片读取失败，请重新选择'))
+  }
+  image.src = objectUrl
 })
 
 const stopProgressTimer = () => {
@@ -73,6 +117,7 @@ const setImageFile = (file) => {
   selectedFile.value = file
   selectedImage.value = URL.createObjectURL(file)
   recognitionResult.value = null
+  recognitionError.value = null
   recognitionProgress.value = 0
   return true
 }
@@ -87,53 +132,46 @@ const clearImage = () => {
   selectedImage.value = null
   selectedFile.value = null
   recognitionResult.value = null
+  recognitionError.value = null
   recognitionProgress.value = 0
 }
 
 const runRecognition = async (file) => {
-  logger.log('开始识别菜品，文件名:', file.name)
+  const compressedFile = await compressImageFile(file)
+  logger.log('开始识别菜品，压缩后文件名:', compressedFile.name)
 
   const formData = new FormData()
-  formData.append('image', file)
+  formData.append('image', compressedFile)
 
   const apiUrl = API_CONFIG.baseURL + API_CONFIG.ai.recognizeDish
-  console.log('🔍 开始识别菜品，API URL:', apiUrl)
-  console.log('📤 发送图片:', file.name, file.size, 'bytes')
-
   const response = await fetch(apiUrl, {
     method: 'POST',
     body: formData
   })
-
-  console.log('📡 后端响应状态:', response.status, response.statusText)
+  const result = await response.json().catch(() => null)
+  const responseData = result?.data || null
+  const responseMessage = normalizeRecognitionMessage(result, `请求失败 (${response.status})`)
 
   if (!response.ok) {
-    const errorText = await response.text()
-    console.error('❌ 请求失败:', response.status, errorText)
-    throw new Error(`请求失败 (${response.status}): ${errorText}`)
+    throw new Error(responseMessage)
   }
-
-  const result = await response.json()
-  const responseData = result?.data || null
-  const nonDishMessage = normalizeRecognitionMessage(result, '请上传菜品图片')
 
   if (isNonDishRecognitionResult(result) || responseData?.isDish === false) {
-    recognitionProgress.value = 0
-    recognitionResult.value = null
-    ElMessage.warning(nonDishMessage || '请上传菜品图片')
-    logger.warn('⚠️ 非菜品图片:', nonDishMessage)
-    return
+    const error = new Error(responseMessage || '请上传食物图片')
+    error.nonDish = true
+    throw error
   }
 
-  if ((result.success === true || result.code === '200') && responseData) {
+  if ((result?.success === true || result?.code === '200') && responseData?.isDish === true) {
     recognitionProgress.value = 100
     recognitionResult.value = mapRecognitionResult(responseData)
+    recognitionError.value = null
     ElMessage.success('识别成功！')
     logger.log('✅ 菜品识别完成:', recognitionResult.value.name)
     return
   }
 
-  throw new Error(normalizeRecognitionMessage(result, '识别失败'))
+  throw new Error(responseMessage || '识别失败，请稍后重试')
 }
 
 const recognizeDish = async () => {
@@ -150,13 +188,18 @@ const recognizeDish = async () => {
   const file = selectedFile.value
   recognitionLoading.value = true
   recognitionResult.value = null
+  recognitionError.value = null
   startProgressTimer()
 
   runningTask = runRecognition(file)
     .catch((error) => {
       recognitionProgress.value = 0
-      const errorMessage = error?.message || '识别失败'
-      if (/菜品|食物图片/.test(errorMessage)) {
+      const errorMessage = error?.message || '识别失败，请稍后重试'
+      recognitionError.value = {
+        message: errorMessage,
+        nonDish: error?.nonDish === true
+      }
+      if (error?.nonDish) {
         ElMessage.warning(errorMessage)
         logger.warn('⚠️ 非菜品图片:', errorMessage)
         return
@@ -176,6 +219,7 @@ const recognizeDish = async () => {
 
 const reRecognize = () => {
   recognitionResult.value = null
+  recognitionError.value = null
   return recognizeDish()
 }
 
@@ -186,6 +230,7 @@ export function useDishRecognitionTask() {
     recognitionLoading,
     recognitionProgress,
     recognitionResult,
+    recognitionError,
     setImageFile,
     clearImage,
     recognizeDish,

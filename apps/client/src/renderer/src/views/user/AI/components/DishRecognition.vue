@@ -81,7 +81,7 @@
             <div class="progress-dot-wave">
               <span></span><span></span><span></span><span></span>
             </div>
-            <span class="progress-label">AI 正在分析您的菜品</span>
+            <span class="progress-label">AI 正在分析您的菜品，可切换页面继续等待</span>
           </div>
         </div>
       </Transition>
@@ -106,7 +106,7 @@
         </button>
 
         <button
-          v-if="recognitionResult"
+          v-if="recognitionResult || recognitionError"
           class="action-btn outline-btn"
           @click="reRecognize"
           :disabled="recognitionLoading"
@@ -114,8 +114,14 @@
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
           </svg>
-          重新识别
+          {{ recognitionError ? '重试识别' : '重新识别' }}
         </button>
+      </div>
+
+      <div v-if="recognitionError" class="recognition-error">
+        <div class="error-title">{{ recognitionError.nonDish ? '未识别到食物' : '识别失败' }}</div>
+        <div class="error-message">{{ recognitionError.message }}</div>
+        <button class="error-retry-btn" :disabled="recognitionLoading" @click="reRecognize">重试识别</button>
       </div>
 
       <!-- 识别结果 -->
@@ -133,6 +139,12 @@
               <div class="meta-chip">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
                 <span>{{ recognitionResult.preparationTime }}</span>
+              </div>
+              <div class="meta-chip confidence-chip">
+                <span>置信度 {{ Math.round(recognitionResult.confidence * 100) }}%</span>
+              </div>
+              <div class="meta-chip nutrition-score-chip">
+                <span>营养评分 {{ recognitionResult.nutritionScore }}/10</span>
               </div>
             </div>
           </div>
@@ -199,6 +211,7 @@
                 <div class="nutrition-val"><AnimatedNumber :value="displayCarbs" /><span class="val-unit">g</span></div>
               </div>
             </div>
+            <div v-if="recognitionResult.nutritionEstimated" class="estimate-note">营养数据为估算值</div>
           </div>
 
           <!-- 食材 -->
@@ -307,6 +320,7 @@ const {
   recognitionLoading,
   recognitionProgress,
   recognitionResult,
+  recognitionError,
   setImageFile,
   clearImage,
   recognizeDish,
@@ -900,6 +914,39 @@ const handleDrop = async (event) => {
   to { transform: rotate(360deg); }
 }
 
+// ===== 识别失败 =====
+.recognition-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(196, 90, 90, 0.2);
+  border-radius: 14px;
+  background: #fff7f7;
+}
+
+.error-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #a33d3d;
+}
+
+.error-message {
+  font-size: 13px;
+  color: @nordic-text-secondary;
+}
+
+.error-retry-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 16px;
+  color: #fff;
+  background: @nordic-accent;
+  cursor: pointer;
+}
+
 // ===== 识别结果 =====
 .recognition-result {
   animation: resultReveal 0.6s cubic-bezier(0.4, 0, 0.2, 1);
@@ -975,6 +1022,16 @@ const handleDrop = async (event) => {
 
   svg {
     color: @nordic-accent;
+  }
+
+  &.confidence-chip {
+    color: #5b7f62;
+    background: #f1f7f2;
+  }
+
+  &.nutrition-score-chip {
+    color: @nordic-accent-dark;
+    background: @nordic-accent-light;
   }
 }
 
@@ -1173,6 +1230,14 @@ const handleDrop = async (event) => {
     color: @nordic-text-muted;
     margin-left: 1px;
   }
+}
+
+.estimate-note {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed @nordic-divider;
+  font-size: 12px;
+  color: @nordic-text-muted;
 }
 
 // 食材/标签区

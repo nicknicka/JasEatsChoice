@@ -14,7 +14,7 @@
           <view v-if="!selectedImage" class="upload-placeholder">
             <text class="upload-icon">📷</text>
             <text class="upload-text">点击上传菜品图片</text>
-            <text class="upload-hint">支持 JPG、PNG 格式</text>
+            <text class="upload-hint">支持 JPG、PNG、WebP，上传前自动压缩</text>
           </view>
 
           <view v-else class="image-preview">
@@ -35,19 +35,25 @@
           @click="recognizeDish"
         >
           <text v-if="isRecognizing">识别中...</text>
-          <text v-else>🔍 开始识别菜品</text>
+          <text v-else>{{ recognitionError ? '重试识别' : '🔍 开始识别菜品' }}</text>
         </button>
 
         <button
-          v-if="recognitionResult"
+          v-if="recognitionResult || recognitionError"
           class="re-recognize-btn"
           :disabled="isRecognizing"
           @click="recognizeDish"
         >
-          🔄 重新识别
+          {{ recognitionError ? '重试识别' : '🔄 重新识别' }}
         </button>
       </view>
     </view>
+
+      <view v-if="recognitionError && !isRecognizing" class="recognition-error">
+        <text class="error-title">{{ recognitionError.nonDish ? '未识别到食物' : '识别失败' }}</text>
+        <text class="error-message">{{ recognitionError.message }}</text>
+        <button class="error-retry-btn" @click="recognizeDish">重试识别</button>
+      </view>
 
       <!-- 可滚动内容：识别结果 -->
       <scroll-view v-if="isRecognizing" class="scrollable-content" scroll-y>
@@ -113,6 +119,16 @@
           <view class="card-value">{{ recognitionResult.preparationTime }}</view>
         </view>
 
+        <view class="result-card">
+          <view class="card-label">🎯 置信度</view>
+          <view class="card-value">{{ Math.round(recognitionResult.confidence * 100) }}%</view>
+        </view>
+
+        <view class="result-card">
+          <view class="card-label">🥗 营养评分</view>
+          <view class="card-value">{{ recognitionResult.nutritionScore }}/10</view>
+        </view>
+
         <!-- 营养成分 -->
         <view class="result-card full-width">
           <view class="card-label">📊 营养成分</view>
@@ -161,6 +177,10 @@
           </view>
         </view>
 
+        <view v-if="recognitionResult.nutritionEstimated" class="estimate-note">
+          <text>营养数据为估算值</text>
+        </view>
+
         <!-- 操作按钮 -->
         <view class="result-actions">
           <button class="action-btn primary" @click="addToRecipe">
@@ -198,15 +218,38 @@
 
 <script setup>
 import { ref } from 'vue'
+import { aiApi } from '@/api/modules/ai'
 
-// 选中的图片
 const selectedImage = ref('')
 const isRecognizing = ref(false)
 const recognitionResult = ref(null)
+const recognitionError = ref(null)
 
-/**
- * 选择图片
- */
+const normalizeResult = (data) => ({
+  isDish: data.isDish === true,
+  name: data.name || '未知菜品',
+  calories: Number(data.calories) || 0,
+  protein: Number(data.protein) || 0,
+  fat: Number(data.fat) || 0,
+  carbs: Number(data.carbs) || 0,
+  difficulty: data.difficulty || '中等',
+  preparationTime: data.preparationTime || '30分钟',
+  ingredients: Array.isArray(data.ingredients) ? data.ingredients : [],
+  tags: Array.isArray(data.tags) ? data.tags : [],
+  confidence: Number(data.confidence) || 0,
+  nutritionScore: Number(data.nutritionScore) || 0,
+  nutritionEstimated: data.nutritionEstimated === true,
+  imageUrl: data.imageUrl || '',
+  nutrition: {
+    protein: Math.min(100, Number(data.protein) || 0),
+    proteinValue: Number(data.protein) || 0,
+    fat: Math.min(100, Number(data.fat) || 0),
+    fatValue: Number(data.fat) || 0,
+    carb: Math.min(100, Number(data.carbs) || 0),
+    carbValue: Number(data.carbs) || 0
+  }
+})
+
 const chooseImage = () => {
   uni.chooseImage({
     count: 1,
@@ -215,55 +258,39 @@ const chooseImage = () => {
     success: (res) => {
       selectedImage.value = res.tempFilePaths[0]
       recognitionResult.value = null
+      recognitionError.value = null
     }
   })
 }
 
-/**
- * 清除图片
- */
 const clearImage = () => {
+  if (isRecognizing.value) return
   selectedImage.value = ''
   recognitionResult.value = null
+  recognitionError.value = null
 }
 
-/**
- * 识别菜品
- */
 const recognizeDish = async () => {
-  if (!selectedImage.value) return
+  if (!selectedImage.value || isRecognizing.value) return
 
   isRecognizing.value = true
   recognitionResult.value = null
+  recognitionError.value = null
 
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 2800))
-
-    // 模拟识别结果
-    recognitionResult.value = {
-      name: '宫保鸡丁',
-      calories: 285,
-      difficulty: '中等',
-      preparationTime: '30分钟',
-      nutrition: {
-        protein: 75,
-        proteinValue: 23.5,
-        fat: 45,
-        fatValue: 12.8,
-        carb: 60,
-        carbValue: 18.2
-      }
-    }
-
+    const data = await aiApi.recognizeDish(selectedImage.value)
+    recognitionResult.value = normalizeResult(data)
     uni.showToast({
-      title: '识别成功！',
+      title: '识别成功',
       icon: 'success'
     })
   } catch (error) {
-    console.error('识别失败:', error)
+    recognitionError.value = {
+      message: error?.message || '识别失败，请重试',
+      nonDish: error?.nonDish === true
+    }
     uni.showToast({
-      title: '识别失败，请重试',
+      title: recognitionError.value.message,
       icon: 'none'
     })
   } finally {
@@ -271,9 +298,6 @@ const recognizeDish = async () => {
   }
 }
 
-/**
- * 添加到食谱
- */
 const addToRecipe = () => {
   uni.showToast({
     title: '已添加到我的食谱',
@@ -281,9 +305,6 @@ const addToRecipe = () => {
   })
 }
 
-/**
- * 分享结果
- */
 const shareResult = () => {
   uni.showShareMenu({
     withShareTicket: true
@@ -557,6 +578,42 @@ const shareResult = () => {
   }
 }
 
+/* 识别失败 */
+.recognition-error {
+  margin: 0 $spacing-lg $spacing-lg;
+  padding: $spacing-lg;
+  border-radius: $border-radius-lg;
+  background: #fff7f7;
+  border: 1rpx solid rgba(196, 90, 90, 0.2);
+}
+
+.error-title,
+.error-message {
+  display: block;
+}
+
+.error-title {
+  font-size: $font-size-base;
+  font-weight: $font-weight-bold;
+  color: #a33d3d;
+  margin-bottom: $spacing-xs;
+}
+
+.error-message {
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
+  margin-bottom: $spacing-md;
+}
+
+.error-retry-btn {
+  height: 68rpx;
+  border: none;
+  border-radius: $border-radius-md;
+  color: #fff;
+  background: $primary-color;
+  font-size: $font-size-sm;
+}
+
 /* 识别结果 */
 .result-section {
   margin-bottom: $spacing-lg;
@@ -677,6 +734,17 @@ const shareResult = () => {
   color: $text-color-secondary;
   text-align: right;
   display: block;
+}
+
+/* 营养估算提示 */
+.estimate-note {
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-md;
+  border-radius: $border-radius-md;
+  background: #f7faf7;
+  color: $text-color-secondary;
+  font-size: $font-size-sm;
+  text-align: center;
 }
 
 /* 结果操作 */

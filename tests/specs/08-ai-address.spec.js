@@ -80,42 +80,96 @@ test.describe('模块八：AI助手与地址管理', () => {
     } catch (e) { markFailed('8.1', e.message.slice(0, 50)); throw e }
   })
 
-  // 真实 8.2/8.3 需要有效的 AI_API_KEY、AI_BASE_URL 与可用模型；仓库和 CI 不保存真实密钥，
-  // 不能把模拟或将空结果视为成功。无凭据时的真实降级路径由下方 8.2a/8.3a 覆盖。
-  test.fixme('8.2 菜品识别 (needs real AI credentials)', async ({ page }) => {
+  test('8.2 菜品识别接口契约与错误语义', async ({ page }) => {
     markRunning('8.2')
     try {
-      await page.goto('/user/home/ai')
-      await page.locator('#tab-btn-recognition').click()
-      await expect(page.locator('.recognition-content-wrapper')).toBeVisible({ timeout: 10000 })
-      await page.locator('#dish-image-upload').setInputFiles(require('path').resolve(__dirname, '../../apps/miniapp/src/static/banner1.jpg'))
-      await expect(page.locator('.image-preview img')).toBeVisible({ timeout: 10000 })
-      await page.locator('.recognition-content-wrapper button.primary-btn').click()
-      await expect(page.locator('.recognition-result')).toBeVisible({ timeout: 30000 })
-      await expect(page.locator('.dish-name')).not.toBeEmpty()
-      markPassed('8.2', '菜品识别返回真实菜品字段')
+      const imageBuffer = require('fs').readFileSync(require('path').resolve(__dirname, '../../apps/miniapp/src/static/banner1.jpg'))
+      const recognize = async (file) => {
+        const response = await page.request.post('/api/v1/ai/dish-recognize', {
+          multipart: { image: file }
+        })
+        return { response, body: await response.json() }
+      }
+
+      const capabilities = await getAiCapabilities()
+      const jpeg = await recognize({
+        name: 'banner1.jpg',
+        mimeType: 'image/jpeg',
+        buffer: imageBuffer
+      })
+      expect(jpeg.response.status()).toBe(200)
+      if (capabilities.vision) {
+        expect(jpeg.body.success).toBe(true)
+        expect(jpeg.body.data).toMatchObject({
+          isDish: true,
+          nutritionEstimated: true
+        })
+        for (const key of ['name', 'calories', 'protein', 'fat', 'carbs', 'difficulty', 'preparationTime', 'ingredients', 'tags', 'confidence', 'nutritionScore', 'imageUrl']) {
+          expect(jpeg.body.data).toHaveProperty(key)
+        }
+      } else {
+        expect(jpeg.body.success).toBe(false)
+        expect(jpeg.body.code).toBe('AI_VISION_NOT_CONFIGURED')
+      }
+
+      const disguisedText = await recognize({
+        name: 'dish.jpg',
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from('this is not an image')
+      })
+      expect(disguisedText.body.success).toBe(false)
+      expect(disguisedText.body.code).toBe('415')
+      expect(disguisedText.body.message).toContain('JPEG、PNG 或 WebP')
+
+      const gif = await recognize({
+        name: 'dish.gif',
+        mimeType: 'image/gif',
+        buffer: Buffer.from('GIF89a123456')
+      })
+      expect(gif.body.success).toBe(false)
+      expect(gif.body.code).toBe('415')
+
+      markPassed('8.2', '菜品识别接口契约、真实魔数与错误语义通过')
     } catch (e) { markFailed('8.2', e.message.slice(0, 50)); throw e }
   })
 
-  test.fixme('8.3 食谱生成 (needs real AI credentials)', async ({ page }) => {
-    markRunning('8.3')
+  test('8.2b 桌面端识别失败后可重试', async ({ page }) => {
+    markRunning('8.2b')
     try {
+      await page.route('**/v1/ai/capabilities', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            code: '200',
+            message: '成功',
+            data: { available: true, vision: true, textChat: true, streaming: true }
+          })
+        })
+      })
       await page.goto('/user/home/ai')
       await expect(page.locator('#tab-btn-chat')).toHaveClass(/active/, { timeout: 10000 })
-      await page.locator('#tab-btn-recipe').click()
-      const recipe = '番茄炒蛋：准备鸡蛋2个、番茄2个，先炒鸡蛋再炒番茄，调味后出锅。'
-      const textarea = page.locator('.recipe-textarea')
-      await expect(textarea).toBeVisible({ timeout: 10000 })
-      await textarea.fill(recipe)
-      await page.locator('.recipe-content-wrapper button.primary-btn').click()
-      const result = page.locator('.recipe-result')
-      await expect(result).toBeVisible({ timeout: 45000 })
-      await expect(result.locator('.result-title')).toHaveText('食谱对比')
-      await expect(result.locator('.original-card .recipe-text')).toContainText('番茄炒蛋')
-      await expect(result.locator('.optimized-card .recipe-text')).toContainText('推荐食谱：')
-      await expect(result.locator('.improvement-item')).toHaveCount(3)
-      markPassed('8.3', '食谱优化返回原食谱与优化结果')
-    } catch (e) { markFailed('8.3', e.message.slice(0, 50)); throw e }
+      await page.locator('#tab-btn-recognition').click()
+      await expect(page.locator('#tab-btn-recognition')).toHaveClass(/active/)
+      await expect(page.locator('.recognition-content-wrapper')).toBeVisible({ timeout: 10000 })
+
+      await page.route('**/v1/ai/dish-recognize', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: false, code: '500', message: '识别失败，请稍后重试' })
+        })
+      })
+
+      await page.locator('#dish-image-upload').setInputFiles(require('path').resolve(__dirname, '../../apps/miniapp/src/static/banner1.jpg'))
+      await page.locator('.recognition-content-wrapper button.primary-btn').click()
+      await expect(page.locator('.recognition-error')).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('.recognition-error')).toContainText('识别失败，请稍后重试')
+      await expect(page.locator('.error-retry-btn')).toBeVisible()
+      await expect(page.locator('.recognition-content-wrapper button.primary-btn')).toBeEnabled()
+      markPassed('8.2b', '识别失败保留图片并展示重试入口')
+    } catch (e) { markFailed('8.2b', e.message.slice(0, 50)); throw e }
   })
 
   test('8.2a 无视觉模型时菜品识别入口降级', async ({ page }) => {
