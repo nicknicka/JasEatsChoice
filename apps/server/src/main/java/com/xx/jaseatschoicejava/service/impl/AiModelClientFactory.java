@@ -41,6 +41,13 @@ public interface AiModelClientFactory {
 
     ChatModel buildChatModel(AiModelConfig config, String candidateApiKey);
 
+    /**
+     * 构建食谱优化专用对话模型：独立的温度、输出上限与超时。
+     */
+    ChatModel buildRecipeModel(AiModelConfig config);
+
+    ChatModel buildRecipeModel(AiModelConfig config, String candidateApiKey);
+
     ChatModel buildSupervisorModel(AiModelConfig config);
 
     ChatModel buildSupervisorModel(AiModelConfig config, String candidateApiKey);
@@ -52,6 +59,13 @@ public interface AiModelClientFactory {
     StreamingChatModel buildStreamingModel(AiModelConfig config);
 
     StreamingChatModel buildStreamingModel(AiModelConfig config, String candidateApiKey);
+
+    /**
+     * 构建食谱优化专用流式模型：独立的温度、输出上限与超时。
+     */
+    StreamingChatModel buildRecipeStreamingModel(AiModelConfig config);
+
+    StreamingChatModel buildRecipeStreamingModel(AiModelConfig config, String candidateApiKey);
 
     AiCapabilitiesDTO capabilities(AiModelConfig config);
 }

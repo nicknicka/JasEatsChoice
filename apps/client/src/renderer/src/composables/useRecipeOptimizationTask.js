@@ -8,6 +8,7 @@ import { useStreamResponse } from './useStreamResponse'
 
 const originalRecipe = ref('')
 const optimizedRecipe = ref(null)
+const recipeGoal = ref('balanced')
 const optimizationLoading = ref(false)
 const smoothProgress = ref(0)
 const progressStatus = ref('')
@@ -59,7 +60,7 @@ const runOptimization = async (recipeText) => {
       'Content-Type': 'application/json',
       Accept: 'text/event-stream'
     },
-    body: JSON.stringify({ foodName: recipeText })
+    body: JSON.stringify({ recipe: recipeText, goal: recipeGoal.value })
   })
 
   if (!response.ok) {
@@ -88,27 +89,52 @@ const runOptimization = async (recipeText) => {
         continue
       }
 
-      if (parsedData.progress === true && parsedData.content) {
-        progressStatus.value = parsedData.content
+      const progressMessage = parsedData.message || parsedData.content
+      if (parsedData.progress === true && progressMessage) {
+        progressStatus.value = progressMessage
         continue
       }
 
-      if (parsedData.done === true && parsedData.recipes) {
+      if (parsedData.done === true && parsedData.result) {
         stopSmoothProgress()
-        const backendRecipes = parsedData.recipes
-        if (backendRecipes.length > 0) {
-          const firstRecipe = backendRecipes[0]
+        const r = parsedData.result
+        const recipe = r.recipe || {}
+        if (r.recipe) {
+          const original = r.nutrition?.original || {}
+          const optimized = r.nutrition?.optimized || {}
+          const num = (v) => Number(v) || 0
           optimizedRecipe.value = {
             original: recipeText,
-            optimized: `推荐食谱：${firstRecipe.name}
-难度：${firstRecipe.difficulty}
-卡路里：${firstRecipe.calorie}大卡
-食材：${firstRecipe.ingredients}
-步骤：${firstRecipe.steps}`,
-            improvements: ['营养均衡', '口味优化', '步骤简化'],
-            rawData: firstRecipe
+            goal: r.goal || recipeGoal.value,
+            optimized: `推荐食谱：${recipe.name || 'AI 优化食谱'}
+难度：${recipe.difficulty || '-'}
+卡路里：${num(optimized.calorie)}大卡
+蛋白质：${num(optimized.protein)}g
+脂肪：${num(optimized.fat)}g
+碳水化合物：${num(optimized.carb)}g
+食材：${recipe.ingredients || ''}
+步骤：${recipe.steps || ''}`,
+            improvements: Array.isArray(r.improvements)
+              ? r.improvements.map((it) =>
+                  typeof it === 'string'
+                    ? it
+                    : [it.title, it.detail].filter(Boolean).join('：')
+                )
+              : [],
+            nutrition: { original, optimized },
+            estimationNote: r.estimationNote || '',
+            rawData: {
+              name: recipe.name,
+              difficulty: recipe.difficulty,
+              ingredients: recipe.ingredients,
+              steps: recipe.steps,
+              calorie: num(optimized.calorie),
+              protein: num(optimized.protein),
+              fat: num(optimized.fat),
+              carb: num(optimized.carb)
+            }
           }
-          logger.log('✅ 食谱优化成功:', firstRecipe.name)
+          logger.log('✅ 食谱优化成功:', recipe.name)
         } else {
           optimizedRecipe.value = {
             original: recipeText,
@@ -168,6 +194,7 @@ export function useRecipeOptimizationTask() {
   return {
     originalRecipe,
     optimizedRecipe,
+    recipeGoal,
     optimizationLoading,
     smoothProgress,
     progressStatus,

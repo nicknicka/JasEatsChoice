@@ -271,7 +271,7 @@ export const aiApi = {
    * POST /v1/ai/recipe
    * @param {Object} data - 优化参数
    * @param {string} data.recipe - 食谱内容
-   * @param {string} data.goal - 优化目标(lowCalorie/highProtein/lowFat/balanced)
+   * @param {string} data.goal - 优化目标(balanced/fat_loss/muscle_gain/blood_sugar_control)，默认 balanced
    * @returns {Promise} 返回优化结果
    */
   optimizeRecipe: (data) => post(AI_API.RECIPE, data),

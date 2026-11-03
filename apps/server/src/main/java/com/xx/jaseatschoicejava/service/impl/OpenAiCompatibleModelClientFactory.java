@@ -48,6 +48,14 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
         "gpt-4o"
     );
 
+    /** 普通对话输出上限，避免无界输出。 */
+    private static final int CHAT_MAX_TOKENS = 4096;
+
+    /** 食谱优化任务使用独立参数，不与普通聊天混用。 */
+    private static final double RECIPE_TEMPERATURE = 0.2;
+    private static final int RECIPE_MAX_TOKENS = 4096;
+    private static final long RECIPE_TIMEOUT_MS = 60000L;
+
     private final AIConfig aiConfig;
     private final AiRuntimeKeyStore runtimeKeyStore;
 
@@ -170,8 +178,31 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
             .baseUrl(config.getBaseUrl())
             .modelName(config.getModel())
             .temperature(config.getTemperature())
+            .maxTokens(CHAT_MAX_TOKENS)
             .timeout(Duration.ofMillis(config.getTimeoutMs()))
             .maxRetries(2)
+            .build();
+    }
+
+    @Override
+    public ChatModel buildRecipeModel(AiModelConfig config) {
+        return buildRecipeModel(config, null);
+    }
+
+    @Override
+    public ChatModel buildRecipeModel(AiModelConfig config, String candidateApiKey) {
+        String key = key(candidateApiKey);
+        if (!hasKey(key) || !hasText(config.getBaseUrl())) {
+            return new NoopChatModel();
+        }
+        return OpenAiChatModel.builder()
+            .apiKey(key)
+            .baseUrl(config.getBaseUrl())
+            .modelName(config.getModel())
+            .temperature(RECIPE_TEMPERATURE)
+            .maxTokens(RECIPE_MAX_TOKENS)
+            .timeout(Duration.ofMillis(RECIPE_TIMEOUT_MS))
+            .maxRetries(1)
             .build();
     }
 
@@ -235,7 +266,29 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
             .baseUrl(config.getBaseUrl())
             .modelName(config.getModel())
             .temperature(config.getTemperature())
+            .maxTokens(CHAT_MAX_TOKENS)
             .timeout(Duration.ofMillis(config.getTimeoutMs()))
+            .build();
+    }
+
+    @Override
+    public StreamingChatModel buildRecipeStreamingModel(AiModelConfig config) {
+        return buildRecipeStreamingModel(config, null);
+    }
+
+    @Override
+    public StreamingChatModel buildRecipeStreamingModel(AiModelConfig config, String candidateApiKey) {
+        String key = key(candidateApiKey);
+        if (!hasKey(key) || !hasText(config.getBaseUrl())) {
+            return new NoopStreamingChatModel();
+        }
+        return OpenAiStreamingChatModel.builder()
+            .apiKey(key)
+            .baseUrl(config.getBaseUrl())
+            .modelName(config.getModel())
+            .temperature(RECIPE_TEMPERATURE)
+            .maxTokens(RECIPE_MAX_TOKENS)
+            .timeout(Duration.ofMillis(RECIPE_TIMEOUT_MS))
             .build();
     }
 

@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.service;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -17,6 +18,12 @@ import java.util.function.Consumer;
  * @since 2026-03-22
  */
 public interface AiAssistantService {
+
+    /** 食谱优化支持的优化目标标识。 */
+    Set<String> RECIPE_GOALS = Set.of("balanced", "fat_loss", "muscle_gain", "blood_sugar_control");
+
+    /** 未指定优化目标时的默认值。 */
+    String DEFAULT_RECIPE_GOAL = "balanced";
 
     /**
      * AI菜品识别
@@ -45,9 +52,10 @@ public interface AiAssistantService {
     /**
      * AI食谱优化
      * @param originalRecipe 原始食谱
-     * @return 优化后的食谱
+     * @param goal 优化目标，见 {@link #RECIPE_GOALS}
+     * @return 单方案统一结构
      */
-    Map<String, Object> optimizeRecipe(String originalRecipe);
+    Map<String, Object> optimizeRecipe(String originalRecipe, String goal);
 
     /**
      * AI食谱优化（带进度回调，用于 SSE 流式推送）
@@ -55,20 +63,24 @@ public interface AiAssistantService {
      * 三阶段进度：分析食谱 → AI优化 → 生成结果
      *
      * @param originalRecipe 原始食谱
+     * @param goal 优化目标，见 {@link #RECIPE_GOALS}
      * @param progressCallback 进度回调，接收进度描述文本
-     * @return 优化后的食谱
+     * @return 单方案统一结构
      */
-    Map<String, Object> optimizeRecipeWithProgress(String originalRecipe, Consumer<String> progressCallback);
+    Map<String, Object> optimizeRecipeWithProgress(String originalRecipe, String goal,
+            Consumer<String> progressCallback);
 
     /**
      * AI食谱优化（真正流式输出，逐 token 推送）
      *
      * @param originalRecipe 原始食谱
+     * @param goal 优化目标，见 {@link #RECIPE_GOALS}
      * @param progressCallback 阶段进度回调
      * @param tokenCallback 逐 token 回调
      * @param onComplete 流式结束回调
      */
     void optimizeRecipeStreaming(String originalRecipe,
+            String goal,
             Consumer<String> progressCallback,
             Consumer<String> tokenCallback,
             Runnable onComplete);

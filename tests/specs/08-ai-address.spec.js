@@ -271,7 +271,7 @@ test.describe('模块八：AI助手与地址管理', () => {
       await expect(recipeTab).toContainText('暂未开放')
 
       const response = await page.request.post('/api/v1/ai/recipe/stream', {
-        data: { foodName: '番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。' },
+        data: { recipe: '番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。' },
         headers: { Accept: 'text/event-stream' }
       })
       expect(response.status()).toBe(200)

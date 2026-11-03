@@ -2,6 +2,10 @@ package com.xx.jaseatschoicejava.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
+import com.xx.jaseatschoicejava.agent.config.NoopChatModel;
+import com.xx.jaseatschoicejava.agent.config.NoopStreamingChatModel;
+import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.service.AiAssistantService;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
@@ -42,8 +46,17 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     @Resource(name = "aiModel")
     private ChatModel aiModel;
 
-    @Resource(name = "streamingChatLanguageModel")
-    private StreamingChatModel streamingChatLanguageModel;
+    @Resource
+    private DynamicAiModelRegistry dynamicAiModelRegistry;
+
+    @Resource
+    private AiProviderRegistry aiProviderRegistry;
+
+    /** 食谱优化模型的按版本缓存，随运行时热切换自动失效。 */
+    private volatile ChatModel recipeChatModelCache;
+    private volatile long recipeChatModelVersion = Long.MIN_VALUE;
+    private volatile StreamingChatModel recipeStreamingModelCache;
+    private volatile long recipeStreamingModelVersion = Long.MIN_VALUE;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -88,34 +101,42 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         """;
 
     /**
-     * 食谱优化提示词
+     * 食谱优化提示词（单方案 + 优化目标 + 统一结构）。
      */
     private static final String RECIPE_OPTIMIZATION_PROMPT = """
-        你是一个专业的营养师和烹饪专家。用户提供了食材或食谱描述，请基于此推荐优化后的食谱方案。
+        你是一个专业的营养师和烹饪专家。用户提供了食材或食谱描述，请基于此给出一个优化后的食谱方案。
 
         用户输入：
         %s
 
-        请严格返回以下JSON格式（不要添加任何其他文字，不要用markdown代码块）：
-        [
-          {
+        优化目标：%s
+
+        请严格返回以下 JSON 对象（不要添加任何其他文字，不要用 markdown 代码块）：
+        {
+          "goal": "优化目标标识",
+          "recipe": {
             "name": "食谱名称",
             "difficulty": "简单/中等/困难",
-            "calorie": 数字（总卡路里，单位kcal），
             "ingredients": "食材及用量列表",
-            "steps": "详细烹饪步骤",
-            "protein": 数字（蛋白质，单位g），
-            "fat": 数字（脂肪，单位g），
-            "carb": 数字（碳水化合物，单位g）
-          }
-        ]
+            "steps": "详细烹饪步骤"
+          },
+          "nutrition": {
+            "original": {"calorie": 数字, "protein": 数字, "fat": 数字, "carb": 数字},
+            "optimized": {"calorie": 数字, "protein": 数字, "fat": 数字, "carb": 数字}
+          },
+          "improvements": [
+            {"title": "改进项标题", "detail": "具体说明与量化变化"}
+          ],
+          "estimationNote": "营养数值为 AI 估算，仅供参考"
+        }
 
         要求：
-        1. 返回1-3个优化后的食谱方案
-        2. 食材搭配合理，营养均衡
-        3. 减少油盐用量，保持健康
-        4. 步骤清晰，易于操作
-        5. 只返回JSON数组，不要其他解释文字
+        1. 只返回 1 个优化方案，不要返回多个方案
+        2. 围绕优化目标调整食谱，goal 字段回填该目标的标识
+        3. nutrition.original 为原食谱估算，nutrition.optimized 为优化后的估算
+        4. improvements 每条包含 title 与 detail，说明具体改进与量化变化
+        5. 食材搭配合理，步骤清晰，易于操作
+        6. 只返回 JSON 对象，不要其他解释文字
         """;
 
     /**
@@ -198,19 +219,18 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     // ==================== 食谱优化 ====================
 
     @Override
-    public Map<String, Object> optimizeRecipe(String originalRecipe) {
+    public Map<String, Object> optimizeRecipe(String originalRecipe, String goal) {
         if (originalRecipe == null || originalRecipe.trim().isEmpty()) {
             log.error("原始食谱为空");
             return Map.of("error", true, "message", "食谱内容不能为空");
         }
 
+        String normalizedGoal = normalizeRecipeGoal(goal);
         try {
-            log.info("开始调用AI进行食谱优化，原文长度: {}", originalRecipe.length());
+            log.info("开始调用AI进行食谱优化，目标: {}，原文长度: {}", normalizedGoal, originalRecipe.length());
 
-            // 构建提示词
-            String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT, originalRecipe);
-
-            // 调用对话模型，优先使用 LangChain4j，空结果时回退到官方 SDK
+            String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT,
+                originalRecipe, describeRecipeGoal(normalizedGoal));
             String responseText = callRecipeOptimizationModel(prompt);
 
             if (responseText.isBlank()) {
@@ -220,19 +240,14 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
             log.info("AI返回优化结果: {}", responseText.length() > 300 ? responseText.substring(0, 300) + "..." : responseText);
 
-            // 解析JSON响应，返回食谱列表
-            List<Map<String, Object>> recipes = parseRecipeListResult(responseText);
-
-            if (recipes.isEmpty()) {
-                log.warn("AI返回的食谱列表为空");
+            Map<String, Object> result = parseRecipeResult(responseText, normalizedGoal);
+            if (result == null) {
+                log.warn("AI返回的食谱方案无法解析");
                 return Map.of("error", true, "message", "没有找到合适的优化食谱");
             }
 
-            Map<String, Object> result = new HashMap<>();
             result.put("error", false);
-            result.put("recipes", recipes);
-            // 兼容桌面端：直接返回数组（Controller 会包装在 ResponseResult.data 中）
-            log.info("食谱优化成功，返回 {} 个食谱方案", recipes.size());
+            log.info("食谱优化成功，目标: {}", normalizedGoal);
             return result;
 
         } catch (Exception e) {
@@ -242,18 +257,20 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     }
 
     @Override
-    public Map<String, Object> optimizeRecipeWithProgress(String originalRecipe,
+    public Map<String, Object> optimizeRecipeWithProgress(String originalRecipe, String goal,
             java.util.function.Consumer<String> progressCallback) {
         if (originalRecipe == null || originalRecipe.trim().isEmpty()) {
             return Map.of("error", true, "message", "食谱内容不能为空");
         }
 
+        String normalizedGoal = normalizeRecipeGoal(goal);
         try {
             // 阶段1：分析食谱内容
             progressCallback.accept("正在分析食谱内容...");
-            log.info("[食谱优化-SSE] 阶段1：分析食谱，长度={}", originalRecipe.length());
+            log.info("[食谱优化-SSE] 阶段1：分析食谱，长度={}，目标={}", originalRecipe.length(), normalizedGoal);
 
-            String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT, originalRecipe);
+            String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT,
+                originalRecipe, describeRecipeGoal(normalizedGoal));
 
             // 阶段2：调用AI优化
             progressCallback.accept("正在调用AI进行优化...");
@@ -274,16 +291,13 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             progressCallback.accept("正在生成优化结果...");
             log.info("[食谱优化-SSE] 阶段3：解析结果");
 
-            List<Map<String, Object>> recipes = parseRecipeListResult(responseText);
-
-            if (recipes.isEmpty()) {
+            Map<String, Object> result = parseRecipeResult(responseText, normalizedGoal);
+            if (result == null) {
                 return Map.of("error", true, "message", "没有找到合适的优化食谱");
             }
 
-            Map<String, Object> result = new HashMap<>();
             result.put("error", false);
-            result.put("recipes", recipes);
-            log.info("[食谱优化-SSE] 成功，返回 {} 个食谱方案", recipes.size());
+            log.info("[食谱优化-SSE] 成功，目标: {}", normalizedGoal);
             return result;
 
         } catch (Exception e) {
@@ -294,6 +308,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
     @Override
     public void optimizeRecipeStreaming(String originalRecipe,
+            String goal,
             java.util.function.Consumer<String> progressCallback,
             java.util.function.Consumer<String> tokenCallback,
             Runnable onComplete) {
@@ -304,17 +319,21 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             return;
         }
 
-        if (streamingChatLanguageModel == null) {
+        StreamingChatModel recipeStreamingModel = recipeStreamingModel();
+        if (recipeStreamingModel == null) {
             progressCallback.accept("ERROR:食谱优化暂未开放：未配置流式模型");
             onComplete.run();
             return;
         }
 
+        String normalizedGoal = normalizeRecipeGoal(goal);
+
         // 阶段1：分析食谱
         progressCallback.accept("正在分析食谱内容...");
-        log.info("[食谱优化-流式] 阶段1：分析食谱，长度={}", originalRecipe.length());
+        log.info("[食谱优化-流式] 阶段1：分析食谱，长度={}，目标={}", originalRecipe.length(), normalizedGoal);
 
-        String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT, originalRecipe);
+        String prompt = String.format(RECIPE_OPTIMIZATION_PROMPT,
+            originalRecipe, describeRecipeGoal(normalizedGoal));
 
         // 阶段2：流式调用AI
         progressCallback.accept("正在调用AI进行优化...");
@@ -323,7 +342,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
         StringBuilder fullResponse = new StringBuilder();
 
-        streamingChatLanguageModel.chat(prompt, new StreamingChatResponseHandler() {
+        recipeStreamingModel.chat(prompt, new StreamingChatResponseHandler() {
             @Override
             public void onPartialResponse(String partialResponse) {
                 if (partialResponse != null && !partialResponse.isEmpty()) {
@@ -339,19 +358,19 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
                 // 阶段3：解析结果
                 progressCallback.accept("正在生成优化结果...");
-                List<Map<String, Object>> recipes = parseRecipeListResult(fullResponse.toString());
+                Map<String, Object> result = parseRecipeResult(fullResponse.toString(), normalizedGoal);
 
-                if (recipes.isEmpty()) {
+                if (result == null) {
                     progressCallback.accept("ERROR:没有找到合适的优化食谱");
                 } else {
                     // 通过特殊前缀传递最终结果
                     try {
-                        String recipesJson = objectMapper.writeValueAsString(recipes);
-                        progressCallback.accept("RECIPES:" + recipesJson);
+                        String resultJson = objectMapper.writeValueAsString(result);
+                        progressCallback.accept("RESULT:" + resultJson);
                     } catch (Exception e) {
                         progressCallback.accept("ERROR:结果解析失败");
                     }
-                    log.info("[食谱优化-流式] 成功，返回 {} 个食谱方案", recipes.size());
+                    log.info("[食谱优化-流式] 成功，目标: {}", normalizedGoal);
                 }
                 onComplete.run();
             }
@@ -460,93 +479,105 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     }
 
     /**
-     * 解析食谱列表结果（AI返回JSON数组格式）
+     * 解析食谱优化结果（统一单方案结构）。
+     *
+     * @return 统一结构；无法解析时返回 null
      */
-    private List<Map<String, Object>> parseRecipeListResult(String responseText) {
+    private Map<String, Object> parseRecipeResult(String responseText, String goal) {
+        if (responseText == null || responseText.isBlank()) {
+            return null;
+        }
         try {
-            String json = extractJsonArray(responseText);
+            String json = extractJson(responseText);
 
-            // 尝试解析为数组
+            Map<String, Object> raw;
             if (json.trim().startsWith("[")) {
-                List<Map<String, Object>> recipes = objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
-                // 确保每个食谱有必要字段
-                for (Map<String, Object> recipe : recipes) {
-                    recipe.putIfAbsent("name", "未知食谱");
-                    recipe.putIfAbsent("difficulty", "中等");
-                    recipe.putIfAbsent("calorie", 0);
-                    recipe.putIfAbsent("ingredients", "");
-                    recipe.putIfAbsent("steps", "");
-                    recipe.putIfAbsent("protein", 0);
-                    recipe.putIfAbsent("fat", 0);
-                    recipe.putIfAbsent("carb", 0);
-                    // 确保数值类型
-                    for (String key : List.of("calorie", "protein", "fat", "carb")) {
-                        Object val = recipe.get(key);
-                        if (val instanceof String stringValue) {
-                            try {
-                                recipe.put(key, Double.valueOf(stringValue));
-                            } catch (NumberFormatException ignored) {}
-                        }
-                    }
+                // 防御：模型若仍返回数组，只接受第一个方案
+                List<Map<String, Object>> list = objectMapper.readValue(
+                    json, new TypeReference<List<Map<String, Object>>>() {});
+                if (list.isEmpty()) {
+                    return null;
                 }
-                return recipes;
+                raw = list.get(0);
+            } else {
+                raw = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
             }
 
-            // 如果返回的是单个对象（非数组），包装为数组
-            if (json.trim().startsWith("{")) {
-                Map<String, Object> single = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
-                return List.of(single);
+            Object recipeObj = raw.get("recipe");
+            if (!(recipeObj instanceof Map<?, ?> recipeRaw)) {
+                log.warn("食谱优化结果缺少 recipe 字段");
+                return null;
             }
 
-            log.warn("无法解析为JSON数组或对象: {}", json.substring(0, Math.min(100, json.length())));
-            return new ArrayList<>();
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("goal", stringOr(raw.get("goal"), goal));
+
+            Map<String, Object> recipe = new LinkedHashMap<>();
+            recipe.put("name", stringOr(recipeRaw.get("name"), "AI 优化食谱"));
+            recipe.put("difficulty", stringOr(recipeRaw.get("difficulty"), "中等"));
+            recipe.put("ingredients", stringOr(recipeRaw.get("ingredients"), ""));
+            recipe.put("steps", stringOr(recipeRaw.get("steps"), ""));
+            result.put("recipe", recipe);
+
+            Map<String, Object> nutrition = new LinkedHashMap<>();
+            nutrition.put("original", normalizeMacros(nutritionSection(raw.get("nutrition"), "original")));
+            nutrition.put("optimized", normalizeMacros(nutritionSection(raw.get("nutrition"), "optimized")));
+            result.put("nutrition", nutrition);
+
+            result.put("improvements", normalizeImprovements(raw.get("improvements")));
+            result.put("estimationNote", stringOr(raw.get("estimationNote"), "营养数值为 AI 估算，仅供参考"));
+            return result;
 
         } catch (IOException e) {
-            log.error("解析食谱列表失败: {}", responseText.substring(0, Math.min(200, responseText.length())), e);
-            return new ArrayList<>();
+            log.error("解析食谱结果失败: {}",
+                responseText.substring(0, Math.min(200, responseText.length())), e);
+            return null;
         }
     }
 
-    /**
-     * 从响应文本中提取JSON数组
-     */
-    private String extractJsonArray(String text) {
-        if (text == null || text.isEmpty()) {
-            return "[]";
+    private Object nutritionSection(Object nutritionObj, String key) {
+        if (nutritionObj instanceof Map<?, ?> nutrition) {
+            return nutrition.get(key);
         }
+        return null;
+    }
 
-        String trimmed = text.trim();
+    private Map<String, Object> normalizeMacros(Object node) {
+        Map<?, ?> source = node instanceof Map<?, ?> map ? map : Map.of();
+        Map<String, Object> macros = new LinkedHashMap<>();
+        macros.put("calorie", normalizeNumber(source.get("calorie"), 0));
+        macros.put("protein", normalizeNumber(source.get("protein"), 0));
+        macros.put("fat", normalizeNumber(source.get("fat"), 0));
+        macros.put("carb", normalizeNumber(source.get("carb"), 0));
+        return macros;
+    }
 
-        // 处理 ```json ... ``` 格式
-        if (trimmed.contains("```json")) {
-            int start = trimmed.indexOf("```json") + 7;
-            int end = trimmed.indexOf("```", start);
-            if (end > start) {
-                return trimmed.substring(start, end).trim();
+    private List<Object> normalizeImprovements(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return new ArrayList<>();
+        }
+        List<Object> improvements = new ArrayList<>();
+        for (Object item : list) {
+            if (item instanceof String text) {
+                if (!text.isBlank()) {
+                    improvements.add(text);
+                }
+            } else if (item instanceof Map<?, ?> map) {
+                String title = stringOr(map.get("title"), "");
+                String detail = stringOr(map.get("detail"), "");
+                if (!title.isBlank() || !detail.isBlank()) {
+                    Map<String, Object> entry = new LinkedHashMap<>();
+                    entry.put("title", title);
+                    entry.put("detail", detail);
+                    improvements.add(entry);
+                }
             }
         }
+        return improvements;
+    }
 
-        // 处理 ``` ... ``` 格式
-        if (trimmed.contains("```")) {
-            int start = trimmed.indexOf("```") + 3;
-            while (start < trimmed.length() && !Character.isWhitespace(trimmed.charAt(start)) && trimmed.charAt(start) != '[' && trimmed.charAt(start) != '{') {
-                start++;
-            }
-            int end = trimmed.indexOf("```", start);
-            if (end > start) {
-                return trimmed.substring(start, end).trim();
-            }
-        }
-
-        // 尝试找到JSON数组 [ ... ]
-        int arrayStart = trimmed.indexOf('[');
-        int arrayEnd = trimmed.lastIndexOf(']');
-        if (arrayStart >= 0 && arrayEnd > arrayStart) {
-            return trimmed.substring(arrayStart, arrayEnd + 1);
-        }
-
-        // 回退到对象查找
-        return extractJson(text);
+    private String stringOr(Object value, String fallback) {
+        return value instanceof String text && !text.isBlank() ? text : fallback;
     }
 
     /**
@@ -593,14 +624,79 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     }
 
     /**
-     * 调用食谱优化模型（使用通用 aiModel，由配置决定具体模型）。
+     * 调用食谱优化专用对话模型（独立温度、输出上限与超时）。
      */
     private String callRecipeOptimizationModel(String prompt) {
-        String responseText = aiModel.chat(prompt);
+        ChatModel recipeModel = recipeChatModel();
+        if (recipeModel == null) {
+            return "";
+        }
+        String responseText = recipeModel.chat(prompt);
         if (responseText == null || responseText.isBlank()) {
             log.warn("食谱优化模型返回空结果");
             return "";
         }
         return responseText.trim();
+    }
+
+    /**
+     * 按运行时配置版本缓存食谱优化对话模型，管理员热切换后自动重建。
+     */
+    ChatModel recipeChatModel() {
+        DynamicAiModelRegistry.ActiveModels active = dynamicAiModelRegistry.current();
+        AiModelConfig config = active.config();
+        if (config == null) {
+            return new NoopChatModel();
+        }
+        long version = active.version();
+        ChatModel cached = recipeChatModelCache;
+        if (cached != null && version == recipeChatModelVersion) {
+            return cached;
+        }
+        synchronized (this) {
+            if (recipeChatModelCache == null || recipeChatModelVersion != version) {
+                recipeChatModelCache = aiProviderRegistry.required(config.getProvider())
+                    .buildRecipeModel(config);
+                recipeChatModelVersion = version;
+            }
+            return recipeChatModelCache;
+        }
+    }
+
+    /**
+     * 按运行时配置版本缓存食谱优化流式模型，管理员热切换后自动重建。
+     */
+    StreamingChatModel recipeStreamingModel() {
+        DynamicAiModelRegistry.ActiveModels active = dynamicAiModelRegistry.current();
+        AiModelConfig config = active.config();
+        if (config == null) {
+            return new NoopStreamingChatModel();
+        }
+        long version = active.version();
+        StreamingChatModel cached = recipeStreamingModelCache;
+        if (cached != null && version == recipeStreamingModelVersion) {
+            return cached;
+        }
+        synchronized (this) {
+            if (recipeStreamingModelCache == null || recipeStreamingModelVersion != version) {
+                recipeStreamingModelCache = aiProviderRegistry.required(config.getProvider())
+                    .buildRecipeStreamingModel(config);
+                recipeStreamingModelVersion = version;
+            }
+            return recipeStreamingModelCache;
+        }
+    }
+
+    private String normalizeRecipeGoal(String goal) {
+        return goal == null || goal.isBlank() ? AiAssistantService.DEFAULT_RECIPE_GOAL : goal.trim();
+    }
+
+    private String describeRecipeGoal(String goal) {
+        return switch (goal) {
+            case "fat_loss" -> "减脂（fat_loss）：降低总热量与脂肪，提升饱腹感";
+            case "muscle_gain" -> "增肌（muscle_gain）：提高蛋白质与总热量";
+            case "blood_sugar_control" -> "控糖（blood_sugar_control）：降低精制碳水与升糖负担";
+            default -> "营养均衡（balanced）：平衡蛋白质、脂肪与碳水";
+        };
     }
 }

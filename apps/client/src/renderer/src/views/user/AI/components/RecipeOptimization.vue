@@ -34,6 +34,21 @@
             <span class="char-count">{{ originalRecipe.length }} / 10000</span>
           </div>
         </div>
+        <div class="goal-selector">
+          <span class="goal-label">优化目标</span>
+          <div class="goal-options">
+            <button
+              v-for="option in goalOptions"
+              :key="option.key"
+              type="button"
+              class="goal-pill"
+              :class="{ active: recipeGoal === option.key }"
+              @click="recipeGoal = option.key"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 操作按钮 -->
@@ -168,6 +183,28 @@
             </div>
           </div>
 
+          <!-- 营养对比 -->
+          <div v-if="nutritionRows.length" class="nutrition-section">
+            <div class="section-title">
+              <span class="title-bar"></span>
+              营养对比
+            </div>
+            <div class="nutrition-list">
+              <div
+                v-for="row in nutritionRows"
+                :key="row.key"
+                class="nutrition-item"
+              >
+                <span class="nutrition-name">{{ row.label }}</span>
+                <span class="nutrition-values">
+                  <span class="nutrition-original">{{ row.original }}{{ row.unit }}</span>
+                  <span class="nutrition-arrow">→</span>
+                  <span class="nutrition-optimized">{{ row.optimized }}{{ row.unit }}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
           <!-- 优化亮点 -->
           <div v-if="optimizedRecipe.improvements?.length" class="improvements-section">
             <div class="section-title">
@@ -190,6 +227,11 @@
               </div>
             </div>
           </div>
+
+          <!-- 估算说明 -->
+          <div v-if="optimizedRecipe.estimationNote" class="estimation-note">
+            {{ optimizedRecipe.estimationNote }}
+          </div>
         </div>
       </Transition>
     </div>
@@ -197,7 +239,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { Loading, DocumentCopy, FolderAdd } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import axios from "axios";
@@ -220,11 +262,36 @@ const savingRecipe = ref(false);
 const {
   originalRecipe,
   optimizedRecipe,
+  recipeGoal,
   optimizationLoading,
   smoothProgress,
   progressStatus,
   optimizeRecipe
 } = useRecipeOptimizationTask();
+
+// 优化目标选项
+const goalOptions = [
+  { key: "balanced", label: "营养均衡" },
+  { key: "fat_loss", label: "减脂" },
+  { key: "muscle_gain", label: "增肌" },
+  { key: "blood_sugar_control", label: "控糖" }
+];
+
+const numOrZero = (v) => Number(v) || 0;
+
+// 营养对比行（原食谱 → 优化后）
+const nutritionRows = computed(() => {
+  const nutrition = optimizedRecipe.value?.nutrition;
+  if (!nutrition) return [];
+  const original = nutrition.original || {};
+  const optimized = nutrition.optimized || {};
+  return [
+    { key: "calorie", label: "卡路里", unit: "kcal", original: numOrZero(original.calorie), optimized: numOrZero(optimized.calorie) },
+    { key: "protein", label: "蛋白质", unit: "g", original: numOrZero(original.protein), optimized: numOrZero(optimized.protein) },
+    { key: "fat", label: "脂肪", unit: "g", original: numOrZero(original.fat), optimized: numOrZero(optimized.fat) },
+    { key: "carb", label: "碳水化合物", unit: "g", original: numOrZero(original.carb), optimized: numOrZero(optimized.carb) }
+  ];
+});
 
 /**
  * 复制到剪贴板
@@ -480,6 +547,50 @@ const saveToMyRecipes = async () => {
 .char-count {
   font-size: 12px;
   color: @nordic-text-muted;
+}
+
+// ===== 优化目标 =====
+.goal-selector {
+  margin-top: 16px;
+}
+
+.goal-label {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: @nordic-text-secondary;
+}
+
+.goal-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.goal-pill {
+  padding: 8px 18px;
+  border-radius: 50px;
+  border: 1px solid @nordic-border;
+  background: @nordic-bg;
+  color: @nordic-text-secondary;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+
+  &:hover {
+    border-color: @nordic-green;
+    color: @nordic-green-dark;
+  }
+
+  &.active {
+    background: linear-gradient(135deg, @nordic-green, @nordic-green-dark);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 3px 10px rgba(123, 174, 127, 0.3);
+  }
 }
 
 // ===== 操作按钮 =====
@@ -896,6 +1007,69 @@ const saveToMyRecipes = async () => {
 .arrow-icon {
   color: @nordic-green;
   display: flex;
+}
+
+// 营养对比
+.nutrition-section {
+  background: @nordic-surface;
+  border-radius: 18px;
+  padding: 24px;
+  border: 1px solid @nordic-border;
+  margin-bottom: 20px;
+}
+
+.nutrition-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nutrition-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: @nordic-bg;
+  border: 1px solid @nordic-border;
+}
+
+.nutrition-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: @nordic-text-secondary;
+}
+
+.nutrition-values {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nutrition-original {
+  color: @nordic-text-muted;
+  text-decoration: line-through;
+}
+
+.nutrition-arrow {
+  color: @nordic-text-muted;
+}
+
+.nutrition-optimized {
+  color: @nordic-green-dark;
+}
+
+.estimation-note {
+  margin-top: 16px;
+  font-size: 12px;
+  color: @nordic-text-muted;
+  line-height: 1.7;
 }
 
 // 优化亮点
