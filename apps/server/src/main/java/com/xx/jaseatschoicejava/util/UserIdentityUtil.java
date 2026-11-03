@@ -11,6 +11,11 @@ public class UserIdentityUtil {
     private static final String HEADER_USER_ID = "X-User-Id";
     private static final String HEADER_AUTHORIZATION = "Authorization";
 
+    /**
+     * 请求属性名：JwtAuthenticationFilter 校验通过 JWT 后写入的可信用户ID。
+     */
+    public static final String VERIFIED_USER_ID_ATTRIBUTE = "jaseats.verifiedUserId";
+
     // JWT工具类实例（Spring注入）
     private static JwtUtil jwtUtil;
 
@@ -54,6 +59,27 @@ public class UserIdentityUtil {
                 // JWT解析失败，返回null
                 return null;
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * 从请求中获取可信用户ID：只认 JwtAuthenticationFilter 校验通过的 JWT 写入的用户ID，
+     * 不采信任何请求头。内容提取等需要强身份的接口使用该入口；其它模块仍沿用
+     * {@link #extractUserId(HttpServletRequest)}。
+     *
+     * @param request HTTP请求
+     * @return 已验证的用户ID，未登录或令牌无效时返回 null
+     */
+    public static String extractVerifiedUserId(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+
+        Object attribute = request.getAttribute(VERIFIED_USER_ID_ATTRIBUTE);
+        if (attribute instanceof String userId && !userId.isBlank()) {
+            return userId;
         }
 
         return null;

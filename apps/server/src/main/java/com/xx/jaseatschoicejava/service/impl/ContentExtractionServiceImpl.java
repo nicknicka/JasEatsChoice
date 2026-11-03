@@ -16,6 +16,7 @@ import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcher;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcherFactory;
 import com.xx.jaseatschoicejava.service.extraction.recognizer.ContentRecognizer;
+import com.xx.jaseatschoicejava.util.UrlSecurityValidator;
 import com.xx.jaseatschoicejava.vo.ContentExtractionDetailVO;
 import com.xx.jaseatschoicejava.vo.ContentSourceVO;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -72,10 +73,13 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
     @Autowired
     private ContentRecognizer contentRecognizer;
 
+    @Autowired
+    private UrlSecurityValidator urlSecurityValidator;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String addContentSource(ContentSourceCreateDTO dto, String userId) {
-        String contentUrl = normalizeContentUrl(dto.getContentUrl());
+        String contentUrl = urlSecurityValidator.validateAndResolve(normalizeContentUrl(dto.getContentUrl()));
 
         // 自动识别平台和内容类型
         ContentPlatform platform = ContentPlatform.parseFromUrl(contentUrl);
@@ -203,6 +207,11 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             throw new RuntimeException("提取内容不存在");
         }
 
+        ContentSource source = contentSourceMapper.selectById(extraction.getSourceId());
+        if (source == null || !source.getUserId().equals(userId)) {
+            throw new RuntimeException("无权发布该提取内容");
+        }
+
         if (extraction.getIsPublished()) {
             throw new RuntimeException("该内容已发布为食谱");
         }
@@ -228,6 +237,11 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         ContentExtraction extraction = contentExtractionMapper.selectById(extractionId);
         if (extraction == null) {
             throw new RuntimeException("提取内容不存在");
+        }
+
+        ContentSource source = contentSourceMapper.selectById(extraction.getSourceId());
+        if (source == null || !source.getUserId().equals(userId)) {
+            throw new RuntimeException("无权验证该提取内容");
         }
 
         extraction.setIsVerified(verified);

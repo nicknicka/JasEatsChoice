@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.filter;
 
 import com.xx.jaseatschoicejava.util.JwtUtil;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -75,6 +76,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                         // 将认证信息设置到 SecurityContext（每次都重新设置）
                         SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                        // 记录经签名校验的用户ID，供只认 JWT 的接口使用（如内容提取）；
+                        // 失败不影响其它模块继续以 phone 作为 principal。
+                        try {
+                            String verifiedUserId = jwtUtil.extractUserId(token);
+                            if (verifiedUserId != null && !verifiedUserId.isBlank()) {
+                                request.setAttribute(UserIdentityUtil.VERIFIED_USER_ID_ATTRIBUTE, verifiedUserId);
+                            }
+                        } catch (Exception e) {
+                            logger.debug("提取已验证用户ID失败: " + e.getMessage());
+                        }
                         // System.out.println("Authentication set successfully with ROLE_ADMIN and " + (permissions != null ? permissions.size() : 0) + " permissions");
                     } else {
                         // System.out.println("Token expired, returning 401");

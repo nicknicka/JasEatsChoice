@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
@@ -21,6 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.xx.jaseatschoicejava.dto.ContentSourceCreateDTO;
 import com.xx.jaseatschoicejava.entity.ContentExtraction;
 import com.xx.jaseatschoicejava.entity.ContentSource;
 import com.xx.jaseatschoicejava.entity.ExtractionTask;
@@ -34,6 +36,7 @@ import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcher;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcherFactory;
 import com.xx.jaseatschoicejava.service.extraction.recognizer.ContentRecognizer;
+import com.xx.jaseatschoicejava.util.UrlSecurityValidator;
 
 @ExtendWith(MockitoExtension.class)
 class ContentExtractionServiceImplTest {
@@ -58,6 +61,9 @@ class ContentExtractionServiceImplTest {
 
     @Mock
     private ContentFetcher contentFetcher;
+
+    @Mock
+    private UrlSecurityValidator urlSecurityValidator;
 
     @Test
     void parseExtractionResult_whenResponseBlank_shouldThrowParseException() throws Exception {
@@ -247,5 +253,95 @@ class ContentExtractionServiceImplTest {
         assertFalse(source.getIsExtracted());
         assertNotNull(source.getErrorMessage());
         verify(contentExtractionMapper, never()).insert(any(ContentExtraction.class));
+    }
+
+    @Test
+    void addContentSource_whenUrlRejected_shouldThrowAndNotInsert() {
+        when(urlSecurityValidator.validateAndResolve(anyString()))
+            .thenThrow(new UrlSecurityValidator.InvalidUrlException("不允许访问内网地址"));
+
+        ContentSourceCreateDTO dto = new ContentSourceCreateDTO();
+        dto.setContentUrl("http://127.0.0.1/secret");
+
+        assertThrows(UrlSecurityValidator.InvalidUrlException.class,
+            () -> service.addContentSource(dto, "user-1"));
+        verify(contentSourceMapper, never()).insert(any(ContentSource.class));
+        verify(extractionTaskMapper, never()).insert(any(ExtractionTask.class));
+    }
+
+    @Test
+    void addContentSource_shouldPersistValidatedUrlForUser() {
+        when(urlSecurityValidator.validateAndResolve(anyString())).thenReturn("https://example.com/a");
+
+        ContentSourceCreateDTO dto = new ContentSourceCreateDTO();
+        dto.setContentUrl("https://example.com/a");
+
+        String sourceId = service.addContentSource(dto, "user-1");
+
+        assertNotNull(sourceId);
+        ArgumentCaptor<ContentSource> captor = ArgumentCaptor.forClass(ContentSource.class);
+        verify(contentSourceMapper).insert(captor.capture());
+        assertEquals("user-1", captor.getValue().getUserId());
+        assertEquals("https://example.com/a", captor.getValue().getContentUrl());
+        verify(extractionTaskMapper).insert(any(ExtractionTask.class));
+    }
+
+    @Test
+    void publishAsRecipe_whenSourceOwnedByAnotherUser_shouldThrowAndNotUpdate() {
+        ContentExtraction extraction = extraction();
+        ContentSource source = pendingSource();
+        when(contentExtractionMapper.selectById("ext-1")).thenReturn(extraction);
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+
+        assertThrows(RuntimeException.class, () -> service.publishAsRecipe("ext-1", "user-2"));
+        verify(contentExtractionMapper, never()).updateById(any(ContentExtraction.class));
+    }
+
+    @Test
+    void publishAsRecipe_whenOwner_shouldPublish() {
+        ContentExtraction extraction = extraction();
+        ContentSource source = pendingSource();
+        when(contentExtractionMapper.selectById("ext-1")).thenReturn(extraction);
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+
+        String recipeId = service.publishAsRecipe("ext-1", "user-1");
+
+        assertNotNull(recipeId);
+        assertTrue(extraction.getIsPublished());
+        verify(contentExtractionMapper).updateById(extraction);
+    }
+
+    @Test
+    void verifyExtraction_whenSourceOwnedByAnotherUser_shouldThrowAndNotUpdate() {
+        ContentExtraction extraction = extraction();
+        ContentSource source = pendingSource();
+        when(contentExtractionMapper.selectById("ext-1")).thenReturn(extraction);
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+
+        assertThrows(RuntimeException.class,
+            () -> service.verifyExtraction("ext-1", true, 5, "user-2"));
+        verify(contentExtractionMapper, never()).updateById(any(ContentExtraction.class));
+    }
+
+    @Test
+    void verifyExtraction_whenOwner_shouldUpdateVerification() {
+        ContentExtraction extraction = extraction();
+        ContentSource source = pendingSource();
+        when(contentExtractionMapper.selectById("ext-1")).thenReturn(extraction);
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+        when(contentExtractionMapper.updateById(any(ContentExtraction.class))).thenReturn(1);
+
+        assertTrue(service.verifyExtraction("ext-1", true, 5, "user-1"));
+        assertTrue(extraction.getIsVerified());
+        assertEquals(5, extraction.getManualScore());
+    }
+
+    private ContentExtraction extraction() {
+        ContentExtraction extraction = new ContentExtraction();
+        extraction.setId("ext-1");
+        extraction.setSourceId("source-1");
+        extraction.setIsPublished(false);
+        extraction.setIsVerified(false);
+        return extraction;
     }
 }

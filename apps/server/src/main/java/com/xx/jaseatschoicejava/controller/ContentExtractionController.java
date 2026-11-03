@@ -13,9 +13,12 @@ import com.xx.jaseatschoicejava.vo.ContentSourceVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +52,7 @@ public class ContentExtractionController {
      */
     @PostMapping("/source")
     public ResponseResult<String> addContentSource(
-            @RequestBody ContentSourceCreateDTO dto,
+            @Valid @RequestBody ContentSourceCreateDTO dto,
             HttpServletRequest request) {
         String userId = resolveUserId(request);
 
@@ -264,10 +267,13 @@ public class ContentExtractionController {
         }
     }
 
+    /**
+     * 只认已验证 JWT 中的用户ID；取不到即视为未登录。不采信任何请求头，也不再有匿名兜底账号。
+     */
     private String resolveUserId(HttpServletRequest request) {
-        String userId = UserIdentityUtil.extractUserId(request);
+        String userId = UserIdentityUtil.extractVerifiedUserId(request);
         if (userId == null || userId.isBlank()) {
-            return "test_user";
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "未登录");
         }
         return userId;
     }
