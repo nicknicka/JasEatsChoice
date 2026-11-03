@@ -94,10 +94,15 @@ const startProgressTimer = () => {
   stopProgressTimer()
   recognitionProgress.value = 0
 
+  // 渐近式推进：越接近 99% 越慢，并保留最小步进，
+  // 保证识别期间进度条始终有可见变化，不会卡在一个数值上。
   progressTimer = setInterval(() => {
-    if (recognitionProgress.value < 90) {
-      recognitionProgress.value += 10
-    }
+    if (recognitionProgress.value >= 99) return
+    const remaining = 99 - recognitionProgress.value
+    recognitionProgress.value = Math.min(
+      99,
+      recognitionProgress.value + Math.max(0.2, remaining * 0.06)
+    )
   }, 150)
 }
 

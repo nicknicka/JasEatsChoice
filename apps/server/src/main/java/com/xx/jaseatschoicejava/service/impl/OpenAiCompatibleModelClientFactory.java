@@ -202,7 +202,9 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
             .temperature(RECIPE_TEMPERATURE)
             .maxTokens(RECIPE_MAX_TOKENS)
             .timeout(Duration.ofMillis(RECIPE_TIMEOUT_MS))
-            .maxRetries(1)
+            // 不重试：食谱优化单次生成本身就要 30~150s，超时重试只会把等待时间翻倍，
+            // 且每次重试都重复计费。
+            .maxRetries(0)
             .build();
     }
 
