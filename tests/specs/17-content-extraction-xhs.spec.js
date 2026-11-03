@@ -9,6 +9,12 @@ const AUTH_SOURCE_TITLE = 'E2E 需要登录小红书'
 const FAILED_SOURCE_ID = 'e2e-extraction-failed-source'
 const FAILED_SOURCE_TITLE = 'E2E 提取失败'
 const FAILURE_MESSAGE = 'AI识别结果解析失败：上游返回内容不完整，请稍后重试。'
+const PUBLISH_SOURCE_ID = 'e2e-publish-source-212'
+const PUBLISH_SOURCE_TITLE = 'E2E 发布食谱'
+const PUBLISH_EXTRACTION_ID = 'e2e-publish-extraction-212'
+const PUBLISHED_RECIPE_ID = 'e2e-recipe-212'
+const PUBLISHED_RECIPE_NAME = '番茄炒蛋'
+const PUBLISHED_SOURCE_URL = 'https://www.xiaohongshu.com/explore/e2e-publish-212'
 
 // 内容提取接口现在只认已验证 JWT：Authorization 是唯一可信身份来源，
 // X-User-Id 不再影响内容提取的归属（其余模块尚未收紧，带上它无害且兼容）。
@@ -76,6 +82,91 @@ async function stubFailedSource(page) {
         extractionId: 'e2e-stale-extraction',
         errorMessage: FAILURE_MESSAGE,
         createdAt: new Date().toISOString()
+      }]
+    })
+  }))
+}
+
+async function stubPublishSource(page, publishedState) {
+  await page.route('**/v1/content-extraction/sources', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      success: true,
+      code: '200',
+      message: '成功',
+      data: [{
+        id: PUBLISH_SOURCE_ID,
+        title: PUBLISH_SOURCE_TITLE,
+        platform: 'XIAOHONGSHU',
+        platformName: '小红书',
+        contentType: 'ARTICLE',
+        contentTypeName: '文章',
+        contentUrl: PUBLISHED_SOURCE_URL,
+        extractionStatus: 'SUCCESS',
+        extractionStatusName: '提取完成',
+        extractionId: PUBLISH_EXTRACTION_ID,
+        extractedDishName: PUBLISHED_RECIPE_NAME,
+        isPublished: publishedState.isPublished,
+        recipeId: publishedState.recipeId,
+        createdAt: new Date().toISOString()
+      }]
+    })
+  }))
+}
+
+async function stubExtractionDetail(page) {
+  await page.route(`**/v1/content-extraction/extraction/${PUBLISH_EXTRACTION_ID}`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      success: true,
+      code: '200',
+      message: '成功',
+      data: {
+        id: PUBLISH_EXTRACTION_ID,
+        dishName: PUBLISHED_RECIPE_NAME,
+        description: '酸甜开胃',
+        ingredients: [],
+        steps: [],
+        tags: [],
+        cookingTime: 15,
+        calories: 180,
+        isPublished: false,
+        recipeId: null
+      }
+    })
+  }))
+}
+
+async function stubPublishedRecipeList(page) {
+  await page.route('**/v1/recipe/all*', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      success: true,
+      code: '200',
+      message: '成功',
+      data: [{
+        id: PUBLISHED_RECIPE_ID,
+        name: PUBLISHED_RECIPE_NAME,
+        type: 'dinner',
+        cookTime: '15分钟',
+        sourceUrl: PUBLISHED_SOURCE_URL,
+        sourcePlatform: 'XIAOHONGSHU',
+        items: [{
+          name: PUBLISHED_RECIPE_NAME,
+          ingredients: ['番茄 2个', '鸡蛋 3个'],
+          calories: 180,
+          protein: 0,
+          carbs: 0,
+          fat: 0
+        }],
+        calories: 180,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        favorite: false
       }]
     })
   }))
@@ -257,6 +348,101 @@ test.describe('模块十七：内容提取登录态绑定', () => {
       markPassed('17.3', '失败摘要 → 具体原因 → 重试 → 删除')
     } catch (e) {
       markFailed('17.3', e.message.slice(0, 60))
+      throw e
+    }
+  })
+
+  test('17.4 卡片入口可选择餐次，发布后查看食谱', async ({ page }) => {
+    markRunning('17.4')
+    let publishPayload
+    const publishedState = { isPublished: false, recipeId: null }
+    try {
+      await stubPublishSource(page, publishedState)
+      await stubPublishedRecipeList(page)
+      await page.route(`**/v1/content-extraction/extraction/${PUBLISH_EXTRACTION_ID}/publish`, (route) => {
+        publishPayload = JSON.parse(route.request().postData() || '{}')
+        publishedState.isPublished = true
+        publishedState.recipeId = PUBLISHED_RECIPE_ID
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            code: '200',
+            message: '成功',
+            data: PUBLISHED_RECIPE_ID
+          })
+        })
+      })
+
+      await openExtractionTab(page)
+      const card = page.locator('.source-card', { hasText: PUBLISHED_RECIPE_NAME }).first()
+      await expect(card).toBeVisible({ timeout: 10000 })
+      await card.locator('.publish-icon').click()
+
+      const publishDialog = page.locator('.el-dialog', { hasText: '发布为食谱' }).last()
+      await expect(publishDialog).toBeVisible()
+      await expect(publishDialog.locator('.el-select')).toContainText('午餐')
+      await publishDialog.locator('.el-select').click()
+      await page.locator('.el-select-dropdown__item', { hasText: '晚餐' }).last().click()
+      await publishDialog.getByRole('button', { name: '确认发布' }).click()
+
+      await expect.poll(() => publishPayload, { timeout: 10000 }).toEqual({ mealType: 'dinner' })
+      await expect(card).toContainText('已发布')
+      await expect(card.getByRole('button', { name: '查看食谱' })).toBeVisible()
+
+      await card.getByRole('button', { name: '查看食谱' }).click()
+      await page.waitForURL('**/my-recipe?recipeId=*', { timeout: 10000 })
+      const recipeDetail = page.locator('.recipe-detail-dialog').last()
+      await expect(recipeDetail).toBeVisible()
+      await expect(recipeDetail).toContainText(PUBLISHED_RECIPE_NAME)
+      await expect(recipeDetail).toContainText('小红书')
+      await expect(recipeDetail).toContainText('15 分钟')
+      await expect(recipeDetail.getByRole('link', { name: '查看原文' })).toHaveAttribute('href', PUBLISHED_SOURCE_URL)
+
+      markPassed('17.4', '发布餐次可选；已发布可查看食谱；来源与时长正确展示')
+    } catch (e) {
+      markFailed('17.4', e.message.slice(0, 60))
+      throw e
+    }
+  })
+
+  test('17.5 详情入口默认午餐发布', async ({ page }) => {
+    markRunning('17.5')
+    let publishPayload
+    try {
+      await stubPublishSource(page, { isPublished: false, recipeId: null })
+      await stubExtractionDetail(page)
+      await page.route(`**/v1/content-extraction/extraction/${PUBLISH_EXTRACTION_ID}/publish`, (route) => {
+        publishPayload = JSON.parse(route.request().postData() || '{}')
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            code: '200',
+            message: '成功',
+            data: PUBLISHED_RECIPE_ID
+          })
+        })
+      })
+
+      await openExtractionTab(page)
+      await page.locator('.source-card', { hasText: PUBLISHED_RECIPE_NAME }).first().click()
+      const detailDialog = page.locator('.extraction-detail-dialog .el-dialog', { hasText: '提取详情' }).first()
+      await expect(detailDialog).toBeVisible()
+      await detailDialog.getByRole('button', { name: '发布为食谱' }).click()
+
+      const publishDialog = page.locator('.el-dialog', { hasText: '发布为食谱' }).last()
+      await expect(publishDialog).toBeVisible()
+      await expect(publishDialog.locator('.el-select')).toContainText('午餐')
+      await publishDialog.getByRole('button', { name: '确认发布' }).click()
+
+      await expect.poll(() => publishPayload, { timeout: 10000 }).toEqual({ mealType: 'lunch' })
+      await expect(detailDialog.getByRole('button', { name: '查看食谱' })).toBeVisible()
+      markPassed('17.5', '详情入口默认午餐；发布后详情保持打开并显示查看食谱')
+    } catch (e) {
+      markFailed('17.5', e.message.slice(0, 60))
       throw e
     }
   })

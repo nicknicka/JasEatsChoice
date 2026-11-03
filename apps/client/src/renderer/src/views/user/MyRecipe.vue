@@ -1,10 +1,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '../../store/authStore'
+import { mealTypeOptions, mealTypeToEnglish } from '../../utils/mealTypeUtils'
 
 // 引入组件
 import RecipeDetail from '../../components/RecipeDetail.vue'
@@ -18,10 +20,12 @@ import { useUserStore } from '../../store/userStore'
 // 初始化 Pinia store
 const authStore = useAuthStore()
 const userStore = useUserStore()
+const route = useRoute()
 
 // 我的食谱数据
 const myRecipes = ref([])
 const loadingFailed = ref(false)
+let recipeQueryOpened = false
 
 // 批量操作相关变量
 const selectedRecipes = ref([]) // 存储选中的食谱
@@ -127,6 +131,7 @@ const loadMyRecipes = () => {
       }
       loadingFailed.value = false
       console.log('加载我的食谱成功:', myRecipes.value)
+      openRecipeFromQuery()
     })
     .catch((error) => {
       console.error('加载我的食谱失败:', error)
@@ -182,7 +187,7 @@ const filteredRecipes = computed(() => {
   if (recipeFilter.value === 'all') {
     filtered = [...myRecipes.value]
   } else {
-    filtered = myRecipes.value.filter((recipe) => recipe.type === recipeFilter.value)
+    filtered = myRecipes.value.filter((recipe) => mealTypeToEnglish(recipe.type) === recipeFilter.value)
   }
 
   // 按搜索关键词筛选
@@ -254,6 +259,18 @@ const selectedRecipe = ref(null)
 const viewRecipeDetails = (recipe) => {
   selectedRecipe.value = recipe
   detailDialogVisible.value = true
+}
+
+const openRecipeFromQuery = () => {
+  if (recipeQueryOpened) return
+  const recipeId = route.query.recipeId
+  if (!recipeId) return
+
+  const recipe = myRecipes.value.find((item) => String(item.id) === String(recipeId))
+  if (recipe) {
+    recipeQueryOpened = true
+    viewRecipeDetails(recipe)
+  }
 }
 
 // 更新收藏状态
@@ -1119,25 +1136,12 @@ const exportToDietRecord = () => {
           @click="recipeFilter = 'all'"
         >全部</button>
         <button
+          v-for="option in mealTypeOptions"
+          :key="option.value"
           class="meal-chip"
-          :class="{ active: recipeFilter === '早餐' }"
-          @click="recipeFilter = '早餐'"
-        >早餐</button>
-        <button
-          class="meal-chip"
-          :class="{ active: recipeFilter === '午餐' }"
-          @click="recipeFilter = '午餐'"
-        >午餐</button>
-        <button
-          class="meal-chip"
-          :class="{ active: recipeFilter === '晚餐' }"
-          @click="recipeFilter = '晚餐'"
-        >晚餐</button>
-        <button
-          class="meal-chip"
-          :class="{ active: recipeFilter === '加餐' }"
-          @click="recipeFilter = '加餐'"
-        >加餐</button>
+          :class="{ active: recipeFilter === option.value }"
+          @click="recipeFilter = option.value"
+        >{{ option.label }}</button>
       </div>
     </div>
 

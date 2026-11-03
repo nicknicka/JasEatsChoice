@@ -114,6 +114,11 @@ public class ContentSourceVO {
     private Boolean isPublished;
 
     /**
+     * 发布后生成的食谱ID
+     */
+    private String recipeId;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;

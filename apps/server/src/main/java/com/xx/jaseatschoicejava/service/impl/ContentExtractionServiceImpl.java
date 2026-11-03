@@ -12,6 +12,7 @@ import com.xx.jaseatschoicejava.mapper.ContentExtractionMapper;
 import com.xx.jaseatschoicejava.mapper.ContentSourceMapper;
 import com.xx.jaseatschoicejava.mapper.ExtractionTaskMapper;
 import com.xx.jaseatschoicejava.service.ContentExtractionService;
+import com.xx.jaseatschoicejava.service.RecipeService;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcher;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcherFactory;
@@ -75,6 +76,9 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
     @Autowired
     private UrlSecurityValidator urlSecurityValidator;
+
+    @Autowired
+    private RecipeService recipeService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -200,8 +204,9 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String publishAsRecipe(String extractionId, String userId) {
-        ContentExtraction extraction = contentExtractionMapper.selectById(extractionId);
+    public String publishAsRecipe(String extractionId, String mealType, String userId) {
+        // 锁住提取记录，避免并发发布各自创建一条食谱。
+        ContentExtraction extraction = contentExtractionMapper.selectByIdForUpdate(extractionId);
         if (extraction == null) {
             throw new RuntimeException("提取内容不存在");
         }
@@ -211,19 +216,22 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             throw new RuntimeException("无权发布该提取内容");
         }
 
-        if (extraction.getIsPublished()) {
-            throw new RuntimeException("该内容已发布为食谱");
+        if (Boolean.TRUE.equals(extraction.getIsPublished())
+            && extraction.getRecipeId() != null
+            && recipeService.getById(extraction.getRecipeId()) != null) {
+            return extraction.getRecipeId();
         }
 
-        // TODO: 调用RecipeService创建食谱
-        String recipeId = UUID.randomUUID().toString().replace("-", "");
+        String recipeId = recipeService.createFromExtraction(extraction, source, mealType).getId();
 
         // 更新提取记录
         extraction.setIsPublished(true);
         extraction.setRecipeId(recipeId);
         extraction.setUpdatedAt(LocalDateTime.now());
 
-        contentExtractionMapper.updateById(extraction);
+        if (contentExtractionMapper.updateById(extraction) <= 0) {
+            throw new RuntimeException("发布状态更新失败");
+        }
 
         log.info("发布提取内容为食谱: extractionId={}, recipeId={}", extractionId, recipeId);
 
@@ -750,6 +758,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             vo.setExtractedDishName(extraction.getDishName());
             vo.setExtractedDishImage(extraction.getDishImage());
             vo.setIsPublished(extraction.getIsPublished());
+            vo.setRecipeId(extraction.getRecipeId());
         }
 
         return vo;

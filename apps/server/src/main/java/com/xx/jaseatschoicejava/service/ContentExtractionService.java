@@ -63,10 +63,11 @@ public interface ContentExtractionService {
      * 发布为食谱
      *
      * @param extractionId 提取ID
+     * @param mealType 餐次，缺省为 lunch
      * @param userId 用户ID
      * @return 食谱ID
      */
-    String publishAsRecipe(String extractionId, String userId);
+    String publishAsRecipe(String extractionId, String mealType, String userId);
 
     /**
      * 验证提取内容

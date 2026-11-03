@@ -201,6 +201,13 @@
                       </svg>
                     </button>
                     <button
+                      v-if="source.isPublished && source.recipeId"
+                      class="action-text view-recipe-btn"
+                      @click.stop="viewPublishedRecipe(source)"
+                    >
+                      查看食谱
+                    </button>
+                    <button
                       v-if="isFailedSource(source)"
                       class="action-icon retry-icon"
                       @click.stop="handleReExtract(source)"
@@ -256,6 +263,12 @@
     <extraction-detail-dialog
       v-model:visible="detailDialogVisible"
       :extraction-id="selectedExtractionId"
+      @published="handlePublished"
+    />
+
+    <publish-recipe-dialog
+      v-model:visible="publishDialogVisible"
+      :extraction-id="publishExtractionId"
       @published="handlePublished"
     />
 
@@ -340,14 +353,17 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, List } from '@element-plus/icons-vue'
 import ContentSourceList from '@/components/ContentSourceList.vue'
 import ContentExtractionDialog from '@/components/ContentExtractionDialog.vue'
 import ExtractionDetailDialog from '@/components/ExtractionDetailDialog.vue'
+import PublishRecipeDialog from '@/components/PublishRecipeDialog.vue'
 import XhsSessionDialog from './XhsSessionDialog.vue'
 import contentExtractionApi from '@/api/contentExtraction'
 
+const router = useRouter()
 const loading = ref(false)
 const sources = ref([])
 const addDialogVisible = ref(false)
@@ -358,6 +374,8 @@ const xhsDialogVisible = ref(false)
 const xhsDialogSource = ref(null)
 const failureDialogVisible = ref(false)
 const failureDialogSource = ref(null)
+const publishDialogVisible = ref(false)
+const publishExtractionId = ref('')
 
 // 自动刷新定时器
 let refreshTimer = null
@@ -523,30 +541,19 @@ const handleViewDetail = (source) => {
 }
 
 // 发布为食谱
-const handlePublish = async (source) => {
+const handlePublish = (source) => {
   if (!source.extractionId) {
     ElMessage.warning('无法发布，请等待提取完成')
     return
   }
 
-  try {
-    await ElMessageBox.confirm('确认发布为食谱？', '提示', {
-      type: 'warning'
-    })
+  publishExtractionId.value = source.extractionId
+  publishDialogVisible.value = true
+}
 
-    const response = await contentExtractionApi.publishAsRecipe(source.extractionId, {})
-    if (response.code === '200' || response.code === 200) {
-      ElMessage.success('发布成功')
-      loadSources()
-    } else {
-      ElMessage.error(response.message || '发布失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('发布失败:', error)
-      ElMessage.error('发布失败')
-    }
-  }
+const viewPublishedRecipe = (source) => {
+  if (!source.recipeId) return
+  router.push(`/user/home/my-recipe?recipeId=${source.recipeId}`)
 }
 
 // 删除内容源
@@ -1209,6 +1216,23 @@ onUnmounted(() => {
     background: @nordic-blue-light;
     color: @nordic-blue;
   }
+}
+
+.action-text {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid @nordic-green;
+  border-radius: 8px;
+  background: @nordic-green-light;
+  color: @nordic-green;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.view-recipe-btn:hover {
+  background: @nordic-green;
+  color: white;
 }
 
 .failure-detail {

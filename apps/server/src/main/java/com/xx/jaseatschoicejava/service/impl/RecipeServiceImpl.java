@@ -2,6 +2,10 @@ package com.xx.jaseatschoicejava.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xx.jaseatschoicejava.entity.ContentExtraction;
+import com.xx.jaseatschoicejava.entity.ContentSource;
 import com.xx.jaseatschoicejava.entity.Recipe;
 import com.xx.jaseatschoicejava.mapper.RecipeMapper;
 import com.xx.jaseatschoicejava.service.RecipeService;
@@ -16,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -25,6 +30,8 @@ import java.util.stream.Collectors;
 public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> implements RecipeService {
 
     Logger logger = LoggerFactory.getLogger(RecipeServiceImpl.class);
+    private static final Set<String> MEAL_TYPES = Set.of("breakfast", "lunch", "dinner", "snack");
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public Map<String, Object> getTodayRecipes(String userId) {
@@ -150,7 +157,7 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
     }
 
     @Override
-    public Recipe updateRecipe(Long id, Recipe recipe) {
+    public Recipe updateRecipe(String id, Recipe recipe) {
         Recipe existingRecipe = getById(id);
         if (existingRecipe == null) {
             return null;
@@ -172,12 +179,12 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
     }
 
     @Override
-    public boolean deleteRecipe(Long id) {
+    public boolean deleteRecipe(String id) {
         return removeById(id);
     }
 
     @Override
-    public Recipe toggleFavorite(Long id) {
+    public Recipe toggleFavorite(String id) {
         Recipe recipe = getById(id);
         if (recipe == null) {
             return null;
@@ -186,6 +193,129 @@ public class RecipeServiceImpl extends ServiceImpl<RecipeMapper, Recipe> impleme
         recipe.setUpdatedAt(LocalDateTime.now());
         updateById(recipe);
         return recipe;
+    }
+
+    @Override
+    public Recipe createFromExtraction(ContentExtraction extraction, ContentSource source, String mealType) {
+        String resolvedMealType = mealType == null || mealType.isBlank() ? "lunch" : mealType.trim();
+        if (!MEAL_TYPES.contains(resolvedMealType)) {
+            throw new IllegalArgumentException("餐次不合法");
+        }
+
+        Recipe recipe = new Recipe();
+        recipe.setUserId(source.getUserId());
+        recipe.setName(extraction.getDishName() == null || extraction.getDishName().isBlank()
+            ? "未命名菜品" : extraction.getDishName());
+        recipe.setType(resolvedMealType);
+        recipe.setItems(buildItems(extraction));
+        recipe.setCalories(extraction.getCalories() == null ? 0 : extraction.getCalories());
+        recipe.setProtein(0);
+        recipe.setCarbs(0);
+        recipe.setFat(0);
+        recipe.setDetail(buildDetail(extraction));
+        recipe.setCookTime(extraction.getCookingTime() == null ? "" : extraction.getCookingTime() + "分钟");
+        recipe.setFavorite(false);
+        recipe.setSourceUrl(source.getContentUrl());
+        recipe.setSourcePlatform(source.getPlatform());
+        addRecipe(recipe);
+        return recipe;
+    }
+
+    private String buildItems(ContentExtraction extraction) {
+        List<String> ingredients = new ArrayList<>();
+        if (extraction.getIngredients() != null && !extraction.getIngredients().isBlank()) {
+            try {
+                List<Map<String, Object>> parsed = objectMapper.readValue(
+                    extraction.getIngredients(),
+                    new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {}
+                );
+                for (Map<String, Object> ingredient : parsed) {
+                    String name = valueAsString(ingredient.get("name"));
+                    String amount = valueAsString(ingredient.get("amount"));
+                    if (!name.isBlank()) {
+                        ingredients.add(amount.isBlank() ? name : name + " " + amount);
+                    }
+                }
+            } catch (JsonProcessingException e) {
+                throw new IllegalArgumentException("食材数据格式不合法", e);
+            }
+        }
+
+        Map<String, Object> dish = new HashMap<>();
+        dish.put("name", extraction.getDishName());
+        dish.put("ingredients", ingredients);
+        dish.put("calories", extraction.getCalories() == null ? 0 : extraction.getCalories());
+        dish.put("protein", 0);
+        dish.put("carbs", 0);
+        dish.put("fat", 0);
+        try {
+            return objectMapper.writeValueAsString(List.of(dish));
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("食谱菜品数据序列化失败", e);
+        }
+    }
+
+    private String buildDetail(ContentExtraction extraction) {
+        StringBuilder detail = new StringBuilder();
+        if (extraction.getDescription() != null && !extraction.getDescription().isBlank()) {
+            detail.append(extraction.getDescription().trim());
+        }
+        if (extraction.getStepsDescription() != null && !extraction.getStepsDescription().isBlank()) {
+            appendSection(detail, extraction.getStepsDescription().trim());
+        }
+        if (extraction.getSteps() != null && !extraction.getSteps().isBlank()) {
+            try {
+                List<Map<String, Object>> steps = objectMapper.readValue(
+                    extraction.getSteps(),
+                    new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {}
+                );
+                List<String> formattedSteps = new ArrayList<>();
+                for (int i = 0; i < steps.size(); i++) {
+                    Map<String, Object> step = steps.get(i);
+                    String title = valueAsString(step.get("title"));
+                    String description = valueAsString(step.get("description"));
+                    int stepNumber = extractStepNumber(step.get("stepNumber"), i + 1);
+                    String text = title;
+                    if (!description.isBlank()) {
+                        text = text.isBlank() ? description : title + "：" + description;
+                    }
+                    if (!text.isBlank()) {
+                        formattedSteps.add(stepNumber + ". " + text);
+                    }
+                }
+                if (!formattedSteps.isEmpty()) {
+                    appendSection(detail, "制作步骤：\n" + String.join("\n", formattedSteps));
+                }
+            } catch (JsonProcessingException e) {
+                throw new IllegalArgumentException("步骤数据格式不合法", e);
+            }
+        }
+        return detail.toString();
+    }
+
+    private void appendSection(StringBuilder detail, String section) {
+        if (!detail.isEmpty()) {
+            detail.append("\n\n");
+        }
+        detail.append(section);
+    }
+
+    private String valueAsString(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private int extractStepNumber(Object value, int defaultValue) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value != null) {
+            try {
+                return Integer.parseInt(value.toString());
+            } catch (NumberFormatException ignored) {
+                // 使用列表位置作为兜底序号
+            }
+        }
+        return defaultValue;
     }
 
     @Override

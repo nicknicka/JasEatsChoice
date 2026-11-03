@@ -61,6 +61,12 @@ public class Recipe {
     @ApiModelProperty(value = "烹饪时间")
     private String cookTime;
 
+    @ApiModelProperty(value = "来源链接")
+    private String sourceUrl;
+
+    @ApiModelProperty(value = "来源平台")
+    private String sourcePlatform;
+
     @ApiModelProperty(value = "是否收藏")
     @TableField("is_favorite")
     private Boolean favorite;

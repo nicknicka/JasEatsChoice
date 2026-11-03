@@ -26,12 +26,14 @@ import com.xx.jaseatschoicejava.dto.ContentSourceCreateDTO;
 import com.xx.jaseatschoicejava.entity.ContentExtraction;
 import com.xx.jaseatschoicejava.entity.ContentSource;
 import com.xx.jaseatschoicejava.entity.ExtractionTask;
+import com.xx.jaseatschoicejava.entity.Recipe;
 import com.xx.jaseatschoicejava.enums.ContentPlatform;
 import com.xx.jaseatschoicejava.enums.ContentType;
 import com.xx.jaseatschoicejava.enums.ExtractionStatus;
 import com.xx.jaseatschoicejava.mapper.ContentExtractionMapper;
 import com.xx.jaseatschoicejava.mapper.ContentSourceMapper;
 import com.xx.jaseatschoicejava.mapper.ExtractionTaskMapper;
+import com.xx.jaseatschoicejava.service.RecipeService;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcher;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcherFactory;
@@ -64,6 +66,9 @@ class ContentExtractionServiceImplTest {
 
     @Mock
     private UrlSecurityValidator urlSecurityValidator;
+
+    @Mock
+    private RecipeService recipeService;
 
     @Test
     void parseExtractionResult_whenResponseBlank_shouldThrowParseException() throws Exception {
@@ -369,10 +374,10 @@ class ContentExtractionServiceImplTest {
     void publishAsRecipe_whenSourceOwnedByAnotherUser_shouldThrowAndNotUpdate() {
         ContentExtraction extraction = extraction();
         ContentSource source = pendingSource();
-        when(contentExtractionMapper.selectById("ext-1")).thenReturn(extraction);
+        when(contentExtractionMapper.selectByIdForUpdate("ext-1")).thenReturn(extraction);
         when(contentSourceMapper.selectById("source-1")).thenReturn(source);
 
-        assertThrows(RuntimeException.class, () -> service.publishAsRecipe("ext-1", "user-2"));
+        assertThrows(RuntimeException.class, () -> service.publishAsRecipe("ext-1", "lunch", "user-2"));
         verify(contentExtractionMapper, never()).updateById(any(ContentExtraction.class));
     }
 
@@ -380,14 +385,67 @@ class ContentExtractionServiceImplTest {
     void publishAsRecipe_whenOwner_shouldPublish() {
         ContentExtraction extraction = extraction();
         ContentSource source = pendingSource();
-        when(contentExtractionMapper.selectById("ext-1")).thenReturn(extraction);
+        when(contentExtractionMapper.selectByIdForUpdate("ext-1")).thenReturn(extraction);
         when(contentSourceMapper.selectById("source-1")).thenReturn(source);
 
-        String recipeId = service.publishAsRecipe("ext-1", "user-1");
+        Recipe recipe = new Recipe();
+        recipe.setId("recipe-1");
+        when(recipeService.createFromExtraction(extraction, source, "lunch")).thenReturn(recipe);
+        when(contentExtractionMapper.updateById(any(ContentExtraction.class))).thenReturn(1);
+
+        String recipeId = service.publishAsRecipe("ext-1", "lunch", "user-1");
 
         assertNotNull(recipeId);
+        assertEquals("recipe-1", recipeId);
+        assertEquals("recipe-1", extraction.getRecipeId());
         assertTrue(extraction.getIsPublished());
         verify(contentExtractionMapper).updateById(extraction);
+        verify(recipeService).createFromExtraction(extraction, source, "lunch");
+    }
+
+    @Test
+    void publishAsRecipe_withoutMealType_shouldDelegateDefaultToRecipeService() {
+        ContentExtraction extraction = extraction();
+        ContentSource source = pendingSource();
+        Recipe recipe = new Recipe();
+        recipe.setId("recipe-1");
+        when(contentExtractionMapper.selectByIdForUpdate("ext-1")).thenReturn(extraction);
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+        when(recipeService.createFromExtraction(extraction, source, null)).thenReturn(recipe);
+        when(contentExtractionMapper.updateById(any(ContentExtraction.class))).thenReturn(1);
+
+        assertEquals("recipe-1", service.publishAsRecipe("ext-1", null, "user-1"));
+    }
+
+    @Test
+    void publishAsRecipe_whenAlreadyPublishedAndRecipeExists_shouldBeIdempotent() {
+        ContentExtraction extraction = extraction();
+        extraction.setIsPublished(true);
+        extraction.setRecipeId("recipe-1");
+        ContentSource source = pendingSource();
+        Recipe recipe = new Recipe();
+        recipe.setId("recipe-1");
+        when(contentExtractionMapper.selectByIdForUpdate("ext-1")).thenReturn(extraction);
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+        when(recipeService.getById("recipe-1")).thenReturn(recipe);
+
+        assertEquals("recipe-1", service.publishAsRecipe("ext-1", "dinner", "user-1"));
+        verify(recipeService, never()).createFromExtraction(any(), any(), anyString());
+        verify(contentExtractionMapper, never()).updateById(any(ContentExtraction.class));
+    }
+
+    @Test
+    void publishAsRecipe_whenRecipeCreationFails_shouldNotMarkPublished() {
+        ContentExtraction extraction = extraction();
+        ContentSource source = pendingSource();
+        when(contentExtractionMapper.selectByIdForUpdate("ext-1")).thenReturn(extraction);
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+        when(recipeService.createFromExtraction(extraction, source, "lunch"))
+            .thenThrow(new RuntimeException("落库失败"));
+
+        assertThrows(RuntimeException.class, () -> service.publishAsRecipe("ext-1", "lunch", "user-1"));
+        assertFalse(extraction.getIsPublished());
+        verify(contentExtractionMapper, never()).updateById(any(ContentExtraction.class));
     }
 
     @Test
