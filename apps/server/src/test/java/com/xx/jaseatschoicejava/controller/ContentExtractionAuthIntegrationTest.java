@@ -130,6 +130,30 @@ class ContentExtractionAuthIntegrationTest {
     }
 
     @Test
+    void invalidContentTypeReturns400AndDoesNotPersist() throws Exception {
+        String user = "it211-type-" + randomSuffix();
+
+        mockMvc.perform(createSource(user,
+                "{\"contentUrl\":\"https://example.com/a\",\"contentType\":\"AUDIO\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("内容类型不合法"));
+
+        assertTrue(contentSourceMapper.selectByUserId(user).isEmpty());
+    }
+
+    @Test
+    void invalidReExtractContentTypeReturns400() throws Exception {
+        String user = "it211-retype-" + randomSuffix();
+        String sourceId = seedSource(user);
+
+        mockMvc.perform(post("/v1/content-extraction/source/" + sourceId + "/re-extract")
+                .header("Authorization", bearer(user))
+                .param("contentType", "AUDIO"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("内容类型不合法"));
+    }
+
+    @Test
     void otherUsersCannotReadModifyDeleteReExtractPublishOrVerify() throws Exception {
         String userA = "it209-owner-" + randomSuffix();
         String userB = "it209-other-" + randomSuffix();

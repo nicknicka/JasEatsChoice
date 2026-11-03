@@ -6,6 +6,9 @@ const { markRunning, markPassed, markFailed, updateSummary } = require('../utils
 const SESSION_PATH = '/api/v1/content-extraction/xhs-session'
 const AUTH_SOURCE_ID = 'e2e-xhs-auth-source'
 const AUTH_SOURCE_TITLE = 'E2E 需要登录小红书'
+const FAILED_SOURCE_ID = 'e2e-extraction-failed-source'
+const FAILED_SOURCE_TITLE = 'E2E 提取失败'
+const FAILURE_MESSAGE = 'AI识别结果解析失败：上游返回内容不完整，请稍后重试。'
 
 // 内容提取接口现在只认已验证 JWT：Authorization 是唯一可信身份来源，
 // X-User-Id 不再影响内容提取的归属（其余模块尚未收紧，带上它无害且兼容）。
@@ -52,6 +55,38 @@ async function stubAuthRequiredSource(page) {
   }))
 }
 
+async function stubFailedSource(page) {
+  await page.route('**/v1/content-extraction/sources', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      success: true,
+      code: '200',
+      message: '成功',
+      data: [{
+        id: FAILED_SOURCE_ID,
+        title: FAILED_SOURCE_TITLE,
+        platform: 'OTHER',
+        platformName: '其他',
+        contentType: 'ARTICLE',
+        contentTypeName: '文章',
+        contentUrl: 'https://example.com/e2e-failed',
+        extractionStatus: 'PARSE_FAILED',
+        extractionStatusName: '解析失败',
+        extractionId: 'e2e-stale-extraction',
+        errorMessage: FAILURE_MESSAGE,
+        createdAt: new Date().toISOString()
+      }]
+    })
+  }))
+}
+
+async function openExtractionTab(page) {
+  await page.goto('/user/home/ai')
+  await expect(page.locator('#tab-btn-chat')).toHaveClass(/active/, { timeout: 10000 })
+  await page.locator('#tab-btn-extraction').click()
+}
+
 test.describe('模块十七：内容提取登录态绑定', () => {
 
   test.beforeEach(async ({ page }) => { await loginAsUser(page) })
@@ -71,10 +106,7 @@ test.describe('模块十七：内容提取登录态绑定', () => {
       })
       await deleteSession(page)
 
-      await page.goto('/user/home/ai')
-      // 等默认 tab 挂载完成再切，否则点击可能早于 Vue 绑定事件被吞掉（与 08 spec 同款防竞态写法）
-      await expect(page.locator('#tab-btn-chat')).toHaveClass(/active/, { timeout: 10000 })
-      await page.locator('#tab-btn-extraction').click()
+      await openExtractionTab(page)
 
       const card = page.locator('.source-card', { hasText: AUTH_SOURCE_TITLE }).first()
       await expect(card).toBeVisible({ timeout: 10000 })
@@ -123,6 +155,109 @@ test.describe('模块十七：内容提取登录态绑定', () => {
       throw e
     } finally {
       await deleteSession(page)
+    }
+  })
+
+  test('17.2 添加内容源可手动纠正类型，自动识别不提交类型', async ({ page }) => {
+    markRunning('17.2')
+    const createPayloads = []
+    try {
+      await page.route('**/v1/content-extraction/sources', (route) => route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, code: '200', message: '成功', data: [] })
+      }))
+      await page.route('**/v1/content-extraction/source', async (route) => {
+        if (route.request().method() !== 'POST') return route.continue()
+        createPayloads.push(JSON.parse(route.request().postData() || '{}'))
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true, code: '200', message: '成功', data: 'e2e-source' })
+        })
+      })
+
+      await openExtractionTab(page)
+      await page.getByRole('button', { name: '添加内容源' }).click()
+      const dialog = page.locator('.el-dialog', { hasText: '从视频/文章提取菜品' })
+      await expect(dialog).toBeVisible()
+
+      const typeSelect = dialog.locator('.el-select').last()
+      await expect(typeSelect).not.toHaveClass(/is-disabled/)
+      await expect(typeSelect).toContainText('自动识别')
+
+      await dialog.locator('textarea').fill('https://example.com/e2e-article')
+      await dialog.getByRole('button', { name: '开始提取' }).click()
+      await expect.poll(() => createPayloads.length, { timeout: 10000 }).toBe(1)
+      expect(createPayloads[0]).toEqual({ contentUrl: 'https://example.com/e2e-article' })
+
+      await expect(dialog).toBeHidden({ timeout: 10000 })
+      await page.getByRole('button', { name: '添加内容源' }).click()
+      await expect(dialog).toBeVisible()
+      await dialog.locator('.el-select').last().click()
+      await page.locator('.el-select-dropdown__item', { hasText: '图片' }).last().click()
+      await dialog.locator('textarea').fill('https://example.com/e2e-image')
+      await dialog.getByRole('button', { name: '开始提取' }).click()
+      await expect.poll(() => createPayloads.length, { timeout: 10000 }).toBe(2)
+      expect(createPayloads[1]).toEqual({
+        contentUrl: 'https://example.com/e2e-image',
+        contentType: 'IMAGE'
+      })
+
+      markPassed('17.2', '类型下拉可用；自动识别不传类型；手动类型随请求提交')
+    } catch (e) {
+      markFailed('17.2', e.message.slice(0, 60))
+      throw e
+    }
+  })
+
+  test('17.3 失败条目显示摘要、具体原因，并可重试或删除', async ({ page }) => {
+    markRunning('17.3')
+    let reExtractCount = 0
+    let deleteCount = 0
+    try {
+      await stubFailedSource(page)
+      await page.route('**/v1/content-extraction/source/*/re-extract', (route) => {
+        reExtractCount += 1
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true, code: '200', message: '成功' })
+        })
+      })
+      await page.route('**/v1/content-extraction/source/*', (route) => {
+        if (route.request().method() !== 'DELETE') return route.continue()
+        deleteCount += 1
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true, code: '200', message: '成功' })
+        })
+      })
+
+      await openExtractionTab(page)
+      const card = page.locator('.source-card', { hasText: FAILED_SOURCE_TITLE }).first()
+      await expect(card).toBeVisible({ timeout: 10000 })
+      await expect(card.locator('.failure-summary')).toContainText('AI识别结果解析失败')
+      await card.click()
+
+      const dialog = page.locator('.el-dialog', { hasText: '提取失败' })
+      await expect(dialog).toBeVisible()
+      await expect(dialog).toContainText(FAILURE_MESSAGE)
+      await dialog.getByRole('button', { name: '重试' }).click()
+      await expect.poll(() => reExtractCount, { timeout: 10000 }).toBe(1)
+      await expect(dialog).toBeHidden({ timeout: 10000 })
+
+      await card.click()
+      await expect(dialog).toBeVisible()
+      await dialog.getByRole('button', { name: '删除' }).click()
+      await page.locator('.el-message-box').getByRole('button', { name: /^(OK|确定)$/ }).click()
+      await expect.poll(() => deleteCount, { timeout: 10000 }).toBe(1)
+
+      markPassed('17.3', '失败摘要 → 具体原因 → 重试 → 删除')
+    } catch (e) {
+      markFailed('17.3', e.message.slice(0, 60))
+      throw e
     }
   })
 

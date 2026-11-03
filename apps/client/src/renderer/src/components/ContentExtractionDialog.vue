@@ -20,13 +20,14 @@
         </el-form-item>
 
         <el-form-item label="内容类型" prop="contentType">
-          <el-select v-model="form.contentType" placeholder="自动识别" disabled>
+          <el-select v-model="form.contentType" placeholder="自动识别">
+            <el-option label="自动识别" value="" />
             <el-option label="视频" value="VIDEO" />
             <el-option label="文章" value="ARTICLE" />
             <el-option label="图片" value="IMAGE" />
           </el-select>
           <span style="margin-left: 8px; color: #909399; font-size: 0.929rem /* 原值: 13px */">
-            系统会自动识别
+            系统默认识别，可手动纠正
           </span>
         </el-form-item>
       </el-form>
@@ -71,7 +72,7 @@ const submitting = ref(false)
 
 const form = reactive({
   contentUrl: '',
-  contentType: 'VIDEO'
+  contentType: ''
 })
 
 const normalizeContentUrl = (value) => {
@@ -145,9 +146,12 @@ const handleSubmit = async () => {
     const contentUrl = normalizeContentUrl(form.contentUrl)
     form.contentUrl = contentUrl
 
-    const response = await contentExtractionApi.createSource({
-      contentUrl
-    })
+    const payload = { contentUrl }
+    if (form.contentType) {
+      payload.contentType = form.contentType
+    }
+
+    const response = await contentExtractionApi.createSource(payload)
 
     // 修复：API 响应拦截器已经返回 response.data，所以直接检查 response.code
     if (response.code === '200' || response.code === 200) {
@@ -173,7 +177,7 @@ const handleSubmit = async () => {
 const handleClose = () => {
   formRef.value?.resetFields()
   form.contentUrl = ''
-  form.contentType = 'VIDEO'
+  form.contentType = ''
   emit('update:visible', false)
 }
 </script>

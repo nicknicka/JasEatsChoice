@@ -35,8 +35,12 @@ export default {
   /**
    * 重新提取
    */
-  reExtract(sourceId) {
-    return api.post(`/v1/content-extraction/source/${sourceId}/re-extract`)
+  reExtract(sourceId, contentType) {
+    return api.post(
+      `/v1/content-extraction/source/${sourceId}/re-extract`,
+      null,
+      contentType ? { params: { contentType } } : undefined
+    )
   },
 
   /**

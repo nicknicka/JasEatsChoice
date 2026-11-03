@@ -183,6 +183,9 @@
                   </span>
                   <span class="content-type">{{ source.contentTypeName }}</span>
                 </div>
+                <p v-if="isFailedSource(source)" class="failure-summary">
+                  {{ getFailureSummary(source) }}
+                </p>
                 <div class="card-footer">
                   <span class="card-time">{{ formatTime(source.extractionTime || source.createdAt) }}</span>
                   <div class="card-actions">
@@ -195,6 +198,17 @@
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
                         <line x1="4" y1="22" x2="4" y2="15"/>
+                      </svg>
+                    </button>
+                    <button
+                      v-if="isFailedSource(source)"
+                      class="action-icon retry-icon"
+                      @click.stop="handleReExtract(source)"
+                      title="重试"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
                       </svg>
                     </button>
                     <button
@@ -244,6 +258,42 @@
       :extraction-id="selectedExtractionId"
       @published="handlePublished"
     />
+
+    <!-- 失败详情弹窗 -->
+    <el-dialog
+      v-model="failureDialogVisible"
+      title="提取失败"
+      width="520px"
+      class="failure-dialog"
+    >
+      <div v-if="failureDialogSource" class="failure-detail">
+        <div class="failure-meta">
+          <span class="platform-tag" :class="getPlatformClass(failureDialogSource.platform)">
+            {{ failureDialogSource.platformName }}
+          </span>
+          <span class="content-type">{{ failureDialogSource.contentTypeName }}</span>
+        </div>
+        <p class="failure-url">{{ failureDialogSource.contentUrl }}</p>
+        <el-alert type="error" :closable="false" show-icon>
+          {{ getFailureMessage(failureDialogSource) }}
+        </el-alert>
+      </div>
+      <template #footer>
+        <el-button @click="failureDialogVisible = false">关闭</el-button>
+        <el-button
+          type="danger"
+          @click="handleFailureDelete"
+        >
+          删除
+        </el-button>
+        <el-button
+          type="primary"
+          @click="handleFailureRetry"
+        >
+          重试
+        </el-button>
+      </template>
+    </el-dialog>
 
     <!-- 提取历史弹窗 -->
     <el-dialog
@@ -306,6 +356,8 @@ const historyDialogVisible = ref(false)
 const selectedExtractionId = ref(null)
 const xhsDialogVisible = ref(false)
 const xhsDialogSource = ref(null)
+const failureDialogVisible = ref(false)
+const failureDialogSource = ref(null)
 
 // 自动刷新定时器
 let refreshTimer = null
@@ -343,6 +395,30 @@ const hasProcessingTasks = computed(() => {
     s.extractionStatus === 'PENDING' || s.extractionStatus === 'PROCESSING'
   )
 })
+
+const FAILURE_MESSAGE_LIMIT = 300
+
+const isFailedSource = (source) => {
+  return source.extractionStatus === 'FAILED' || source.extractionStatus === 'PARSE_FAILED'
+}
+
+const getFailureMessage = (source) => {
+  if (source.errorMessage) {
+    const message = String(source.errorMessage)
+    return message.length > FAILURE_MESSAGE_LIMIT
+      ? `${message.slice(0, FAILURE_MESSAGE_LIMIT)}...`
+      : message
+  }
+  if (source.extractionStatus === 'PARSE_FAILED') {
+    return '内容已抓取，但未能解析出菜谱信息，请重试或删除。'
+  }
+  return '内容提取失败，请重试或删除。'
+}
+
+const getFailureSummary = (source) => {
+  const message = getFailureMessage(source)
+  return message.length > 60 ? `${message.slice(0, 60)}...` : message
+}
 
 // 加载内容源列表
 const loadSources = async () => {
@@ -400,18 +476,49 @@ const handleXhsBound = async () => {
   }
 }
 
+const handleReExtract = async (source) => {
+  try {
+    const response = await contentExtractionApi.reExtract(source.id)
+    if (response.code === '200' || response.code === 200) {
+      ElMessage.success('已重新提交提取')
+      failureDialogVisible.value = false
+      loadSources()
+      startPolling()
+    } else {
+      ElMessage.error(response.message || '重新提取失败')
+    }
+  } catch (error) {
+    const backendMessage = error?.data?.message || error?.response?.data?.message
+    ElMessage.error(backendMessage || error?.message || '重新提取失败，请稍后重试')
+  }
+}
+
+const handleFailureRetry = async () => {
+  if (failureDialogSource.value) {
+    await handleReExtract(failureDialogSource.value)
+  }
+}
+
+const handleFailureDelete = async () => {
+  if (failureDialogSource.value) {
+    failureDialogVisible.value = false
+    await handleDelete(failureDialogSource.value)
+  }
+}
+
 // 查看详情
 const handleViewDetail = (source) => {
-  if (source.extractionId) {
+  if (source.extractionStatus === 'AUTH_REQUIRED') {
+    xhsDialogSource.value = source
+    xhsDialogVisible.value = true
+  } else if (isFailedSource(source)) {
+    failureDialogSource.value = source
+    failureDialogVisible.value = true
+  } else if (source.extractionId) {
     selectedExtractionId.value = source.extractionId
     detailDialogVisible.value = true
   } else {
-    if (source.extractionStatus === 'AUTH_REQUIRED') {
-      xhsDialogSource.value = source
-      xhsDialogVisible.value = true
-    } else {
-      ElMessage.info(source.extractionStatus === 'PARSE_FAILED' ? '内容解析失败，请查看错误信息' : '内容正在提取中，请稍后查看')
-    }
+    ElMessage.info('内容正在提取中，请稍后查看')
   }
 }
 
@@ -1016,6 +1123,16 @@ onUnmounted(() => {
   color: @nordic-text-muted;
 }
 
+.failure-summary {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: @nordic-red;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .card-status {
   display: flex;
   align-items: center;
@@ -1087,6 +1204,30 @@ onUnmounted(() => {
     background: @nordic-red-light;
     color: @nordic-red;
   }
+
+  &.retry-icon:hover {
+    background: @nordic-blue-light;
+    color: @nordic-blue;
+  }
+}
+
+.failure-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.failure-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.failure-url {
+  margin: 0;
+  color: @nordic-text-muted;
+  font-size: 13px;
+  word-break: break-all;
 }
 
 // ===== 空状态 =====
