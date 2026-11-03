@@ -32,8 +32,10 @@ import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.dto.DishDescriptionRequestDTO;
 import com.xx.jaseatschoicejava.service.DishDescriptionService;
 import com.xx.jaseatschoicejava.agent.config.ChatModelProvider;
+import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.service.AiAssistantService;
+import com.xx.jaseatschoicejava.service.DishRecognitionCacheService;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -68,6 +70,9 @@ public class AIController {
     private ChatModelProvider chatModelProvider;
 
     @Resource
+    private DynamicAiModelRegistry aiModelRegistry;
+
+    @Resource
     private AiAssistantService aiAssistantService;
 
     @Resource
@@ -75,6 +80,9 @@ public class AIController {
 
     @Resource
     private DishDescriptionService dishDescriptionService;
+
+    @Resource
+    private DishRecognitionCacheService dishRecognitionCacheService;
 
     // ==================== 菜品识别 ====================
 
@@ -108,8 +116,16 @@ public class AIController {
             return ResponseResult.fail("415", "仅支持 JPEG、PNG 或 WebP 图片");
         }
 
-        if (!chatModelProvider.getCapabilities().isVision()) {
+        AiCapabilitiesDTO capabilities = chatModelProvider.getCapabilities();
+        if (!capabilities.isVision()) {
             return ResponseResult.fail(AI_VISION_NOT_CONFIGURED_CODE, "菜品识别暂未开放：请配置可用的视觉模型");
+        }
+
+        long runtimeVersion = aiModelRegistry.current().version();
+        java.util.Optional<Map<String, Object>> cachedResult = dishRecognitionCacheService.find(
+            imageBytes, capabilities.getProvider(), capabilities.getVisionModel(), runtimeVersion);
+        if (cachedResult.isPresent()) {
+            return ResponseResult.success(cachedResult.get());
         }
 
         String suffix = imageSuffix(contentType);
@@ -153,6 +169,10 @@ public class AIController {
             }
 
             result.put("imageUrl", imageUrl);
+            if (Boolean.TRUE.equals(result.get("isDish"))) {
+                dishRecognitionCacheService.put(
+                    imageBytes, capabilities.getProvider(), capabilities.getVisionModel(), runtimeVersion, result);
+            }
             return ResponseResult.success(result);
         } catch (RuntimeException e) {
             deleteQuietly(filePath);

@@ -3,6 +3,8 @@ package com.xx.jaseatschoicejava.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -16,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
@@ -33,10 +36,13 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.xx.jaseatschoicejava.agent.config.ChatModelProvider;
+import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.service.AiAssistantService;
+import com.xx.jaseatschoicejava.service.DishRecognitionCacheService;
 
 @ExtendWith(MockitoExtension.class)
 class AIControllerDishRecognitionTest {
@@ -50,6 +56,12 @@ class AIControllerDishRecognitionTest {
 
     @Mock
     private AiAssistantService aiAssistantService;
+
+    @Mock
+    private DynamicAiModelRegistry aiModelRegistry;
+
+    @Mock
+    private DishRecognitionCacheService dishRecognitionCacheService;
 
     @TempDir
     private Path tempDir;
@@ -68,6 +80,8 @@ class AIControllerDishRecognitionTest {
         ReflectionTestUtils.setField(controller, "chatModelProvider", chatModelProvider);
         ReflectionTestUtils.setField(controller, "aiAssistantService", aiAssistantService);
         ReflectionTestUtils.setField(controller, "fileUploadConfig", fileUploadConfig);
+        ReflectionTestUtils.setField(controller, "aiModelRegistry", aiModelRegistry);
+        ReflectionTestUtils.setField(controller, "dishRecognitionCacheService", dishRecognitionCacheService);
     }
 
     @AfterEach
@@ -108,6 +122,35 @@ class AIControllerDishRecognitionTest {
         assertTrue((Boolean) data.get("nutritionEstimated"));
         assertTrue(((String) data.get("imageUrl")).endsWith(expectedSuffix));
         verify(aiAssistantService).recognizeDishWithBase64(anyString(), eq(expectedMime));
+        verify(dishRecognitionCacheService).put(bytes, null, null, 7L, data);
+    }
+
+    @Test
+    void dishRecognize_cacheHitReturnsResultWithoutWritingFileOrCallingModel() {
+        enableVision("openai-compatible", "vision-a");
+        Map<String, Object> cached = successfulResult();
+        cached.put("imageUrl", "http://localhost:8080/api/uploads/dish-recognition/cached.jpg");
+        when(dishRecognitionCacheService.find(eq(JPEG), eq("openai-compatible"), eq("vision-a"), eq(7L)))
+            .thenReturn(Optional.of(cached));
+
+        ResponseResult<?> response = controller.dishRecognize(
+            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), null);
+
+        assertTrue(response.getSuccess());
+        assertEquals(cached, response.getData());
+        assertTrue(uploadDirIsEmpty());
+        verifyNoInteractions(aiAssistantService);
+    }
+
+    @Test
+    void dishRecognize_cacheMissUsesCurrentModelIdentity() {
+        enableVision("openai-compatible", "vision-a");
+        when(aiAssistantService.recognizeDishWithBase64(anyString(), eq("image/jpeg")))
+            .thenReturn(successfulResult());
+
+        controller.dishRecognize(new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), null);
+
+        verify(dishRecognitionCacheService).find(JPEG, "openai-compatible", "vision-a", 7L);
     }
 
     @Test
@@ -183,6 +226,8 @@ class AIControllerDishRecognitionTest {
         assertFalse(response.getSuccess());
         assertEquals("500", response.getCode());
         assertTrue(uploadDirIsEmpty());
+        verify(dishRecognitionCacheService, never()).put(any(byte[].class), anyString(), anyString(), anyLong(),
+            any(Map.class));
     }
 
     @Test
@@ -198,6 +243,24 @@ class AIControllerDishRecognitionTest {
         assertEquals("4001", response.getCode());
         assertEquals("请上传食物图片", response.getMessage());
         assertTrue(uploadDirIsEmpty());
+        verify(dishRecognitionCacheService, never()).put(any(byte[].class), anyString(), anyString(), anyLong(),
+            any(Map.class));
+    }
+
+    @Test
+    void dishRecognize_modelException_removesSavedFileAndDoesNotCache() {
+        enableVision();
+        when(aiAssistantService.recognizeDishWithBase64(anyString(), eq("image/jpeg")))
+            .thenThrow(new IllegalStateException("vision unavailable"));
+
+        ResponseResult<?> response = controller.dishRecognize(
+            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), null);
+
+        assertFalse(response.getSuccess());
+        assertEquals("500", response.getCode());
+        assertTrue(uploadDirIsEmpty());
+        verify(dishRecognitionCacheService, never()).put(any(byte[].class), anyString(), anyString(), anyLong(),
+            any(Map.class));
     }
 
     @Test
@@ -217,7 +280,18 @@ class AIControllerDishRecognitionTest {
     }
 
     private void enableVision() {
-        when(chatModelProvider.getCapabilities()).thenReturn(AiCapabilitiesDTO.builder().vision(true).build());
+        enableVision(null, null);
+    }
+
+    private void enableVision(String provider, String visionModel) {
+        when(aiModelRegistry.current()).thenReturn(new DynamicAiModelRegistry.ActiveModels(
+            AiModelConfig.builder().provider(provider).visionModel(visionModel).build(),
+            null, null, null, null, 7L));
+        when(chatModelProvider.getCapabilities()).thenReturn(AiCapabilitiesDTO.builder()
+            .provider(provider)
+            .visionModel(visionModel)
+            .vision(true)
+            .build());
     }
 
     private Map<String, Object> successfulResult() {

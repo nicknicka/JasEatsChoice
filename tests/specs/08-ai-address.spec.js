@@ -172,6 +172,64 @@ test.describe('模块八：AI助手与地址管理', () => {
     } catch (e) { markFailed('8.2b', e.message.slice(0, 50)); throw e }
   })
 
+  test('8.2c 桌面端展示置信度、营养评分与估算提示', async ({ page }) => {
+    markRunning('8.2c')
+    try {
+      await page.route('**/v1/ai/capabilities', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            code: '200',
+            message: '成功',
+            data: { available: true, vision: true, textChat: true, streaming: true }
+          })
+        })
+      })
+      await page.goto('/user/home/ai')
+      await expect(page.locator('#tab-btn-chat')).toHaveClass(/active/, { timeout: 10000 })
+      await page.locator('#tab-btn-recognition').click()
+      await expect(page.locator('#tab-btn-recognition')).toHaveClass(/active/)
+      await expect(page.locator('.recognition-content-wrapper')).toBeVisible({ timeout: 10000 })
+
+      await page.route('**/v1/ai/dish-recognize', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            code: '200',
+            message: '成功',
+            data: {
+              isDish: true,
+              name: '番茄炒蛋',
+              calories: 180,
+              protein: 10,
+              fat: 12,
+              carbs: 8,
+              difficulty: '简单',
+              preparationTime: '15分钟',
+              ingredients: ['番茄', '鸡蛋'],
+              tags: ['家常菜'],
+              confidence: 0.92,
+              nutritionScore: 8,
+              nutritionEstimated: true,
+              imageUrl: 'http://localhost:8080/api/uploads/dish-recognition/test.jpg'
+            }
+          })
+        })
+      })
+
+      await page.locator('#dish-image-upload').setInputFiles(require('path').resolve(__dirname, '../../apps/miniapp/src/static/banner1.jpg'))
+      await page.locator('.recognition-content-wrapper button.primary-btn').click()
+      await expect(page.locator('.confidence-chip')).toContainText('置信度 92%', { timeout: 10000 })
+      await expect(page.locator('.nutrition-score-chip')).toContainText('营养评分 8/10')
+      await expect(page.locator('.estimate-note')).toContainText('营养数据为估算值')
+      markPassed('8.2c', '桌面端展示置信度、营养评分与估算提示')
+    } catch (e) { markFailed('8.2c', e.message.slice(0, 50)); throw e }
+  })
+
   test('8.2a 无视觉模型时菜品识别入口降级', async ({ page }) => {
     markRunning('8.2a')
     try {
