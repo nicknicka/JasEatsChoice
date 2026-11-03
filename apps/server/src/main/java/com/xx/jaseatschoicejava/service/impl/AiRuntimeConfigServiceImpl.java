@@ -461,7 +461,6 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             adapter.buildChatModel(config, candidateKey),
             adapter.buildSupervisorModel(config, candidateKey),
             adapter.buildVisionModel(config, candidateKey),
-            adapter.buildStreamingModel(config, candidateKey),
             version);
     }
 
@@ -514,7 +513,6 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             adapter.buildChatModel(config),
             adapter.buildSupervisorModel(config),
             adapter.buildVisionModel(config),
-            adapter.buildStreamingModel(config),
             nextVersion);
         registry.activate(clients);
         activateEmbedding(config);

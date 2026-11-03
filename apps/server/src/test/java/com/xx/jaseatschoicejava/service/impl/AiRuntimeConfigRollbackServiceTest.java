@@ -145,7 +145,6 @@ service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry
         when(modelFactory.buildVisionModel(any(AiModelConfig.class), eq(NEW_KEY))).thenReturn(visionModel);
         when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(supervisorModel);
         when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(visionModel);
-        when(modelFactory.buildStreamingModel(any(AiModelConfig.class))).thenReturn(null);
         when(systemConfigService.setConfigValue(anyString(), anyString(), anyString(), anyString()))
             .thenReturn(true);
         service.saveAndActivate(candidate(), "13800000000");
@@ -180,7 +179,6 @@ service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry
             .thenReturn(supervisorModel);
         when(modelFactory.buildVisionModel(any(AiModelConfig.class), eq(NEW_KEY)))
             .thenReturn(visionModel);
-        when(modelFactory.buildStreamingModel(any(AiModelConfig.class))).thenReturn(null);
         when(systemConfigService.setConfigValue(anyString(), anyString(), anyString(), anyString()))
             .thenReturn(true);
         service.saveAndActivate(candidate(), "13800000000");
@@ -268,7 +266,6 @@ service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry
         when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(rollbackModel);
         when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(supervisorModel);
         when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(visionModel);
-        when(modelFactory.buildStreamingModel(any(AiModelConfig.class))).thenReturn(null);
 
         AiRuntimeConfigSnapshot rolledBack = service.rollbackToPrevious("13800000000");
 
@@ -286,7 +283,6 @@ service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry
         when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(rollbackModel);
         when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(supervisorModel);
         when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(visionModel);
-        when(modelFactory.buildStreamingModel(any(AiModelConfig.class))).thenReturn(null);
         service.rollbackToPrevious("13800000000");
 
         ArgumentCaptor<AiConfigAuditEvent> captor = ArgumentCaptor.forClass(AiConfigAuditEvent.class);

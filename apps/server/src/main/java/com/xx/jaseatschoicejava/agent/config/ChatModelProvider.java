@@ -1,7 +1,6 @@
 package com.xx.jaseatschoicejava.agent.config;
 
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.StreamingChatModel;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 
 /**
@@ -37,11 +36,6 @@ public interface ChatModelProvider {
      * 构建视觉识别模型。
      */
     ChatModel buildVisionModel();
-
-    /**
-     * 构建流式对话模型。
-     */
-    StreamingChatModel buildStreamingModel();
 
     /**
      * 返回当前供应商的能力清单。

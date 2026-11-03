@@ -56,10 +56,6 @@ public interface AiModelClientFactory {
 
     ChatModel buildVisionModel(AiModelConfig config, String candidateApiKey);
 
-    StreamingChatModel buildStreamingModel(AiModelConfig config);
-
-    StreamingChatModel buildStreamingModel(AiModelConfig config, String candidateApiKey);
-
     /**
      * 构建食谱优化专用流式模型：独立的温度、输出上限与超时。
      */

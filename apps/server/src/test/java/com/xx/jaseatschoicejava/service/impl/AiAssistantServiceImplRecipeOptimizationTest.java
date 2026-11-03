@@ -97,7 +97,7 @@ class AiAssistantServiceImplRecipeOptimizationTest {
 
     private void wireRecipeModel(AiModelConfig config, long version) {
         when(dynamicAiModelRegistry.current()).thenReturn(
-            new DynamicAiModelRegistry.ActiveModels(config, null, null, null, null, version));
+            new DynamicAiModelRegistry.ActiveModels(config, null, null, null, version));
         when(aiProviderRegistry.required(config.getProvider())).thenReturn(clientFactory);
         when(clientFactory.buildRecipeModel(config)).thenReturn(recipeChatModel);
     }
@@ -182,7 +182,7 @@ class AiAssistantServiceImplRecipeOptimizationTest {
         AiModelConfig config = config("openai-compatible");
         StreamingChatModel streamingModel = mock(StreamingChatModel.class);
         when(dynamicAiModelRegistry.current()).thenReturn(
-            new DynamicAiModelRegistry.ActiveModels(config, null, null, null, null, 1L));
+            new DynamicAiModelRegistry.ActiveModels(config, null, null, null, 1L));
         when(aiProviderRegistry.required("openai-compatible")).thenReturn(clientFactory);
         when(clientFactory.buildRecipeStreamingModel(config)).thenReturn(streamingModel);
         doAnswer(invocation -> {
@@ -214,9 +214,9 @@ class AiAssistantServiceImplRecipeOptimizationTest {
         AiModelConfig configV2 = config("provider-b");
         ChatModel rebuilt = mock(ChatModel.class);
         when(dynamicAiModelRegistry.current()).thenReturn(
-            new DynamicAiModelRegistry.ActiveModels(configV1, null, null, null, null, 1L),
-            new DynamicAiModelRegistry.ActiveModels(configV1, null, null, null, null, 1L),
-            new DynamicAiModelRegistry.ActiveModels(configV2, null, null, null, null, 2L));
+            new DynamicAiModelRegistry.ActiveModels(configV1, null, null, null, 1L),
+            new DynamicAiModelRegistry.ActiveModels(configV1, null, null, null, 1L),
+            new DynamicAiModelRegistry.ActiveModels(configV2, null, null, null, 2L));
         when(aiProviderRegistry.required("provider-a")).thenReturn(clientFactory);
         when(aiProviderRegistry.required("provider-b")).thenReturn(clientFactory);
         when(clientFactory.buildRecipeModel(configV1)).thenReturn(recipeChatModel);
@@ -233,7 +233,7 @@ class AiAssistantServiceImplRecipeOptimizationTest {
     @Test
     void recipeChatModel_withoutConfig_returnsNoopInsteadOfThrowing() {
         when(dynamicAiModelRegistry.current()).thenReturn(
-            new DynamicAiModelRegistry.ActiveModels(null, null, null, null, null, 0L));
+            new DynamicAiModelRegistry.ActiveModels(null, null, null, null, 0L));
 
         assertInstanceOf(NoopChatModel.class, implementation.recipeChatModel());
     }

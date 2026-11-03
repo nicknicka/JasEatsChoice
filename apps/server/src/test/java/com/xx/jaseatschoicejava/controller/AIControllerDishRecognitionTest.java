@@ -286,7 +286,7 @@ class AIControllerDishRecognitionTest {
     private void enableVision(String provider, String visionModel) {
         when(aiModelRegistry.current()).thenReturn(new DynamicAiModelRegistry.ActiveModels(
             AiModelConfig.builder().provider(provider).visionModel(visionModel).build(),
-            null, null, null, null, 7L));
+            null, null, null, 7L));
         when(chatModelProvider.getCapabilities()).thenReturn(AiCapabilitiesDTO.builder()
             .provider(provider)
             .visionModel(visionModel)

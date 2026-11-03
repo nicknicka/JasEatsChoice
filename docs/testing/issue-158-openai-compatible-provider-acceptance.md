@@ -1,3 +1,5 @@
+> 历史验收记录（2026-10-31）。文中「流式客户端/流式角色」指当时用于通用对话的 `buildStreamingModel` 链；该链路已由 [ADR-0011](../adr/0011-remove-unwired-generic-streaming-chat.md) 删除。当前 `streaming` 能力仅指食谱优化的逐 token 流式输出，Supervisor SSE 只推送进度、最终结果一次性下发。
+
 # OpenAI 兼容 provider 验收记录（Issue #158）
 
 - 验收日期：2026-10-31

@@ -15,7 +15,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.StreamingChatModel;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
@@ -44,10 +43,6 @@ public class DynamicAiModelRegistry {
         return proxy(ChatModel.class, ModelKind.VISION);
     }
 
-    public StreamingChatModel streamingModel() {
-        return proxy(StreamingChatModel.class, ModelKind.STREAMING);
-    }
-
     public ActiveModels current() {
         return active.get();
     }
@@ -64,21 +59,11 @@ public class DynamicAiModelRegistry {
             ChatModel supervisor,
             ChatModel vision,
             long version) {
-        activate(config, chat, supervisor, vision, null, version);
+        active.set(new ActiveModels(config, chat, supervisor, vision, version));
     }
 
     public void activate(ActiveModels models) {
         active.set(models);
-    }
-
-    public void activate(
-            AiModelConfig config,
-            ChatModel chat,
-            ChatModel supervisor,
-            ChatModel vision,
-            StreamingChatModel streaming,
-            long version) {
-        active.set(new ActiveModels(config, chat, supervisor, vision, streaming, version));
     }
 
     private <T> T proxy(Class<T> type, ModelKind kind) {
@@ -90,7 +75,7 @@ public class DynamicAiModelRegistry {
 
     private static ActiveModels initial() {
         return new ActiveModels(null, new NoopChatModel(), new NoopChatModel(),
-            new NoopChatModel(), new NoopStreamingChatModel(), 0L);
+            new NoopChatModel(), 0L);
     }
 
     private final class DelegateHandler implements InvocationHandler {
@@ -135,7 +120,7 @@ public class DynamicAiModelRegistry {
     }
 
     private enum ModelKind {
-        CHAT, SUPERVISOR, VISION, STREAMING
+        CHAT, SUPERVISOR, VISION
     }
 
     public record ActiveModels(
@@ -143,7 +128,6 @@ public class DynamicAiModelRegistry {
         ChatModel chat,
         ChatModel supervisor,
         ChatModel vision,
-        StreamingChatModel streaming,
         long version
     ) {
         public Object targetFor(ModelKind kind) {
@@ -151,7 +135,6 @@ public class DynamicAiModelRegistry {
                 case CHAT -> Objects.requireNonNull(chat, "chat model");
                 case SUPERVISOR -> Objects.requireNonNull(supervisor, "supervisor model");
                 case VISION -> Objects.requireNonNull(vision, "vision model");
-                case STREAMING -> Objects.requireNonNull(streaming, "streaming model");
             };
         }
     }

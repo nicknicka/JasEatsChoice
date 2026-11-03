@@ -24,15 +24,13 @@ import jakarta.servlet.http.HttpServletRequest;
 /**
  * SupervisorAgent 控制器（V2 架构）
  *
- * 提供 Supervisor + StreamingResponse 的同步接口（UniApp 端）
+ * 提供 Supervisor 同步聊天接口（UniApp 端）
  *
- * 执行流程：
- * 1. 同步阶段：SupervisorAgent 协调 L1 专家 Agent 收集数据
- * 2. 流式阶段：StreamingResponseAgent 格式化输出（同步收集完整结果）
+ * 执行流程：SupervisorAgent 协调 L1 专家 Agent 收集数据并返回完整结果。
  *
 
  * @since 2026-03-25
- * @updated 2026-04-03 V2: 同步 Supervisor + StreamingResponse 格式化
+ * @updated 2026-04-03 V2: 同步 Supervisor + 结构化卡片输出
  */
 @Api(tags = "Supervisor监督代理接口")
 @RestController
