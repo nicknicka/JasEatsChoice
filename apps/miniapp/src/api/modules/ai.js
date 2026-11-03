@@ -4,6 +4,7 @@
  * 基础路径: /v1/ai
  */
 import { get, post, del } from '@/utils/request'
+import config from '@/config/index.js'
 import { AI_API } from '../urlEnum'
 
 /**
@@ -158,6 +159,44 @@ export const aiApi = {
       onError && onError(error)
       throw error
     }
+  },
+
+  /**
+   * 菜品识别
+   * POST /v1/ai/dish-recognize
+   * @param {string} filePath - 压缩后的图片临时路径
+   * @returns {Promise} 返回统一响应结果
+   */
+  recognizeDish: (filePath) => {
+    return new Promise((resolve, reject) => {
+      const token = uni.getStorageSync('token') || ''
+      uni.uploadFile({
+        url: `${config.baseURL}${AI_API.RECOGNIZE_DISH}`,
+        filePath,
+        name: 'image',
+        header: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        success: (res) => {
+          let result
+          try {
+            result = JSON.parse(res.data)
+          } catch (error) {
+            reject(new Error('识别响应解析失败，请重试'))
+            return
+          }
+          if (res.statusCode >= 200 && res.statusCode < 300 && result.success === true && result.data?.isDish === true) {
+            resolve(result.data)
+            return
+          }
+          const error = new Error(result.message || '识别失败，请稍后重试')
+          error.code = result.code
+          error.nonDish = result.code === '4001' || result.code === 4001 || result.data?.isDish === false
+          reject(error)
+        },
+        fail: () => reject(new Error('图片上传失败，请重试'))
+      })
+    })
   },
 
   /**
