@@ -40,7 +40,6 @@ import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.StreamingChatModel;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -107,8 +106,6 @@ class AiRuntimeConfigMigrationServiceTest {
             .thenReturn(mock(ChatModel.class));
         when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull()))
             .thenReturn(mock(ChatModel.class));
-        when(modelFactory.buildStreamingModel(any(AiModelConfig.class)))
-            .thenReturn(mock(StreamingChatModel.class));
     }
 
     @Test

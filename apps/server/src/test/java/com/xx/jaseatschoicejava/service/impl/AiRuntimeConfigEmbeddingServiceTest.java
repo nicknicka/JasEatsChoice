@@ -46,7 +46,6 @@ import com.xx.jaseatschoicejava.service.AnnouncementEmbeddingRuntime;
 import com.xx.jaseatschoicejava.service.SystemConfigService;
 
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.StreamingChatModel;
 
 /**
  * AI 运行时配置服务边界上的公告 Embedding 行为：快照可见、切换生效、换模型拒绝、密钥槽位独立、重启恢复。
@@ -110,8 +109,6 @@ class AiRuntimeConfigEmbeddingServiceTest {
         when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(chatModel);
         when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(chatModel);
         when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(chatModel);
-        when(modelFactory.buildStreamingModel(any(AiModelConfig.class)))
-            .thenReturn(mock(StreamingChatModel.class));
         when(systemConfigService.getConfigsByGroup("ai"))
             .thenAnswer(ignored -> new HashMap<>(databaseConfigs));
         when(systemConfigService.setConfigValue(anyString(), anyString(), anyString(), anyString()))

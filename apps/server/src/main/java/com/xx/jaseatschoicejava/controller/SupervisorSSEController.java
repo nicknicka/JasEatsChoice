@@ -34,24 +34,24 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * SupervisorAgent SSE 流式输出控制器（V2 架构）
+ * SupervisorAgent SSE 输出控制器（V2 架构）
  *
- * 架构：同步 Supervisor（数据收集）+ 流式 Response（逐字输出）
+ * 架构：Supervisor 同步执行 + SSE 推送结果
  *
  * 执行流程：
- * 1. 同步阶段：SupervisorAgent 协调 L1 专家 Agent 收集数据（用户看到进度事件）
- * 2. 流式阶段：StreamingResponseAgent 将结果逐字输出（用户看到打字机效果）
+ * 1. SupervisorAgent 协调 L1 专家 Agent 收集数据并生成结果，进度事件实时推送
+ * 2. 结果（含预提取卡片）作为 SSE 事件一次性下发，不做逐 token 渲染
  *
  * SSE 事件格式（兼容前端 useStreamResponse.js）：
  * - 进度事件: {"message":"正在搜索菜品","progress":true} → 前端过滤跳过
- * - Token事件: {"content":"推"} → 前端逐字追加
+ * - 结果事件: {"type":"info","content":"完整回复"} → 前端整体追加
  * - 完成事件: {"done":true} → 前端触发 onComplete
  *
 
  * @since 2026-03-26
- * @updated 2026-04-03 V2: 同步 Supervisor + 流式 Response 架构
+ * @updated 2026-04-03 V2: 同步 Supervisor + 结果推送架构
  */
-@Tag(name = "Supervisor监督代理（SSE流式）", description = "SupervisorAgent流式输出接口")
+@Tag(name = "Supervisor监督代理（SSE进度推送）", description = "SupervisorAgent SSE 进度与结果推送接口")
 @RestController
 @RequestMapping("/agent/supervisor-sse")
 public class SupervisorSSEController {
@@ -82,13 +82,14 @@ public class SupervisorSSEController {
     }
 
     /**
-     * SSE流式聊天接口
+     * SSE 聊天接口（进度推送 + 最终结果一次性下发）
      *
      * @param message 用户消息
      * @param userId 用户ID（推荐传入，以保持对话历史）
      * @return SSE流
      */
-    @Operation(summary = "SSE流式聊天", description = "实时推送Agent执行过程和流式结果")
+    @Operation(summary = "SSE 聊天（进度 + 结果）",
+        description = "执行过程推送进度事件，最终回复一次性下发；不做逐 token 渲染")
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(
             @Parameter(description = "用户消息", required = true)
@@ -175,11 +176,11 @@ public class SupervisorSSEController {
     }
 
     /**
-     * 处理 SupervisorAgent + StreamingResponse 对话（核心方法）
+     * 处理 SupervisorAgent 对话（核心方法）
      *
      * 执行流程：
-     * 阶段1（同步）：SupervisorAgent 协调 L1 专家 Agent，进度事件实时推送
-     * 阶段2（流式）：StreamingResponseAgent 逐字输出，每个 token 作为 SSE 事件发送
+     * 阶段1：SupervisorAgent 协调 L1 专家 Agent 并生成结果，进度事件实时推送
+     * 阶段2：结果（含预提取卡片）作为 SSE 事件一次性下发
      */
     private SseEmitter handleSupervisorChat(String message, AgentChatContext context) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
@@ -212,7 +213,7 @@ public class SupervisorSSEController {
 
                 // ===== 预提取卡片数据 =====
                 // 从 ToolExecutionContext 中提取工具返回的卡片数据，直接发送给前端
-                // 不依赖 Supervisor LLM 或 StreamingResponseAgent LLM 透传
+                // 直接使用工具返回的卡片数据，不依赖 Supervisor LLM 透传
                 java.util.List<String> preExtractedCards = com.xx.jaseatschoicejava.agent.context.ToolExecutionContext.extractCardJsonData();
                 boolean hasPreExtractedCards = !preExtractedCards.isEmpty();
                 if (hasPreExtractedCards) {
@@ -268,9 +269,10 @@ public class SupervisorSSEController {
     }
 
     /**
-     * POST方式的SSE流式聊天（支持更复杂的请求体）
+     * POST 方式 SSE 聊天（支持 JSON 请求体）
      */
-    @Operation(summary = "POST方式SSE流式聊天", description = "支持复杂请求体的流式聊天")
+    @Operation(summary = "POST 方式 SSE 聊天（进度 + 结果）",
+        description = "与 GET 版本行为一致，支持 JSON 请求体")
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStreamPost(@RequestBody ChatRequest request, HttpServletRequest httpRequest) {
         return chatStream(request.getMessage(), request.getUserId(), httpRequest);

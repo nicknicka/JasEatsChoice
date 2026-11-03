@@ -46,7 +46,8 @@ public class AiCapabilitiesDTO {
     private boolean textChat;
 
     /**
-     * 是否支持流式输出（SSE / WebSocket 逐 token）
+     * 食谱优化是否支持逐 token 流式输出。
+     * 通用对话流式回复尚未接线，此字段当前只用于食谱优化的能力门禁。
      */
     private boolean streaming;
 

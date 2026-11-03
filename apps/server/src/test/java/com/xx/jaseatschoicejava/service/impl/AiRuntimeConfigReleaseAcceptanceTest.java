@@ -39,7 +39,6 @@ import com.xx.jaseatschoicejava.service.AiConfigHistoryStore;
 import com.xx.jaseatschoicejava.service.SystemConfigService;
 
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.StreamingChatModel;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -106,7 +105,6 @@ class AiRuntimeConfigReleaseAcceptanceTest {
         }).when(historyStore).save(anyString());
         when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), isNull())).thenReturn(mock(ChatModel.class));
         when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull())).thenReturn(mock(ChatModel.class));
-        when(modelFactory.buildStreamingModel(any(AiModelConfig.class))).thenReturn(mock(StreamingChatModel.class));
         ChatModel initialChatModel = successfulModel();
         when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull())).thenReturn(initialChatModel);
         when(modelFactory.resolveKey(any())).thenAnswer(invocation -> {

@@ -33,7 +33,7 @@ class AiChatModelFactoryTest {
 
         DynamicAiModelRegistry registry = new DynamicAiModelRegistry();
         registry.activate(config, new NoopChatModel(), new NoopChatModel(),
-            new NoopChatModel(), new NoopStreamingChatModel(), 1L);
+            new NoopChatModel(), 1L);
         AiProviderRegistry providerRegistry = new AiProviderRegistry(List.of(
             new OpenAiCompatibleModelClientFactory(aiConfig, null)));
         AiChatModelFactory factory = new AiChatModelFactory();
@@ -63,7 +63,7 @@ class AiChatModelFactoryTest {
             .build();
         DynamicAiModelRegistry registry = new DynamicAiModelRegistry();
         registry.activate(unverified, new NoopChatModel(), new NoopChatModel(),
-            new NoopChatModel(), new NoopStreamingChatModel(), 1L);
+            new NoopChatModel(), 1L);
         AiChatModelFactory factory = new AiChatModelFactory();
         AiProviderRegistry providerRegistry = new AiProviderRegistry(List.of(
             new OpenAiCompatibleModelClientFactory(aiConfig, null)));
@@ -79,7 +79,7 @@ class AiChatModelFactoryTest {
 
         AiModelConfig verified = unverified.toBuilder().visionVerified(true).build();
         registry.activate(verified, new NoopChatModel(), new NoopChatModel(),
-            new NoopChatModel(), new NoopStreamingChatModel(), 2L);
+            new NoopChatModel(), 2L);
 
         assertTrue(factory.chatModelProvider(registry, providerRegistry, aiConfig)
             .getCapabilities().isVision());

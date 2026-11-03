@@ -38,7 +38,6 @@ import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
 import com.xx.jaseatschoicejava.service.SystemConfigService;
 
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.StreamingChatModel;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -235,7 +234,7 @@ class AiRuntimeConfigServiceTest {
     }
 
     @Test
-    void activationBuildsStreamingModelWithCandidateKey(@TempDir Path tempDir) throws Exception {
+    void activationUsesCandidateKeyAndStoresIt(@TempDir Path tempDir) throws Exception {
         AiRuntimeKeyStore keyStore = new AiRuntimeKeyStore(tempDir.resolve("active-key").toString());
         when(modelFactory.resolveKey(any(AiRuntimeKeyStore.class)))
             .thenAnswer(ignored -> keyStore.readKey());
@@ -254,8 +253,6 @@ class AiRuntimeConfigServiceTest {
             .thenReturn(mock(ChatModel.class));
         when(modelFactory.buildVisionModel(any(AiModelConfig.class), eq(CANDIDATE_KEY)))
             .thenReturn(mock(ChatModel.class));
-        when(modelFactory.buildStreamingModel(any(AiModelConfig.class), eq(CANDIDATE_KEY)))
-            .thenReturn(mock(StreamingChatModel.class));
 
         activationService.saveAndActivate(AiModelCandidateDTO.builder()
             .provider("openai-compatible")
@@ -265,7 +262,6 @@ class AiRuntimeConfigServiceTest {
             .apiKey(CANDIDATE_KEY)
             .build(), "tester");
 
-        verify(modelFactory).buildStreamingModel(any(AiModelConfig.class), eq(CANDIDATE_KEY));
         assertEquals(CANDIDATE_KEY, keyStore.readKey());
     }
 

@@ -112,6 +112,14 @@ _Avoid_: 对话、聊天记录
 AI 助手在会话中记住的历史消息，用于上下文理解。存储在 Redis 中，有 TTL 和最大条数限制。
 _Avoid_: 上下文、历史记录
 
+**流式回复（Streaming Reply）**：
+模型生成过程中逐 token 推送文本，前端边接收边渲染。当前仅用于食谱优化接口 `/v1/ai/recipe/stream`；通用 AI 聊天不提供逐 token 流式回复。
+_Avoid_: 流式聊天、SSE（当实际指代进度推送时）
+
+**SSE 进度推送（SSE Progress Push）**：
+通过 Server-Sent Events 推送 Agent 执行进度，最终结果一次性下发，不做逐 token 渲染。Supervisor 的 `/agent/supervisor-sse/chat` 属于这一类。
+_Avoid_: 流式回复、打字机效果
+
 **AI 卡片消息（AI Card Message）**：
 AI 助手中由结构化卡片数据表达、以卡片而非纯文本呈现的消息。用户端与商家端的 AI 助手共享这一概念。
 _Avoid_: 图文消息、富文本消息

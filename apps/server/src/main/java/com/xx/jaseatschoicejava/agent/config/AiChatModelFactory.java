@@ -7,7 +7,6 @@ import com.xx.jaseatschoicejava.service.impl.AiModelClientFactory;
 import com.xx.jaseatschoicejava.service.impl.AiProviderRegistry;
 
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.StreamingChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -47,11 +46,6 @@ public class AiChatModelFactory {
             @Override
             public ChatModel buildVisionModel() {
                 return registry.visionModel();
-            }
-
-            @Override
-            public StreamingChatModel buildStreamingModel() {
-                return registry.streamingModel();
             }
 
             @Override

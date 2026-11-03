@@ -253,27 +253,6 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
     }
 
     @Override
-    public StreamingChatModel buildStreamingModel(AiModelConfig config) {
-        return buildStreamingModel(config, null);
-    }
-
-    @Override
-    public StreamingChatModel buildStreamingModel(AiModelConfig config, String candidateApiKey) {
-        String key = key(candidateApiKey);
-        if (!hasKey(key) || !hasText(config.getBaseUrl())) {
-            return new NoopStreamingChatModel();
-        }
-        return OpenAiStreamingChatModel.builder()
-            .apiKey(key)
-            .baseUrl(config.getBaseUrl())
-            .modelName(config.getModel())
-            .temperature(config.getTemperature())
-            .maxTokens(CHAT_MAX_TOKENS)
-            .timeout(Duration.ofMillis(config.getTimeoutMs()))
-            .build();
-    }
-
-    @Override
     public StreamingChatModel buildRecipeStreamingModel(AiModelConfig config) {
         return buildRecipeStreamingModel(config, null);
     }
