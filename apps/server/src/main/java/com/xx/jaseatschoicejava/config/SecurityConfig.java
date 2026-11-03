@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.config;
 
 import com.xx.jaseatschoicejava.filter.JwtAuthenticationFilter;
+import com.xx.jaseatschoicejava.security.SecurityAccessDeniedHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +27,9 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Autowired
+    private SecurityAccessDeniedHandler securityAccessDeniedHandler;
 
     // 允许URL中包含双斜杠的防火墙
     @Bean
@@ -91,11 +95,13 @@ public class SecurityConfig {
             // Add JWT authentication filter
             .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.access.intercept.FilterSecurityInterceptor.class)
             // 未登录访问受保护接口时返回 401，交由前端既有流程跳登录
-            .exceptionHandling(exception -> exception.authenticationEntryPoint((request, response, authException) -> {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("{\"code\":401,\"message\":\"未登录或登录已过期，请重新登录\"}");
-            }))
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"code\":401,\"message\":\"未登录或登录已过期，请重新登录\"}");
+                })
+                .accessDeniedHandler(securityAccessDeniedHandler))
             // Configure authorization (Spring Security 6: authorizeHttpRequests + requestMatchers)
             .authorizeHttpRequests()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests

@@ -244,6 +244,16 @@ announcement-rag:
     dimensions: ${AI_EMBEDDING_DIMENSIONS:2048}
     base-url: ${AI_EMBEDDING_BASE_URL:}
 
+# ==================== AI 用户级配额配置 ====================
+# 固定窗口计数，按 JWT 中的用户 ID 分别限制菜品识别与食谱优化请求。
+ai-quota:
+  dish-recognition:
+    limit: ${AI_QUOTA_DISH_LIMIT:20}
+    window: ${AI_QUOTA_DISH_WINDOW:1h}
+  recipe:
+    limit: ${AI_QUOTA_RECIPE_LIMIT:10}
+    window: ${AI_QUOTA_RECIPE_WINDOW:1h}
+
 # ==================== 内容提取配置 ====================
 content-extraction:
   fetch:
