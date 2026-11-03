@@ -115,7 +115,6 @@ export const API_CONFIG = {
   // AI助手API端点
   ai: {
     chat: '/agent/supervisor-sse/chat', // SupervisorAgent SSE接口
-    chatLegacy: '/v1/ai/stream/chat', // 旧版AI聊天接口
     recipe: '/v1/ai/recipe', // 食谱推荐接口
     nutrient: '/v1/ai/nutrient', // 营养分析接口
     recognizeDish: '/v1/ai/dish-recognize' // 菜品识别接口

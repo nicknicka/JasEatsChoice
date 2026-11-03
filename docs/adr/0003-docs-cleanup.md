@@ -28,15 +28,15 @@
 | | `前后端字段对接分析报告.md` | 前后端字段对齐的依据 |
 | `docs/testing/` | `test-checklist.md` | 测试检查清单，当前有效 |
 | | `implementation-plan.md` | 测试体系的实施方案 |
-| `docs/technical/` | `架构清理完成总结.md` | 当前架构状态说明 |
-| | `LangChain4j用户隔离实现文档.md` | AI 子系统核心设计 |
-| | `AgenticScope状态共享指南.md` | Agent 核心设计 |
+| `docs/technical/` | `AgenticScope状态共享指南.md` | Agent 核心设计 |
 | | `地址功能梳理.md` | 业务功能说明 |
 | | `监督代理架构培训材料.md` | Supervisor Agent 设计 |
 | `docs/delivery/` | `配置指南.md` | 部署配置参考 |
 | | `目录清单.md` | 项目结构说明 |
 | `docs/agents/` | 全部保留 | Agent skills 的配置文件，运行时依赖 |
 | `docs/adr/` | 全部保留 | 架构决策记录，新增中 |
+
+> 修订（参见 ADR-0011 / issue #232）：`架构清理完成总结.md`、`LangChain4j用户隔离实现文档.md` 描述的是已不存在的流式 Agent 架构，已删除。
 
 ### 删除清单
 

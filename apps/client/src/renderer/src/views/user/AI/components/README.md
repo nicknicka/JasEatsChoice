@@ -1,32 +1,19 @@
 # AI 聊天目录说明
 
-这部分代码已经按职责拆成三层，当前主页面不再直接使用这里的旧聊天面板文件：
+用户端 AI 页面入口是 `src/renderer/src/views/user/AI.vue`，主聊天实现是 `AIChatFull.vue`，其余为各功能页签组件。
 
-## 1. 页面入口
+## 组件
 
-- `src/renderer/src/views/user/AI.vue`：当前主入口，路由直接指向这里。
-- `src/renderer/src/views/user/AI/legacy/index.vue`：旧的页面容器，已归档。
-
-## 2. 聊天组件
-
-- `legacy/chat/index.js`：旧聊天组件的统一导出入口。
-- `legacy/AIChatPanel.vue`：旧的聊天面板。
-- `legacy/ChatMessage.vue`：旧的消息渲染组件。
-- `legacy/MessageInput.vue`：旧的底部输入区。
-- `legacy/QuickQuestions.vue`：旧的快捷提问面板。
-
-## 3. 归档组件
-
-- `legacy/README.md`：历史文件归档说明。
-- `AIChatFull.vue`：当前仍在使用的主聊天实现。
-- `legacy/AIChatSimple.vue`、`legacy/QuickActions.vue`：已归档。
+- `AIChatFull.vue`：主聊天实现，被 `views/user/AI.vue` 使用。
+- `ContentExtractionTab.vue`：内容提取页签。
+- `DishRecognition.vue`：菜品识别页签。
+- `RecipeOptimization.vue`：食谱优化页签。
+- `XhsSessionDialog.vue`：小红书会话弹窗，被 `ContentExtractionTab.vue` 使用。
+- `cards/`：消息卡片组件（`UniCard` 系列与各类列表卡片）。
+- `cards/elements/`：卡片内的原子元素。
 
 ## 推荐使用方式
-
-新代码不要再从旧的 `legacy/chat/index.js` 引入。
 
 ```js
 import AiChatFull from '@/views/user/AI/components/AIChatFull.vue'
 ```
-
-如果你在整理旧页面，只保留 `AIChatFull`，不要再新增对旧聊天面板的依赖。
