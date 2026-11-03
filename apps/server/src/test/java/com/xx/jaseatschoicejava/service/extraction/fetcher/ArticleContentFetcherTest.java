@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.xx.jaseatschoicejava.config.ContentExtractionConfig;
 import com.xx.jaseatschoicejava.config.XhsSessionStore;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 
@@ -146,7 +147,7 @@ class ArticleContentFetcherTest {
      * 登录页的最终 URL 命中 /login，必须显式判定为登录墙（authRequired=true），而不是“内容有问题”。
      */
     private FetchedContent fetchOnLoginWall(String cookie, XhsSessionStore store) throws Exception {
-        ArticleContentFetcher fetcher = new ArticleContentFetcher();
+        ArticleContentFetcher fetcher = newFetcher();
         ReflectionTestUtils.setField(fetcher, "xhsCookie", cookie);
         ReflectionTestUtils.setField(fetcher, "xhsSessionStore", store);
 
@@ -193,7 +194,7 @@ class ArticleContentFetcherTest {
     }
 
     private FetchedContent fetchThrowing(XhsSessionStore store) throws Exception {
-        ArticleContentFetcher fetcher = new ArticleContentFetcher();
+        ArticleContentFetcher fetcher = newFetcher();
         ReflectionTestUtils.setField(fetcher, "xhsCookie", "");
         ReflectionTestUtils.setField(fetcher, "xhsSessionStore", store);
 
@@ -215,7 +216,7 @@ class ArticleContentFetcherTest {
     }
 
     private FetchedContent fetchMissingXiaohongshuContent(String cookie, XhsSessionStore store) throws Exception {
-        ArticleContentFetcher fetcher = new ArticleContentFetcher();
+        ArticleContentFetcher fetcher = newFetcher();
         ReflectionTestUtils.setField(fetcher, "xhsCookie", cookie);
         ReflectionTestUtils.setField(fetcher, "xhsSessionStore", store);
 
@@ -233,6 +234,12 @@ class ArticleContentFetcherTest {
         }
     }
 
+    private static ArticleContentFetcher newFetcher() {
+        ArticleContentFetcher fetcher = new ArticleContentFetcher();
+        ReflectionTestUtils.setField(fetcher, "config", new ContentExtractionConfig());
+        return fetcher;
+    }
+
     private String resolveFor(String url) throws Exception {
         return resolveFor(url, GLOBAL_COOKIE);
     }
@@ -242,7 +249,7 @@ class ArticleContentFetcherTest {
     }
 
     private String resolveFor(String url, String cookie, String userId, XhsSessionStore store) throws Exception {
-        ArticleContentFetcher fetcher = new ArticleContentFetcher();
+        ArticleContentFetcher fetcher = newFetcher();
         ReflectionTestUtils.setField(fetcher, "xhsCookie", cookie);
         ReflectionTestUtils.setField(fetcher, "xhsSessionStore", store);
 

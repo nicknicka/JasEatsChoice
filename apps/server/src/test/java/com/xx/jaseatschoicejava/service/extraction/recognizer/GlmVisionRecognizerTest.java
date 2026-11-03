@@ -1,15 +1,19 @@
 package com.xx.jaseatschoicejava.service.extraction.recognizer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +34,13 @@ import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.ImageContent;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
+
 @ExtendWith(MockitoExtension.class)
 class GlmVisionRecognizerTest {
 
@@ -38,6 +49,9 @@ class GlmVisionRecognizerTest {
 
     @Mock
     private RestTemplate restTemplate;
+
+    @Mock
+    private ChatModel visionModel;
 
     private DynamicAiModelRegistry registry;
     private AiRuntimeKeyStore keyStore;
@@ -55,7 +69,7 @@ class GlmVisionRecognizerTest {
         zhipuConfig.setVisionModel("bootstrap-vision");
         zhipuConfig.setTimeout(30000);
         recognizer = new GlmVisionRecognizer();
-        ReflectionTestUtils.setField(recognizer, "visionModel", mock(dev.langchain4j.model.chat.ChatModel.class));
+        ReflectionTestUtils.setField(recognizer, "visionModel", visionModel);
         ReflectionTestUtils.setField(recognizer, "aiModel", mock(dev.langchain4j.model.chat.ChatModel.class));
         ReflectionTestUtils.setField(recognizer, "aiConfig", aiConfig);
         ReflectionTestUtils.setField(recognizer, "zhipuAIConfig", zhipuConfig);
@@ -102,5 +116,31 @@ class GlmVisionRecognizerTest {
         HttpEntity<Map<String, Object>> entity = captor.getValue();
         assertEquals("Bearer runtime-key-1234567890", entity.getHeaders().getFirst("Authorization"));
         assertEquals("runtime-vision", entity.getBody().get("model"));
+    }
+
+    @Test
+    void imageDataUriIsPassedThroughWithoutDoublePrefix() {
+        AtomicReference<UserMessage> captured = new AtomicReference<>();
+        doAnswer(invocation -> {
+            captured.set((UserMessage) invocation.getArgument(0));
+            return ChatResponse.builder().aiMessage(AiMessage.from("ok")).build();
+        }).when(visionModel).chat(any(ChatMessage.class));
+
+        String dataUri = "data:image/png;base64,UE5H";
+        FetchedContent content = FetchedContent.builder()
+            .fetchSuccess(true)
+            .imageBase64List(List.of(dataUri))
+            .textContent("recipe")
+            .build();
+
+        assertEquals("ok", recognizer.recognize(content));
+
+        ImageContent image = (ImageContent) captured.get().contents().stream()
+            .filter(c -> c instanceof ImageContent)
+            .findFirst()
+            .orElseThrow();
+        // 抓取阶段已是完整 data URI：直接作为 url 传入，供应商适配层不会再拼一层 data:image/jpeg;base64,
+        assertEquals(dataUri, image.image().url().toString());
+        assertNull(image.image().base64Data());
     }
 }

@@ -18,13 +18,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.xx.jaseatschoicejava.config.ContentExtractionConfig;
 import com.xx.jaseatschoicejava.config.XhsSessionStore;
 import com.xx.jaseatschoicejava.enums.ContentPlatform;
 import com.xx.jaseatschoicejava.enums.ContentType;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 import com.xx.jaseatschoicejava.util.FileUploadUtil;
+import com.xx.jaseatschoicejava.util.MediaFormatUtil;
 
-import cn.hutool.http.HttpUtil;
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -35,12 +38,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class ArticleContentFetcher implements ContentFetcher {
-
-    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-    private static final int TIMEOUT_MS = 30000;
-    private static final int MAX_IMAGES = 5;
-    private static final long MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
     /**
      * 小红书登录态 Cookie（来自 deploy/.env 的 XHS_COOKIE）。未配置时为空，小红书链接会明确报错。
@@ -53,6 +50,9 @@ public class ArticleContentFetcher implements ContentFetcher {
      */
     @Autowired
     private XhsSessionStore xhsSessionStore;
+
+    @Autowired
+    private ContentExtractionConfig config;
 
     @Override
     public boolean canHandle(ContentPlatform platform, ContentType contentType) {
@@ -71,7 +71,7 @@ public class ArticleContentFetcher implements ContentFetcher {
             ContentPlatform platform = ContentPlatform.parseFromUrl(realUrl);
 
             // 抓取网页（小红书正文必须带登录态，否则会被重定向到登录页）
-            Document doc = newConnection(realUrl, TIMEOUT_MS, userId).get();
+            Document doc = newConnection(realUrl, userId).get();
 
             // 小红书未登录/登录态失效会被 302 到 /login?redirectPath=...，必须显式识别：
             // 登录页里也会带图片 URL，不能靠“正文是否为空”间接推断登录墙。
@@ -162,7 +162,7 @@ public class ArticleContentFetcher implements ContentFetcher {
             String lowerUrl = url.toLowerCase();
             if (lowerUrl.contains("t.cn") || lowerUrl.contains("bit.ly")
                 || lowerUrl.contains("dwz.cn") || lowerUrl.contains("xhslink.com")) {
-                var response = newConnection(url, 10000, userId).execute();
+                var response = newConnection(url, userId).execute();
                 return response.url().toString();
             }
         } catch (IOException | RuntimeException e) {
@@ -174,10 +174,10 @@ public class ArticleContentFetcher implements ContentFetcher {
     /**
      * 构造抓取连接；只有小红书相关域名才附带登录态 Cookie，避免把凭据发给其他站点。
      */
-    private Connection newConnection(String url, int timeoutMs, String userId) {
+    private Connection newConnection(String url, String userId) {
         Connection connection = Jsoup.connect(url)
-            .userAgent(USER_AGENT)
-            .timeout(timeoutMs)
+            .userAgent(config.getFetch().getUserAgent())
+            .timeout(config.getFetch().getReadTimeout())
             .followRedirects(true);
 
         String cookie = resolveCookieHeader(url, userId);
@@ -353,7 +353,7 @@ public class ArticleContentFetcher implements ContentFetcher {
                 return src;
             })
             .filter(src -> !src.isEmpty() && src.startsWith("http"))
-            .limit(MAX_IMAGES)
+            .limit(config.getFetch().getMaxImages())
             .toList();
 
         return new ExtractedArticle(text, new ArrayList<>(imageUrls));
@@ -382,7 +382,7 @@ public class ArticleContentFetcher implements ContentFetcher {
             Pattern imgPattern = Pattern.compile("\"urlDefault\"\\s*:\\s*\"([^\"]+)\"");
             Matcher imgMatcher = imgPattern.matcher(html);
             int count = 0;
-            while (imgMatcher.find() && count < MAX_IMAGES) {
+            while (imgMatcher.find() && count < config.getFetch().getMaxImages()) {
                 String imgUrl = imgMatcher.group(1)
                     .replace("\\u002F", "/")
                     .replace("\\/", "/");
@@ -418,7 +418,7 @@ public class ArticleContentFetcher implements ContentFetcher {
             .stream()
             .map(img -> img.attr("abs:src"))
             .filter(src -> !src.isEmpty())
-            .limit(MAX_IMAGES)
+            .limit(config.getFetch().getMaxImages())
             .toList();
 
         return new ExtractedArticle(text, new ArrayList<>(imageUrls));
@@ -449,7 +449,7 @@ public class ArticleContentFetcher implements ContentFetcher {
                 if (!src.isEmpty() && !src.contains("avatar") && !src.contains("icon")
                     && !src.contains("logo") && !src.contains("banner")) {
                     imageUrls.add(src);
-                    if (imageUrls.size() >= MAX_IMAGES) break;
+                    if (imageUrls.size() >= config.getFetch().getMaxImages()) break;
                 }
             }
         }
@@ -464,10 +464,20 @@ public class ArticleContentFetcher implements ContentFetcher {
         List<String> base64List = new ArrayList<>();
         for (String url : imageUrls) {
             try {
-                byte[] bytes = HttpUtil.downloadBytes(url);
-                if (bytes.length > 0 && bytes.length <= MAX_IMAGE_SIZE) {
+                byte[] bytes;
+                String contentType;
+                try (HttpResponse response = HttpRequest.get(url)
+                    .header("User-Agent", config.getFetch().getUserAgent())
+                    .setConnectionTimeout(config.getFetch().getConnectTimeout())
+                    .setReadTimeout(config.getFetch().getReadTimeout())
+                    .execute()) {
+                    bytes = response.bodyBytes();
+                    contentType = response.header("Content-Type");
+                }
+
+                if (bytes.length > 0 && bytes.length <= config.getFetch().getMaxImageSize()) {
                     String base64 = Base64.getEncoder().encodeToString(bytes);
-                    String mimeType = guessMimeType(url);
+                    String mimeType = MediaFormatUtil.resolveImageMimeType(bytes, contentType, url);
                     base64List.add("data:" + mimeType + ";base64," + base64);
                 } else {
                     log.warn("图片过大或为空({}字节)，跳过: {}", bytes.length, url);
@@ -490,17 +500,6 @@ public class ArticleContentFetcher implements ContentFetcher {
             log.warn("封面图转存失败，继续使用原始地址: {}", coverImage, e);
             return coverImage;
         }
-    }
-
-    /**
-     * 根据URL猜测图片MIME类型
-     */
-    private String guessMimeType(String url) {
-        String lower = url.toLowerCase();
-        if (lower.contains(".png")) return "image/png";
-        if (lower.contains(".gif")) return "image/gif";
-        if (lower.contains(".webp")) return "image/webp";
-        return "image/jpeg";
     }
 
     /**

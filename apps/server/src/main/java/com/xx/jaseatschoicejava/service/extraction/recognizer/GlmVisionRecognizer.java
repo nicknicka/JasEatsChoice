@@ -62,6 +62,7 @@ public class GlmVisionRecognizer implements ContentRecognizer {
     private DynamicAiModelRegistry registry;
 
     @Autowired
+    @Qualifier("videoApiRestTemplate")
     private RestTemplate restTemplate;
 
     /**
@@ -181,11 +182,11 @@ public class GlmVisionRecognizer implements ContentRecognizer {
             String prompt = String.format(RECIPE_EXTRACTION_PROMPT, textContext);
             contents.add(TextContent.from(prompt));
 
-            // 添加图片（最多5张）
+            // 添加图片。抓取阶段已按配置的数量上限截断，并产出带真实格式的完整 data URI，
+            // 这里直接按 URL 传入，避免再拼一层 data: 前缀（切换模型供应商时会双重前缀报错）。
             if (content.hasImages()) {
-                List<String> images = content.getImageBase64List().stream().limit(5).toList();
-                for (String base64 : images) {
-                    contents.add(ImageContent.from(base64, "image/jpeg"));
+                for (String dataUri : content.getImageBase64List()) {
+                    contents.add(ImageContent.from(dataUri));
                 }
             }
 
