@@ -161,7 +161,7 @@ public class LangChain4jConfig {
     /**
      * Supervisor专用模型（更强推理能力）
      *
-     * 包装MarkdownStrippingChatModel：GLM模型倾向将JSON包裹在```json中，
+     * 包装MarkdownStrippingChatModel：部分模型倾向将 JSON 包裹在 ```json 中，
      * langchain4j的extractAndParseJson无法处理，需要预先剥离
      */
     @Bean("supervisorModel")

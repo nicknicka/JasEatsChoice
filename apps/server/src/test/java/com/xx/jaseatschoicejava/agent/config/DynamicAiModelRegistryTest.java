@@ -25,10 +25,10 @@ class DynamicAiModelRegistryTest {
     void newRequestUsesActivatedClientWhilePinnedRequestKeepsOldClient() {
         DynamicAiModelRegistry registry = new DynamicAiModelRegistry();
         AiModelConfig oldConfig = AiModelConfig.builder()
-            .provider("zhipu").model("old-chat").supervisorModel("old-supervisor")
+            .provider("openai-compatible").model("old-chat").supervisorModel("old-supervisor")
             .visionModel("old-vision").baseUrl("").timeoutMs(1000).temperature(0.1).build();
         AiModelConfig newConfig = AiModelConfig.builder()
-            .provider("zhipu").model("new-chat").supervisorModel("new-supervisor")
+            .provider("openai-compatible").model("new-chat").supervisorModel("new-supervisor")
             .visionModel("new-vision").baseUrl("").timeoutMs(2000).temperature(0.2).build();
 
         ChatModel oldModel = mock(ChatModel.class);

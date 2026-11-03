@@ -5,21 +5,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.net.ServerSocket;
 import org.junit.jupiter.api.Test;
 
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import io.qdrant.client.QdrantClient;
 import io.qdrant.client.QdrantGrpcClient;
 
 class AnnouncementRagInfrastructureTest {
 
     private static AnnouncementEmbeddingConfig embeddingConfig() {
-        return new AnnouncementEmbeddingConfig("zhipu", "embedding-3", 2048, "");
+        return new AnnouncementEmbeddingConfig("openai-compatible", "bge-m3", 2048, "");
     }
 
     @Test
     void missingEmbeddingKey_reportsNotConfigured() {
         AnnouncementRagProperties properties = new AnnouncementRagProperties();
-        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("");
         AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
             properties, () -> null, AnnouncementRagDisabledEmbeddingModel::new, null);
 
@@ -35,8 +32,6 @@ class AnnouncementRagInfrastructureTest {
             unavailablePort = socket.getLocalPort();
         }
         AnnouncementRagProperties properties = new AnnouncementRagProperties();
-        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("test-key");
         try (var qdrantClient = new QdrantClient(
             QdrantGrpcClient.newBuilder("localhost", unavailablePort, false).build())) {
             AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(

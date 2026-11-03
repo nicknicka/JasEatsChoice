@@ -44,6 +44,18 @@ public class AiPreviousConfigSummary {
     @ApiModelProperty("温度")
     private Double temperature;
 
+    @ApiModelProperty("视觉模型是否已通过真实图片请求验证")
+    private boolean visionVerified;
+
+    @ApiModelProperty("视觉模型验证失败原因")
+    private String visionVerificationReason;
+
+    @ApiModelProperty("旧配置是否需要管理员重新填写")
+    private boolean needsReconfiguration;
+
+    @ApiModelProperty("需要重新配置时的原因")
+    private String configurationNotice;
+
     @ApiModelProperty("key 是否仍配置")
     private boolean keyConfigured;
 

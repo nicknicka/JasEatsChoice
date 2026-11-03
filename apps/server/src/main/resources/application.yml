@@ -204,33 +204,24 @@ id:
     epoch: 1704067200000                  # 纪元时间（2024-01-01 00:00:00 CST）
 
 # ==================== 通用AI配置 ====================
-# 供应商无关的顶层配置。具体供应商的专属参数在下方各段中。
+# 项目只保留 OpenAI-compatible 适配器，所有模型都通过通用配置注入。
 ai:
-  # AI 供应商：zhipu（默认，兼容历史）/ qwen / doubao / ollama ...
-  provider: ${AI_PROVIDER:zhipu}
-  # 通用 API Key（聊天和 Embedding 都优先读供应商专属 key，没有再回退到这里）
+  # 唯一适配器；旧值会在启动时幂等迁移
+  provider: ${AI_PROVIDER:openai-compatible}
+  # 通用 API Key。留空时应用仍可启动，AI 能力标记为未配置。
   api-key: ${AI_API_KEY:}
   # 通用文本推理模型名
-  model: ${AI_MODEL:glm-4-flash}
+  model: ${AI_MODEL:gpt-4o-mini}
   # Supervisor 专用模型名（推理更强、温度更低）
-  supervisor-model: ${AI_SUPERVISOR_MODEL:glm-4-flash}
+  supervisor-model: ${AI_SUPERVISOR_MODEL:gpt-4o-mini}
   # 视觉识别模型名
-  vision-model: ${AI_VISION_MODEL:glm-4.1v-thinking-flash}
-  # API 基础 URL（可选，留空用供应商默认）
+  vision-model: ${AI_VISION_MODEL:gpt-4o-mini}
+  # OpenAI-compatible API 根地址；留空时 AI 能力标记为未配置
   base-url: ${AI_BASE_URL:}
   # 请求超时时间（毫秒）
   timeout: ${AI_TIMEOUT:30000}
   # 温度参数
   temperature: ${AI_TEMPERATURE:0.7}
-
-# ==================== 智谱AI配置（专属参数，兼容旧版） ====================
-# 智谱适配器配置。对外只使用通用 AI_* 环境变量，不暴露厂商专属变量。
-zhipuai:
-  api-key: ${AI_API_KEY:}
-  model: ${AI_MODEL:glm-4-flash}
-  vision-model: ${AI_VISION_MODEL:glm-4.1v-thinking-flash}
-  base-url: ${AI_BASE_URL:https://open.bigmodel.cn/api/paas/v4/chat/completions}
-  timeout: ${AI_TIMEOUT:30000}
 
 announcement-rag:
   enabled: ${ANNOUNCEMENT_RAG_ENABLED:true}
@@ -239,9 +230,9 @@ announcement-rag:
     port: ${QDRANT_PORT:6334}
     collection: ${QDRANT_COLLECTION:jaseats_knowledge_v1}
   embedding:
-    provider: ${AI_EMBEDDING_PROVIDER:zhipu}
-    model: ${AI_EMBEDDING_MODEL:embedding-3}
-    dimensions: ${AI_EMBEDDING_DIMENSIONS:2048}
+    provider: ${AI_EMBEDDING_PROVIDER:openai-compatible}
+    model: ${AI_EMBEDDING_MODEL:}
+    dimensions: ${AI_EMBEDDING_DIMENSIONS:0}
     base-url: ${AI_EMBEDDING_BASE_URL:}
 
 # ==================== AI 用户级配额配置 ====================
@@ -262,8 +253,6 @@ content-extraction:
     read-timeout: ${CONTENT_EXTRACTION_READ_TIMEOUT:60000}
     max-images: ${CONTENT_EXTRACTION_MAX_IMAGES:5}
     max-image-size: ${CONTENT_EXTRACTION_MAX_IMAGE_SIZE:2097152}   # 2MB
-  ai:
-    video-api-timeout: ${CONTENT_EXTRACTION_VIDEO_API_TIMEOUT:120000}   # 视频理解API超时（毫秒）
 
 # ==================== 邮件服务配置 ====================
 email:

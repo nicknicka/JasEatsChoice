@@ -11,33 +11,33 @@ import org.junit.jupiter.api.Test;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.service.impl.AiProviderRegistry;
 import com.xx.jaseatschoicejava.service.impl.OpenAiCompatibleModelClientFactory;
-import com.xx.jaseatschoicejava.service.impl.ZhipuAiModelClientFactory;
 
-class ZhipuChatModelFactoryTest {
+class AiChatModelFactoryTest {
 
     @Test
-    void getCapabilities_withoutKeyAndVisionModel_reportsAllCapabilitiesUnavailable() {
-        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("");
-        zhipuConfig.setVisionModel("");
+    void capabilities_withoutKeyAndBaseUrl_areUnavailable() {
         AIConfig aiConfig = new AIConfig();
         aiConfig.setApiKey("");
-        aiConfig.setVisionModel("");
+        aiConfig.setBaseUrl("");
         AiModelConfig config = AiModelConfig.builder()
-            .provider("zhipu").model("glm-4-flash")
-            .supervisorModel("glm-4-flash").visionModel("")
-            .baseUrl("").timeoutMs(30000).temperature(0.7).build();
+            .provider("openai-compatible")
+            .model("gpt-4o-mini")
+            .supervisorModel("gpt-4o-mini")
+            .visionModel("")
+            .baseUrl("")
+            .timeoutMs(30000)
+            .temperature(0.7)
+            .build();
 
         DynamicAiModelRegistry registry = new DynamicAiModelRegistry();
         registry.activate(config, new NoopChatModel(), new NoopChatModel(),
             new NoopChatModel(), new NoopStreamingChatModel(), 1L);
         AiProviderRegistry providerRegistry = new AiProviderRegistry(List.of(
-            new ZhipuAiModelClientFactory(aiConfig, zhipuConfig, null),
             new OpenAiCompatibleModelClientFactory(aiConfig, null)));
-        ZhipuChatModelFactory factory = new ZhipuChatModelFactory();
+        AiChatModelFactory factory = new AiChatModelFactory();
+
         AiCapabilitiesDTO capabilities = factory.chatModelProvider(
             registry, providerRegistry, aiConfig).getCapabilities();
 
@@ -48,20 +48,25 @@ class ZhipuChatModelFactoryTest {
     }
 
     @Test
-    void getCapabilities_resolvesActiveOpenAiCompatibleProvider() {
+    void capabilities_requireVerifiedVisionModel() {
         AIConfig aiConfig = new AIConfig();
         aiConfig.setApiKey("test-key");
-        AiModelConfig config = AiModelConfig.builder()
-            .provider("openai-compatible").model("glm-5.3-solo")
-            .supervisorModel("glm-5.3-solo").visionModel("glm-5.3-solo")
-            .baseUrl("http://127.0.0.1:3065/v1").timeoutMs(30000).temperature(0.2).build();
-
+        AiModelConfig unverified = AiModelConfig.builder()
+            .provider("openai-compatible")
+            .model("gpt-4o-mini")
+            .supervisorModel("gpt-4o-mini")
+            .visionModel("gpt-4o-mini")
+            .baseUrl("https://api.example.com/v1")
+            .timeoutMs(30000)
+            .temperature(0.2)
+            .visionVerified(false)
+            .build();
         DynamicAiModelRegistry registry = new DynamicAiModelRegistry();
-        registry.activate(config, new NoopChatModel(), new NoopChatModel(),
+        registry.activate(unverified, new NoopChatModel(), new NoopChatModel(),
             new NoopChatModel(), new NoopStreamingChatModel(), 1L);
+        AiChatModelFactory factory = new AiChatModelFactory();
         AiProviderRegistry providerRegistry = new AiProviderRegistry(List.of(
             new OpenAiCompatibleModelClientFactory(aiConfig, null)));
-        ZhipuChatModelFactory factory = new ZhipuChatModelFactory();
 
         AiCapabilitiesDTO capabilities = factory.chatModelProvider(
             registry, providerRegistry, aiConfig).getCapabilities();
@@ -70,5 +75,13 @@ class ZhipuChatModelFactoryTest {
         assertTrue(capabilities.isAvailable());
         assertTrue(capabilities.isTextChat());
         assertTrue(capabilities.isStreaming());
+        assertFalse(capabilities.isVision());
+
+        AiModelConfig verified = unverified.toBuilder().visionVerified(true).build();
+        registry.activate(verified, new NoopChatModel(), new NoopChatModel(),
+            new NoopChatModel(), new NoopStreamingChatModel(), 2L);
+
+        assertTrue(factory.chatModelProvider(registry, providerRegistry, aiConfig)
+            .getCapabilities().isVision());
     }
 }

@@ -36,7 +36,6 @@ import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.exception.BusinessException;
@@ -63,7 +62,6 @@ class AiRuntimeKeyRotationServiceTest {
     private AiModelClientFactory modelFactory;
 
     private AIConfig aiConfig;
-    private ZhipuAIConfig zhipuConfig;
     private DynamicAiModelRegistry registry;
     private AiRuntimeKeyStore keyStore;
     private AiRuntimeConfigServiceImpl service;
@@ -71,24 +69,18 @@ class AiRuntimeKeyRotationServiceTest {
     @BeforeEach
     void setUp() throws IOException {
         aiConfig = new AIConfig();
-        aiConfig.setProvider("zhipu");
+        aiConfig.setProvider("openai-compatible");
         aiConfig.setApiKey("env-active-key-1234567890");
         aiConfig.setModel("env-chat");
         aiConfig.setSupervisorModel("env-supervisor");
         aiConfig.setVisionModel("env-vision");
         aiConfig.setTimeout(30000);
         aiConfig.setTemperature(0.7);
-        zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("");
-        zhipuConfig.setModel("");
-        zhipuConfig.setVisionModel("");
-        zhipuConfig.setBaseUrl("");
-        zhipuConfig.setTimeout(null);
         registry = new DynamicAiModelRegistry();
         keyStore = spy(new AiRuntimeKeyStore(tempDir.resolve("ai-active-key").toString()));
-                when(modelFactory.providerCode()).thenReturn("zhipu");
+                when(modelFactory.providerCode()).thenReturn("openai-compatible");
         when(modelFactory.environmentConfig(any(AIConfig.class))).thenReturn(AiModelConfig.builder()
-            .provider("zhipu")
+            .provider("openai-compatible")
             .model(aiConfig.getModel())
             .supervisorModel(aiConfig.getSupervisorModel())
             .visionModel(aiConfig.getVisionModel())
@@ -109,10 +101,10 @@ service = new AiRuntimeConfigServiceImpl(
 
     private AiModelCandidateDTO candidate() {
         return AiModelCandidateDTO.builder()
-            .provider("zhipu")
-            .model("glm-4-flash")
-            .supervisorModel("glm-4-flash")
-            .visionModel("glm-4.6v-flash")
+            .provider("openai-compatible")
+            .model("gpt-4o-mini")
+            .supervisorModel("gpt-4o-mini")
+            .visionModel("gpt-4o-mini")
             .baseUrl("")
             .timeoutMs(30000)
             .temperature(0.7)
@@ -135,7 +127,7 @@ service = new AiRuntimeConfigServiceImpl(
         AiRuntimeConfigSnapshot snapshot = service.saveAndActivate(candidate());
         String json = new ObjectMapper().writeValueAsString(snapshot);
 
-        assertEquals("glm-4-flash", snapshot.getModel());
+        assertEquals("gpt-4o-mini", snapshot.getModel());
         assertEquals(NEW_KEY, Files.readString(tempDir.resolve("ai-active-key")).trim());
         assertEquals(NEW_FINGERPRINT, snapshot.getKeyStatus().getFingerprint());
         assertNotNull(snapshot.getKeyStatus().getUpdatedAt());

@@ -20,12 +20,10 @@ file:
     path: ${FILE_UPLOAD_PATH:./uploads/}
     server-url: ${FILE_SERVER_URL:http://localhost:7777/api}
 
-zhipuai:
+ai:
+  provider: ${AI_PROVIDER:openai-compatible}
   api-key: ${AI_API_KEY:}
-  model: ${AI_MODEL:glm-4.7}
-  # 本地预留 Ollama 配置位：当前代码尚未接入，先放这里方便后续切换
-  ollama:
-    enabled: false
-    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-    chat-model: ${OLLAMA_CHAT_MODEL:qwen2.5:7b}
-    vision-model: ${OLLAMA_VISION_MODEL:llava:7b}
+  model: ${AI_MODEL:gpt-4o-mini}
+  supervisor-model: ${AI_SUPERVISOR_MODEL:gpt-4o-mini}
+  vision-model: ${AI_VISION_MODEL:gpt-4o-mini}
+  base-url: ${AI_BASE_URL:}

@@ -78,6 +78,10 @@ const aiConfig = ref({
   baseUrl: '',
   timeoutMs: 30000,
   temperature: 0.7,
+  visionVerified: false,
+  visionVerificationReason: '',
+  needsReconfiguration: false,
+  configurationNotice: '',
   updatedAt: '',
   keyStatus: { configured: false, fingerprint: '', updatedAt: '' },
   capabilities: {
@@ -340,7 +344,7 @@ function resetAiCandidateFromCurrent(config = {}) {
     embedding: {
       provider: config.embedding?.provider || '',
       model: config.embedding?.model || '',
-      dimensions: config.embedding?.dimensions || 1024,
+      dimensions: config.embedding?.dimensions ?? 1024,
       baseUrl: config.embedding?.baseUrl || '',
       apiKey: ''
     }
@@ -637,17 +641,35 @@ onMounted(async () => {
               class="ai-alert"
             />
 
+            <el-alert
+              v-if="aiConfig.needsReconfiguration"
+              title="当前 AI 配置需要重新填写"
+              :description="aiConfig.configurationNotice || '旧服务地址无法安全转换，请重新填写 OpenAI 兼容服务根地址。'"
+              type="warning"
+              show-icon
+              :closable="false"
+              class="ai-alert"
+            />
+
             <h4>当前配置</h4>
             <el-descriptions :column="2" border>
               <el-descriptions-item label="Provider">{{ aiConfig.provider || '-' }}</el-descriptions-item>
               <el-descriptions-item label="更新时间">{{ aiConfig.updatedAt || '-' }}</el-descriptions-item>
               <el-descriptions-item label="聊天模型">{{ aiConfig.model || '-' }}</el-descriptions-item>
               <el-descriptions-item label="Supervisor 模型">{{ aiConfig.supervisorModel || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="视觉模型">{{ aiConfig.visionModel || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="服务地址">{{ aiConfig.baseUrl || '供应商默认' }}</el-descriptions-item>
+              <el-descriptions-item label="视觉模型">
+                {{ aiConfig.visionModel || '-' }}
+                <el-tag :type="aiConfig.visionVerified ? 'success' : 'info'" size="small">
+                  {{ aiConfig.visionVerified ? '已验证' : '未验证' }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="服务地址">{{ aiConfig.baseUrl || '未配置（需显式填写）' }}</el-descriptions-item>
               <el-descriptions-item label="超时时间">{{ aiConfig.timeoutMs }} ms</el-descriptions-item>
               <el-descriptions-item label="温度">{{ aiConfig.temperature }}</el-descriptions-item>
             </el-descriptions>
+            <div v-if="!aiConfig.visionVerified && aiConfig.visionVerificationReason" class="vision-verification-reason">
+              视觉验证失败：{{ aiConfig.visionVerificationReason }}
+            </div>
 
             <h4>Embedding 配置</h4>
             <div class="embedding-summary">
@@ -655,7 +677,7 @@ onMounted(async () => {
                 <el-descriptions-item label="Embedding Provider">{{ aiConfig.embedding.provider || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="Embedding 模型">{{ aiConfig.embedding.model || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="向量维度">{{ aiConfig.embedding.dimensions }}</el-descriptions-item>
-                <el-descriptions-item label="服务地址">{{ aiConfig.embedding.baseUrl || '供应商默认' }}</el-descriptions-item>
+                <el-descriptions-item label="服务地址">{{ aiConfig.embedding.baseUrl || '未配置（需显式填写）' }}</el-descriptions-item>
               </el-descriptions>
               <div class="embedding-key-status">
                 <el-tag :type="aiConfig.embedding.keyStatus.configured ? 'success' : 'danger'">
@@ -691,7 +713,12 @@ onMounted(async () => {
               <el-descriptions-item label="生效时间">{{ previousAiConfig.updatedAt || '-' }}</el-descriptions-item>
               <el-descriptions-item label="聊天模型">{{ previousAiConfig.model || '-' }}</el-descriptions-item>
               <el-descriptions-item label="Supervisor 模型">{{ previousAiConfig.supervisorModel || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="视觉模型">{{ previousAiConfig.visionModel || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="视觉模型">
+                  {{ previousAiConfig.visionModel || '-' }}
+                  <el-tag :type="previousAiConfig.visionVerified ? 'success' : 'info'" size="small">
+                    {{ previousAiConfig.visionVerified ? '已验证' : '未验证' }}
+                  </el-tag>
+                </el-descriptions-item>
               <el-descriptions-item label="Key 状态">
                 {{ previousAiConfig.keyConfigured ? `已配置（${previousAiConfig.keyFingerprint || '-'}）` : '未配置' }}
               </el-descriptions-item>
@@ -817,6 +844,7 @@ onMounted(async () => {
                 >
                   <el-option v-for="option in aiVisionModelOptions" :key="option.value" :label="option.label" :value="option.value" />
                 </el-select>
+                <span class="form-tip">保存时会发送真实图片请求；验证失败时菜品识别保持关闭。</span>
               </el-form-item>
 
               <div class="embedding-candidate">
@@ -840,7 +868,7 @@ onMounted(async () => {
                 </el-form-item>
 
                 <el-form-item label="服务地址">
-                  <el-input v-model="aiCandidate.embedding.baseUrl" placeholder="留空使用供应商默认地址" />
+                  <el-input v-model="aiCandidate.embedding.baseUrl" placeholder="请输入 OpenAI 兼容服务根地址" />
                 </el-form-item>
 
                 <el-form-item label="Embedding API Key">
@@ -860,7 +888,7 @@ onMounted(async () => {
 
               <template v-if="aiAdvanced">
                 <el-form-item label="服务地址">
-                  <el-input v-model="aiCandidate.baseUrl" placeholder="留空使用供应商默认地址" />
+                  <el-input v-model="aiCandidate.baseUrl" placeholder="请输入 OpenAI 兼容服务根地址" />
                 </el-form-item>
                 <el-form-item label="超时时间">
                   <el-input-number v-model="aiCandidate.timeoutMs" :min="1000" :step="1000" />
@@ -962,6 +990,11 @@ onMounted(async () => {
   .unavailable-message {
     margin-top: 8px;
     color: #909399;
+  }
+
+  .vision-verification-reason {
+    margin-top: 8px;
+    color: #e6a23c;
   }
 
   .connectivity-section {

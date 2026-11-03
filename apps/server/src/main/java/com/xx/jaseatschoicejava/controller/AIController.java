@@ -33,7 +33,7 @@ import com.xx.jaseatschoicejava.dto.DishDescriptionRequestDTO;
 import com.xx.jaseatschoicejava.service.DishDescriptionService;
 import com.xx.jaseatschoicejava.agent.config.ChatModelProvider;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
-import com.xx.jaseatschoicejava.service.ZhipuAIService;
+import com.xx.jaseatschoicejava.service.AiAssistantService;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -68,7 +68,7 @@ public class AIController {
     private ChatModelProvider chatModelProvider;
 
     @Resource
-    private ZhipuAIService zhipuAIService;
+    private AiAssistantService aiAssistantService;
 
     @Resource
     private FileUploadConfig fileUploadConfig;
@@ -84,7 +84,7 @@ public class AIController {
      * 路由: /v1/ai/dish-recognize
      * 返回: ResponseResult (识别结果)
      */
-    @ApiOperation(value = "AI菜品识别", notes = "使用GLM-4V模型识别菜品图片")
+    @ApiOperation(value = "AI菜品识别", notes = "使用通用视觉模型识别菜品图片")
     @PostMapping(value = "/dish-recognize", consumes = "multipart/form-data")
     public ResponseResult<?> dishRecognize(@RequestParam("image") MultipartFile image,
                                           @RequestParam(value = "userId", required = false) String userId) {
@@ -134,7 +134,7 @@ public class AIController {
             log.info("图片上传成功，URL：{}", imageUrl);
 
             // 5. 调用AI识别服务
-            Map<String, Object> result = zhipuAIService.recognizeDishWithBase64(base64Data);
+            Map<String, Object> result = aiAssistantService.recognizeDishWithBase64(base64Data);
 
             // 6. 检查识别结果
             if (result == null) {
@@ -167,7 +167,7 @@ public class AIController {
     public ResponseResult<?> dishRecognizeByUrl(@RequestBody Map<String, Object> params) {
         try {
             String imageUrl = (String) params.get("imageUrl");
-            Map<String, Object> result = zhipuAIService.recognizeDish(imageUrl);
+            Map<String, Object> result = aiAssistantService.recognizeDish(imageUrl);
             return ResponseResult.success(result);
         } catch (RuntimeException e) {
             log.error("菜品识别失败", e);
@@ -379,7 +379,7 @@ public class AIController {
                 return ResponseResult.fail("400", "食谱内容不能为空");
             }
 
-            Map<String, Object> result = zhipuAIService.optimizeRecipe(recipeText);
+            Map<String, Object> result = aiAssistantService.optimizeRecipe(recipeText);
             return ResponseResult.success(result);
         } catch (Exception e) {
             log.error("食谱优化失败", e);
@@ -418,7 +418,7 @@ public class AIController {
             }
 
             log.info("食谱优化请求，目标：{}，输入：{}", goal, inputText.length() > 100 ? inputText.substring(0, 100) + "..." : inputText);
-            Map<String, Object> result = zhipuAIService.optimizeRecipe(inputText);
+            Map<String, Object> result = aiAssistantService.optimizeRecipe(inputText);
 
             // 检查 service 层是否返回了错误
             if (Boolean.TRUE.equals(result.get("error"))) {
@@ -478,7 +478,7 @@ public class AIController {
         }
 
         // 使用流式调用
-        zhipuAIService.optimizeRecipeStreaming(
+        aiAssistantService.optimizeRecipeStreaming(
                 inputText,
                 // progressCallback：处理进度和最终结果
                 message -> {

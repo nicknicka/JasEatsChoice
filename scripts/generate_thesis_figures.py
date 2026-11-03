@@ -186,7 +186,7 @@ def architecture_diagram(output_dir: Path) -> None:
         (7, 12, 20, 9.8, "MySQL\n72 张表定义"),
         (30, 12, 18, 9.8, "Redis\n缓存与热点数据"),
         (51, 12, 18, 9.8, "Netty WebSocket\n实时消息通道"),
-        (72, 12, 21, 9.8, "外部服务\n智谱 AI / 地图 / 天气 /\n短信 / 支付"),
+        (72, 12, 21, 9.8, "外部服务\nAI 服务 / 地图 / 天气 /\n短信 / 支付"),
     ]
     for box in data_boxes:
         draw_box(ax, *box, fc="#EEF8EE", ec="#4C956C", fontsize=11.5)

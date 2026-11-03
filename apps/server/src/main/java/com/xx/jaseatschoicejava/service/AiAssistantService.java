@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * 智谱AI服务接口
+ * AI 饮食助手服务接口
  *
  * 注意：部分功能已迁移到 Agent 系统
  * - chat() → NutritionAiAgent
@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 
  * @since 2026-03-22
  */
-public interface ZhipuAIService {
+public interface AiAssistantService {
 
     /**
      * AI菜品识别

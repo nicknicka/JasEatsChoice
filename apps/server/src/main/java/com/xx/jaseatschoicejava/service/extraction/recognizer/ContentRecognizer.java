@@ -9,10 +9,10 @@ import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 public interface ContentRecognizer {
 
     /**
-     * 识别内容并返回结构化的JSON字符串
+     * 识别内容并返回结构化 JSON，同时携带本次降级说明。
      *
      * @param content 抓取到的内容
-     * @return AI返回的结构化JSON字符串
+     * @return AI 返回的结构化 JSON 与用户可见的降级原因
      */
-    String recognize(FetchedContent content);
+    ContentRecognitionResult recognize(FetchedContent content);
 }

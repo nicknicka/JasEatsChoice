@@ -2,7 +2,7 @@
   <div class="content-extraction-dialog">
     <el-dialog
       v-model="dialogVisible"
-      title="从视频/文章提取菜品"
+      title="从内容链接提取菜品"
       width="600px"
       @close="handleClose"
     >
@@ -16,6 +16,9 @@
           />
           <div class="url-tips">
             支持平台：抖音、小红书、哔哩哔哩、微信公众号、今日头条、快手等
+          </div>
+          <div class="url-tips">
+            当前未开放视频理解；视频将使用封面图或文字信息提取，并显示降级说明。
           </div>
         </el-form-item>
 

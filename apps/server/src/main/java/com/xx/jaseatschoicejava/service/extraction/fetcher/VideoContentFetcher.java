@@ -16,9 +16,9 @@ import java.util.regex.Pattern;
 
 /**
  * 视频内容抓取策略
- * 通过平台 API 获取视频流直链 URL，用于传给 GLM-4.6V-Flash 视频理解
- * 支持：抖音、B站、快手
- * 降级：获取视频封面图作为图片传给视觉模型
+ * 提取标题、描述和封面图，交给通用视觉模型识别。
+ * 当前不获取或传递视频流直链，也不调用任何厂商视频理解接口。
+ * 支持：抖音、B站、快手、小红书
  */
 @Slf4j
 @Component
@@ -61,8 +61,7 @@ public class VideoContentFetcher implements ContentFetcher {
             // 验证是否获取到有效内容
             boolean hasContent = (videoInfo.title != null && !videoInfo.title.isEmpty())
                 || (videoInfo.description != null && !videoInfo.description.isEmpty())
-                || (videoInfo.coverUrl != null && !videoInfo.coverUrl.isEmpty())
-                || (videoInfo.videoUrl != null && !videoInfo.videoUrl.isEmpty());
+                || (videoInfo.coverUrl != null && !videoInfo.coverUrl.isEmpty());
 
             if (!hasContent) {
                 log.warn("视频信息所有字段为空: {}", url);
@@ -76,15 +75,6 @@ public class VideoContentFetcher implements ContentFetcher {
                 .textContent(videoInfo.description)
                 .contentType(ContentType.VIDEO)
                 .platform(platform);
-
-            // 优先使用视频直链URL（不需要下载）
-            if (videoInfo.videoUrl != null && !videoInfo.videoUrl.isEmpty()) {
-                log.info("获取到视频直链: {}", videoInfo.videoUrl);
-                builder.videoUrl(videoInfo.videoUrl);
-            } else {
-                log.info("未获取到视频直链，尝试获取封面图作为降级");
-                builder.videoUrl(null);
-            }
 
             return builder.fetchSuccess(true).build();
 
@@ -207,29 +197,6 @@ public class VideoContentFetcher implements ContentFetcher {
             info.author = data.path("owner").path("name").asText("");
             info.description = data.path("desc").asText("");
             info.coverUrl = data.path("pic").asText("");
-
-            // 获取视频流地址（mp4格式，GLM Vision不支持m4s DASH分片）
-            long cid = data.path("cid").asLong();
-            if (cid > 0) {
-                String playUrl = "https://api.bilibili.com/x/player/playurl?bvid=" + bvid + "&cid=" + cid + "&qn=16&fnver=0&fnval=0";
-                try {
-                    String playJson = Jsoup.connect(playUrl)
-                        .userAgent(config.getFetch().getUserAgent())
-                        .timeout(config.getFetch().getReadTimeout())
-                        .ignoreContentType(true)
-                        .execute()
-                        .body();
-
-                    JsonNode playRoot = objectMapper.readTree(playJson);
-                    // fnval=0 返回 durl 数组（mp4格式）
-                    JsonNode durlArray = playRoot.at("/data/durl");
-                    if (durlArray.isArray() && !durlArray.isEmpty()) {
-                        info.videoUrl = durlArray.get(0).path("url").asText("");
-                    }
-                } catch (Exception e) {
-                    log.warn("获取B站视频流地址失败: {}", e.getMessage());
-                }
-            }
 
             return info;
 

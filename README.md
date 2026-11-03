@@ -66,7 +66,7 @@ make test         # 全部 114 条
 
 - `deploy/.env` 已被 gitignore，只提交 `deploy/.env.example`。
 - 数据库口令、Redis 口令、JWT 密钥由 `scripts/gen-env.sh` 用 `openssl rand` 生成。
-- 后端不再硬编任何密钥：`application.yml` 里 DB / Redis / JWT / 智谱 / 高德 / 腾讯地图 /
+- 后端不再硬编任何密钥：`application.yml` 里 DB / Redis / JWT / AI / 高德 / 腾讯地图 /
   邮箱全部改成 `${ENV:}` 注入。
 - `AI_API_KEY` 留空也能启动：AI 相关 Bean 会降级成占位实现并打 WARN，
   只有真正发起对话时才报错。CI 因此不需要任何密钥。

@@ -13,7 +13,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 class AnnouncementRagStartupTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-        .withUserConfiguration(AnnouncementRagConfig.class, ZhipuAnnouncementEmbeddingModelFactory.class,
+        .withUserConfiguration(AnnouncementRagConfig.class,
             OpenAiCompatibleAnnouncementEmbeddingModelFactory.class, AiEmbeddingRuntimeKeyStore.class)
         // 索引重建编排依赖检索服务；本用例只验证启动状态，用替身即可
         .withBean(RagKnowledgeService.class, () -> org.mockito.Mockito.mock(RagKnowledgeService.class));
@@ -22,8 +22,7 @@ class AnnouncementRagStartupTest {
     void disabledRag_startsInDisabledState() {
         contextRunner
             .withPropertyValues(
-                "announcement-rag.enabled=false",
-                "zhipuai.api-key=test-key")
+                "announcement-rag.enabled=false")
             .run(context -> {
                 assertThat(context).hasSingleBean(AnnouncementRagInfrastructure.class);
                 AnnouncementRagStatus status = context.getBean(AnnouncementRagInfrastructure.class).status();
@@ -35,8 +34,7 @@ class AnnouncementRagStartupTest {
     void missingEmbeddingKey_startsInNotConfiguredState() {
         contextRunner
             .withPropertyValues(
-                "announcement-rag.enabled=true",
-                "zhipuai.api-key=")
+                "announcement-rag.enabled=true")
             .run(context -> {
                 AnnouncementRagStatus status = context.getBean(AnnouncementRagInfrastructure.class).status();
                 assertThat(status.state()).isEqualTo(AnnouncementRagState.NOT_CONFIGURED);
@@ -48,8 +46,10 @@ class AnnouncementRagStartupTest {
         contextRunner
             .withPropertyValues(
                 "announcement-rag.enabled=true",
-                "zhipuai.api-key=",
                 "ai.api-key=generic-test-key",
+                "announcement-rag.embedding.model=bge-m3",
+                "announcement-rag.embedding.dimensions=1024",
+                "announcement-rag.embedding.base-url=http://localhost:11434/v1",
                 "announcement-rag.qdrant.host=localhost",
                 "announcement-rag.qdrant.port=1")
             .run(context -> {
@@ -65,13 +65,15 @@ class AnnouncementRagStartupTest {
         embeddingKeyStore.writeKey("embedding-runtime-key");
 
         new ApplicationContextRunner()
-            .withUserConfiguration(AnnouncementRagConfig.class, ZhipuAnnouncementEmbeddingModelFactory.class,
+            .withUserConfiguration(AnnouncementRagConfig.class,
                 OpenAiCompatibleAnnouncementEmbeddingModelFactory.class)
             .withBean(AiEmbeddingRuntimeKeyStore.class, () -> embeddingKeyStore)
             .withBean(RagKnowledgeService.class, () -> org.mockito.Mockito.mock(RagKnowledgeService.class))
             .withPropertyValues(
                 "announcement-rag.enabled=true",
-                "zhipuai.api-key=",
+                "announcement-rag.embedding.model=bge-m3",
+                "announcement-rag.embedding.dimensions=1024",
+                "announcement-rag.embedding.base-url=http://localhost:11434/v1",
                 "announcement-rag.qdrant.host=localhost",
                 "announcement-rag.qdrant.port=1")
             .run(context -> {
@@ -108,7 +110,6 @@ class AnnouncementRagStartupTest {
         contextRunner
             .withPropertyValues(
                 "announcement-rag.enabled=true",
-                "zhipuai.api-key=",
                 "announcement-rag.embedding.provider=openai-compatible",
                 "announcement-rag.embedding.model=bge-m3",
                 "announcement-rag.embedding.dimensions=1024",
@@ -122,11 +123,31 @@ class AnnouncementRagStartupTest {
     }
 
     @Test
+    void legacyProviderWithIncompleteEmbeddingConfigStartsDegraded() {
+        contextRunner
+            .withPropertyValues(
+                "announcement-rag.enabled=true",
+                "announcement-rag.embedding.provider=zhipu",
+                "announcement-rag.embedding.model=",
+                "announcement-rag.embedding.dimensions=0")
+            .run(context -> {
+                assertThat(context).hasNotFailed();
+                AnnouncementRagStatus status = context.getBean(AnnouncementRagInfrastructure.class).status();
+                assertThat(status.state()).isEqualTo(AnnouncementRagState.NOT_CONFIGURED);
+                AnnouncementRagEmbeddingRuntime runtime = context.getBean(AnnouncementRagEmbeddingRuntime.class);
+                assertThat(runtime.effective(null).provider()).isEqualTo("openai-compatible");
+            });
+    }
+
+    @Test
     void unavailableQdrant_startsInUnavailableState() {
         contextRunner
             .withPropertyValues(
                 "announcement-rag.enabled=true",
-                "zhipuai.api-key=test-key",
+                "ai.api-key=test-key",
+                "announcement-rag.embedding.model=bge-m3",
+                "announcement-rag.embedding.dimensions=1024",
+                "announcement-rag.embedding.base-url=http://localhost:11434/v1",
                 "announcement-rag.qdrant.host=localhost",
                 "announcement-rag.qdrant.port=1")
             .run(context -> {

@@ -15,7 +15,7 @@ RAG 的落地目标：
 1. 用户问“这家店现在有什么优惠”“满减规则是什么”“退款怎么处理”时，Agent 能检索公告或教程原文，再基于原文回答。
 2. 检索必须受平台/商家/目标群体/有效期约束，不能把其他商家的私有公告召回给当前上下文。
 3. 已过期、已下线、已删除的内容不能继续被 AI 引用。
-4. `AI_API_KEY` / `AI_API_KEY` / `AI_API_KEY` 都未配置，或 Qdrant 不可用时，项目仍然能启动；只有 RAG 检索能力降级，不能让整个 Spring 上下文起不来。
+4. AI 服务地址/密钥缺失，或 Qdrant 不可用时，项目仍然能启动；只有 RAG 检索能力降级，不能让整个 Spring 上下文起不来。
 5. RAG 只接入 AI 聊天。商家详情页、通知中心、群公告等结构化展示继续走原 SQL 查询，两种读取路径不互相替代。
 
 明确不做：
@@ -36,7 +36,7 @@ RAG 的落地目标：
 
 补充决策：
 
-- Embedding 使用现有智谱依赖中的 `ZhipuAiEmbeddingModel`，不另造供应商抽象。
+- Embedding 使用 OpenAI-compatible 的 `OpenAiEmbeddingModel`，与聊天模型共用同一适配器边界。
 - 向量库优先使用与当前 LangChain4j 版本匹配的 `dev.langchain4j:langchain4j-qdrant:1.12.1-beta21`，直接复用 `QdrantEmbeddingStore` 对 metadata filter、自定义 point ID 和删除的支持。
 - `langchain4j-qdrant:1.12.1-beta21` 传递依赖 `io.qdrant:client:1.17.0`；首期 Qdrant 容器使用 `v1.17.0` 与之对齐。若要升级到更高版本，必须单独做兼容性冒烟并记录。
 - 向量维度一旦变化，必须新建 collection 并全量重建，不能原地修改维度。
@@ -60,7 +60,7 @@ RagIndexService
         |
         | 组装文本 + metadata，按规则分块
         v
-EmbeddingModel（智谱 embedding-3）
+EmbeddingModel（OpenAI-compatible embedding 模型）
         |
         v
 QdrantVectorStore.upsert / deleteByDocument
@@ -114,7 +114,7 @@ Agent 只基于检索文本组织回答
 
 - 名称：`jaseats_knowledge_v1`
 - 距离函数：`Cosine`
-- 向量维度：首期 `2048`，对应 `embedding-3`；通过环境变量显式配置
+- 向量维度：由实际 Embedding 模型决定，通过 `AI_EMBEDDING_DIMENSIONS` 显式配置；配置值必须与真实响应和现有 collection 一致
 - 写入方式：按文档分块后，每块一个 point
 - point ID：使用 `UUID.nameUUIDFromBytes(documentId + ":" + chunkIndex)` 生成稳定的 UUID，再调用 `QdrantEmbeddingStore.addAll(ids, embeddings, segments)` 写入，保证重复写入是幂等 upsert
 
@@ -210,25 +210,24 @@ Agent 只基于检索文本组织回答
 
 ### 6.1 依赖与模型
 
-当前 `apps/server/pom.xml` 已有：
+`apps/server/pom.xml` 使用 `langchain4j-open-ai` 提供的 `OpenAiEmbeddingModel`，不引入供应商专属 SDK。
 
-- `dev.langchain4j:langchain4j-community-zhipu-ai:1.12.1-beta21`
-- 该类库已经包含 `ZhipuAiEmbeddingModel`
-
-首期配置建议：
+当前配置位于 `announcement-rag.embedding.*`：
 
 ```yaml
-ai:
-  embedding-model: ${AI_EMBEDDING_MODEL:embedding-3}
-  embedding-dimensions: ${AI_EMBEDDING_DIMENSIONS:2048}
-  embedding-base-url: ${AI_EMBEDDING_BASE_URL:}
+announcement-rag:
+  embedding:
+    provider: ${AI_EMBEDDING_PROVIDER:openai-compatible}
+    model: ${AI_EMBEDDING_MODEL:}
+    dimensions: ${AI_EMBEDDING_DIMENSIONS:0}
+    base-url: ${AI_EMBEDDING_BASE_URL:}
 ```
 
-注意：现有 `zhipuai.base-url` 是 chat completions 地址，不能直接复用于 embedding。`ZhipuAiEmbeddingModel` 默认使用智谱开放平台根地址；如果显式配置，应使用根地址而不是 `/chat/completions`。
+`AI_EMBEDDING_BASE_URL` 必须是 OpenAI-compatible 服务根地址（通常以 `/v1` 结尾），不能填写 `/chat/completions`。旧配置若带有该后缀，启动时会迁移为根地址；无法安全转换时清空并提示管理员重新填写。
 
 ### 6.2 降级
 
-- 有效智谱 key 为空时，embedding Bean 返回 `DisabledEmbeddingModel`。有效 key 的解析顺序与聊天模型一致：`AI_API_KEY` > `AI_API_KEY` > `AI_API_KEY`。
+- 服务地址、模型名或维度不完整时，embedding 返回占位实现并标记 `NOT_CONFIGURED`。key 解析顺序为运行时 Embedding key > `AI_API_KEY`；本地无鉴权的兼容端点可以只配置 `AI_EMBEDDING_BASE_URL`。
 - 应用启动不因缺 key 失败。
 - RAG 工具被调用时返回“知识检索暂不可用，请基于现有工具结果回答”，不能编造平台规则。
 - 单次 embedding 调用失败时，索引同步记录错误；内容写事务已经提交，不回滚。
@@ -237,7 +236,7 @@ ai:
 ### 6.3 成本与批处理
 
 - embedding 请求按批处理，建议每批 16～32 个 chunk。
-- 单次重建限制每批最大文档数，避免一次重建打满智谱额度。
+- 单次重建限制每批最大文档数，避免一次重建耗尽外部 Embedding 服务额度。
 - 日志只记录 sourceType、contentId、chunk 数、耗时、成功失败，不打印完整公告内容。
 
 ## 七、索引同步设计
@@ -460,8 +459,9 @@ ANNOUNCEMENT_RAG_ENABLED=true
 QDRANT_HOST=qdrant
 QDRANT_PORT=6334
 QDRANT_COLLECTION=jaseats_knowledge_v1
-AI_EMBEDDING_MODEL=embedding-3
-AI_EMBEDDING_DIMENSIONS=2048
+AI_EMBEDDING_PROVIDER=openai-compatible
+AI_EMBEDDING_MODEL=
+AI_EMBEDDING_DIMENSIONS=0
 AI_EMBEDDING_BASE_URL=
 ```
 
@@ -623,5 +623,5 @@ AI_EMBEDDING_BASE_URL=
 1. 商家端 AI 聊天请求里当前是否已有可信的 `merchantId` 来源；如果没有，需要先补认证上下文。
 2. `CustomerServiceAgent` 提升为 L1 后，是否保留原来的独立快速通道；建议保留，但 RAG 只在 Supervisor 路径启用。
 3. 商家名称解析是否首期只支持“唯一匹配”；如果多商家同名，是否需要城市或地址辅助。
-4. `embedding-3` 实际返回维度以本地真实 key 调通后的结果为准；如果与 2048 不一致，以首次真实响应修正配置和 collection。
+4. Embedding 模型实际返回维度以真实连通性校验结果为准；首次配置时应据此填写 `AI_EMBEDDING_DIMENSIONS` 并创建 collection。
 5. 生产环境是否需要给 Qdrant 配置 API key；如果只在内部 Docker 网络访问，首期可以不启用鉴权。

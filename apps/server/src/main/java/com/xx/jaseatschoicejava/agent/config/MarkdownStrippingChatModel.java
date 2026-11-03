@@ -12,8 +12,8 @@ import java.util.regex.Pattern;
 /**
  * ChatModel装饰器，自动剥离LLM响应中的Markdown代码块标记
  *
- * 解决GLM模型返回 ```json ... ``` 导致langchain4j JSON解析失败的问题。
- * 某些LLM（如GLM-4）倾向于将JSON输出包裹在markdown代码块中，
+ * 解决模型返回 ```json ... ``` 导致 LangChain4j JSON 解析失败的问题。
+ * 部分模型倾向于将 JSON 输出包裹在 markdown 代码块中，
  * 而langchain4j的JsonParsingUtils.extractAndParseJson无法正确处理这种格式。
  *
  * 装饰器在响应返回后自动检测并剥离以下格式：

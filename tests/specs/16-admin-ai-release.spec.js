@@ -14,16 +14,25 @@ const NEW_EMBED_BASE_URL = 'http://embedding-new.example.com:11434/v1'
 const EMBED_FINGERPRINT = '3c9f1a2b7d4e'
 const NEW_EMBED_MODEL = 'bge-large-zh-v1.5'
 const EMBED_REBUILD_FAILURE = '公告索引重建失败：connection refused'
+const PROVIDER = 'openai-compatible'
+const CURRENT_MODEL = 'gpt-4o-mini'
+const CANDIDATE_MODEL = 'gpt-4o'
+const VISION_MODEL = 'gpt-4o'
+const SUPPORTED_MODELS = [CURRENT_MODEL, CANDIDATE_MODEL, 'gpt-4.1']
 
 function snapshot(model, version, fingerprint, embeddingOverride = {}) {
   return {
-    provider: 'zhipu',
+    provider: PROVIDER,
     model,
     supervisorModel: model,
-    visionModel: 'glm-4.6v-flash',
+    visionModel: VISION_MODEL,
     baseUrl: 'https://candidate.example.com',
     timeoutMs: 30000,
     temperature: 0.7,
+    visionVerified: true,
+    visionVerificationReason: '',
+    needsReconfiguration: false,
+    configurationNotice: '',
     updatedAt: '2026-10-31T09:00:00',
     version,
     keyStatus: { configured: true, fingerprint, updatedAt: '2026-10-31T08:30:00' },
@@ -36,14 +45,14 @@ function snapshot(model, version, fingerprint, embeddingOverride = {}) {
       agentic: true,
       unavailableMessage: ''
     },
-    supportedModels: ['glm-4-flash', 'glm-4.6v-flash', 'glm-4.1v-thinking-flash'],
-    providers: [{ code: 'zhipu', name: '智谱', models: ['glm-4-flash', 'glm-4.6v-flash', 'glm-4.1v-thinking-flash'] }],
+    supportedModels: SUPPORTED_MODELS,
+    providers: [{ code: PROVIDER, name: 'OpenAI 兼容', models: SUPPORTED_MODELS }],
     embedding: {
       provider: EMBED_PROVIDER,
       model: EMBED_MODEL,
       dimensions: EMBED_DIMENSIONS,
       baseUrl: EMBED_BASE_URL,
-      providers: ['zhipu', 'openai-compatible'],
+      providers: [PROVIDER],
       keyStatus: { configured: true, fingerprint: EMBED_FINGERPRINT, updatedAt: '2026-10-31T08:35:00' },
       ...embeddingOverride
     }
@@ -53,8 +62,8 @@ function snapshot(model, version, fingerprint, embeddingOverride = {}) {
 test.describe('AI 热加载发布验收', () => {
   test('16.1 查看、测试、保存、热切换、脱敏和回滚', async ({ page }) => {
     markRunning('16.1')
-    const currentModel = 'glm-4-flash'
-    const candidateModel = 'glm-4.1v-thinking-flash'
+    const currentModel = CURRENT_MODEL
+    const candidateModel = CANDIDATE_MODEL
     const activeSnapshot = snapshot(currentModel, 2, ACTIVE_FINGERPRINT, { state: 'READY' })
     const unavailableSnapshot = snapshot(candidateModel, 3, NEW_FINGERPRINT, {
       model: NEW_EMBED_MODEL,
@@ -66,13 +75,17 @@ test.describe('AI 热加载发布验收', () => {
     const previousSummary = {
       version: 1,
       updatedAt: '2026-10-31T08:00:00',
-      provider: 'zhipu',
+      provider: PROVIDER,
       model: currentModel,
       supervisorModel: currentModel,
-      visionModel: 'glm-4.6v-flash',
+      visionModel: VISION_MODEL,
       baseUrl: '',
       timeoutMs: 30000,
       temperature: 0.7,
+      visionVerified: true,
+      visionVerificationReason: '',
+      needsReconfiguration: false,
+      configurationNotice: '',
       keyConfigured: true,
       keyFingerprint: ACTIVE_FINGERPRINT
     }
@@ -96,9 +109,9 @@ test.describe('AI 热加载发布验收', () => {
       route.fulfill({ json: { success: true, data: previousSummary } }))
     await page.route('**/api/admin/settings/ai/models', route =>
       route.fulfill({ json: { success: true, data: [
-        { id: 'glm-4-flash', name: 'glm-4-flash', supportsImages: false },
-        { id: 'glm-4.6v-flash', name: 'glm-4.6v-flash', supportsImages: true },
-        { id: 'glm-4.1v-thinking-flash', name: 'glm-4.1v-thinking-flash', supportsImages: true }
+        { id: CURRENT_MODEL, name: CURRENT_MODEL, supportsImages: false },
+        { id: CANDIDATE_MODEL, name: CANDIDATE_MODEL, supportsImages: true },
+        { id: 'gpt-4.1', name: 'gpt-4.1', supportsImages: true }
       ] } }))
     await page.route('**/api/admin/settings/ai/test', route => {
       capturedRequests.test = route.request().postDataJSON()
@@ -160,7 +173,7 @@ test.describe('AI 热加载发布验收', () => {
       await formItem('API Key').locator('input[type="password"]').fill(SECRET_KEY)
 
       await formItem('Provider').locator('.el-select').click()
-      await page.getByRole('option', { name: '智谱' }).click()
+      await page.getByRole('option', { name: 'OpenAI 兼容' }).click()
 
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/models'),
@@ -175,7 +188,7 @@ test.describe('AI 热加载发布验收', () => {
       await page.getByRole('option', { name: candidateModel, exact: true }).last().click()
 
       await formItem('视觉模型').locator('.el-select').click()
-      await page.getByRole('option', { name: 'glm-4.6v-flash', exact: true }).last().click()
+      await page.getByRole('option', { name: VISION_MODEL, exact: true }).last().click()
 
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/test'),

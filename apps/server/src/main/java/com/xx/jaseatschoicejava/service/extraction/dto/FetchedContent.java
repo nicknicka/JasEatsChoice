@@ -37,10 +37,10 @@ public class FetchedContent {
     /** 图片Base64列表（用于传给视觉模型） */
     private List<String> imageBase64List;
 
-    /** 视频直链URL（用于传给GLM视频理解） */
+    /** 视频直链URL。当前识别链路不使用，仅为兼容已有抓取结构保留。 */
     private String videoUrl;
 
-    /** 视频Base64（备选，大视频慎用） */
+    /** 视频 Base64。当前识别链路不使用，仅为兼容已有抓取结构保留。 */
     private String videoBase64;
 
     /** 实际内容类型 */
