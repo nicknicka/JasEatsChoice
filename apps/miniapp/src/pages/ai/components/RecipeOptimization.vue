@@ -83,6 +83,7 @@
           <view class="card-header">
             <text class="card-icon">✨</text>
             <text class="card-title">优化后食谱</text>
+            <text class="card-recipe-name">{{ optimizationResult.recipeName }}</text>
           </view>
 
           <!-- 营养对比 -->
@@ -122,6 +123,12 @@
               <text class="suggestion-content">{{ suggestion.content }}</text>
             </view>
           </view>
+
+          <!-- 估算说明 -->
+          <text
+            class="estimation-note"
+            v-if="optimizationResult.estimationNote"
+          >{{ optimizationResult.estimationNote }}</text>
         </view>
 
         <!-- 操作按钮 -->
@@ -165,10 +172,10 @@ import { aiApi } from '@/api/modules/ai'
 
 // 优化目标选项
 const optimizationOptions = ref([
-  { key: 'lowCalorie', label: '低卡路里', icon: '🔥' },
-  { key: 'highProtein', label: '高蛋白', icon: '💪' },
-  { key: 'lowFat', label: '低脂肪', icon: '🥗' },
-  { key: 'balanced', label: '营养均衡', icon: '⚖️' }
+  { key: 'balanced', label: '营养均衡', icon: '⚖️' },
+  { key: 'fat_loss', label: '减脂', icon: '🔥' },
+  { key: 'muscle_gain', label: '增肌', icon: '💪' },
+  { key: 'blood_sugar_control', label: '控糖', icon: '🥗' }
 ])
 
 // 选中的优化目标
@@ -221,16 +228,29 @@ const optimizeRecipe = async () => {
       throw new Error(data?.message || '优化失败')
     }
 
+    const num = (v) => Number(v) || 0
+    const orig = data.nutrition?.original || {}
+    const opt = data.nutrition?.optimized || {}
+    const ICONS = ['💡', '🥗', '🔥', '💪', '⚖️']
+
     optimizationResult.value = {
-      originalCalories: Number(data.originalCalories) || 0,
-      originalProtein: Number(data.originalProtein) || 0,
-      originalFat: Number(data.originalFat) || 0,
-      originalCarb: Number(data.originalCarb) || 0,
-      optimizedCalories: Number(data.optimizedCalories) || 0,
-      optimizedProtein: Number(data.optimizedProtein) || 0,
-      optimizedFat: Number(data.optimizedFat) || 0,
-      optimizedCarb: Number(data.optimizedCarb) || 0,
-      suggestions: Array.isArray(data.suggestions) ? data.suggestions : []
+      recipeName: data.recipe?.name || '优化食谱',
+      originalCalories: num(orig.calorie),
+      originalProtein: num(orig.protein),
+      originalFat: num(orig.fat),
+      originalCarb: num(orig.carb),
+      optimizedCalories: num(opt.calorie),
+      optimizedProtein: num(opt.protein),
+      optimizedFat: num(opt.fat),
+      optimizedCarb: num(opt.carb),
+      suggestions: Array.isArray(data.improvements)
+        ? data.improvements.map((item, index) => ({
+            icon: ICONS[index % ICONS.length],
+            title: typeof item === 'string' ? item : (item.title || ''),
+            content: typeof item === 'string' ? '' : (item.detail || '')
+          }))
+        : [],
+      estimationNote: data.estimationNote || ''
     }
 
     // 添加到历史记录
@@ -266,8 +286,10 @@ const optimizeRecipe = async () => {
  */
 const getCalorieReduction = () => {
   if (!optimizationResult.value) return 0
-  const reduction = optimizationResult.value.originalCalories - optimizationResult.value.optimizedCalories
-  return Math.round((reduction / optimizationResult.value.originalCalories) * 100)
+  const original = optimizationResult.value.originalCalories
+  if (!original) return 0
+  const reduction = original - optimizationResult.value.optimizedCalories
+  return Math.round((reduction / original) * 100)
 }
 
 /**
@@ -500,6 +522,11 @@ const shareResult = () => {
   color: $text-color-primary;
 }
 
+.card-recipe-name {
+  font-size: $font-size-base;
+  color: $text-color-secondary;
+}
+
 .analysis-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -627,6 +654,14 @@ const shareResult = () => {
 .suggestion-content {
   font-size: $font-size-sm;
   color: $text-color-regular;
+  line-height: $line-height-lg;
+}
+
+.estimation-note {
+  display: block;
+  margin-top: $spacing-md;
+  font-size: $font-size-sm;
+  color: $text-color-secondary;
   line-height: $line-height-lg;
 }
 

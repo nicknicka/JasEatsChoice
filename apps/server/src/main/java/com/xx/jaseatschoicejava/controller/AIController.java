@@ -422,7 +422,8 @@ public class AIController {
                 return ResponseResult.fail("400", "食谱内容不能为空");
             }
 
-            Map<String, Object> result = aiAssistantService.optimizeRecipe(recipeText);
+            Map<String, Object> result = aiAssistantService.optimizeRecipe(
+                recipeText, AiAssistantService.DEFAULT_RECIPE_GOAL);
             return ResponseResult.success(result);
         } catch (Exception e) {
             log.error("食谱优化失败", e);
@@ -436,34 +437,31 @@ public class AIController {
      * AI食谱优化接口（前端统一调用）
      *
      * 路由: POST /v1/ai/recipe
-     * 接收: { "recipe": "食谱内容", "goal": "优化目标" }
-     * 返回: 优化后的食谱结果
+     * 接收: { "recipe": "食谱内容", "goal": "优化目标（可选，默认 balanced）" }
+     * 返回: 单方案统一结构
      */
-    @ApiOperation(value = "AI食谱优化（统一入口）", notes = "根据食材或食谱生成优化建议")
+    @ApiOperation(value = "AI食谱优化（统一入口）", notes = "根据食谱内容与优化目标生成单方案建议")
     @PostMapping("/recipe")
     public ResponseResult<?> recipeOptimize(@RequestBody Map<String, Object> params) {
         try {
-            // 兼容桌面端 {foodName: "..."} 和 UniApp {recipe: "...", goal: "..."}
-            String foodName = (String) params.get("foodName");
-            String recipeText = (String) params.get("recipe");
-            String goal = (String) params.get("goal");
-
-            log.info("食谱优化请求，参数：{}, foodName：{}, goal：{}", params.keySet(), foodName, goal);
-
-            String inputText = (foodName != null && !foodName.trim().isEmpty()) ? foodName : recipeText;
-
-            if (inputText == null || inputText.trim().isEmpty()) {
+            Object recipeValue = params.get("recipe");
+            String recipeText = recipeValue == null ? null : recipeValue.toString();
+            if (recipeText == null || recipeText.trim().isEmpty()) {
                 return ResponseResult.fail("400", "食谱内容不能为空");
+            }
+
+            String goal = resolveRecipeGoal(params.get("goal"));
+            if (goal == null) {
+                return ResponseResult.fail("400", "不支持的优化目标：" + params.get("goal"));
             }
 
             if (!chatModelProvider.getCapabilities().isTextChat()) {
                 return ResponseResult.fail(AI_NOT_CONFIGURED_CODE, "食谱优化暂未开放：请先配置 AI 模型");
             }
 
-            log.info("食谱优化请求，目标：{}，输入：{}", goal, inputText.length() > 100 ? inputText.substring(0, 100) + "..." : inputText);
-            Map<String, Object> result = aiAssistantService.optimizeRecipe(inputText);
+            log.info("食谱优化请求，目标：{}，输入长度：{}", goal, recipeText.length());
+            Map<String, Object> result = aiAssistantService.optimizeRecipe(recipeText, goal);
 
-            // 检查 service 层是否返回了错误
             if (Boolean.TRUE.equals(result.get("error"))) {
                 String errorMsg = (String) result.get("message");
                 log.warn("食谱优化服务返回错误：{}", errorMsg);
@@ -472,13 +470,7 @@ public class AIController {
                 return ResponseResult.fail(errorCode, errorMsg != null ? errorMsg : "食谱优化失败");
             }
 
-            log.info("食谱优化成功，返回字段：{}", result.keySet());
-
-            // 兼容桌面端：前端期望 data 直接是数组
-            Object recipes = result.get("recipes");
-            if (recipes != null) {
-                return ResponseResult.success(recipes);
-            }
+            result.remove("error");
             return ResponseResult.success(result);
         } catch (Exception e) {
             log.error("食谱优化失败", e);
@@ -492,23 +484,30 @@ public class AIController {
      * AI食谱优化 SSE 流式端点（真正流式输出）
      *
      * 路由: POST /v1/ai/recipe/stream
-     * 事件格式：
+     * 事件格式（事件名统一为 message）：
      * - 进度: {"message":"正在分析食谱内容...","progress":true}
      * - 流式token: {"content":"token文本","streaming":true}
-     * - 结果: {"recipes":[...],"done":true}
+     * - 结果: {"result":{...单方案统一结构...},"done":true}
      * - 错误: {"error":true,"message":"...","done":true}
      */
     @ApiOperation(value = "AI食谱优化（SSE流式进度）", notes = "实时推送优化进度和流式token，桌面端专用")
     @PostMapping(value = "/recipe/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter recipeOptimizeStream(@RequestBody Map<String, Object> params) {
-        String foodName = (String) params.get("foodName");
-        String recipeText = (String) params.get("recipe");
-        String inputText = (foodName != null && !foodName.trim().isEmpty()) ? foodName : recipeText;
+        Object recipeValue = params.get("recipe");
+        String recipeText = recipeValue == null ? null : recipeValue.toString();
 
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
 
-        if (inputText == null || inputText.trim().isEmpty()) {
+        if (recipeText == null || recipeText.trim().isEmpty()) {
             sendRecipeSseData(emitter, Map.of("error", true, "message", "食谱内容不能为空", "done", true));
+            emitter.complete();
+            return emitter;
+        }
+
+        String goal = resolveRecipeGoal(params.get("goal"));
+        if (goal == null) {
+            sendRecipeSseData(emitter, Map.of("error", true,
+                    "message", "不支持的优化目标：" + params.get("goal"), "done", true));
             emitter.complete();
             return emitter;
         }
@@ -520,17 +519,29 @@ public class AIController {
             return emitter;
         }
 
-        // 使用流式调用
+        mapRecipeResultStream(emitter, recipeText, goal);
+
+        emitter.onTimeout(() -> {
+            log.warn("SSE食谱优化连接超时");
+            emitter.complete();
+        });
+        emitter.onError(e -> {
+            log.error("SSE食谱优化连接错误", e);
+        });
+
+        return emitter;
+    }
+
+    private void mapRecipeResultStream(SseEmitter emitter, String recipeText, String goal) {
         aiAssistantService.optimizeRecipeStreaming(
-                inputText,
+                recipeText,
+                goal,
                 // progressCallback：处理进度和最终结果
                 message -> {
-                    if (message.startsWith("RECIPES:")) {
-                        // 最终食谱结果：将JSON字符串解析为对象后发送
+                    if (message.startsWith("RESULT:")) {
                         try {
-                            Object recipesObj = objectMapper.readValue(
-                                    message.substring(8), Object.class);
-                            sendRecipeSseData(emitter, Map.of("recipes", recipesObj, "done", true));
+                            Object resultObj = objectMapper.readValue(message.substring(7), Object.class);
+                            sendRecipeSseData(emitter, Map.of("result", resultObj, "done", true));
                         } catch (Exception e) {
                             sendRecipeSseData(emitter, Map.of("error", true,
                                     "message", "结果解析失败", "done", true));
@@ -561,16 +572,20 @@ public class AIController {
                     }
                 }
         );
+    }
 
-        emitter.onTimeout(() -> {
-            log.warn("SSE食谱优化连接超时");
-            emitter.complete();
-        });
-        emitter.onError(e -> {
-            log.error("SSE食谱优化连接错误", e);
-        });
-
-        return emitter;
+    /**
+     * 校验并归一化优化目标；未知目标返回 null。
+     */
+    private String resolveRecipeGoal(Object rawGoal) {
+        if (rawGoal == null) {
+            return AiAssistantService.DEFAULT_RECIPE_GOAL;
+        }
+        String goal = rawGoal.toString().trim();
+        if (goal.isEmpty()) {
+            return AiAssistantService.DEFAULT_RECIPE_GOAL;
+        }
+        return AiAssistantService.RECIPE_GOALS.contains(goal) ? goal : null;
     }
 
     private void sendRecipeSseEvent(SseEmitter emitter, String message) {

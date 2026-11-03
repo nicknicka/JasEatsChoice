@@ -226,4 +226,48 @@ class OpenAiCompatibleModelClientFactoryTest {
 
         assertEquals(List.of(), options);
     }
+
+    @Test
+    void recipeModel_usesDedicatedTemperatureAndMaxTokens() throws Exception {
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            byte[] body = "{\"choices\":[{\"message\":{\"content\":\"OK\"}}]}"
+                .getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        try {
+            int port = server.getAddress().getPort();
+            OpenAiCompatibleModelClientFactory factory = new OpenAiCompatibleModelClientFactory(
+                new AIConfig(), mock(AiRuntimeKeyStore.class));
+            AiModelConfig config = AiModelConfig.builder()
+                .provider("openai-compatible")
+                .model("gpt-4o-mini")
+                .supervisorModel("gpt-4o-mini")
+                .visionModel("gpt-4o-mini")
+                .baseUrl("http://127.0.0.1:" + port + "/v1")
+                .timeoutMs(5000)
+                .temperature(0.9)
+                .build();
+
+            ChatModel recipeModel = factory.buildRecipeModel(config, "test-key");
+            assertEquals("OK", recipeModel.chat("给一个减脂食谱"));
+            String recipeBody = requestBody.get().replaceAll("\\s+", "");
+            assertTrue(recipeBody.contains("\"temperature\":0.2"), requestBody.get());
+            assertTrue(recipeBody.contains("\"max_tokens\":4096"), requestBody.get());
+
+            ChatModel chatModel = factory.buildChatModel(config, "test-key");
+            assertEquals("OK", chatModel.chat("你好"));
+            String chatBody = requestBody.get().replaceAll("\\s+", "");
+            assertTrue(chatBody.contains("\"temperature\":0.9"), requestBody.get());
+            assertTrue(chatBody.contains("\"max_tokens\":4096"), requestBody.get());
+        } finally {
+            server.stop(0);
+        }
+    }
 }
