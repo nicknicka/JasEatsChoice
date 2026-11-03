@@ -167,17 +167,23 @@ public class ContentExtractionController {
      * 重新提取
      *
      * @param sourceId 内容源ID
+     * @param contentType 内容类型（可选，不传则沿用已保存类型）
      * @param request HTTP请求
      * @return 是否成功
      */
     @PostMapping("/source/{sourceId}/re-extract")
     public ResponseResult<Boolean> reExtract(
             @PathVariable String sourceId,
+            @RequestParam(required = false) String contentType,
             HttpServletRequest request) {
         String userId = resolveUserId(request);
 
-        boolean success = contentExtractionService.reExtract(sourceId, userId);
-        return ResponseResult.success(success);
+        try {
+            boolean success = contentExtractionService.reExtract(sourceId, contentType, userId);
+            return ResponseResult.success(success);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     /**

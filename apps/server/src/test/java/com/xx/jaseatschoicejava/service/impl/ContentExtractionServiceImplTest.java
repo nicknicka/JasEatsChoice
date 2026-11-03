@@ -287,6 +287,85 @@ class ContentExtractionServiceImplTest {
     }
 
     @Test
+    void addContentSource_withoutType_shouldAutoDetectAndFallbackToArticle() {
+        when(urlSecurityValidator.validateAndResolve(anyString())).thenReturn("https://example.com/unknown");
+
+        ContentSourceCreateDTO dto = new ContentSourceCreateDTO();
+        dto.setContentUrl("https://example.com/unknown");
+
+        service.addContentSource(dto, "user-1");
+
+        ArgumentCaptor<ContentSource> captor = ArgumentCaptor.forClass(ContentSource.class);
+        verify(contentSourceMapper).insert(captor.capture());
+        assertEquals(ContentType.ARTICLE.getCode(), captor.getValue().getContentType());
+    }
+
+    @Test
+    void addContentSource_withExplicitType_shouldRespectUserChoice() {
+        when(urlSecurityValidator.validateAndResolve(anyString())).thenReturn("https://example.com/video/1");
+
+        ContentSourceCreateDTO dto = new ContentSourceCreateDTO();
+        dto.setContentUrl("https://example.com/video/1");
+        dto.setContentType(ContentType.IMAGE.getCode());
+
+        service.addContentSource(dto, "user-1");
+
+        ArgumentCaptor<ContentSource> captor = ArgumentCaptor.forClass(ContentSource.class);
+        verify(contentSourceMapper).insert(captor.capture());
+        assertEquals(ContentType.IMAGE.getCode(), captor.getValue().getContentType());
+    }
+
+    @Test
+    void addContentSource_withInvalidType_shouldRejectWithoutPersisting() {
+        when(urlSecurityValidator.validateAndResolve(anyString())).thenReturn("https://example.com/a");
+
+        ContentSourceCreateDTO dto = new ContentSourceCreateDTO();
+        dto.setContentUrl("https://example.com/a");
+        dto.setContentType("AUDIO");
+
+        assertThrows(IllegalArgumentException.class, () -> service.addContentSource(dto, "user-1"));
+        verify(contentSourceMapper, never()).insert(any(ContentSource.class));
+        verify(extractionTaskMapper, never()).insert(any(ExtractionTask.class));
+    }
+
+    @Test
+    void reExtract_withoutType_shouldKeepSavedType() {
+        ContentSource source = pendingSource();
+        source.setContentType(ContentType.IMAGE.getCode());
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+
+        assertTrue(service.reExtract("source-1", null, "user-1"));
+
+        assertEquals(ContentType.IMAGE.getCode(), source.getContentType());
+        verify(extractionTaskMapper).insert(any(ExtractionTask.class));
+    }
+
+    @Test
+    void reExtract_withExplicitType_shouldOverrideSavedType() {
+        ContentSource source = pendingSource();
+        source.setContentType(ContentType.VIDEO.getCode());
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+
+        assertTrue(service.reExtract("source-1", ContentType.ARTICLE.getCode(), "user-1"));
+
+        assertEquals(ContentType.ARTICLE.getCode(), source.getContentType());
+    }
+
+    @Test
+    void getExtractionDetail_shouldExposeContentType() {
+        ContentExtraction extraction = extraction();
+        ContentSource source = pendingSource();
+        source.setContentType(ContentType.IMAGE.getCode());
+        when(contentExtractionMapper.selectById("ext-1")).thenReturn(extraction);
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+
+        var detail = service.getExtractionDetail("ext-1", "user-1");
+
+        assertEquals(ContentType.IMAGE.getCode(), detail.getContentType());
+        assertEquals(ContentType.IMAGE.getDescription(), detail.getContentTypeName());
+    }
+
+    @Test
     void publishAsRecipe_whenSourceOwnedByAnotherUser_shouldThrowAndNotUpdate() {
         ContentExtraction extraction = extraction();
         ContentSource source = pendingSource();

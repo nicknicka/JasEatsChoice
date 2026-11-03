@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.dto;
 import lombok.Data;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 /**
  * 内容源创建DTO
@@ -22,6 +23,7 @@ public class ContentSourceCreateDTO {
     /**
      * 内容类型（可选，系统会自动识别）
      */
+    @Pattern(regexp = "VIDEO|ARTICLE|IMAGE", message = "内容类型不合法")
     private String contentType;
 
     /**

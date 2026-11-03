@@ -40,6 +40,16 @@ public class ContentExtractionDetailVO {
     private String platformName;
 
     /**
+     * 内容类型
+     */
+    private String contentType;
+
+    /**
+     * 内容类型名称
+     */
+    private String contentTypeName;
+
+    /**
      * 原始标题
      */
     private String originalTitle;

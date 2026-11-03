@@ -22,6 +22,9 @@
           <div class="dish-info">
             <h3 class="dish-name">{{ extraction.dishName || '未命名菜品' }}</h3>
             <div class="dish-meta">
+              <el-tag v-if="extraction.contentTypeName" type="info" size="small">
+                {{ extraction.contentTypeName }}
+              </el-tag>
               <el-tag :type="getDifficultyType(extraction.difficulty)" size="small">
                 {{ getDifficultyText(extraction.difficulty) }}
               </el-tag>

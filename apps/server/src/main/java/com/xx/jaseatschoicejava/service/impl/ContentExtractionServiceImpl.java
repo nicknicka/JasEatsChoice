@@ -83,15 +83,14 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
         // 自动识别平台和内容类型
         ContentPlatform platform = ContentPlatform.parseFromUrl(contentUrl);
-        ContentType contentType = dto.getContentType() != null ?
-            ContentType.getByCode(dto.getContentType()) : detectContentType(contentUrl);
+        ContentType contentType = resolveContentType(dto.getContentType(), contentUrl);
 
         // 创建内容源
         ContentSource source = new ContentSource();
         source.setId(UUID.randomUUID().toString().replace("-", ""));
         source.setUserId(userId);
         source.setContentUrl(contentUrl);
-        source.setContentType(contentType != null ? contentType.getCode() : ContentType.VIDEO.getCode());
+        source.setContentType(contentType.getCode());
         source.setPlatform(platform.getCode());
         source.setExtractionStatus(ExtractionStatus.PENDING.getCode());
         source.setIsExtracted(false);
@@ -254,7 +253,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean reExtract(String sourceId, String userId) {
+    public boolean reExtract(String sourceId, String contentType, String userId) {
         ContentSource source = contentSourceMapper.selectById(sourceId);
         if (source == null) {
             throw new RuntimeException("内容源不存在");
@@ -266,12 +265,12 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
 
         String contentUrl = normalizeContentUrl(source.getContentUrl());
         ContentPlatform platform = ContentPlatform.parseFromUrl(contentUrl);
-        ContentType contentType = detectContentType(contentUrl);
+        ContentType resolvedContentType = resolveContentTypeForReExtract(contentType, source, contentUrl);
 
-        // 重置提取状态，并重新识别平台/内容类型
+        // 重置提取状态；未显式指定类型时沿用已保存的类型
         source.setContentUrl(contentUrl);
         source.setPlatform(platform.getCode());
-        source.setContentType(contentType.getCode());
+        source.setContentType(resolvedContentType.getCode());
         source.setExtractionStatus(ExtractionStatus.PENDING.getCode());
         source.setIsExtracted(false);
         source.setErrorMessage(null);
@@ -671,7 +670,26 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         } else if (lowerUrl.contains("image") || lowerUrl.contains(".jpg") || lowerUrl.contains(".png")) {
             return ContentType.IMAGE;
         }
-        return ContentType.VIDEO; // 默认为视频
+        return ContentType.ARTICLE;
+    }
+
+    private ContentType resolveContentType(String requestedType, String contentUrl) {
+        if (requestedType == null) {
+            return detectContentType(contentUrl);
+        }
+        ContentType contentType = ContentType.getByCode(requestedType.trim());
+        if (contentType == null) {
+            throw new IllegalArgumentException("内容类型不合法");
+        }
+        return contentType;
+    }
+
+    private ContentType resolveContentTypeForReExtract(String requestedType, ContentSource source, String contentUrl) {
+        if (requestedType != null) {
+            return resolveContentType(requestedType, contentUrl);
+        }
+        ContentType savedType = ContentType.getByCode(source.getContentType());
+        return savedType != null ? savedType : detectContentType(contentUrl);
     }
 
     private String normalizeContentUrl(String rawContentUrl) {
@@ -749,6 +767,12 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         vo.setContentUrl(source.getContentUrl());
         vo.setPlatform(source.getPlatform());
         vo.setOriginalTitle(source.getTitle());
+
+        ContentType contentType = ContentType.getByCode(source.getContentType());
+        if (contentType != null) {
+            vo.setContentType(contentType.getCode());
+            vo.setContentTypeName(contentType.getDescription());
+        }
 
         ContentPlatform platform = ContentPlatform.getByCode(source.getPlatform());
         if (platform != null) {

@@ -83,10 +83,11 @@ public interface ContentExtractionService {
      * 重新提取
      *
      * @param sourceId 内容源ID
+     * @param contentType 内容类型；为空时沿用已保存类型
      * @param userId 用户ID
      * @return 是否成功
      */
-    boolean reExtract(String sourceId, String userId);
+    boolean reExtract(String sourceId, String contentType, String userId);
 
     /**
      * 删除内容源
