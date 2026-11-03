@@ -37,7 +37,6 @@ import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiPreviousConfigSummary;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
@@ -72,7 +71,6 @@ class AiRuntimeConfigRollbackServiceTest {
     private AiConfigHistoryStore historyStore;
 
     private AIConfig aiConfig;
-    private ZhipuAIConfig zhipuConfig;
     private DynamicAiModelRegistry registry;
     private AiRuntimeKeyStore keyStore;
     private AiRuntimeConfigServiceImpl service;
@@ -80,7 +78,7 @@ class AiRuntimeConfigRollbackServiceTest {
     @BeforeEach
     void setUp() throws IOException {
         aiConfig = new AIConfig();
-        aiConfig.setProvider("zhipu");
+        aiConfig.setProvider("openai-compatible");
         aiConfig.setApiKey(OLD_KEY);
         aiConfig.setModel("env-chat");
         aiConfig.setSupervisorModel("env-supervisor");
@@ -89,18 +87,12 @@ class AiRuntimeConfigRollbackServiceTest {
         aiConfig.setTimeout(31000);
         aiConfig.setTemperature(0.3);
 
-        zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("");
-        zhipuConfig.setModel("");
-        zhipuConfig.setVisionModel("");
-        zhipuConfig.setBaseUrl("");
-        zhipuConfig.setTimeout(null);
 
         registry = new DynamicAiModelRegistry();
         keyStore = new AiRuntimeKeyStore(tempDir.resolve("ai-active-key").toString());
-                when(modelFactory.providerCode()).thenReturn("zhipu");
+                when(modelFactory.providerCode()).thenReturn("openai-compatible");
         when(modelFactory.environmentConfig(any(AIConfig.class))).thenReturn(AiModelConfig.builder()
-            .provider("zhipu")
+            .provider("openai-compatible")
             .model(aiConfig.getModel())
             .supervisorModel(aiConfig.getSupervisorModel())
             .visionModel(aiConfig.getVisionModel())
@@ -121,10 +113,10 @@ service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry
 
     private AiModelCandidateDTO candidate() {
         return AiModelCandidateDTO.builder()
-            .provider("zhipu")
-            .model("glm-4-flash")
-            .supervisorModel("glm-supervisor")
-            .visionModel("glm-vision")
+            .provider("openai-compatible")
+            .model("gpt-4o-mini")
+            .supervisorModel("supervisor-model")
+            .visionModel("vision-model")
             .baseUrl("https://candidate.example.com")
             .timeoutMs(30000)
             .temperature(0.7)
@@ -205,7 +197,7 @@ service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry
 
         assertEquals("AI_KEY_REQUIRED", exception.getCode());
         assertTrue(exception.getMessage().contains("重新输入"));
-        assertEquals("glm-4-flash", service.getCurrentSnapshot().getModel());
+        assertEquals("gpt-4o-mini", service.getCurrentSnapshot().getModel());
     }
 
     @Test
@@ -222,7 +214,7 @@ service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry
             () -> service.rollbackToPrevious("13800000000"));
 
         assertEquals("AI_CONFIG_ROLLBACK_TEST_FAILED", exception.getCode());
-        assertEquals("glm-4-flash", service.getCurrentSnapshot().getModel());
+        assertEquals("gpt-4o-mini", service.getCurrentSnapshot().getModel());
     }
 
     @Test
@@ -240,7 +232,7 @@ service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry
             () -> service.rollbackToPrevious("13800000000"));
 
         assertEquals("AI_CONFIG_ROLLBACK_FAILED", exception.getCode());
-        assertEquals("glm-4-flash", service.getCurrentSnapshot().getModel());
+        assertEquals("gpt-4o-mini", service.getCurrentSnapshot().getModel());
         verify(systemConfigService, never()).setConfigValue(
             eq("ai.runtime-config-history"), anyString(), anyString(), anyString());
         verify(historyStore, never()).save(anyString());
@@ -259,7 +251,7 @@ service = new AiRuntimeConfigServiceImpl(aiConfig, systemConfigService, registry
                 .apiKey(NEW_KEY).build(), "13800000000"));
 
         assertEquals("AI_CONFIG_HISTORY_SAVE_FAILED", exception.getCode());
-        assertEquals("glm-4-flash", service.getCurrentSnapshot().getModel());
+        assertEquals("gpt-4o-mini", service.getCurrentSnapshot().getModel());
         assertEquals(2L, service.getCurrentSnapshot().getVersion());
         assertEquals(NEW_KEY, java.nio.file.Files.readString(tempDir.resolve("ai-active-key")).trim());
         verify(systemConfigService).setConfigValue(

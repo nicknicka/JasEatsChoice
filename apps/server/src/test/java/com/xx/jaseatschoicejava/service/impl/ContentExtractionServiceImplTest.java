@@ -37,6 +37,7 @@ import com.xx.jaseatschoicejava.service.RecipeService;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcher;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcherFactory;
+import com.xx.jaseatschoicejava.service.extraction.recognizer.ContentRecognitionResult;
 import com.xx.jaseatschoicejava.service.extraction.recognizer.ContentRecognizer;
 import com.xx.jaseatschoicejava.util.UrlSecurityValidator;
 
@@ -166,7 +167,8 @@ class ContentExtractionServiceImplTest {
         when(contentSourceMapper.selectById("source-1")).thenReturn(source);
         when(fetcherFactory.getFetcher(any(ContentPlatform.class), any(ContentType.class))).thenReturn(contentFetcher);
         when(contentFetcher.fetch(anyString(), anyString())).thenReturn(fetchedContent);
-        when(contentRecognizer.recognize(fetchedContent)).thenReturn(notRecipe);
+        when(contentRecognizer.recognize(fetchedContent))
+            .thenReturn(ContentRecognitionResult.success(notRecipe));
         when(extractionTaskMapper.updateById(any(ExtractionTask.class))).thenReturn(1);
         when(contentSourceMapper.updateById(any(ContentSource.class))).thenReturn(1);
 
@@ -243,7 +245,8 @@ class ContentExtractionServiceImplTest {
         when(contentSourceMapper.selectById("source-1")).thenReturn(source);
         when(fetcherFactory.getFetcher(any(ContentPlatform.class), any(ContentType.class))).thenReturn(contentFetcher);
         when(contentFetcher.fetch(anyString(), anyString())).thenReturn(fetchedContent);
-        when(contentRecognizer.recognize(fetchedContent)).thenReturn("not json");
+        when(contentRecognizer.recognize(fetchedContent))
+            .thenReturn(ContentRecognitionResult.success("not json"));
         when(extractionTaskMapper.updateById(any(ExtractionTask.class))).thenReturn(1);
         when(contentSourceMapper.updateById(any(ContentSource.class))).thenReturn(1);
 
@@ -258,6 +261,46 @@ class ContentExtractionServiceImplTest {
         assertFalse(source.getIsExtracted());
         assertNotNull(source.getErrorMessage());
         verify(contentExtractionMapper, never()).insert(any(ContentExtraction.class));
+    }
+
+    @Test
+    void processPendingTasks_whenRecognitionDegraded_shouldPersistReasonOnSuccessfulSource() {
+        ExtractionTask task = pendingTask();
+        ContentSource source = pendingSource();
+        String degradedReason = "当前未开放视频理解，已使用视频封面图提取";
+        String recipeJson = """
+            {"isRecipe":true,"dishName":"番茄炒蛋","description":"家常菜","ingredients":[],
+             "steps":[],"cookingTime":10,"difficulty":"简单","tags":[],"calories":180}
+            """;
+        FetchedContent fetchedContent = FetchedContent.builder()
+            .fetchSuccess(true)
+            .videoUrl("https://example.com/video.mp4")
+            .coverImage("https://example.com/cover.jpg")
+            .textContent("视频文字内容")
+            .contentType(ContentType.ARTICLE)
+            .platform(ContentPlatform.DOUYIN)
+            .build();
+
+        when(extractionTaskMapper.selectPendingTasks()).thenReturn(List.of(task));
+        when(contentSourceMapper.selectById("source-1")).thenReturn(source);
+        when(fetcherFactory.getFetcher(any(ContentPlatform.class), any(ContentType.class))).thenReturn(contentFetcher);
+        when(contentFetcher.fetch(anyString(), anyString())).thenReturn(fetchedContent);
+        when(contentRecognizer.recognize(fetchedContent))
+            .thenReturn(ContentRecognitionResult.degraded(recipeJson, degradedReason));
+        when(contentSourceMapper.updateById(any(ContentSource.class))).thenReturn(1);
+        when(extractionTaskMapper.updateById(any(ExtractionTask.class))).thenReturn(1);
+        when(contentExtractionMapper.insert(any(ContentExtraction.class))).thenReturn(1);
+
+        int processedCount = service.processPendingTasks();
+
+        assertEquals(1, processedCount);
+        assertEquals("SUCCESS", task.getTaskStatus());
+        assertEquals(ExtractionStatus.SUCCESS.getCode(), source.getExtractionStatus());
+        assertTrue(source.getIsExtracted());
+        assertEquals(degradedReason, source.getErrorMessage());
+        ArgumentCaptor<ContentExtraction> extractionCaptor = ArgumentCaptor.forClass(ContentExtraction.class);
+        verify(contentExtractionMapper).insert(extractionCaptor.capture());
+        assertEquals("番茄炒蛋", extractionCaptor.getValue().getDishName());
     }
 
     @Test

@@ -35,7 +35,6 @@ import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiEmbeddingRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.dto.AiEmbeddingCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
@@ -70,7 +69,6 @@ class AiRuntimeConfigEmbeddingServiceTest {
     Path tempDir;
 
     private AIConfig aiConfig;
-    private ZhipuAIConfig zhipuConfig;
     private DynamicAiModelRegistry registry;
     private Map<String, String> databaseConfigs;
     private AiRuntimeKeyStore chatKeyStore;
@@ -80,14 +78,11 @@ class AiRuntimeConfigEmbeddingServiceTest {
     @BeforeEach
     void setUp() {
         aiConfig = new AIConfig();
-        aiConfig.setProvider("zhipu");
-        aiConfig.setModel("glm-4-flash");
-        aiConfig.setSupervisorModel("glm-4-flash");
-        aiConfig.setVisionModel("glm-4.6v-flash");
+        aiConfig.setProvider("openai-compatible");
+        aiConfig.setModel("gpt-4o-mini");
+        aiConfig.setSupervisorModel("gpt-4o-mini");
+        aiConfig.setVisionModel("gpt-4o-mini");
         aiConfig.setApiKey("");
-        zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("");
-        zhipuConfig.setTimeout(30000);
         databaseConfigs = new HashMap<>();
         registry = new DynamicAiModelRegistry();
         chatKeyStore = new AiRuntimeKeyStore(tempDir.resolve("chat-active-key").toString());
@@ -95,14 +90,14 @@ class AiRuntimeConfigEmbeddingServiceTest {
             tempDir.resolve("embedding-active-key").toString());
         embeddingRuntime = new StubEmbeddingRuntime(embeddingKeyStore);
 
-        when(modelFactory.providerCode()).thenReturn("zhipu");
-        when(modelFactory.providerDisplayName()).thenReturn("智谱");
-        when(modelFactory.knownModels()).thenReturn(List.of("glm-4-flash"));
+        when(modelFactory.providerCode()).thenReturn("openai-compatible");
+        when(modelFactory.providerDisplayName()).thenReturn("OpenAI 兼容");
+        when(modelFactory.knownModels()).thenReturn(List.of("gpt-4o-mini"));
         when(modelFactory.environmentConfig(aiConfig)).thenReturn(AiModelConfig.builder()
-            .provider("zhipu")
-            .model("glm-4-flash")
-            .supervisorModel("glm-4-flash")
-            .visionModel("glm-4.6v-flash")
+            .provider("openai-compatible")
+            .model("gpt-4o-mini")
+            .supervisorModel("gpt-4o-mini")
+            .visionModel("gpt-4o-mini")
             .baseUrl("")
             .timeoutMs(30000)
             .temperature(0.7)
@@ -131,10 +126,10 @@ class AiRuntimeConfigEmbeddingServiceTest {
         AiRuntimeConfigSnapshot snapshot = service().getCurrentSnapshot();
 
         assertNotNull(snapshot.getEmbedding());
-        assertEquals("zhipu", snapshot.getEmbedding().getProvider());
+        assertEquals("openai-compatible", snapshot.getEmbedding().getProvider());
         assertEquals("embedding-3", snapshot.getEmbedding().getModel());
         assertEquals(2048, snapshot.getEmbedding().getDimensions());
-        assertEquals(List.of("zhipu", "openai-compatible"), snapshot.getEmbedding().getProviders());
+        assertEquals(List.of("openai-compatible"), snapshot.getEmbedding().getProviders());
         assertFalse(snapshot.getEmbedding().getKeyStatus().isConfigured());
     }
 
@@ -143,7 +138,7 @@ class AiRuntimeConfigEmbeddingServiceTest {
         AiRuntimeConfigServiceImpl service = service();
 
         AiRuntimeConfigSnapshot snapshot = service.saveAndActivate(candidate(embedding(
-            "zhipu", "embedding-3", 2048, "https://embedding.example.com/v1", EMBEDDING_KEY)), "admin");
+            "openai-compatible", "embedding-3", 2048, "https://embedding.example.com/v1", EMBEDDING_KEY)), "admin");
 
         assertEquals(1, embeddingRuntime.validateCount);
         assertEquals(EMBEDDING_KEY, embeddingRuntime.lastCandidateKey);
@@ -158,11 +153,11 @@ class AiRuntimeConfigEmbeddingServiceTest {
     void chatOnlyChangeKeepsEmbeddingConfigAndSkipsEmbeddingProbe() {
         AiRuntimeConfigServiceImpl service = service();
         service.saveAndActivate(candidate(embedding(
-            "zhipu", "embedding-3", 2048, "https://embedding.example.com/v1", EMBEDDING_KEY)), "admin");
+            "openai-compatible", "embedding-3", 2048, "https://embedding.example.com/v1", EMBEDDING_KEY)), "admin");
         embeddingRuntime.validateCount = 0;
 
         AiModelCandidateDTO chatOnly = candidate(null);
-        chatOnly.setModel("glm-4-flash");
+        chatOnly.setModel("gpt-4o-mini");
         chatOnly.setApiKey("");
 
         AiRuntimeConfigSnapshot snapshot = service.saveAndActivate(chatOnly, "admin");
@@ -176,7 +171,7 @@ class AiRuntimeConfigEmbeddingServiceTest {
         AiRuntimeConfigServiceImpl service = service();
 
         AiRuntimeConfigSnapshot snapshot = service.saveAndActivate(
-            candidate(embedding("zhipu", "bge-m3", 2048, "", EMBEDDING_KEY)), "admin");
+            candidate(embedding("openai-compatible", "bge-m3", 2048, "", EMBEDDING_KEY)), "admin");
 
         assertEquals(1, embeddingRuntime.validateCount);
         assertEquals(1, embeddingRuntime.rebuildRequests);
@@ -191,7 +186,7 @@ class AiRuntimeConfigEmbeddingServiceTest {
         AiRuntimeConfigServiceImpl service = service();
 
         service.saveAndActivate(candidate(embedding(
-            "zhipu", "embedding-3", 2048, "", "rotated-embedding-key-2")), "admin");
+            "openai-compatible", "embedding-3", 2048, "", "rotated-embedding-key-2")), "admin");
 
         assertEquals(0, embeddingRuntime.rebuildRequests);
     }
@@ -220,7 +215,7 @@ class AiRuntimeConfigEmbeddingServiceTest {
         AiRuntimeConfigServiceImpl service = service();
 
         BusinessException error = assertThrows(BusinessException.class, () -> service.saveAndActivate(
-            candidate(embedding("zhipu", "embedding-3", 2048, "https://broken.example.com", EMBEDDING_KEY)),
+            candidate(embedding("openai-compatible", "embedding-3", 2048, "https://broken.example.com", EMBEDDING_KEY)),
             "admin"));
 
         assertEquals("AI_CONFIG_TEST_FAILED", error.getCode());
@@ -235,7 +230,7 @@ class AiRuntimeConfigEmbeddingServiceTest {
         AiRuntimeConfigServiceImpl service = service();
 
         service.saveAndActivate(candidate(embedding(
-            "zhipu", "embedding-3", 2048, "", "rotated-embedding-key")), "admin");
+            "openai-compatible", "embedding-3", 2048, "", "rotated-embedding-key")), "admin");
 
         assertEquals("current-chat-key", chatKeyStore.readKey());
         assertEquals("rotated-embedding-key", embeddingKeyStore.readKey());
@@ -245,9 +240,9 @@ class AiRuntimeConfigEmbeddingServiceTest {
     void rollbackRestoresPreviousEmbeddingConfigThroughSamePath() {
         AiRuntimeConfigServiceImpl service = service();
         service.saveAndActivate(candidate(embedding(
-            "zhipu", "embedding-3", 2048, "https://first.example.com/v1", EMBEDDING_KEY)), "admin");
+            "openai-compatible", "embedding-3", 2048, "https://first.example.com/v1", EMBEDDING_KEY)), "admin");
         service.saveAndActivate(candidate(embedding(
-            "zhipu", "embedding-3", 2048, "https://second.example.com/v1", "")), "admin");
+            "openai-compatible", "embedding-3", 2048, "https://second.example.com/v1", "")), "admin");
         embeddingRuntime.activated = null;
 
         AiRuntimeConfigSnapshot snapshot = service.rollbackToPrevious("admin");
@@ -284,7 +279,7 @@ class AiRuntimeConfigEmbeddingServiceTest {
         service.initialize();
 
         service.saveAndActivate(candidate(embedding(
-            "zhipu", "embedding-3", 2048, "https://audited.example.com/v1", EMBEDDING_KEY)), "admin");
+            "openai-compatible", "embedding-3", 2048, "https://audited.example.com/v1", EMBEDDING_KEY)), "admin");
 
         verify(auditService, org.mockito.Mockito.atLeastOnce())
             .record(org.mockito.ArgumentMatchers.argThat(event ->
@@ -301,10 +296,10 @@ class AiRuntimeConfigEmbeddingServiceTest {
 
     private AiModelCandidateDTO candidate(AiEmbeddingCandidateDTO embedding) {
         return AiModelCandidateDTO.builder()
-            .provider("zhipu")
-            .model("glm-4-flash")
-            .supervisorModel("glm-4-flash")
-            .visionModel("glm-4.6v-flash")
+            .provider("openai-compatible")
+            .model("gpt-4o-mini")
+            .supervisorModel("gpt-4o-mini")
+            .visionModel("gpt-4o-mini")
             .baseUrl("")
             .timeoutMs(30000)
             .temperature(0.7)
@@ -330,7 +325,7 @@ class AiRuntimeConfigEmbeddingServiceTest {
     private static final class StubEmbeddingRuntime implements AnnouncementEmbeddingRuntime {
 
         private final AnnouncementEmbeddingConfig baseline =
-            new AnnouncementEmbeddingConfig("zhipu", "embedding-3", 2048, "");
+            new AnnouncementEmbeddingConfig("openai-compatible", "embedding-3", 2048, "");
         private final AiEmbeddingRuntimeKeyStore keyStore;
 
         private AnnouncementEmbeddingConfig activated;
@@ -400,7 +395,7 @@ class AiRuntimeConfigEmbeddingServiceTest {
 
         @Override
         public List<String> providers() {
-            return List.of("zhipu", "openai-compatible");
+            return List.of("openai-compatible");
         }
 
         @Override

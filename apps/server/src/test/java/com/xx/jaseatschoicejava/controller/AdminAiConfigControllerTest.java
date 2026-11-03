@@ -37,17 +37,17 @@ class AdminAiConfigControllerTest {
     @Test
     void returnsSnapshotWithoutApiKeyPlaintext() throws Exception {
         AiRuntimeConfigSnapshot snapshot = AiRuntimeConfigSnapshot.builder()
-            .provider("zhipu")
-            .model("glm-4-flash")
-            .supervisorModel("glm-4-flash")
-            .visionModel("glm-4.6v-flash")
+            .provider("openai-compatible")
+            .model("gpt-4o-mini")
+            .supervisorModel("gpt-4o-mini")
+            .visionModel("gpt-4o-mini")
             .baseUrl("https://ai.example.com")
             .timeoutMs(30000)
             .temperature(0.7)
             .updatedAt("2026-10-31T00:00:00")
-            .supportedModels(List.of("glm-4-flash"))
-            .providers(List.of(new AiRuntimeConfigSnapshot.AiProviderOption("zhipu", "智谱",
-                List.of("glm-4-flash", "glm-4.6v-flash"))))
+            .supportedModels(List.of("gpt-4o-mini"))
+            .providers(List.of(new AiRuntimeConfigSnapshot.AiProviderOption("openai-compatible", "OpenAI 兼容",
+                List.of("gpt-4o-mini", "gpt-4o"))))
             .build();
         snapshot.setKeyStatus(new AiRuntimeConfigSnapshot.AiKeyStatus(true, "abcd12345678", "2026-10-31T08:00:00"));
         when(service.getCurrentSnapshot()).thenReturn(snapshot);
@@ -55,10 +55,10 @@ class AdminAiConfigControllerTest {
         String body = mockMvc.perform(get("/admin/settings/ai/current"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data.provider").value("zhipu"))
-            .andExpect(jsonPath("$.data.model").value("glm-4-flash"))
-            .andExpect(jsonPath("$.data.supervisorModel").value("glm-4-flash"))
-            .andExpect(jsonPath("$.data.visionModel").value("glm-4.6v-flash"))
+            .andExpect(jsonPath("$.data.provider").value("openai-compatible"))
+            .andExpect(jsonPath("$.data.model").value("gpt-4o-mini"))
+            .andExpect(jsonPath("$.data.supervisorModel").value("gpt-4o-mini"))
+            .andExpect(jsonPath("$.data.visionModel").value("gpt-4o-mini"))
             .andExpect(jsonPath("$.data.keyStatus.configured").value(true))
             .andExpect(jsonPath("$.data.keyStatus.last4").doesNotExist())
             .andReturn().getResponse().getContentAsString();
@@ -70,8 +70,8 @@ class AdminAiConfigControllerTest {
     void returnsPreviousConfigSummary() throws Exception {
         when(service.getPreviousConfigSummary()).thenReturn(AiPreviousConfigSummary.builder()
             .version(1L).updatedAt("2026-10-31T00:00:00")
-            .provider("zhipu").model("glm-4-flash").supervisorModel("glm-4-flash")
-            .visionModel("glm-4.6v-flash").baseUrl("").timeoutMs(30000).temperature(0.7)
+            .provider("openai-compatible").model("gpt-4o-mini").supervisorModel("gpt-4o-mini")
+            .visionModel("gpt-4o-mini").baseUrl("").timeoutMs(30000).temperature(0.7)
             .keyConfigured(true).keyFingerprint("abcd12345678")
             .build());
 
@@ -79,20 +79,20 @@ class AdminAiConfigControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.version").value(1))
-            .andExpect(jsonPath("$.data.model").value("glm-4-flash"))
+            .andExpect(jsonPath("$.data.model").value("gpt-4o-mini"))
             .andExpect(jsonPath("$.data.keyFingerprint").value("abcd12345678"));
     }
 
     @Test
     void rollbackEndpointReturnsCurrentSnapshot() throws Exception {
         when(service.rollbackToPrevious(null)).thenReturn(AiRuntimeConfigSnapshot.builder()
-            .version(1L).model("glm-4-flash").build());
+            .version(1L).model("gpt-4o-mini").build());
 
         mockMvc.perform(post("/admin/settings/ai/rollback"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.version").value(1))
-            .andExpect(jsonPath("$.data.model").value("glm-4-flash"));
+            .andExpect(jsonPath("$.data.model").value("gpt-4o-mini"));
 
         verify(service).rollbackToPrevious(null);
     }
@@ -100,7 +100,7 @@ class AdminAiConfigControllerTest {
     @Test
     void discoverModelsReturnsProviderModelOptions() throws Exception {
         when(service.discoverModels(Mockito.any())).thenReturn(List.of(
-            AiModelOption.builder().id("glm-5.3-solo").name("GLM-5.3").supportsImages(false).build(),
+            AiModelOption.builder().id("gpt-4o-mini").name("GPT-4o mini").supportsImages(false).build(),
             AiModelOption.builder().id("qwen3.8-max-solo").name("Qwen3.8-Max").supportsImages(true).build()));
 
         mockMvc.perform(post("/admin/settings/ai/models")
@@ -108,7 +108,7 @@ class AdminAiConfigControllerTest {
                 .content("{\"provider\":\"openai-compatible\",\"baseUrl\":\"http://gw/v1\",\"apiKey\":\"secret\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data[0].id").value("glm-5.3-solo"))
+            .andExpect(jsonPath("$.data[0].id").value("gpt-4o-mini"))
             .andExpect(jsonPath("$.data[0].supportsImages").value(false))
             .andExpect(jsonPath("$.data[1].supportsImages").value(true));
     }
@@ -116,13 +116,13 @@ class AdminAiConfigControllerTest {
     @Test
     void returnsCurrentConfigConnectivityResult() throws Exception {
         when(service.testCurrentConnectivity()).thenReturn(new AiConnectivityResult(
-            true, "连接成功", "2026-10-31T00:00:00", "glm-4-flash"));
+            true, "连接成功", "2026-10-31T00:00:00", "gpt-4o-mini"));
 
         mockMvc.perform(post("/admin/settings/ai/connectivity-test"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.success").value(true))
             .andExpect(jsonPath("$.data.message").value("连接成功"))
-            .andExpect(jsonPath("$.data.model").value("glm-4-flash"));
+            .andExpect(jsonPath("$.data.model").value("gpt-4o-mini"));
     }
 }

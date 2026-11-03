@@ -17,6 +17,7 @@ import com.xx.jaseatschoicejava.agent.config.NoopStreamingChatModel;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
+import com.xx.jaseatschoicejava.config.AiProviderCompatibility;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiModelOption;
@@ -30,13 +31,12 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 通用 OpenAI Chat Completions 兼容适配器。
  *
- * 用于 Trae/Sub2API 等本地兼容代理；base URL 由管理员配置，不绑定具体厂商。
+ * 任何兼容 OpenAI Chat Completions 的服务都可接入；base URL 由管理员配置，不绑定具体厂商。
  */
 @Component
 @Slf4j
 public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory {
 
-    public static final String PROVIDER_CODE = "openai-compatible";
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(10))
@@ -45,9 +45,7 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
 
     private static final List<String> KNOWN_MODELS = List.of(
         "gpt-4o-mini",
-        "gpt-4o",
-        "glm-5.3-solo",
-        "deepseek-chat"
+        "gpt-4o"
     );
 
     private final AIConfig aiConfig;
@@ -62,7 +60,7 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
 
     @Override
     public String providerCode() {
-        return PROVIDER_CODE;
+        return AiProviderCompatibility.PROVIDER_CODE;
     }
 
     @Override
@@ -79,7 +77,7 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
     public AiModelConfig environmentConfig(AIConfig genericConfig) {
         String model = firstText(genericConfig.getModel(), "gpt-4o-mini");
         return AiModelConfig.builder()
-            .provider(PROVIDER_CODE)
+            .provider(AiProviderCompatibility.PROVIDER_CODE)
             .model(model)
             .supervisorModel(firstText(genericConfig.getSupervisorModel(), model))
             .visionModel(firstText(genericConfig.getVisionModel(), model))
@@ -243,8 +241,9 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
 
     @Override
     public AiCapabilitiesDTO capabilities(AiModelConfig config) {
-        boolean available = hasKey(key(null)) && hasText(config.getBaseUrl());
-        boolean vision = available && hasText(config.getVisionModel());
+        boolean available = hasKey(key(null)) && hasText(config.getBaseUrl())
+            && hasText(config.getModel());
+        boolean vision = available && hasText(config.getVisionModel()) && config.isVisionVerified();
         return AiCapabilitiesDTO.builder()
             .available(available)
             .provider(config.getProvider())

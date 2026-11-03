@@ -16,6 +16,7 @@ import com.xx.jaseatschoicejava.service.RecipeService;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcher;
 import com.xx.jaseatschoicejava.service.extraction.fetcher.ContentFetcherFactory;
+import com.xx.jaseatschoicejava.service.extraction.recognizer.ContentRecognitionResult;
 import com.xx.jaseatschoicejava.service.extraction.recognizer.ContentRecognizer;
 import com.xx.jaseatschoicejava.util.UrlSecurityValidator;
 import com.xx.jaseatschoicejava.vo.ContentExtractionDetailVO;
@@ -42,9 +43,9 @@ import java.util.stream.Collectors;
         } catch (ExtractionParseException e) {
             log.error("提取任务解析失败: taskId={}", task.getId(), e);
             handleParseFailure(task, e);
- * - 文章/图文：Jsoup抓取 + GLM-4.6V-Flash OCR识别
- * - 视频：平台API获取视频流 + GLM-4.6V-Flash 视频理解
- * - 图片：下载 + GLM-4.6V-Flash 图片识别
+ * - 文章/图文：抓取正文和图片后交给通用视觉模型识别
+ * - 视频：抓取标题、描述和封面，当前不调用厂商视频理解接口
+ * - 图片：下载后交给通用视觉模型识别
  *
 
  * @since 2025-01-31
@@ -403,8 +404,9 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
                 return;
             }
 
-            // 抓不到任何可用内容时直接失败：继续往下走只会写入一条空记录
-            if (!fetchedContent.hasText() && !fetchedContent.hasImages() && !fetchedContent.hasVideo()) {
+            // 抓不到任何可用内容时直接失败：视频有封面图时仍可进入封面降级路径。
+            if (!fetchedContent.hasText() && !fetchedContent.hasImages()
+                    && !fetchedContent.hasVideo() && !hasText(fetchedContent.getCoverImage())) {
                 String detail = fetchedContent.getErrorMessage();
                 throw new ExtractionParseException(
                     detail != null && !detail.isBlank()
@@ -419,7 +421,8 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
                 fetchedContent.hasImages(),
                 fetchedContent.hasVideo(),
                 fetchedContent.hasText());
-            String aiResponse = contentRecognizer.recognize(fetchedContent);
+            ContentRecognitionResult recognition = contentRecognizer.recognize(fetchedContent);
+            String aiResponse = recognition.response();
 
             log.info("AI识别结果: {}", aiResponse.length() > 200 ? aiResponse.substring(0, 200) + "..." : aiResponse);
 
@@ -474,6 +477,7 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
             // 7. 更新内容源状态
             source.setExtractionStatus(ExtractionStatus.SUCCESS.getCode());
             source.setIsExtracted(true);
+            source.setErrorMessage(recognition.degradationReason());
             source.setExtractionTime(LocalDateTime.now());
             source.setUpdatedAt(LocalDateTime.now());
             contentSourceMapper.updateById(source);
@@ -560,6 +564,10 @@ public class ContentExtractionServiceImpl implements ContentExtractionService {
         } catch (NumberFormatException e) {
             return defaultValue;
         }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     /**

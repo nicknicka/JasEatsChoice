@@ -2,6 +2,7 @@ package com.xx.jaseatschoicejava.rag;
 
 import java.time.Duration;
 
+import com.xx.jaseatschoicejava.config.AiProviderCompatibility;
 import org.springframework.stereotype.Component;
 
 import dev.langchain4j.model.embedding.EmbeddingModel;
@@ -15,7 +16,7 @@ public class OpenAiCompatibleAnnouncementEmbeddingModelFactory implements Announ
 
     @Override
     public String providerCode() {
-        return "openai-compatible";
+        return AiProviderCompatibility.PROVIDER_CODE;
     }
 
     /**
@@ -25,6 +26,14 @@ public class OpenAiCompatibleAnnouncementEmbeddingModelFactory implements Announ
     @Override
     public boolean isConfigured(String apiKey, String baseUrl) {
         return baseUrl != null && !baseUrl.isBlank();
+    }
+
+    @Override
+    public boolean isConfigured(
+            String apiKey, String model, int dimensions, String baseUrl) {
+        return isConfigured(apiKey, baseUrl)
+            && model != null && !model.isBlank()
+            && dimensions > 0;
     }
 
     @Override

@@ -4,12 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.web.client.RestTemplate;
 
-import java.time.Duration;
 
 /**
  * 内容提取相关配置
@@ -22,7 +18,6 @@ import java.time.Duration;
 public class ContentExtractionConfig {
 
     private FetchConfig fetch = new FetchConfig();
-    private AiConfig ai = new AiConfig();
 
     @Data
     @NoArgsConstructor
@@ -41,22 +36,4 @@ public class ContentExtractionConfig {
         private long maxImageSize = 2 * 1024 * 1024; // 2MB
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class AiConfig {
-        /** 视频理解API超时（毫秒） */
-        private int videoApiTimeout = 120000;
-    }
-
-    /**
-     * 视频API专用RestTemplate（超时更长）
-     */
-    @Bean("videoApiRestTemplate")
-    public RestTemplate videoApiRestTemplate() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(30));
-        factory.setReadTimeout(Duration.ofMillis(ai.getVideoApiTimeout()));
-        return new RestTemplate(factory);
-    }
 }

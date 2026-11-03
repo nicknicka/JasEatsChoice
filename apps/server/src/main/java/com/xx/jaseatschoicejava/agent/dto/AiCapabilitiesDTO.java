@@ -26,7 +26,7 @@ public class AiCapabilitiesDTO {
     private boolean available;
 
     /**
-     * 供应商名称，如 zhipu / qwen / ollama
+     * 当前适配器代码，例如 openai-compatible
      */
     private String provider;
 

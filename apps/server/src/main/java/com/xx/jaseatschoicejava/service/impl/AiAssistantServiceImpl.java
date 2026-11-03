@@ -2,7 +2,7 @@ package com.xx.jaseatschoicejava.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xx.jaseatschoicejava.service.ZhipuAIService;
+import com.xx.jaseatschoicejava.service.AiAssistantService;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
@@ -19,7 +19,7 @@ import java.io.IOException;
 
 
 /**
- * 智谱AI服务实现（视觉识别与特殊功能）
+ * AI 饮食助手服务实现（视觉识别与特殊功能）
  *
  * 注意：以下功能已迁移到 Agent 系统
  * - chat() → NutritionAiAgent
@@ -34,7 +34,7 @@ import java.io.IOException;
  */
 @Slf4j
 @Service
-public class ZhipuAIServiceImpl implements ZhipuAIService {
+public class AiAssistantServiceImpl implements AiAssistantService {
 
     @Resource(name = "visionModel")
     private ChatModel visionModel;

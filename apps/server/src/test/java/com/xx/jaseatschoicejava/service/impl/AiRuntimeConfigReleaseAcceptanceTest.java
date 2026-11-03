@@ -32,7 +32,6 @@ import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
 import com.xx.jaseatschoicejava.exception.BusinessException;
@@ -67,12 +66,11 @@ class AiRuntimeConfigReleaseAcceptanceTest {
     private final Map<String, String> databaseConfigs = new HashMap<>();
     private final List<String> historyRows = new java.util.ArrayList<>();
     private AIConfig aiConfig;
-    private ZhipuAIConfig zhipuConfig;
 
     @BeforeEach
     void setUp() {
         aiConfig = new AIConfig();
-        aiConfig.setProvider("zhipu");
+        aiConfig.setProvider("openai-compatible");
         aiConfig.setModel("env-chat");
         aiConfig.setSupervisorModel("env-supervisor");
         aiConfig.setVisionModel("env-vision");
@@ -80,18 +78,12 @@ class AiRuntimeConfigReleaseAcceptanceTest {
         aiConfig.setTimeout(31000);
         aiConfig.setTemperature(0.2);
 
-        zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("");
-        zhipuConfig.setModel("");
-        zhipuConfig.setVisionModel("");
-        zhipuConfig.setBaseUrl("");
-        zhipuConfig.setTimeout(null);
 
         databaseConfigs.clear();
         historyRows.clear();
-        when(modelFactory.providerCode()).thenReturn("zhipu");
+        when(modelFactory.providerCode()).thenReturn("openai-compatible");
         when(modelFactory.environmentConfig(aiConfig)).thenReturn(AiModelConfig.builder()
-            .provider("zhipu")
+            .provider("openai-compatible")
             .model(aiConfig.getModel())
             .supervisorModel(aiConfig.getSupervisorModel())
             .visionModel(aiConfig.getVisionModel())
@@ -234,10 +226,10 @@ class AiRuntimeConfigReleaseAcceptanceTest {
 
     private AiModelCandidateDTO candidate(String model, String apiKey) {
         return AiModelCandidateDTO.builder()
-            .provider("zhipu")
+            .provider("openai-compatible")
             .model(model)
             .supervisorModel(model)
-            .visionModel("glm-4.6v-flash")
+            .visionModel("gpt-4o-mini")
             .baseUrl("https://candidate.example.com")
             .timeoutMs(30000)
             .temperature(0.7)

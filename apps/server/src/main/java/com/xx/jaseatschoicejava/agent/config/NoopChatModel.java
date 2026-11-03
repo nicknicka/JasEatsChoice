@@ -22,7 +22,7 @@ public class NoopChatModel implements ChatModel {
     public static final String ERROR_CODE = "AI_NOT_CONFIGURED";
 
     static final String MESSAGE =
-        "AI 未配置：请设置 AI_API_KEY（或对应供应商的 KEY）后重启服务";
+        "AI 未配置：请设置 AI_API_KEY 和 AI_BASE_URL 后重启服务";
 
     @Override
     public ChatResponse doChat(ChatRequest chatRequest) {

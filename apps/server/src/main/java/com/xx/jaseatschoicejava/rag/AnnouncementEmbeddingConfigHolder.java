@@ -1,5 +1,7 @@
 package com.xx.jaseatschoicejava.rag;
 
+import com.xx.jaseatschoicejava.config.AiProviderCompatibility;
+
 /**
  * 当前生效的公告 Embedding 配置。
  *
@@ -34,7 +36,9 @@ public class AnnouncementEmbeddingConfigHolder {
 
     private static AnnouncementEmbeddingConfig fromProperties(AnnouncementRagProperties properties) {
         AnnouncementRagProperties.Embedding embedding = properties.getEmbedding();
+        String provider = embedding.getProvider();
+        provider = AiProviderCompatibility.normalize(provider);
         return new AnnouncementEmbeddingConfig(
-            embedding.getProvider(), embedding.getModel(), embedding.getDimensions(), embedding.getBaseUrl());
+            provider, embedding.getModel(), embedding.getDimensions(), embedding.getBaseUrl());
     }
 }

@@ -28,4 +28,13 @@ public interface AnnouncementEmbeddingModelFactory {
     default boolean isConfigured(String apiKey, String baseUrl) {
         return apiKey != null && !apiKey.isBlank();
     }
+
+    /**
+     * 配置是否完整到可以构建客户端。默认沿用只校验 key 的旧约定，
+     * OpenAI 兼容实现会额外要求模型和有效维度。
+     */
+    default boolean isConfigured(
+            String apiKey, String model, int dimensions, String baseUrl) {
+        return isConfigured(apiKey, baseUrl);
+    }
 }

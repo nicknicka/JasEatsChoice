@@ -39,8 +39,8 @@ class AdminAiModelHotSwitchControllerTest {
 
     private AiModelCandidateDTO candidate() {
         return AiModelCandidateDTO.builder()
-            .provider("zhipu").model("glm-4-flash")
-            .supervisorModel("glm-4-flash").visionModel("glm-4.6v-flash")
+            .provider("openai-compatible").model("gpt-4o-mini")
+            .supervisorModel("gpt-4o-mini").visionModel("gpt-4o-mini")
             .baseUrl("").timeoutMs(30000).temperature(0.7).build();
     }
 
@@ -50,8 +50,8 @@ class AdminAiModelHotSwitchControllerTest {
         AiModelCandidateDTO candidate = candidate();
         candidate.setApiKey(candidateKey);
         AiRuntimeConfigSnapshot snapshot = AiRuntimeConfigSnapshot.builder()
-            .provider("zhipu").model("glm-4-flash")
-            .supervisorModel("glm-4-flash").visionModel("glm-4.6v-flash")
+            .provider("openai-compatible").model("gpt-4o-mini")
+            .supervisorModel("gpt-4o-mini").visionModel("gpt-4o-mini")
             .timeoutMs(30000).temperature(0.7).version(2L)
             .keyStatus(new AiRuntimeConfigSnapshot.AiKeyStatus(true, "8d43aa55aa4f", "2026-10-31T08:00:00"))
             .build();
@@ -83,14 +83,14 @@ class AdminAiModelHotSwitchControllerTest {
     void embeddingConfigIsAcceptedAndReturnedWithoutEchoingKey() throws Exception {
         String embeddingKey = "controller-embedding-key-0123456789";
         AiRuntimeConfigSnapshot snapshot = AiRuntimeConfigSnapshot.builder()
-            .provider("zhipu").model("glm-4-flash")
-            .supervisorModel("glm-4-flash").visionModel("glm-4.6v-flash")
+            .provider("openai-compatible").model("gpt-4o-mini")
+            .supervisorModel("gpt-4o-mini").visionModel("gpt-4o-mini")
             .timeoutMs(30000).temperature(0.7).version(3L)
             .keyStatus(new AiRuntimeConfigSnapshot.AiKeyStatus(true, "8d43aa55aa4f", "2026-10-31T08:00:00"))
             .embedding(AiEmbeddingSnapshot.builder()
                 .provider("openai-compatible").model("bge-m3").dimensions(1024)
                 .baseUrl("http://localhost:11434/v1")
-                .providers(List.of("zhipu", "openai-compatible"))
+                .providers(List.of("openai-compatible"))
                 .keyStatus(new AiRuntimeConfigSnapshot.AiKeyStatus(true, "3c9f1a2b7d4e", "2026-10-31T08:35:00"))
                 .build())
             .build();
@@ -99,10 +99,10 @@ class AdminAiModelHotSwitchControllerTest {
 
         String body = """
             {
-              "provider": "zhipu",
-              "model": "glm-4-flash",
-              "supervisorModel": "glm-4-flash",
-              "visionModel": "glm-4.6v-flash",
+              "provider": "openai-compatible",
+              "model": "gpt-4o-mini",
+              "supervisorModel": "gpt-4o-mini",
+              "visionModel": "gpt-4o-mini",
               "timeoutMs": 30000,
               "temperature": 0.7,
               "embedding": {
@@ -134,7 +134,7 @@ class AdminAiModelHotSwitchControllerTest {
     @Test
     void candidateTestIsExposedAndDoesNotPersist() throws Exception {
         when(service.testCandidateConnectivity(Mockito.any(AiModelCandidateDTO.class)))
-            .thenReturn(new AiConnectivityResult(true, "连接成功", "2026-10-31T00:00:00", "glm-4-flash"));
+            .thenReturn(new AiConnectivityResult(true, "连接成功", "2026-10-31T00:00:00", "gpt-4o-mini"));
 
         mockMvc.perform(post("/admin/settings/ai/test")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -142,7 +142,7 @@ class AdminAiModelHotSwitchControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.success").value(true))
-            .andExpect(jsonPath("$.data.model").value("glm-4-flash"));
+            .andExpect(jsonPath("$.data.model").value("gpt-4o-mini"));
 
         verify(service).testCandidateConnectivity(Mockito.any(AiModelCandidateDTO.class));
     }
@@ -151,8 +151,8 @@ class AdminAiModelHotSwitchControllerTest {
     void saveAndActivateEndpointReturnsCurrentSnapshot() throws Exception {
         when(service.saveAndActivate(Mockito.any(AiModelCandidateDTO.class), Mockito.any()))
             .thenReturn(AiRuntimeConfigSnapshot.builder()
-                .provider("zhipu").model("glm-4-flash")
-                .supervisorModel("glm-4-flash").visionModel("glm-4.6v-flash")
+                .provider("openai-compatible").model("gpt-4o-mini")
+                .supervisorModel("gpt-4o-mini").visionModel("gpt-4o-mini")
                 .timeoutMs(30000).temperature(0.7).version(2L).build());
 
         mockMvc.perform(post("/admin/settings/ai/activate")
@@ -161,7 +161,7 @@ class AdminAiModelHotSwitchControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.version").value(2))
-            .andExpect(jsonPath("$.data.model").value("glm-4-flash"));
+            .andExpect(jsonPath("$.data.model").value("gpt-4o-mini"));
 
         verify(service).saveAndActivate(Mockito.any(AiModelCandidateDTO.class), Mockito.any());
     }

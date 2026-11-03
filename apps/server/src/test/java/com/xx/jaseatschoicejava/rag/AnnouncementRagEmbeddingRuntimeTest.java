@@ -22,7 +22,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiEmbeddingRuntimeKeyStore;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.service.AnnouncementEmbeddingRuntime;
 
@@ -40,14 +39,12 @@ class AnnouncementRagEmbeddingRuntimeTest {
 
     @Test
     void environmentKeyConfiguresEmbedding() {
-        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("");
         AIConfig aiConfig = new AIConfig();
         aiConfig.setApiKey("generic-test-key");
 
         AnnouncementRagEmbeddingRuntime runtime = runtime(
-            properties("zhipu", "embedding-3", 2048, ""), zhipuConfig, aiConfig, null,
-            List.of(measuringFactory("zhipu", 2048)));
+            properties("openai-compatible", "bge-m3", 2048, ""), aiConfig, null,
+            List.of(measuringFactory("openai-compatible", 2048)));
 
         assertInstanceOf(EmbeddingModel.class, runtime.model());
         assertNotNull(runtime.usable());
@@ -56,18 +53,32 @@ class AnnouncementRagEmbeddingRuntimeTest {
     @Test
     void missingKey_returnsDisabledModelAndNoUsableConfig() {
         AnnouncementRagEmbeddingRuntime runtime = runtime(
-            properties("zhipu", "embedding-3", 2048, ""), new ZhipuAIConfig(), new AIConfig(), null,
-            List.of(measuringFactory("zhipu", 2048)));
+            properties("openai-compatible", "bge-m3", 2048, ""), new AIConfig(), null,
+            List.of(measuringFactory("openai-compatible", 2048)));
 
         assertInstanceOf(AnnouncementRagDisabledEmbeddingModel.class, runtime.model());
         assertNull(runtime.usable());
     }
 
     @Test
+    void incompleteOpenAiCompatibleConfigDoesNotBuildDimensionZeroModel() {
+        AnnouncementRagEmbeddingRuntime runtime = runtime(
+            properties("openai-compatible", "", 0, "http://localhost:11434/v1"),
+            new AIConfig(), null,
+            List.of(new OpenAiCompatibleAnnouncementEmbeddingModelFactory()));
+
+        assertInstanceOf(AnnouncementRagDisabledEmbeddingModel.class, runtime.model());
+        assertNull(runtime.usable());
+        BusinessException error = assertThrows(BusinessException.class, () -> runtime.validate(
+            new AnnouncementEmbeddingConfig("openai-compatible", "", 0, "http://localhost:11434/v1"), null));
+        assertEquals("EMBEDDING_CONFIG_INCOMPLETE", error.getCode());
+    }
+
+    @Test
     void keylessOpenAiCompatibleEndpointWithBaseUrlBuildsModel() {
         AnnouncementRagEmbeddingRuntime runtime = runtime(
             properties("openai-compatible", "bge-m3", 1024, "http://localhost:11434/v1"),
-            new ZhipuAIConfig(), new AIConfig(), null,
+            new AIConfig(), null,
             List.of(measuringFactory("openai-compatible", 1024)));
 
         assertInstanceOf(EmbeddingModel.class, runtime.model());
@@ -77,67 +88,80 @@ class AnnouncementRagEmbeddingRuntimeTest {
     @Test
     void runtimeKeySlotIsUsedBeforeEnvironmentKeys() throws Exception {
         AiEmbeddingRuntimeKeyStore keyStore = keyStore("embedding-runtime-key");
-        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("zhipu-env-key");
         AIConfig aiConfig = new AIConfig();
         aiConfig.setApiKey("generic-env-key");
-        AnnouncementEmbeddingModelFactory factory = measuringFactory("zhipu", 2048);
+        AnnouncementEmbeddingModelFactory factory = measuringFactory("openai-compatible", 2048);
 
         AnnouncementRagEmbeddingRuntime runtime = runtime(
-            properties("zhipu", "embedding-3", 2048, ""), zhipuConfig, aiConfig, keyStore, List.of(factory));
+            properties("openai-compatible", "bge-m3", 2048, ""), aiConfig, keyStore, List.of(factory));
 
         runtime.model();
 
-        verify(factory).build("embedding-runtime-key", "embedding-3", 2048, "",
+        verify(factory).build("embedding-runtime-key", "bge-m3", 2048, "",
             java.time.Duration.ofMillis(30000));
     }
 
     @Test
     void runtimeConfigIsResolvedOnEachCall() {
-        AnnouncementRagProperties properties = properties("zhipu", "embedding-3", 2048, "");
+        AnnouncementRagProperties properties = properties("openai-compatible", "embedding-3", 2048, "");
         AnnouncementEmbeddingConfigHolder holder = new AnnouncementEmbeddingConfigHolder(properties);
-        AnnouncementEmbeddingModelFactory zhipuFactory = measuringFactory("zhipu", 2048);
-        AnnouncementEmbeddingModelFactory openAiFactory = measuringFactory("openai-compatible", 1024);
+        AnnouncementEmbeddingModelFactory factory = measuringFactory("openai-compatible", 2048);
 
         AnnouncementRagEmbeddingRuntime runtime = new AnnouncementRagEmbeddingRuntime(
-            properties, holder, null, withKey("test-key"), new AIConfig(),
-            List.of(zhipuFactory, openAiFactory), null, null);
+            properties, holder, null, withKey("test-key"),
+            List.of(factory), null, null);
 
         runtime.model();
         holder.update(new AnnouncementEmbeddingConfig(
             "openai-compatible", "bge-m3", 1024, "http://localhost:11434/v1"));
         runtime.model();
 
-        verify(zhipuFactory).build("test-key", "embedding-3", 2048, "",
+        verify(factory).build("test-key", "embedding-3", 2048, "",
             java.time.Duration.ofMillis(30000));
-        verify(openAiFactory).build("test-key", "bge-m3", 1024,
+        verify(factory).build("test-key", "bge-m3", 1024,
             "http://localhost:11434/v1", java.time.Duration.ofMillis(30000));
     }
 
     @Test
     void effectiveFillsBlankPersistedFieldsFromEnvironment() {
         AnnouncementRagEmbeddingRuntime runtime = runtime(
-            properties("zhipu", "embedding-3", 2048, ""), new ZhipuAIConfig(), new AIConfig(), null,
-            List.of(measuringFactory("zhipu", 2048)));
+            properties("openai-compatible", "bge-m3", 2048, ""), new AIConfig(), null,
+            List.of(measuringFactory("openai-compatible", 2048)));
 
         AnnouncementEmbeddingConfig effective = runtime.effective(
             new AnnouncementEmbeddingConfig("", null, 0, null));
 
-        assertEquals("zhipu", effective.provider());
-        assertEquals("embedding-3", effective.model());
+        assertEquals("openai-compatible", effective.provider());
+        assertEquals("bge-m3", effective.model());
         assertEquals(2048, effective.dimensions());
         assertEquals("", effective.baseUrl());
     }
 
     @Test
+    void legacyProviderStillSelectsOpenAiCompatibleFactory() {
+        AnnouncementRagEmbeddingRuntime runtime = runtime(
+            properties("openai-compatible", "bge-m3", 2048, "http://localhost:11434/v1"),
+            new AIConfig(), null,
+            List.of(measuringFactory("openai-compatible", 2048)));
+
+        AnnouncementEmbeddingConfig usable = AnnouncementRagEmbeddingRuntime.usableConfig(
+            new AnnouncementEmbeddingConfig("zhipu", "bge-m3", 2048, "http://localhost:11434/v1"),
+            null, new AIConfig(), List.of(measuringFactory("openai-compatible", 2048)));
+
+        assertNotNull(usable);
+        assertEquals("openai-compatible",
+            runtime.effective(new AnnouncementEmbeddingConfig("zhipu", "bge-m3", 2048, "")).provider());
+    }
+
+    @Test
     void validateRunsRealEmbeddingCallWithMatchingConfiguredDimension() {
         EmbeddingModel model = measuringModel(2048);
-        AnnouncementEmbeddingModelFactory factory = factory("zhipu", model);
+        AnnouncementEmbeddingModelFactory factory = factory("openai-compatible", model);
         AnnouncementRagEmbeddingRuntime runtime = runtime(
-            properties("zhipu", "embedding-3", 2048, ""), withKey("test-key"), new AIConfig(), null,
+            properties("openai-compatible", "bge-m3", 2048, ""), withKey("test-key"), null,
             List.of(factory));
 
-        runtime.validate(new AnnouncementEmbeddingConfig("zhipu", "embedding-3", 2048, ""), null);
+        runtime.validate(new AnnouncementEmbeddingConfig("openai-compatible", "bge-m3", 2048, ""), null);
 
         verify(model).embed("ping");
     }
@@ -145,11 +169,11 @@ class AnnouncementRagEmbeddingRuntimeTest {
     @Test
     void validateRejectsConfiguredDimensionDifferentFromMeasured() {
         AnnouncementRagEmbeddingRuntime runtime = runtime(
-            properties("zhipu", "embedding-3", 1024, ""), withKey("test-key"), new AIConfig(), null,
-            List.of(measuringFactory("zhipu", 2048)));
+            properties("openai-compatible", "bge-m3", 1024, ""), withKey("test-key"), null,
+            List.of(measuringFactory("openai-compatible", 2048)));
 
         BusinessException error = assertThrows(BusinessException.class, () -> runtime.validate(
-            new AnnouncementEmbeddingConfig("zhipu", "embedding-3", 1024, ""), null));
+            new AnnouncementEmbeddingConfig("openai-compatible", "bge-m3", 1024, ""), null));
 
         assertEquals("EMBEDDING_DIMENSION_CONFIG_MISMATCH", error.getCode());
     }
@@ -157,7 +181,7 @@ class AnnouncementRagEmbeddingRuntimeTest {
     @Test
     void validateRejectsKeylessProviderWithoutBaseUrl() {
         AnnouncementRagEmbeddingRuntime runtime = runtime(
-            properties("openai-compatible", "bge-m3", 1024, ""), new ZhipuAIConfig(), new AIConfig(), null,
+            properties("openai-compatible", "bge-m3", 1024, ""), new AIConfig(), null,
             List.of(measuringFactory("openai-compatible", 1024)));
 
         BusinessException error = assertThrows(BusinessException.class, () -> runtime.validate(
@@ -169,17 +193,17 @@ class AnnouncementRagEmbeddingRuntimeTest {
     @Test
     void validateWrapsConnectivityFailure() {
         AnnouncementEmbeddingModelFactory factory = mock(AnnouncementEmbeddingModelFactory.class);
-        lenient().when(factory.providerCode()).thenReturn("zhipu");
-        when(factory.isConfigured("test-key", "")).thenReturn(true);
+        lenient().when(factory.providerCode()).thenReturn("openai-compatible");
+        when(factory.isConfigured(any(), any(), anyInt(), any())).thenReturn(true);
         EmbeddingModel model = mock(EmbeddingModel.class);
         when(model.embed("ping")).thenThrow(new RuntimeException("连接被拒绝"));
         when(factory.build(any(), any(), anyInt(), any(), any())).thenReturn(model);
         AnnouncementRagEmbeddingRuntime runtime = runtime(
-            properties("zhipu", "embedding-3", 2048, ""), withKey("test-key"), new AIConfig(), null,
+            properties("openai-compatible", "bge-m3", 2048, ""), withKey("test-key"), null,
             List.of(factory));
 
         BusinessException error = assertThrows(BusinessException.class, () -> runtime.validate(
-            new AnnouncementEmbeddingConfig("zhipu", "embedding-3", 2048, ""), null));
+            new AnnouncementEmbeddingConfig("openai-compatible", "bge-m3", 2048, ""), null));
 
         assertEquals("EMBEDDING_CONNECTIVITY_FAILED", error.getCode());
         assertTrue(error.getMessage().contains("连接被拒绝"));
@@ -188,11 +212,11 @@ class AnnouncementRagEmbeddingRuntimeTest {
     @Test
     void providersAndKeyStatusDescribeRuntimeSlot() throws Exception {
         AnnouncementRagEmbeddingRuntime runtime = runtime(
-            properties("zhipu", "embedding-3", 2048, ""), withKey(""), new AIConfig(),
+            properties("openai-compatible", "bge-m3", 2048, ""), withKey(""),
             keyStore("embedding-runtime-key"),
-            List.of(measuringFactory("zhipu", 2048), measuringFactory("openai-compatible", 1024)));
+            List.of(measuringFactory("openai-compatible", 2048)));
 
-        assertEquals(List.of("zhipu", "openai-compatible"), runtime.providers());
+        assertEquals(List.of("openai-compatible"), runtime.providers());
 
         AnnouncementEmbeddingRuntime.KeyStatus status = runtime.keyStatus();
         assertTrue(status.configured());
@@ -204,36 +228,33 @@ class AnnouncementRagEmbeddingRuntimeTest {
     void selectFactoryRejectsUnknownProviderWithAvailableCodes() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () ->
             AnnouncementRagConfig.selectEmbeddingModelFactory(
-                List.of(measuringFactory("zhipu", 2048),
-                    measuringFactory("openai-compatible", 1024)),
+                List.of(measuringFactory("openai-compatible", 1024)),
                 "unknown-provider"));
 
         assertTrue(error.getMessage().contains("unknown-provider"));
-        assertTrue(error.getMessage().contains("zhipu"));
         assertTrue(error.getMessage().contains("openai-compatible"));
     }
 
     @Test
     void selectFactoryWithoutImplementations_throws() {
         assertThrows(IllegalStateException.class, () ->
-            AnnouncementRagConfig.selectEmbeddingModelFactory(List.of(), "zhipu"));
+            AnnouncementRagConfig.selectEmbeddingModelFactory(List.of(), "openai-compatible"));
     }
 
     private AnnouncementRagEmbeddingRuntime runtime(
             AnnouncementRagProperties properties,
-            ZhipuAIConfig zhipuConfig,
             AIConfig aiConfig,
             AiEmbeddingRuntimeKeyStore keyStore,
             List<AnnouncementEmbeddingModelFactory> factories) {
         return new AnnouncementRagEmbeddingRuntime(
             properties, new AnnouncementEmbeddingConfigHolder(properties), keyStore,
-            zhipuConfig, aiConfig, factories, null, null);
+            aiConfig, factories, null, null);
     }
 
-    private ZhipuAIConfig withKey(String key) {
-        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey(key);
-        return zhipuConfig;
+    private AIConfig withKey(String key) {
+        AIConfig aiConfig = new AIConfig();
+        aiConfig.setApiKey(key);
+        return aiConfig;
     }
 
     private AiEmbeddingRuntimeKeyStore keyStore(String key) throws Exception {
@@ -270,6 +291,11 @@ class AnnouncementRagEmbeddingRuntimeTest {
         lenient().when(factory.isConfigured(any(), any())).thenAnswer(invocation -> {
             String apiKey = invocation.getArgument(0);
             String baseUrl = invocation.getArgument(1);
+            return (apiKey != null && !apiKey.isBlank()) || (baseUrl != null && !baseUrl.isBlank());
+        });
+        lenient().when(factory.isConfigured(any(), any(), anyInt(), any())).thenAnswer(invocation -> {
+            String apiKey = invocation.getArgument(0);
+            String baseUrl = invocation.getArgument(3);
             return (apiKey != null && !apiKey.isBlank()) || (baseUrl != null && !baseUrl.isBlank());
         });
         lenient().when(factory.build(any(), any(), anyInt(), any(), any())).thenReturn(model);

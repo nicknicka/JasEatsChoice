@@ -186,6 +186,12 @@
                 <p v-if="isFailedSource(source)" class="failure-summary">
                   {{ getFailureSummary(source) }}
                 </p>
+                <p
+                  v-else-if="source.extractionStatus === 'SUCCESS' && source.errorMessage"
+                  class="degradation-summary"
+                >
+                  降级说明：{{ source.errorMessage }}
+                </p>
                 <div class="card-footer">
                   <span class="card-time">{{ formatTime(source.extractionTime || source.createdAt) }}</span>
                   <div class="card-actions">
@@ -1128,6 +1134,16 @@ onUnmounted(() => {
 .content-type {
   font-size: 11px;
   color: @nordic-text-muted;
+}
+
+.degradation-summary {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: #8a5a00;
+  background: #fff7e6;
+  font-size: 0.929rem;
+  line-height: 1.5;
 }
 
 .failure-summary {

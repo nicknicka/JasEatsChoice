@@ -30,7 +30,6 @@ import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
 import com.xx.jaseatschoicejava.dto.AiModelCandidateDTO;
 import com.xx.jaseatschoicejava.dto.AiRuntimeConfigSnapshot;
@@ -51,28 +50,21 @@ class AiModelHotSwitchServiceTest {
     private AiModelClientFactory modelFactory;
 
     private AIConfig aiConfig;
-    private ZhipuAIConfig zhipuConfig;
     private DynamicAiModelRegistry registry;
     private AiRuntimeConfigServiceImpl service;
 
     @BeforeEach
     void setUp() {
         aiConfig = new AIConfig();
-        aiConfig.setProvider("zhipu");
+        aiConfig.setProvider("openai-compatible");
         aiConfig.setApiKey("secret-key-12345678901");
         aiConfig.setModel("env-chat");
         aiConfig.setSupervisorModel("env-supervisor");
         aiConfig.setVisionModel("env-vision");
         aiConfig.setTimeout(30000);
         aiConfig.setTemperature(0.7);
-        zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("");
-        zhipuConfig.setModel("");
-        zhipuConfig.setVisionModel("");
-        zhipuConfig.setBaseUrl("");
-        zhipuConfig.setTimeout(null);
         registry = new DynamicAiModelRegistry();
-                when(modelFactory.providerCode()).thenReturn("zhipu");
+                when(modelFactory.providerCode()).thenReturn("openai-compatible");
         when(modelFactory.resolveKey(null)).thenAnswer(ignored -> aiConfig.getApiKey());
         when(modelFactory.buildChatModel(any(AiModelConfig.class), isNull()))
             .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
@@ -81,7 +73,7 @@ class AiModelHotSwitchServiceTest {
         when(modelFactory.buildVisionModel(any(AiModelConfig.class), isNull()))
             .thenReturn(org.mockito.Mockito.mock(ChatModel.class));
         when(modelFactory.environmentConfig(any(AIConfig.class))).thenReturn(AiModelConfig.builder()
-            .provider("zhipu")
+            .provider("openai-compatible")
             .model(aiConfig.getModel())
             .supervisorModel(aiConfig.getSupervisorModel())
             .visionModel(aiConfig.getVisionModel())
@@ -102,10 +94,10 @@ service = new AiRuntimeConfigServiceImpl(
 
     private AiModelCandidateDTO candidate() {
         return AiModelCandidateDTO.builder()
-            .provider("zhipu")
-            .model("glm-4-flash")
-            .supervisorModel("glm-4-flash")
-            .visionModel("glm-4.6v-flash")
+            .provider("openai-compatible")
+            .model("gpt-4o-mini")
+            .supervisorModel("gpt-4o-mini")
+            .visionModel("gpt-4o-mini")
             .baseUrl("https://ai.example.com")
             .timeoutMs(12000)
             .temperature(0.4)
@@ -115,7 +107,7 @@ service = new AiRuntimeConfigServiceImpl(
     @Test
     void databaseAiGroupTakesPriorityOverEnvironment() {
         AiModelConfig dbConfig = AiModelConfig.builder()
-            .provider("zhipu")
+            .provider("openai-compatible")
             .model("db-chat")
             .supervisorModel("db-supervisor")
             .visionModel("db-vision")
@@ -160,7 +152,7 @@ service = new AiRuntimeConfigServiceImpl(
         AiConnectivityResult result = service.testCandidateConnectivity(candidate());
 
         assertTrue(result.isSuccess());
-        assertEquals("glm-4-flash", result.getModel());
+        assertEquals("gpt-4o-mini", result.getModel());
         verify(systemConfigService, never()).setConfigValue(anyString(), anyString(), anyString(), anyString());
         assertEquals("env-chat", service.getCurrentSnapshot().getModel());
     }
@@ -174,9 +166,9 @@ service = new AiRuntimeConfigServiceImpl(
 
         AiRuntimeConfigSnapshot snapshot = service.saveAndActivate(candidate());
 
-        assertEquals("glm-4-flash", snapshot.getModel());
-        assertEquals("glm-4.6v-flash", snapshot.getVisionModel());
-        assertEquals("glm-4-flash", service.getCurrentSnapshot().getModel());
+        assertEquals("gpt-4o-mini", snapshot.getModel());
+        assertEquals("gpt-4o-mini", snapshot.getVisionModel());
+        assertEquals("gpt-4o-mini", service.getCurrentSnapshot().getModel());
         verify(systemConfigService).setConfigValue(
             eq("ai.runtime-config"), anyString(), anyString(), anyString());
     }

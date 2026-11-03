@@ -3,7 +3,6 @@ package com.xx.jaseatschoicejava.agent.config;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.service.impl.AiModelClientFactory;
 import com.xx.jaseatschoicejava.service.impl.AiProviderRegistry;
 
@@ -21,8 +20,8 @@ import org.springframework.context.annotation.Configuration;
  * 因此新增供应商适配器（如 openai-compatible）时这里无需改动。
  */
 @Configuration
-@EnableConfigurationProperties({ AIConfig.class, ZhipuAIConfig.class })
-public class ZhipuChatModelFactory {
+@EnableConfigurationProperties({ AIConfig.class })
+public class AiChatModelFactory {
 
     @Bean
     public ChatModelProvider chatModelProvider(

@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.service.impl;
 
 import java.time.LocalDateTime;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,10 +11,13 @@ import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.AIConfig;
+import com.xx.jaseatschoicejava.config.AiProviderCompatibility;
 import com.xx.jaseatschoicejava.config.AiEmbeddingRuntimeKeyStore;
 import com.xx.jaseatschoicejava.config.AiRuntimeKeyStore;
 import com.xx.jaseatschoicejava.dto.AiConnectivityResult;
@@ -35,6 +39,9 @@ import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
 import com.xx.jaseatschoicejava.service.SystemConfigService;
 import com.xx.jaseatschoicejava.util.SecretFingerprint;
 
+import dev.langchain4j.data.message.ImageContent;
+import dev.langchain4j.data.message.TextContent;
+import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +55,8 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     private static final String CONFIG_KEY = "ai.runtime-config";
     private static final String CONFIG_GROUP = "ai";
+    private static final String VISION_PROBE_IMAGE =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 
     private final AIConfig aiConfig;
     private final SystemConfigService systemConfigService;
@@ -93,9 +102,8 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     @PostConstruct
     public synchronized void initialize() {
-        AiModelConfig config = effectiveConfig(systemConfigService == null ? null
-            : systemConfigService.getConfigsByGroup(CONFIG_GROUP));
-        configHistory = loadHistory();
+        AiModelConfig config = effectiveConfig(migrateDatabaseConfig());
+        configHistory = migrateHistory(loadHistory());
         activate(config, configHistory.getActiveVersion());
     }
 
@@ -116,6 +124,10 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             .baseUrl(previous.getConfig().getBaseUrl())
             .timeoutMs(previous.getConfig().getTimeoutMs())
             .temperature(previous.getConfig().getTemperature())
+            .visionVerified(previous.getConfig().isVisionVerified())
+            .visionVerificationReason(previous.getConfig().getVisionVerificationReason())
+            .needsReconfiguration(previous.getConfig().isNeedsReconfiguration())
+            .configurationNotice(previous.getConfig().getConfigurationNotice())
             .keyConfigured(hasText(apiKey))
             .keyFingerprint(hasText(apiKey) ? SecretFingerprint.shortSha256(apiKey) : null)
             .build();
@@ -138,7 +150,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
         AiModelClientFactory adapter = adapter(previous.getConfig().getProvider());
         try {
-            pingRoles(adapter, previous.getConfig(), null);
+            pingRoles(adapter, previous.getConfig(), null, false);
             validateEmbeddingForRollback(previous.getConfig());
         } catch (BusinessException businessException) {
             recordAudit("ROLLBACK_FAILED", version, null, currentConfig(), null, operator,
@@ -240,6 +252,10 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             .baseUrl(config.getBaseUrl() == null ? "" : config.getBaseUrl())
             .timeoutMs(config.getTimeoutMs())
             .temperature(config.getTemperature())
+            .visionVerified(config.isVisionVerified())
+            .visionVerificationReason(config.getVisionVerificationReason())
+            .needsReconfiguration(config.isNeedsReconfiguration())
+            .configurationNotice(config.getConfigurationNotice())
             .updatedAt(updatedAt)
             .version(version)
             .keyStatus(keyStatus(apiKey))
@@ -259,7 +275,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             return failure(config.getModel(), "AI key 未配置");
         }
         try {
-            pingRoles(adapter, config, null);
+            pingRoles(adapter, config, null, false);
             return new AiConnectivityResult(true, "连接成功", testedAt(), config.getModel());
         } catch (Exception exception) {
             return failure(config.getModel(), safeMessage(exception, apiKey));
@@ -288,9 +304,9 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             return failure(config.getModel(), "AI key 未配置");
         }
         try {
-            pingRoles(adapter, config, candidateKey);
+            CandidateEvaluation evaluation = evaluateCandidate(adapter, config, candidateKey);
             validateEmbeddingCandidate(candidate);
-            return new AiConnectivityResult(true, "连接成功", testedAt(), config.getModel());
+            return new AiConnectivityResult(true, evaluation.message(), testedAt(), config.getModel());
         } catch (Exception exception) {
             return failure(config.getModel(), safeMessage(exception, apiKey));
         }
@@ -304,16 +320,51 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     @Override
     public synchronized AiRuntimeConfigSnapshot saveAndActivate(
             AiModelCandidateDTO candidate, String operator) {
-        AiConnectivityResult testResult = testCandidateConnectivity(candidate);
+        AiConnectivityResult testResult;
+        CandidateEvaluation evaluation;
+        AiModelConfig config;
+        AiModelClientFactory adapter;
+        try {
+            config = validatedConfig(candidate);
+            adapter = adapter(config.getProvider());
+            String candidateKey = candidateKey(candidate);
+            String apiKey = candidateKey != null ? candidateKey : activeKey();
+            if (!hasText(apiKey)) {
+                testResult = failure(config.getModel(), "AI key 未配置");
+                evaluation = null;
+            } else {
+                evaluation = evaluateCandidate(adapter, config, candidateKey);
+                validateEmbeddingCandidate(candidate);
+                testResult = new AiConnectivityResult(
+                    true, evaluation.message(), testedAt(), config.getModel());
+            }
+        } catch (BusinessException | IllegalArgumentException exception) {
+            testResult = failure(candidate == null ? null : candidate.getModel(), exception.getMessage());
+            evaluation = null;
+            config = null;
+            adapter = null;
+        } catch (Exception exception) {
+            String apiKey = candidateKey(candidate) != null ? candidateKey(candidate) : activeKey();
+            testResult = failure(candidate == null ? null : candidate.getModel(),
+                safeMessage(exception, apiKey));
+            evaluation = null;
+            config = null;
+            adapter = null;
+        }
         if (!testResult.isSuccess()) {
             recordAudit("SAVE_FAILED", null, null, null, candidate, operator, testResult,
                 "FAILED", testResult.getMessage());
             throw new BusinessException("AI_CONFIG_TEST_FAILED", testResult.getMessage());
         }
 
-        AiModelConfig config = validatedConfig(candidate);
+        config = config.toBuilder()
+            .visionVerified(evaluation.visionVerified())
+            .visionVerificationReason(evaluation.visionVerificationReason())
+            .needsReconfiguration(false)
+            .configurationNotice("")
+            .build();
         AiModelConfig targetConfig = withCandidateEmbedding(config, candidate);
-        AiModelClientFactory adapter = adapter(config.getProvider());
+        adapter = adapter(config.getProvider());
         String candidateKey = candidateKey(candidate);
         String candidateEmbeddingKey = candidateEmbeddingKey(candidate);
         String previousKey = activeKey();
@@ -417,10 +468,43 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     private void pingRoles(
             AiModelClientFactory adapter,
             AiModelConfig config,
+            String candidateKey,
+            boolean verifyVision) {
+        adapter.buildChatModel(config, candidateKey).chat("ping");
+        adapter.buildSupervisorModel(config, candidateKey).chat("ping");
+        if (verifyVision) {
+            adapter.buildVisionModel(config, candidateKey).chat(visionProbeMessage());
+        }
+    }
+
+    private CandidateEvaluation evaluateCandidate(
+            AiModelClientFactory adapter,
+            AiModelConfig config,
             String candidateKey) {
         adapter.buildChatModel(config, candidateKey).chat("ping");
         adapter.buildSupervisorModel(config, candidateKey).chat("ping");
-        adapter.buildVisionModel(config, candidateKey).chat("ping");
+        String visionReason = "";
+        try {
+            adapter.buildVisionModel(config, candidateKey).chat(visionProbeMessage());
+            return new CandidateEvaluation(true, "", "连接成功，视觉模型已通过图片请求验证");
+        } catch (Exception exception) {
+            visionReason = safeMessage(exception, candidateKey);
+            log.warn("视觉模型图片验证失败，文本能力仍可保存：{}", visionReason);
+            return new CandidateEvaluation(false, visionReason,
+                "文本连接成功；视觉模型图片验证失败，菜品识别暂不可用：" + visionReason);
+        }
+    }
+
+    private UserMessage visionProbeMessage() {
+        return UserMessage.from(
+            TextContent.from("请只回复 OK，确认你能接收这张图片。"),
+            ImageContent.from(VISION_PROBE_IMAGE));
+    }
+
+    private record CandidateEvaluation(
+            boolean visionVerified,
+            String visionVerificationReason,
+            String message) {
     }
 
     private void activate(AiModelConfig config, long nextVersion) {
@@ -440,6 +524,139 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             : LocalDateTime.now().withNano(0).toString();
         log.info("AI 运行时配置已激活：version={}, model={}, vision={}",
             nextVersion, config.getModel(), config.getVisionModel());
+    }
+
+    /**
+     * 读取并迁移主配置。旧 provider 或旧地址只在内容确实变化时写回，保证重复启动幂等。
+     */
+    private Map<String, String> migrateDatabaseConfig() {
+        if (systemConfigService == null) {
+            return null;
+        }
+        Map<String, String> configs = systemConfigService.getConfigsByGroup(CONFIG_GROUP);
+        String raw = configs == null ? null : configs.get(CONFIG_KEY);
+        if (!hasText(raw)) {
+            return configs;
+        }
+        try {
+            JsonNode parsed = objectMapper.readTree(raw);
+            if (!(parsed instanceof ObjectNode objectNode)) {
+                return configs;
+            }
+            boolean changed = migrateProviderFields(objectNode);
+            changed |= migrateBaseUrl(objectNode, "baseUrl", "聊天");
+            changed |= migrateBaseUrl(objectNode, "embeddingBaseUrl", "Embedding");
+            if (changed) {
+                String migrated = objectMapper.writeValueAsString(objectNode);
+                systemConfigService.setConfigValue(
+                    CONFIG_KEY, migrated, "AI 模型运行时配置", CONFIG_GROUP);
+                Map<String, String> updated = new HashMap<>(configs);
+                updated.put(CONFIG_KEY, migrated);
+                return updated;
+            }
+        } catch (Exception exception) {
+            log.warn("AI 运行时配置迁移失败，保留原值并回退环境配置", exception);
+        }
+        return configs;
+    }
+
+    /**
+     * 旧历史里的 provider 必须一起迁移，否则回滚会引用已删除的适配器。
+     */
+    private AiRuntimeConfigHistory migrateHistory(AiRuntimeConfigHistory history) {
+        boolean changed = false;
+        for (AiRuntimeConfigHistory.Entry entry : history.getHistory()) {
+            AiModelConfig migrated = migrateConfig(entry.getConfig());
+            if (migrated != entry.getConfig()) {
+                entry.setConfig(migrated);
+                changed = true;
+            }
+        }
+        if (changed) {
+            try {
+                persistHistory(history);
+            } catch (Exception exception) {
+                log.warn("AI 配置历史迁移写回失败，本次启动继续使用内存中的迁移结果", exception);
+            }
+        }
+        return history;
+    }
+
+    private AiModelConfig migrateConfig(AiModelConfig config) {
+        if (config == null) {
+            return null;
+        }
+        try {
+            ObjectNode node = objectMapper.valueToTree(config);
+            boolean changed = migrateProviderFields(node);
+            changed |= migrateBaseUrl(node, "baseUrl", "聊天");
+            changed |= migrateBaseUrl(node, "embeddingBaseUrl", "Embedding");
+            return changed ? objectMapper.treeToValue(node, AiModelConfig.class) : config;
+        } catch (Exception exception) {
+            log.warn("AI 配置历史条目迁移失败，跳过该条目", exception);
+            return config;
+        }
+    }
+
+    private boolean migrateProviderFields(ObjectNode node) {
+        boolean changed = false;
+        changed |= migrateProviderField(node, "provider");
+        changed |= migrateProviderField(node, "embeddingProvider");
+        return changed;
+    }
+
+    private boolean migrateProviderField(ObjectNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isTextual()) {
+            return false;
+        }
+        String normalized = AiProviderCompatibility.normalize(value.asText());
+        if (normalized.equals(value.asText())) {
+            return false;
+        }
+        node.put(field, normalized);
+        return true;
+    }
+
+    /**
+     * 旧聊天地址可能以 /chat/completions 结尾；OpenAI 兼容 SDK 需要根地址。
+     * 无法可靠转换的地址清空，并留下管理员可见的重配提示。
+     */
+    private boolean migrateBaseUrl(ObjectNode node, String field, String role) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isTextual() || !hasText(value.asText())) {
+            return false;
+        }
+        String baseUrl = value.asText().trim();
+        if (baseUrl.endsWith("/chat/completions")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - "/chat/completions".length());
+            while (baseUrl.endsWith("/")) {
+                baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+            }
+        }
+        if (!isHttpBaseUrl(baseUrl)) {
+            node.put(field, "");
+            node.put("needsReconfiguration", true);
+            node.put("configurationNotice",
+                "旧" + role + "服务地址无法安全转换，请重新填写 OpenAI 兼容服务根地址");
+            return true;
+        }
+        if (!baseUrl.equals(value.asText())) {
+            node.put(field, baseUrl);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isHttpBaseUrl(String value) {
+        try {
+            URI uri = URI.create(value);
+            return ("http".equalsIgnoreCase(uri.getScheme())
+                || "https".equalsIgnoreCase(uri.getScheme()))
+                && hasText(uri.getHost());
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
     }
 
     private AiRuntimeConfigHistory loadHistory() {
@@ -510,7 +727,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         try {
             AiModelConfig dbConfig = objectMapper.readValue(
                 databaseConfigs.get(CONFIG_KEY), AiModelConfig.class);
-            String dbProvider = hasText(dbConfig.getProvider()) ? dbConfig.getProvider() : provider;
+            String dbProvider = normalizeProvider(dbConfig.getProvider());
             AiModelConfig providerFallback = adapter(dbProvider).environmentConfig(aiConfig);
             AiModelConfig effective = AiModelConfig.builder()
                 .provider(dbProvider)
@@ -524,6 +741,10 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
                     ? dbConfig.getTimeoutMs() : providerFallback.getTimeoutMs())
                 .temperature(dbConfig.getTemperature() >= 0 ? dbConfig.getTemperature()
                     : providerFallback.getTemperature())
+                .visionVerified(dbConfig.isVisionVerified())
+                .visionVerificationReason(dbConfig.getVisionVerificationReason())
+                .needsReconfiguration(dbConfig.isNeedsReconfiguration())
+                .configurationNotice(dbConfig.getConfigurationNotice())
                 .build();
             return withEmbedding(effective, dbConfig);
         } catch (Exception exception) {
@@ -570,7 +791,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             throw new BusinessException("AI_CONFIG_INVALID", "温度必须在 0 到 2 之间");
         }
         return AiModelConfig.builder()
-            .provider(candidate.getProvider())
+            .provider(normalizeProvider(candidate.getProvider()))
             .model(candidate.getModel().trim())
             .supervisorModel(candidate.getSupervisorModel().trim())
             .visionModel(candidate.getVisionModel().trim())
@@ -674,7 +895,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             throw new BusinessException("AI_CONFIG_INVALID", "Embedding 向量维度必须大于 0");
         }
         return new AnnouncementEmbeddingConfig(
-            candidate.getProvider().trim(),
+            normalizeProvider(candidate.getProvider()),
             candidate.getModel().trim(),
             dimensions,
             candidate.getBaseUrl() == null ? "" : candidate.getBaseUrl().trim());
@@ -682,7 +903,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     private AnnouncementEmbeddingConfig embeddingConfig(AiModelConfig config) {
         return new AnnouncementEmbeddingConfig(
-            config.getEmbeddingProvider(),
+            normalizeProvider(config.getEmbeddingProvider()),
             config.getEmbeddingModel(),
             config.getEmbeddingDimensions(),
             config.getEmbeddingBaseUrl());
@@ -774,7 +995,7 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
 
     private String bootstrapProvider() {
         if (hasText(aiConfig.getProvider())) {
-            return aiConfig.getProvider();
+            return AiProviderCompatibility.normalize(aiConfig.getProvider());
         }
         List<AiRuntimeConfigSnapshot.AiProviderOption> options = providerRegistry.options();
         if (options.isEmpty()) {
@@ -784,7 +1005,12 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     }
 
     private AiModelClientFactory adapter(String provider) {
-        return providerRegistry.required(hasText(provider) ? provider : bootstrapProvider());
+        return providerRegistry.required(normalizeProvider(provider));
+    }
+
+    private String normalizeProvider(String provider) {
+        String normalized = hasText(provider) ? provider.trim() : bootstrapProvider();
+        return AiProviderCompatibility.normalize(normalized);
     }
 
     private String databaseConfigValue() {

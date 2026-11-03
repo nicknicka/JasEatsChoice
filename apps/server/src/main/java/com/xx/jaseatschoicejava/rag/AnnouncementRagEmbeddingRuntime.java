@@ -7,7 +7,7 @@ import java.util.Objects;
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiApiKeyResolver;
 import com.xx.jaseatschoicejava.config.AiEmbeddingRuntimeKeyStore;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
+import com.xx.jaseatschoicejava.config.AiProviderCompatibility;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.service.AnnouncementEmbeddingRuntime;
 import com.xx.jaseatschoicejava.util.SecretFingerprint;
@@ -29,7 +29,6 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
     private final AnnouncementRagProperties properties;
     private final AnnouncementEmbeddingConfigHolder holder;
     private final AiEmbeddingRuntimeKeyStore embeddingKeyStore;
-    private final ZhipuAIConfig zhipuAIConfig;
     private final AIConfig aiConfig;
     private final List<AnnouncementEmbeddingModelFactory> factories;
     private final QdrantClient qdrantClient;
@@ -39,7 +38,6 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
             AnnouncementRagProperties properties,
             AnnouncementEmbeddingConfigHolder holder,
             AiEmbeddingRuntimeKeyStore embeddingKeyStore,
-            ZhipuAIConfig zhipuAIConfig,
             AIConfig aiConfig,
             List<AnnouncementEmbeddingModelFactory> factories,
             QdrantClient qdrantClient,
@@ -47,7 +45,6 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
         this.properties = properties;
         this.holder = holder;
         this.embeddingKeyStore = embeddingKeyStore;
-        this.zhipuAIConfig = zhipuAIConfig;
         this.aiConfig = aiConfig;
         this.factories = factories;
         this.qdrantClient = qdrantClient;
@@ -62,17 +59,18 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
     static AnnouncementEmbeddingConfig usableConfig(
             AnnouncementEmbeddingConfig config,
             AiEmbeddingRuntimeKeyStore embeddingKeyStore,
-            ZhipuAIConfig zhipuAIConfig,
             AIConfig aiConfig,
             List<AnnouncementEmbeddingModelFactory> factories) {
         if (config == null) {
             return null;
         }
         AnnouncementEmbeddingModelFactory factory =
-            AnnouncementRagConfig.selectEmbeddingModelFactory(factories, config.provider());
-        String apiKey = AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig,
+            AnnouncementRagConfig.selectEmbeddingModelFactory(
+                factories, AiProviderCompatibility.normalize(config.provider()));
+        String apiKey = AiApiKeyResolver.resolve(aiConfig,
             embeddingKeyStore == null ? "" : embeddingKeyStore.readKey());
-        return factory.isConfigured(apiKey, config.baseUrl()) ? config : null;
+        return factory.isConfigured(apiKey, config.model(), config.dimensions(), config.baseUrl())
+            ? config : null;
     }
 
     /**
@@ -82,7 +80,7 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
         AnnouncementEmbeddingConfig config = holder.current();
         AnnouncementEmbeddingModelFactory factory = factory(config.provider());
         String apiKey = apiKey(null);
-        if (!factory.isConfigured(apiKey, config.baseUrl())) {
+        if (!factory.isConfigured(apiKey, config.model(), config.dimensions(), config.baseUrl())) {
             return new AnnouncementRagDisabledEmbeddingModel();
         }
         return factory.build(apiKey, config.model(), config.dimensions(), config.baseUrl(), timeout());
@@ -92,7 +90,7 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
      * 当前生效配置；缺少服务地址或密钥时返回 null。
      */
     public AnnouncementEmbeddingConfig usable() {
-        return usableConfig(holder.current(), embeddingKeyStore, zhipuAIConfig, aiConfig, factories);
+        return usableConfig(holder.current(), embeddingKeyStore, aiConfig, factories);
     }
 
     @Override
@@ -102,7 +100,7 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
             return fallback;
         }
         return new AnnouncementEmbeddingConfig(
-            hasText(persisted.provider()) ? persisted.provider() : fallback.provider(),
+            normalizeProvider(hasText(persisted.provider()) ? persisted.provider() : fallback.provider()),
             hasText(persisted.model()) ? persisted.model() : fallback.model(),
             persisted.dimensions() > 0 ? persisted.dimensions() : fallback.dimensions(),
             persisted.baseUrl() != null ? persisted.baseUrl() : fallback.baseUrl());
@@ -112,9 +110,9 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
     public void validate(AnnouncementEmbeddingConfig candidate, String candidateKey) {
         AnnouncementEmbeddingModelFactory factory = factory(candidate.provider());
         String apiKey = apiKey(candidateKey);
-        if (!factory.isConfigured(apiKey, candidate.baseUrl())) {
+        if (!factory.isConfigured(apiKey, candidate.model(), candidate.dimensions(), candidate.baseUrl())) {
             throw new BusinessException("EMBEDDING_CONFIG_INCOMPLETE",
-                "公告 Embedding 配置不完整：该 provider 需要服务地址或密钥");
+                "公告 Embedding 配置不完整：请检查服务地址、模型名和向量维度");
         }
 
         int actualDimensions = measuredDimensions(factory, candidate, apiKey);
@@ -222,15 +220,19 @@ public class AnnouncementRagEmbeddingRuntime implements AnnouncementEmbeddingRun
         if (!hasText(runtimeKey)) {
             runtimeKey = embeddingKeyStore == null ? "" : embeddingKeyStore.readKey();
         }
-        return AiApiKeyResolver.resolve(zhipuAIConfig, aiConfig, runtimeKey);
+        return AiApiKeyResolver.resolve(aiConfig, runtimeKey);
     }
 
     private AnnouncementEmbeddingModelFactory factory(String provider) {
-        return AnnouncementRagConfig.selectEmbeddingModelFactory(factories, provider);
+        return AnnouncementRagConfig.selectEmbeddingModelFactory(factories, normalizeProvider(provider));
+    }
+
+    private String normalizeProvider(String provider) {
+        return AiProviderCompatibility.normalize(provider);
     }
 
     private Duration timeout() {
-        Integer millis = zhipuAIConfig == null ? null : zhipuAIConfig.getTimeout();
+        Integer millis = aiConfig == null ? null : aiConfig.getTimeout();
         return Duration.ofMillis(millis == null || millis <= 0 ? DEFAULT_TIMEOUT_MS : millis);
     }
 

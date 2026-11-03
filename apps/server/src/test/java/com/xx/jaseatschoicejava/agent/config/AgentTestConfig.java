@@ -1,53 +1,47 @@
 package com.xx.jaseatschoicejava.agent.config;
 
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
-import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.community.model.zhipu.ZhipuAiChatModel;
-import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import java.time.Duration;
+
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Agent测试配置类
- * 为测试提供所有Agent和工具的Bean
- *
+import com.xx.jaseatschoicejava.config.AIConfig;
 
- * @since 2026-03-24
+import dev.langchain4j.memory.ChatMemory;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
+
+/**
+ * Agent 测试配置：只装配唯一的 OpenAI-compatible 适配器。
  */
 @Configuration
-@EnableConfigurationProperties(ZhipuAIConfig.class)
+@EnableConfigurationProperties(AIConfig.class)
 public class AgentTestConfig {
 
-    /**
-     * 测试用ChatModel
-     */
     @Bean
-    public ChatModel testChatModel(ZhipuAIConfig zhipuAIConfig) {
-        String apiKey = zhipuAIConfig.getApiKey();
-        if (apiKey == null || apiKey.isBlank()) {
-            // 与生产 LangChain4jConfig 保持一致：无 key 时降级为占位实现，
-            // 否则测试上下文会因缺少凭据而整体启动失败
+    public ChatModel testChatModel(AIConfig aiConfig) {
+        if (isBlank(aiConfig.getApiKey()) || isBlank(aiConfig.getBaseUrl())) {
+            // 无凭据时使用占位实现，避免测试上下文整体启动失败。
             return new NoopChatModel();
         }
-        return ZhipuAiChatModel.builder()
-                .apiKey(zhipuAIConfig.getApiKey())
-                .model(zhipuAIConfig.getModel())
+        return OpenAiChatModel.builder()
+                .apiKey(aiConfig.getApiKey())
+                .baseUrl(aiConfig.getBaseUrl())
+                .modelName(aiConfig.getModel())
                 .temperature(0.7)
+                .timeout(Duration.ofSeconds(60))
                 .maxRetries(2)
-                .callTimeout(java.time.Duration.ofSeconds(60))
-                .connectTimeout(java.time.Duration.ofSeconds(60))
-                .writeTimeout(java.time.Duration.ofSeconds(60))
-                .readTimeout(java.time.Duration.ofSeconds(60))
                 .build();
     }
 
-    /**
-     * 测试用ChatMemory
-     */
     @Bean
     public ChatMemory testChatMemory() {
         return MessageWindowChatMemory.withMaxMessages(20);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

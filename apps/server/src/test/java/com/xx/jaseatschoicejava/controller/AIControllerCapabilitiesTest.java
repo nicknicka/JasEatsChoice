@@ -18,7 +18,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.xx.jaseatschoicejava.agent.config.ChatModelProvider;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.common.ResponseResult;
-import com.xx.jaseatschoicejava.service.ZhipuAIService;
+import com.xx.jaseatschoicejava.service.AiAssistantService;
 
 @ExtendWith(MockitoExtension.class)
 class AIControllerCapabilitiesTest {
@@ -27,7 +27,7 @@ class AIControllerCapabilitiesTest {
     private ChatModelProvider chatModelProvider;
 
     @Mock
-    private ZhipuAIService zhipuAIService;
+    private AiAssistantService aiAssistantService;
 
     private AIController controller;
 
@@ -35,7 +35,7 @@ class AIControllerCapabilitiesTest {
     void setUp() {
         controller = new AIController();
         ReflectionTestUtils.setField(controller, "chatModelProvider", chatModelProvider);
-        ReflectionTestUtils.setField(controller, "zhipuAIService", zhipuAIService);
+        ReflectionTestUtils.setField(controller, "aiAssistantService", aiAssistantService);
     }
 
     @Test

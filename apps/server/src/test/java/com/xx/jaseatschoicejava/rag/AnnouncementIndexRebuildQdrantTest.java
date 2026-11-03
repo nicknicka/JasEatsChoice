@@ -15,7 +15,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.xx.jaseatschoicejava.config.AIConfig;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 import com.xx.jaseatschoicejava.entity.Announcement;
 import com.xx.jaseatschoicejava.service.AnnouncementService;
 
@@ -60,7 +59,7 @@ class AnnouncementIndexRebuildQdrantTest {
             AnnouncementIndexRebuilder rebuilder =
                 new AnnouncementIndexRebuilder(infrastructure, knowledgeService, Runnable::run);
             AnnouncementRagEmbeddingRuntime runtime = new AnnouncementRagEmbeddingRuntime(
-                properties, holder, null, new ZhipuAIConfig(), new AIConfig(),
+                properties, holder, null, new AIConfig(),
                 List.of(factory), client, rebuilder);
 
             infrastructure.initialize();

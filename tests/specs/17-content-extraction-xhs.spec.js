@@ -270,7 +270,7 @@ test.describe('模块十七：内容提取登录态绑定', () => {
 
       await openExtractionTab(page)
       await page.getByRole('button', { name: '添加内容源' }).click()
-      const dialog = page.locator('.el-dialog', { hasText: '从视频/文章提取菜品' })
+      const dialog = page.locator('.el-dialog', { hasText: '从内容链接提取菜品' })
       await expect(dialog).toBeVisible()
 
       const typeSelect = dialog.locator('.el-select').last()

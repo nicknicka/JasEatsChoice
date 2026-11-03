@@ -18,7 +18,6 @@ import io.qdrant.client.QdrantGrpcClient;
 import io.qdrant.client.grpc.Collections.PayloadSchemaType;
 
 import com.xx.jaseatschoicejava.config.AIConfig;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
 @Testcontainers(disabledWithoutDocker = true)
 class QdrantCollectionInitializerTest {
@@ -59,17 +58,13 @@ class QdrantCollectionInitializerTest {
     @Test
     void normalInfrastructurePath_reportsReadyWithEmbeddingModelAndStore() throws Exception {
         AnnouncementRagProperties properties = properties("it-" + UUID.randomUUID());
-        ZhipuAIConfig zhipuConfig = new ZhipuAIConfig();
-        zhipuConfig.setApiKey("test-key");
         try (QdrantClient client = client()) {
             AnnouncementRagEmbeddingRuntime runtime = new AnnouncementRagEmbeddingRuntime(
                 properties,
                 new AnnouncementEmbeddingConfigHolder(properties),
                 null,
-                zhipuConfig,
                 new AIConfig(),
-                java.util.List.of(new ZhipuAnnouncementEmbeddingModelFactory(),
-                    new OpenAiCompatibleAnnouncementEmbeddingModelFactory()),
+                java.util.List.of(new OpenAiCompatibleAnnouncementEmbeddingModelFactory()),
                 client,
                 null);
             AnnouncementRagInfrastructure infrastructure = new AnnouncementRagInfrastructure(
@@ -111,7 +106,10 @@ class QdrantCollectionInitializerTest {
         properties.getQdrant().setHost(qdrant.getHost());
         properties.getQdrant().setPort(qdrant.getMappedPort(6334));
         properties.getQdrant().setCollection(collection);
+        properties.getEmbedding().setProvider("openai-compatible");
+        properties.getEmbedding().setModel("bge-m3");
         properties.getEmbedding().setDimensions(4);
+        properties.getEmbedding().setBaseUrl("http://localhost:11434/v1");
         return properties;
     }
 

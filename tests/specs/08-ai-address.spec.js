@@ -80,9 +80,9 @@ test.describe('模块八：AI助手与地址管理', () => {
     } catch (e) { markFailed('8.1', e.message.slice(0, 50)); throw e }
   })
 
-  // 真实 8.2/8.3 需要有效的 ZHIPU_API_KEY 与可用模型；仓库和 CI 不保存真实密钥，
+  // 真实 8.2/8.3 需要有效的 AI_API_KEY、AI_BASE_URL 与可用模型；仓库和 CI 不保存真实密钥，
   // 不能把模拟或将空结果视为成功。无凭据时的真实降级路径由下方 8.2a/8.3a 覆盖。
-  test.fixme('8.2 菜品识别 (needs real ZHIPU_API_KEY)', async ({ page }) => {
+  test.fixme('8.2 菜品识别 (needs real AI credentials)', async ({ page }) => {
     markRunning('8.2')
     try {
       await page.goto('/user/home/ai')
@@ -97,7 +97,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     } catch (e) { markFailed('8.2', e.message.slice(0, 50)); throw e }
   })
 
-  test.fixme('8.3 食谱生成 (needs real ZHIPU_API_KEY)', async ({ page }) => {
+  test.fixme('8.3 食谱生成 (needs real AI credentials)', async ({ page }) => {
     markRunning('8.3')
     try {
       await page.goto('/user/home/ai')

@@ -9,14 +9,13 @@ import org.springframework.context.annotation.Configuration;
 
 import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.AiEmbeddingRuntimeKeyStore;
-import com.xx.jaseatschoicejava.config.ZhipuAIConfig;
 
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import io.qdrant.client.QdrantClient;
 import io.qdrant.client.QdrantGrpcClient;
 
 @Configuration
-@EnableConfigurationProperties({AnnouncementRagProperties.class, ZhipuAIConfig.class, AIConfig.class})
+@EnableConfigurationProperties({AnnouncementRagProperties.class, AIConfig.class})
 public class AnnouncementRagConfig {
 
     @Bean(destroyMethod = "close")
@@ -37,7 +36,6 @@ public class AnnouncementRagConfig {
         AnnouncementRagProperties properties,
         AnnouncementEmbeddingConfigHolder announcementEmbeddingConfigHolder,
         AiEmbeddingRuntimeKeyStore aiEmbeddingRuntimeKeyStore,
-        ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
         List<AnnouncementEmbeddingModelFactory> embeddingModelFactories,
         QdrantClient announcementQdrantClient,
@@ -46,7 +44,6 @@ public class AnnouncementRagConfig {
             properties,
             announcementEmbeddingConfigHolder,
             aiEmbeddingRuntimeKeyStore,
-            zhipuAIConfig,
             aiConfig,
             embeddingModelFactories,
             announcementQdrantClient,
@@ -71,7 +68,6 @@ public class AnnouncementRagConfig {
         AnnouncementRagProperties properties,
         AnnouncementEmbeddingConfigHolder announcementEmbeddingConfigHolder,
         AiEmbeddingRuntimeKeyStore aiEmbeddingRuntimeKeyStore,
-        ZhipuAIConfig zhipuAIConfig,
         AIConfig aiConfig,
         List<AnnouncementEmbeddingModelFactory> embeddingModelFactories,
         ObjectProvider<EmbeddingModel> announcementEmbeddingModel,
@@ -80,7 +76,7 @@ public class AnnouncementRagConfig {
             properties,
             () -> AnnouncementRagEmbeddingRuntime.usableConfig(
                 announcementEmbeddingConfigHolder.current(), aiEmbeddingRuntimeKeyStore,
-                zhipuAIConfig, aiConfig, embeddingModelFactories),
+                aiConfig, embeddingModelFactories),
             announcementEmbeddingModel::getObject,
             announcementQdrantClient);
     }

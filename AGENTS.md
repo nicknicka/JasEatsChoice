@@ -9,7 +9,7 @@
 - 所有真实密钥、密码只写在 `deploy/.env`（已 gitignore，永不入库）。仓库里只提交 `deploy/.env.example`，值全是占位符。
 - 不要把凭据写进 Java 代码、`application*.yml` 的默认值、文档、测试或提交信息。`application.yml` 只允许 `${ENV:}` 形式的注入，缺省值必须是无意义的占位。
 - 数据库连接参数（账号、密码、库名）来自 `deploy/.env`，不要在别处再抄一份。应用账号是 `DB_USERNAME`，它不是 root。
-- 外部服务密钥（智谱、高德、腾讯地图、QQ 邮箱授权码）由所有者在控制台吊销后重新申请，本地填 `deploy/.env`，CI 用 GitHub Secrets。
+- 外部服务密钥（AI、高德、腾讯地图、QQ 邮箱授权码）由所有者在控制台吊销后重新申请，本地填 `deploy/.env`，CI 用 GitHub Secrets。
 
 ## 模块地图
 
@@ -48,7 +48,7 @@ bash scripts/ci-e2e.sh [spec ...]   # 一条命令从空仓到跑完用例
 
 ## 几条真实的坑
 
-- **不要在 `@Bean` 工厂方法里无条件抛异常。** 智谱没配 key 时整个 Spring 上下文会起不来，所以 `LangChain4jConfig` / `ZhipuClientConfig` 在 key 为空时返回占位实现，调用 AI 接口才报错。`AI_API_KEY` 留空也必须能启动。
+- **不要在 `@Bean` 工厂方法里无条件抛异常。** AI 没配 key 时整个 Spring 上下文会起不来，所以 `LangChain4jConfig` 在 key 为空时返回占位实现，调用 AI 接口才报错。`AI_API_KEY` 留空也必须能启动。
 - **接口路径以运行中的 OpenAPI 为准。** 后端 `context-path` 是 `/api`，登录实际是 `/v1/users/login` 和 `/admin/login`，不是 `/v1/user/login`。改前端调用前先读 `/api/v3/api-docs`。
 - **Web 与桌面共用同一份 renderer。** 新增 `window.api.xxx` 调用，必须同步 `platform/webShim.js`，否则 Web 版和 CI 直接挂。路由已按 `file:` 协议在 hash / history 间自动切换，不要另加判断。
 - **种子数据是用例的前提。** 后端启动时通过 Flyway 执行种子迁移，改种子后要 `make reset-db`。测试账号 `17322222222 / asdasd`、`admin / admin123` 必须存在且密码哈希与明文匹配，否则用例会整片红。
