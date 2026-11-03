@@ -293,21 +293,35 @@
           <el-button
             v-if="extraction && !extraction.isPublished"
             type="success"
-            @click="publishAsRecipe"
-            :loading="publishing"
+            @click="openPublishDialog"
             size="large"
           >
             <el-icon><Upload /></el-icon>
             发布为食谱
           </el-button>
+          <el-button
+            v-if="extraction && extraction.isPublished && extraction.recipeId"
+            type="success"
+            @click="viewPublishedRecipe"
+            size="large"
+          >
+            查看食谱
+          </el-button>
         </div>
       </template>
     </el-dialog>
+
+    <publish-recipe-dialog
+      v-model:visible="publishDialogVisible"
+      :extraction-id="extraction?.id || ''"
+      @published="handlePublished"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, watch, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Plus,
@@ -325,6 +339,7 @@ import {
   Bottom
 } from '@element-plus/icons-vue'
 import contentExtractionApi from '@/api/contentExtraction'
+import PublishRecipeDialog from '@/components/PublishRecipeDialog.vue'
 
 const props = defineProps({
   visible: {
@@ -338,6 +353,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:visible', 'published'])
+const router = useRouter()
 
 const dialogVisible = computed({
   get: () => props.visible,
@@ -347,7 +363,7 @@ const dialogVisible = computed({
 const loading = ref(false)
 const isEditing = ref(false)
 const saving = ref(false)
-const publishing = ref(false)
+const publishDialogVisible = ref(false)
 const extraction = ref(null)
 
 // 获取难度类型
@@ -513,25 +529,21 @@ const saveExtraction = async () => {
   }
 }
 
-// 发布为食谱
-const publishAsRecipe = async () => {
-  try {
-    publishing.value = true
-    const response = await contentExtractionApi.publishAsRecipe(extraction.value.id, {})
+const openPublishDialog = () => {
+  publishDialogVisible.value = true
+}
 
-    if (response.code === '200' || response.code === 200) {
-      ElMessage.success('发布成功')
-      emit('published')
-      handleClose()
-    } else {
-      ElMessage.error(response.message || '发布失败')
-    }
-  } catch (error) {
-    console.error('发布失败:', error)
-    ElMessage.error('发布失败')
-  } finally {
-    publishing.value = false
+const handlePublished = (recipeId) => {
+  if (extraction.value) {
+    extraction.value.isPublished = true
+    extraction.value.recipeId = recipeId
   }
+  emit('published', recipeId)
+}
+
+const viewPublishedRecipe = () => {
+  if (!extraction.value?.recipeId) return
+  router.push(`/user/home/my-recipe?recipeId=${extraction.value.recipeId}`)
 }
 
 const handleClose = () => {

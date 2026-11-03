@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -14,7 +15,13 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +36,8 @@ import com.xx.jaseatschoicejava.entity.ContentExtraction;
 import com.xx.jaseatschoicejava.entity.ContentSource;
 import com.xx.jaseatschoicejava.mapper.ContentExtractionMapper;
 import com.xx.jaseatschoicejava.mapper.ContentSourceMapper;
+import com.xx.jaseatschoicejava.mapper.RecipeMapper;
+import com.xx.jaseatschoicejava.service.ContentExtractionService;
 import com.xx.jaseatschoicejava.util.JwtUtil;
 
 /**
@@ -55,13 +64,23 @@ class ContentExtractionAuthIntegrationTest {
     @Autowired
     private ContentExtractionMapper contentExtractionMapper;
 
+    @Autowired
+    private RecipeMapper recipeMapper;
+
+    @Autowired
+    private ContentExtractionService contentExtractionService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final List<String> createdSourceIds = new ArrayList<>();
     private final List<String> createdExtractionIds = new ArrayList<>();
+    private final List<String> createdRecipeIds = new ArrayList<>();
 
     @AfterEach
     void cleanup() {
+        createdRecipeIds.forEach(recipeMapper::deleteById);
         createdExtractionIds.forEach(contentExtractionMapper::deleteById);
         createdSourceIds.forEach(contentSourceMapper::deleteById);
+        createdRecipeIds.clear();
         createdExtractionIds.clear();
         createdSourceIds.clear();
     }
@@ -198,6 +217,155 @@ class ContentExtractionAuthIntegrationTest {
         assertEquals(Boolean.FALSE, contentExtractionMapper.selectById(extractionB).getIsVerified());
     }
 
+    @Test
+    void publishCreatesRealRecipeWithSourceAndMappedFields() throws Exception {
+        String userId = numericUserId();
+        String sourceId = seedSource(userId);
+        String extractionId = seedExtraction(sourceId);
+
+        ContentSource source = contentSourceMapper.selectById(sourceId);
+        source.setPlatform("XIAOHONGSHU");
+        source.setContentUrl("https://www.xiaohongshu.com/explore/it212-publish");
+        contentSourceMapper.updateById(source);
+
+        ContentExtraction extraction = contentExtractionMapper.selectById(extractionId);
+        extraction.setDishName("番茄炒蛋");
+        extraction.setDescription("酸甜开胃");
+        extraction.setIngredients("[{\"name\":\"番茄\",\"amount\":\"2个\"},{\"name\":\"鸡蛋\",\"amount\":\"3个\"}]");
+        extraction.setSteps("[{\"title\":\"切配\",\"description\":\"番茄切块，鸡蛋打散\"},{\"description\":\"热锅炒熟\"}]");
+        extraction.setCookingTime(15);
+        extraction.setCalories(180);
+        contentExtractionMapper.updateById(extraction);
+
+        String body = mockMvc.perform(post("/v1/content-extraction/extraction/" + extractionId + "/publish")
+                .header("Authorization", bearer(userId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"mealType\":\"dinner\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data").isNotEmpty())
+            .andReturn().getResponse().getContentAsString();
+        String recipeId = objectMapper.readTree(body).path("data").asText();
+        createdRecipeIds.add(recipeId);
+
+        mockMvc.perform(get("/v1/recipe/" + recipeId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.name").value("番茄炒蛋"))
+            .andExpect(jsonPath("$.data.type").value("dinner"))
+            .andExpect(jsonPath("$.data.cookTime").value("15分钟"))
+            .andExpect(jsonPath("$.data.calories").value(180))
+            .andExpect(jsonPath("$.data.protein").value(0))
+            .andExpect(jsonPath("$.data.carbs").value(0))
+            .andExpect(jsonPath("$.data.fat").value(0))
+            .andExpect(jsonPath("$.data.sourceUrl").value(source.getContentUrl()))
+            .andExpect(jsonPath("$.data.sourcePlatform").value("XIAOHONGSHU"))
+            .andExpect(jsonPath("$.data.items").isNotEmpty());
+
+        mockMvc.perform(get("/v1/content-extraction/sources").header("Authorization", bearer(userId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].isPublished").value(true))
+            .andExpect(jsonPath("$.data[0].recipeId").value(recipeId));
+
+        ContentExtraction published = contentExtractionMapper.selectById(extractionId);
+        assertEquals(Boolean.TRUE, published.getIsPublished());
+        assertEquals(recipeId, published.getRecipeId());
+    }
+
+    @Test
+    void repeatedPublishReturnsSameRecipeWithoutCreatingAnother() throws Exception {
+        String userId = numericUserId();
+        String sourceId = seedSource(userId);
+        String extractionId = seedExtraction(sourceId);
+
+        ContentExtraction extraction = contentExtractionMapper.selectById(extractionId);
+        extraction.setDishName("测试菜");
+        contentExtractionMapper.updateById(extraction);
+
+        String firstBody = mockMvc.perform(post("/v1/content-extraction/extraction/" + extractionId + "/publish")
+                .header("Authorization", bearer(userId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"mealType\":\"lunch\"}"))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        String firstRecipeId = objectMapper.readTree(firstBody).path("data").asText();
+        createdRecipeIds.add(firstRecipeId);
+
+        String secondBody = mockMvc.perform(post("/v1/content-extraction/extraction/" + extractionId + "/publish")
+                .header("Authorization", bearer(userId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"mealType\":\"dinner\"}"))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        assertEquals(firstRecipeId, objectMapper.readTree(secondBody).path("data").asText());
+        assertEquals(1, recipeMapper.selectCount(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.xx.jaseatschoicejava.entity.Recipe>()
+                .eq("user_id", userId)
+                .eq("source_url", contentSourceMapper.selectById(sourceId).getContentUrl())));
+    }
+
+    @Test
+    void concurrentPublishCreatesOnlyOneRecipe() throws Exception {
+        String userId = numericUserId();
+        String sourceId = seedSource(userId);
+        String extractionId = seedExtraction(sourceId);
+
+        ContentExtraction extraction = contentExtractionMapper.selectById(extractionId);
+        extraction.setDishName("并发测试菜");
+        contentExtractionMapper.updateById(extraction);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<String> first = executor.submit(() -> publishAfterSignal(
+                extractionId, userId, ready, start));
+            Future<String> second = executor.submit(() -> publishAfterSignal(
+                extractionId, userId, ready, start));
+
+            assertTrue(ready.await(5, TimeUnit.SECONDS), "发布线程未能就绪");
+            start.countDown();
+
+            String firstRecipeId = first.get(10, TimeUnit.SECONDS);
+            String secondRecipeId = second.get(10, TimeUnit.SECONDS);
+            createdRecipeIds.add(firstRecipeId);
+            createdRecipeIds.add(secondRecipeId);
+
+            assertEquals(firstRecipeId, secondRecipeId);
+            assertEquals(1, recipeMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.xx.jaseatschoicejava.entity.Recipe>()
+                    .eq("user_id", userId)
+                    .eq("source_url", contentSourceMapper.selectById(sourceId).getContentUrl())));
+
+            ContentExtraction published = contentExtractionMapper.selectById(extractionId);
+            assertTrue(Boolean.TRUE.equals(published.getIsPublished()));
+            assertEquals(firstRecipeId, published.getRecipeId());
+        } finally {
+            start.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void invalidMealTypeReturns400WithoutCreatingRecipe() throws Exception {
+        String userId = numericUserId();
+        String sourceId = seedSource(userId);
+        String extractionId = seedExtraction(sourceId);
+
+        mockMvc.perform(post("/v1/content-extraction/extraction/" + extractionId + "/publish")
+                .header("Authorization", bearer(userId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"mealType\":\"夜宵\"}"))
+            .andExpect(status().isBadRequest());
+
+        ContentExtraction extraction = contentExtractionMapper.selectById(extractionId);
+        assertFalse(Boolean.TRUE.equals(extraction.getIsPublished()));
+        assertEquals(0, recipeMapper.selectCount(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.xx.jaseatschoicejava.entity.Recipe>()
+                .eq("user_id", userId)));
+    }
+
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder createSource(
             String userId, String body) {
         return post("/v1/content-extraction/source")
@@ -208,6 +376,15 @@ class ContentExtractionAuthIntegrationTest {
 
     private String bearer(String userId) {
         return "Bearer " + jwtUtil.generateToken(userId, "13000000000");
+    }
+
+    private String publishAfterSignal(String extractionId, String userId,
+            CountDownLatch ready, CountDownLatch start) throws InterruptedException {
+        ready.countDown();
+        if (!start.await(5, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("等待并发发布信号超时");
+        }
+        return contentExtractionService.publishAsRecipe(extractionId, "lunch", userId);
     }
 
     private String seedSource(String userId) {
@@ -241,5 +418,9 @@ class ContentExtractionAuthIntegrationTest {
 
     private String randomSuffix() {
         return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+    }
+
+    private String numericUserId() {
+        return String.valueOf(2000000000000000000L + Math.abs(UUID.randomUUID().getLeastSignificantBits() % 100000000L));
     }
 }

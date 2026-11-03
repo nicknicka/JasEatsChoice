@@ -70,7 +70,7 @@ public class RecipeController {
      * 更新食谱
      */
     @PutMapping("/{id}")
-    public ResponseResult<?> updateRecipe(@PathVariable Long id, @RequestBody Recipe recipe) {
+    public ResponseResult<?> updateRecipe(@PathVariable String id, @RequestBody Recipe recipe) {
         Recipe updatedRecipe = recipeService.updateRecipe(id, recipe);
         if (updatedRecipe == null) {
             return ResponseResult.fail("404", "食谱不存在");
@@ -82,7 +82,7 @@ public class RecipeController {
      * 删除食谱
      */
     @DeleteMapping("/{id}")
-    public ResponseResult<?> deleteRecipe(@PathVariable Long id) {
+    public ResponseResult<?> deleteRecipe(@PathVariable String id) {
         boolean success = recipeService.deleteRecipe(id);
         if (success) {
             return ResponseResult.success("删除成功");
@@ -95,7 +95,7 @@ public class RecipeController {
      * 切换食谱收藏状态
      */
     @PutMapping("/toggle-favorite/{id}")
-    public ResponseResult<?> toggleFavorite(@PathVariable Long id) {
+    public ResponseResult<?> toggleFavorite(@PathVariable String id) {
         Recipe updatedRecipe = recipeService.toggleFavorite(id);
         if (updatedRecipe == null) {
             return ResponseResult.fail("404", "食谱不存在");
@@ -125,7 +125,7 @@ public class RecipeController {
      * 根据ID获取食谱详情
      */
     @GetMapping("/{id}")
-    public ResponseResult<?> getRecipeDetail(@PathVariable Long id) {
+    public ResponseResult<?> getRecipeDetail(@PathVariable String id) {
         Recipe recipe = recipeService.getById(id);
         if (recipe != null) {
             return ResponseResult.success(recipe);

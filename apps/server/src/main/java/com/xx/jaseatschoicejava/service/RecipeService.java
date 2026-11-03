@@ -1,6 +1,8 @@
 package com.xx.jaseatschoicejava.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.xx.jaseatschoicejava.entity.ContentExtraction;
+import com.xx.jaseatschoicejava.entity.ContentSource;
 import com.xx.jaseatschoicejava.entity.Recipe;
 
 import java.util.List;
@@ -51,21 +53,31 @@ public interface RecipeService extends IService<Recipe> {
      * @param recipe 食谱信息
      * @return 更新后的食谱
      */
-    Recipe updateRecipe(Long id, Recipe recipe);
+    Recipe updateRecipe(String id, Recipe recipe);
 
     /**
      * 删除食谱
      * @param id 食谱ID
      * @return 是否删除成功
      */
-    boolean deleteRecipe(Long id);
+    boolean deleteRecipe(String id);
 
     /**
      * 切换食谱收藏状态
      * @param id 食谱ID
      * @return 更新后的食谱
      */
-    Recipe toggleFavorite(Long id);
+    Recipe toggleFavorite(String id);
+
+    /**
+     * 从内容提取结果创建食谱。
+     *
+     * @param extraction 提取结果
+     * @param source 内容源快照
+     * @param mealType 餐次，缺省为 lunch
+     * @return 已落库的食谱
+     */
+    Recipe createFromExtraction(ContentExtraction extraction, ContentSource source, String mealType);
 
     /**
      * 批量切换食谱收藏状态

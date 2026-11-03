@@ -93,7 +93,17 @@ test.describe('模块五：饮食管理与收藏', () => {
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const recipe = page.locator('[class*="recipe"], .el-card')
       await expect(recipe.first()).toBeVisible({ timeout: 10000 })
-      markPassed('5.4', '我的食谱页面可访问')
+
+      const recipes = await getJson(`/v1/recipe/all?userId=${encodeURIComponent(testUserId)}`)
+      const firstRecipe = recipes[0]
+      if (!firstRecipe) throw new Error('我的食谱接口没有返回数据')
+
+      await page.goto(`/user/home/my-recipe?recipeId=${encodeURIComponent(firstRecipe.id)}`)
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      const detail = page.locator('.recipe-detail-dialog').last()
+      await expect(detail).toBeVisible({ timeout: 10000 })
+      await expect(detail).toContainText(firstRecipe.name)
+      markPassed('5.4', '我的食谱可访问；query 中的食谱 ID 自动打开对应详情')
     } catch (e) { markFailed('5.4', e.message.slice(0, 50)); throw e }
   })
 

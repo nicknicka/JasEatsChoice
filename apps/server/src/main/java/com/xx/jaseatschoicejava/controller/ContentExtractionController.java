@@ -4,6 +4,7 @@ import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.config.XhsSessionStore;
 import com.xx.jaseatschoicejava.dto.ContentExtractionUpdateDTO;
 import com.xx.jaseatschoicejava.dto.ContentSourceCreateDTO;
+import com.xx.jaseatschoicejava.dto.PublishRecipeDTO;
 import com.xx.jaseatschoicejava.dto.XhsSessionBindDTO;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.service.ContentExtractionService;
@@ -135,11 +136,17 @@ public class ContentExtractionController {
     @PostMapping("/extraction/{extractionId}/publish")
     public ResponseResult<String> publishAsRecipe(
             @PathVariable String extractionId,
+            @RequestBody(required = false) PublishRecipeDTO dto,
             HttpServletRequest request) {
         String userId = resolveUserId(request);
 
-        String recipeId = contentExtractionService.publishAsRecipe(extractionId, userId);
-        return ResponseResult.success(recipeId);
+        try {
+            String recipeId = contentExtractionService.publishAsRecipe(
+                extractionId, dto == null ? null : dto.getMealType(), userId);
+            return ResponseResult.success(recipeId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     /**

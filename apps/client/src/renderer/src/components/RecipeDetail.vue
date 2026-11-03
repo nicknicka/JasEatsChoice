@@ -48,6 +48,13 @@ const parseTimeStringToDate = (timeString) => {
     const [hours, minutes] = timeString.split(':').map(Number)
     return createBaseTime(hours, minutes, 0)
   }
+  if (typeof timeString === 'string') {
+    const hourMatch = timeString.match(/(\d+)\s*小时/)
+    const minuteMatch = timeString.match(/(\d+)\s*分钟/)
+    if (hourMatch || minuteMatch) {
+      return createBaseTime(Number(hourMatch?.[1] || 0), Number(minuteMatch?.[1] || 0), 0)
+    }
+  }
   return createBaseTime(0, 0, 0)
 }
 
@@ -152,6 +159,8 @@ const saveEdit = async () => {
       cookTime: cookTimeToSave,
       detail: editableRecipe.value.detail,
       items: itemsToSave,
+      sourceUrl: props.recipe.sourceUrl,
+      sourcePlatform: props.recipe.sourcePlatform,
       // 保存自定义营养信息（已序列化为JSON字符串）
       customNutrition: customNutritionToSave
     }
@@ -334,6 +343,11 @@ const formatCookTime = (time) => {
     minutes = time.getMinutes()
   } else if (typeof time === 'string' && time.includes(':')) {
     ;[hours, minutes] = time.split(':').map(Number)
+  } else if (typeof time === 'string') {
+    const hourMatch = time.match(/(\d+)\s*小时/)
+    const minuteMatch = time.match(/(\d+)\s*分钟/)
+    hours = Number(hourMatch?.[1] || 0)
+    minutes = Number(minuteMatch?.[1] || 0)
   }
 
   if (hours === 0 && minutes === 0) {
@@ -360,6 +374,18 @@ const mealTypeOptions = [
   { label: '下午茶', value: 'afternoon_tea' },
   { label: '夜宵', value: 'night_snack' }
 ]
+
+const platformNameMap = {
+  DOUYIN: '抖音',
+  XIAOHONGSHU: '小红书',
+  BILIBILI: '哔哩哔哩',
+  WECHAT: '微信',
+  TOUTIAO: '今日头条',
+  KUAISHOU: '快手',
+  OTHER: '其他'
+}
+
+const getPlatformName = (platform) => platformNameMap[platform] || platform
 
 // 更新自定义营养信息
 const updateCustomNutrition = (field, value) => {
@@ -434,6 +460,19 @@ const updateCustomNutrition = (field, value) => {
               />
             </div>
           </div>
+        </div>
+        <div v-if="recipe.sourceUrl || recipe.sourcePlatform" class="recipe-source">
+          <span class="source-label">来源:</span>
+          <span v-if="recipe.sourcePlatform" class="source-platform">{{ getPlatformName(recipe.sourcePlatform) }}</span>
+          <a
+            v-if="recipe.sourceUrl"
+            :href="recipe.sourceUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="source-link"
+          >
+            查看原文
+          </a>
         </div>
       </div>
 
@@ -598,6 +637,34 @@ const updateCustomNutrition = (field, value) => {
   justify-content: center;
   gap: 40px;
   flex-wrap: wrap;
+}
+
+.recipe-source {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  color: @nordic-text-secondary;
+  font-size: @nordic-text-base;
+}
+
+.source-label {
+  font-weight: 600;
+  color: @nordic-accent;
+}
+
+.source-platform {
+  color: @nordic-text-secondary;
+}
+
+.source-link {
+  color: @nordic-accent;
+  text-decoration: none;
+}
+
+.source-link:hover {
+  text-decoration: underline;
 }
 
 .info-item {

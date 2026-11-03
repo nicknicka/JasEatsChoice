@@ -27,6 +27,15 @@ public interface ContentExtractionMapper extends BaseMapper<ContentExtraction> {
     ContentExtraction selectBySourceId(@Param("sourceId") String sourceId);
 
     /**
+     * 锁定提取结果，供发布等需要串行化的写操作使用。
+     *
+     * @param id 提取结果ID
+     * @return 提取结果
+     */
+    @Select("SELECT * FROM ext_content_extraction WHERE id = #{id} FOR UPDATE")
+    ContentExtraction selectByIdForUpdate(@Param("id") String id);
+
+    /**
      * 查询未发布的提取结果
      *
      * @return 提取结果列表
