@@ -247,17 +247,13 @@ announcement-rag:
 # ==================== 内容提取配置 ====================
 content-extraction:
   fetch:
-    user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    connect-timeout: 30000
-    read-timeout: 60000
-    max-images: 5
-    max-image-size: 2097152       # 2MB
-    max-video-size: 52428800      # 50MB
-  retry:
-    max-count: 3
-    delay-ms: 5000
+    user-agent: "${CONTENT_EXTRACTION_USER_AGENT:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36}"
+    connect-timeout: ${CONTENT_EXTRACTION_CONNECT_TIMEOUT:30000}
+    read-timeout: ${CONTENT_EXTRACTION_READ_TIMEOUT:60000}
+    max-images: ${CONTENT_EXTRACTION_MAX_IMAGES:5}
+    max-image-size: ${CONTENT_EXTRACTION_MAX_IMAGE_SIZE:2097152}   # 2MB
   ai:
-    video-api-timeout: 120000     # 视频理解API超时（毫秒）
+    video-api-timeout: ${CONTENT_EXTRACTION_VIDEO_API_TIMEOUT:120000}   # 视频理解API超时（毫秒）
 
 # ==================== 邮件服务配置 ====================
 email:

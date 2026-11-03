@@ -22,7 +22,6 @@ import java.time.Duration;
 public class ContentExtractionConfig {
 
     private FetchConfig fetch = new FetchConfig();
-    private RetryConfig retry = new RetryConfig();
     private AiConfig ai = new AiConfig();
 
     @Data
@@ -40,18 +39,6 @@ public class ContentExtractionConfig {
         private int maxImages = 5;
         /** 单张图片最大字节数 */
         private long maxImageSize = 2 * 1024 * 1024; // 2MB
-        /** 视频最大字节数 */
-        private long maxVideoSize = 50 * 1024 * 1024; // 50MB
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class RetryConfig {
-        /** 最大重试次数 */
-        private int maxCount = 3;
-        /** 重试间隔（毫秒） */
-        private long delayMs = 5000;
     }
 
     @Data

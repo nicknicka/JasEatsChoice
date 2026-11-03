@@ -2,11 +2,13 @@ package com.xx.jaseatschoicejava.service.extraction.fetcher;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xx.jaseatschoicejava.config.ContentExtractionConfig;
 import com.xx.jaseatschoicejava.enums.ContentPlatform;
 import com.xx.jaseatschoicejava.enums.ContentType;
 import com.xx.jaseatschoicejava.service.extraction.dto.FetchedContent;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.regex.Matcher;
@@ -22,10 +24,10 @@ import java.util.regex.Pattern;
 @Component
 public class VideoContentFetcher implements ContentFetcher {
 
-    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-    private static final int TIMEOUT_MS = 30000;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    private ContentExtractionConfig config;
 
     @Override
     public boolean canHandle(ContentPlatform platform, ContentType contentType) {
@@ -141,8 +143,8 @@ public class VideoContentFetcher implements ContentFetcher {
     private String resolveDouyinUrl(String url) {
         try {
             var response = Jsoup.connect(url)
-                .userAgent(USER_AGENT)
-                .timeout(10000)
+                .userAgent(config.getFetch().getUserAgent())
+                .timeout(config.getFetch().getReadTimeout())
                 .followRedirects(true)
                 .execute();
             return response.url().toString();
@@ -187,8 +189,8 @@ public class VideoContentFetcher implements ContentFetcher {
             // 调用B站API获取视频信息
             String apiUrl = "https://api.bilibili.com/x/web-interface/view?bvid=" + bvid;
             String json = Jsoup.connect(apiUrl)
-                .userAgent(USER_AGENT)
-                .timeout(TIMEOUT_MS)
+                .userAgent(config.getFetch().getUserAgent())
+                .timeout(config.getFetch().getReadTimeout())
                 .ignoreContentType(true)
                 .execute()
                 .body();
@@ -212,8 +214,8 @@ public class VideoContentFetcher implements ContentFetcher {
                 String playUrl = "https://api.bilibili.com/x/player/playurl?bvid=" + bvid + "&cid=" + cid + "&qn=16&fnver=0&fnval=0";
                 try {
                     String playJson = Jsoup.connect(playUrl)
-                        .userAgent(USER_AGENT)
-                        .timeout(TIMEOUT_MS)
+                        .userAgent(config.getFetch().getUserAgent())
+                        .timeout(config.getFetch().getReadTimeout())
                         .ignoreContentType(true)
                         .execute()
                         .body();
@@ -273,8 +275,8 @@ public class VideoContentFetcher implements ContentFetcher {
 
             // 直接使用原始URL（带 xsec_token 等参数），避免被拦截
             var response = Jsoup.connect(url)
-                .userAgent(USER_AGENT)
-                .timeout(TIMEOUT_MS)
+                .userAgent(config.getFetch().getUserAgent())
+                .timeout(config.getFetch().getReadTimeout())
                 .followRedirects(true)
                 .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
                 .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
@@ -451,8 +453,8 @@ public class VideoContentFetcher implements ContentFetcher {
     private VideoInfo fetchVideoInfoFromPage(String url, ContentPlatform platform) {
         try {
             var response = Jsoup.connect(url)
-                .userAgent(USER_AGENT)
-                .timeout(TIMEOUT_MS)
+                .userAgent(config.getFetch().getUserAgent())
+                .timeout(config.getFetch().getReadTimeout())
                 .followRedirects(true)
                 .execute();
 
