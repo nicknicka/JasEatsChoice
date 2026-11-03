@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.common;
 
+import com.xx.jaseatschoicejava.exception.AiQuotaExceededException;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.util.UrlSecurityValidator;
 import org.apache.catalina.connector.ClientAbortException;
@@ -81,6 +82,16 @@ public class GlobalExceptionHandler {
         String message = e.getReason() != null ? e.getReason() : "请求失败";
         return ResponseEntity.status(e.getStatusCode())
             .body(ResponseResult.fail(String.valueOf(e.getStatusCode().value()), message));
+    }
+
+    /**
+     * 处理 AI 用户级配额超限，统一返回 429。
+     */
+    @ExceptionHandler(AiQuotaExceededException.class)
+    public ResponseEntity<ResponseResult<?>> handleAiQuotaExceeded(AiQuotaExceededException e) {
+        logger.warn("AI quota exceeded: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(ResponseResult.fail("429", e.getMessage()));
     }
 
     /**
