@@ -72,15 +72,16 @@
       <!-- 识别进度 -->
       <Transition name="progress-slide">
         <div v-if="recognitionLoading" class="recognition-progress">
+          <div class="progress-head">
+            <span class="progress-label">{{ progressStageText }}</span>
+            <span class="progress-value">{{ Math.round(recognitionProgress) }}%</span>
+          </div>
           <div class="progress-track">
             <div class="progress-fill" :style="{ width: recognitionProgress + '%' }">
               <div class="progress-glow"></div>
             </div>
           </div>
           <div class="progress-info">
-            <div class="progress-dot-wave">
-              <span></span><span></span><span></span><span></span>
-            </div>
             <span class="progress-label">AI 正在分析您的菜品，可切换页面继续等待</span>
           </div>
         </div>
@@ -260,7 +261,7 @@
 </template>
 
 <script setup>
-import { ref, watch, h } from 'vue'
+import { computed, ref, watch, h } from 'vue'
 import { ElMessage } from 'element-plus'
 import { API_CONFIG } from '../../../../config'
 import { validateImageFile } from '../../../../utils/imageValidator'
@@ -326,6 +327,13 @@ const {
   recognizeDish,
   reRecognize
 } = useDishRecognitionTask()
+
+const progressStageText = computed(() => {
+  const p = recognitionProgress.value
+  if (p < 35) return '正在识别菜品'
+  if (p < 70) return '正在分析营养成分'
+  return '正在整理识别结果'
+})
 
 // 营养条宽度动画
 const proteinBarWidth = ref(0)
@@ -505,7 +513,7 @@ const handleDrop = async (event) => {
 .page-header-strip {
   height: 4px;
   flex-shrink: 0;
-  background: linear-gradient(90deg, @nordic-accent, @nordic-yellow, @nordic-green, @nordic-accent);
+  background: linear-gradient(90deg, @nordic-accent, @nordic-yellow, @nordic-accent);
   background-size: 200% 100%;
   animation: gradientShift 4s ease infinite;
 
@@ -782,7 +790,6 @@ const handleDrop = async (event) => {
   background: @nordic-divider;
   border-radius: 3px;
   overflow: hidden;
-  margin-bottom: 14px;
 }
 
 .progress-fill {
@@ -805,36 +812,28 @@ const handleDrop = async (event) => {
 }
 
 .progress-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  margin-top: 10px;
 }
 
-.progress-dot-wave {
+.progress-head {
   display: flex;
-  gap: 4px;
-  span {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: @nordic-accent;
-    animation: wave 1.2s ease-in-out infinite;
-
-    &:nth-child(2) { animation-delay: 0.1s; }
-    &:nth-child(3) { animation-delay: 0.2s; }
-    &:nth-child(4) { animation-delay: 0.3s; }
-  }
-}
-
-@keyframes wave {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-  30% { transform: translateY(-6px); opacity: 1; }
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .progress-label {
   font-size: 13px;
   color: @nordic-text-secondary;
   font-weight: 500;
+}
+
+.progress-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: @nordic-accent-dark;
+  font-variant-numeric: tabular-nums;
 }
 
 // ===== 操作按钮 =====

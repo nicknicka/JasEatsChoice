@@ -72,19 +72,11 @@
 								:class="getProgressClass(message)"
 							>
 								<div class="progress-content">
-									<div class="progress-icon">
-										<component :is="getProgressIcon(message)" />
-									</div>
 									<div class="progress-text">
 										{{ getProgressText(message) }}
 									</div>
-									<div
-										v-if="getProgressDots(message)"
-										class="progress-dots"
-									>
-										<span class="progress-dot"></span>
-										<span class="progress-dot"></span>
-										<span class="progress-dot"></span>
+									<div class="progress-track">
+										<span class="progress-bar"></span>
 									</div>
 								</div>
 							</div>
@@ -608,9 +600,7 @@ const {
 	streamResponse,
 	stopStreaming: stopStreamRequest,
 	sendStreamRequest,
-	getProgressIcon,
 	getProgressText,
-	getProgressDots,
 	getProgressClass,
 } = useAdvancedStreaming({
 	messages,
@@ -1440,91 +1430,99 @@ onUnmounted(() => {
 
 // ========== 进度指示器 ==========
 .message-progress-indicator {
-	display: inline-flex !important;
-	align-items: center;
-	gap: 8px;
+	display: block !important;
 	max-width: 100%;
 	padding: 12px 16px;
 	margin: 0;
 	box-sizing: border-box;
-	border-radius: 0;
-	box-shadow: none;
-	border: none;
 	background: transparent;
 	.progress-content {
-		flex: 0 1 auto;
 		display: flex;
-		flex-direction: row;
-		align-items: center;
-		gap: 8px;
-		max-width: 100%;
+		flex-direction: column;
+		gap: 10px;
+		width: 100%;
 		min-width: 0;
-		.progress-icon {
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			width: 20px;
-			height: 20px;
-			color: @sage;
-			font-size: 18px;
-			flex-shrink: 0;
-			svg {
-				width: 18px;
-				height: 18px;
-			}
-		}
 		.progress-text {
+			display: block;
 			font-size: 0.9rem;
 			font-weight: 500;
 			line-height: 1.5;
-			flex: 1 1 auto;
-			min-width: 0;
-			white-space: normal;
+			min-width: 96px;
 			word-break: break-word;
 			overflow-wrap: break-word;
-			line-break: loose;
+			background-image: linear-gradient(
+				100deg,
+				@terracotta-dark 0%,
+				@terracotta-dark 45%,
+				@terracotta 48%,
+				#fda766 50%,
+				@terracotta 52%,
+				@terracotta-dark 55%,
+				@terracotta-dark 100%
+			);
+			background-size: 300% 100%;
+			-webkit-background-clip: text;
+			background-clip: text;
+			-webkit-text-fill-color: transparent;
+			color: transparent;
+			animation: progressSweep 2.6s linear infinite;
 		}
-		.progress-dots {
-			display: flex;
-			align-items: center;
-			gap: 6px;
-			flex-shrink: 0;
-			.progress-dot {
-				width: 6px;
-				height: 6px;
-				border-radius: 50%;
-				animation: dotBounce 1.4s ease-in-out infinite;
-				&:nth-child(1) {
-					animation-delay: 0s;
-				}
-				&:nth-child(2) {
-					animation-delay: 0.2s;
-				}
-				&:nth-child(3) {
-					animation-delay: 0.4s;
-				}
-			}
+		.progress-track {
+			display: block;
+			width: 100%;
+			min-width: 120px;
+			height: 4px;
+			border-radius: 3px;
+			background: @terracotta-light;
+			overflow: hidden;
+		}
+		.progress-bar {
+			display: block;
+			width: 55%;
+			height: 100%;
+			border-radius: 3px;
+			background: linear-gradient(
+				90deg,
+				@terracotta 0%,
+				@terracotta-dark 100%
+			);
+			animation: progressSlide 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 		}
 	}
-	&.status-thinking .progress-text {
-		color: @terracotta;
-	}
-	&.status-thinking .progress-dot {
-		background: @terracotta;
-	}
-	&.status-executing .progress-text {
-		color: #e2b455;
-	}
-	&.status-executing .progress-dot {
-		background: #e2b455;
-	}
-	&.status-completed {
-		background: linear-gradient(135deg, @sage 0%, #66bb6a 100%);
-		border: 1px solid @sage;
-		border-radius: 6px;
+	// 执行阶段沿用原有琥珀色语义
+	&.status-executing {
 		.progress-text {
-			color: #fff;
+			background-image: linear-gradient(
+				100deg,
+				#c99a3f 0%,
+				#c99a3f 46%,
+				#e0b968 49%,
+				#f0d79b 50%,
+				#e0b968 51%,
+				#c99a3f 54%,
+				#c99a3f 100%
+			);
+			background-size: 300% 100%;
 		}
+		.progress-bar {
+			background: linear-gradient(90deg, #e2b455 0%, #c99a3f 100%);
+		}
+	}
+}
+@keyframes progressSweep {
+	0% {
+		background-position: 140% 0;
+	}
+	100% {
+		background-position: -140% 0;
+	}
+}
+@keyframes progressSlide {
+	0% {
+		transform: translateX(-82%);
+	}
+	100% {
+		transform: translateX(164%);
 	}
 }
 
@@ -2012,18 +2010,6 @@ onUnmounted(() => {
 		opacity: 1;
 	}
 }
-@keyframes dotBounce {
-	0%,
-	80%,
-	100% {
-		transform: scale(0.8);
-		opacity: 0.5;
-	}
-	40% {
-		transform: scale(1);
-		opacity: 1;
-	}
-}
 @keyframes cursorBlink {
 	0%,
 	50% {
@@ -2105,9 +2091,14 @@ onUnmounted(() => {
 		animation: none !important;
 		opacity: 1;
 	}
-	.progress-dot {
+	.progress-text {
 		animation: none !important;
-		opacity: 1;
+		-webkit-text-fill-color: currentColor;
+		color: @terracotta;
+	}
+	.progress-bar {
+		animation: none !important;
+		width: 100%;
 	}
 	.char-count.at-limit {
 		animation: none !important;
