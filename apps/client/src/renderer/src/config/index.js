@@ -94,8 +94,6 @@ export const API_CONFIG = {
   // AI助手API端点
   ai: {
     chat: '/agent/supervisor-sse/chat',
-    chatLegacy: '/v1/ai/stream/chat',
-    chatSupervisor: '/agent/supervisor/chat',
     recipe: '/v1/ai/recipe',
     recipeStream: '/v1/ai/recipe/stream',
     capabilities: '/v1/ai/capabilities',

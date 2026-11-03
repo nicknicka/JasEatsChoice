@@ -13,7 +13,6 @@
 /v1/admin/hot-topic/review
 /v1/admin/hot-topic/update
 /v1/ai/nutrient
-/v1/ai/stream/chat
 /v1/collections/user/{userId}
 /v1/merchant/{merchantId}/comments
 /v1/tutorial

@@ -211,7 +211,6 @@ export const AI_API = {
   // 对话
   CHAT: '/agent/supervisor/chat',
   STREAM_CHAT: '/agent/supervisor-sse/chat',
-  CHAT_LEGACY: '/v1/ai/stream/chat',
 
   // 聊天历史
   HISTORY: '/v1/ai/chat/history',
