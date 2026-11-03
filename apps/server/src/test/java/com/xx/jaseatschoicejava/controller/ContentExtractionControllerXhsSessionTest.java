@@ -22,13 +22,14 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.xx.jaseatschoicejava.common.GlobalExceptionHandler;
 import com.xx.jaseatschoicejava.config.XhsSessionStore;
 import com.xx.jaseatschoicejava.service.ContentExtractionService;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 
 /**
  * xhs-session 接口：只回传绑定状态，绝不回传登录态本体。
  */
 class ContentExtractionControllerXhsSessionTest {
 
-    private static final String USER_HEADER = "X-User-Id";
+    private static final String USER_ATTRIBUTE = UserIdentityUtil.VERIFIED_USER_ID_ATTRIBUTE;
     private static final String SECRET = "a1=secret; web_session=session-token-xyz";
 
     @TempDir
@@ -51,7 +52,7 @@ class ContentExtractionControllerXhsSessionTest {
 
     @Test
     void getWithoutBindingReturnsNoneStatus() throws Exception {
-        mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+        mockMvc.perform(get("/v1/content-extraction/xhs-session").requestAttr(USER_ATTRIBUTE, "user-a"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.bound").value(false))
@@ -62,7 +63,7 @@ class ContentExtractionControllerXhsSessionTest {
     @Test
     void bindThenGetReturnsActiveAndNeverLeaksBody() throws Exception {
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"" + SECRET + "\"}"))
             .andExpect(status().isOk())
@@ -70,7 +71,7 @@ class ContentExtractionControllerXhsSessionTest {
             .andExpect(jsonPath("$.data.bound").value(true))
             .andExpect(jsonPath("$.data.updatedAt").isNotEmpty());
 
-        MvcResult result = mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+        MvcResult result = mockMvc.perform(get("/v1/content-extraction/xhs-session").requestAttr(USER_ATTRIBUTE, "user-a"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.bound").value(true))
             .andExpect(jsonPath("$.data.status").value("active"))
@@ -84,14 +85,14 @@ class ContentExtractionControllerXhsSessionTest {
     @Test
     void statusIsExpiredWhenSessionMarkedExpired() throws Exception {
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"" + SECRET + "\"}"))
             .andExpect(status().isOk());
 
         xhsSessionStore.markExpired("user-a");
 
-        MvcResult result = mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+        MvcResult result = mockMvc.perform(get("/v1/content-extraction/xhs-session").requestAttr(USER_ATTRIBUTE, "user-a"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.bound").value(true))
             .andExpect(jsonPath("$.data.status").value("expired"))
@@ -105,35 +106,35 @@ class ContentExtractionControllerXhsSessionTest {
     @Test
     void rebindingClearsExpiredStatus() throws Exception {
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"" + SECRET + "\"}"))
             .andExpect(status().isOk());
         xhsSessionStore.markExpired("user-a");
 
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"" + SECRET + "\"}"))
             .andExpect(status().isOk());
 
-        mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+        mockMvc.perform(get("/v1/content-extraction/xhs-session").requestAttr(USER_ATTRIBUTE, "user-a"))
             .andExpect(jsonPath("$.data.status").value("active"));
     }
 
     @Test
     void unbindClearsExpiredStatus() throws Exception {
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"" + SECRET + "\"}"))
             .andExpect(status().isOk());
         xhsSessionStore.markExpired("user-a");
 
-        mockMvc.perform(delete("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+        mockMvc.perform(delete("/v1/content-extraction/xhs-session").requestAttr(USER_ATTRIBUTE, "user-a"))
             .andExpect(status().isOk());
 
-        mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+        mockMvc.perform(get("/v1/content-extraction/xhs-session").requestAttr(USER_ATTRIBUTE, "user-a"))
             .andExpect(jsonPath("$.data.bound").value(false))
             .andExpect(jsonPath("$.data.status").value("none"));
     }
@@ -141,17 +142,17 @@ class ContentExtractionControllerXhsSessionTest {
     @Test
     void unbindReturnsBoundFalse() throws Exception {
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"" + SECRET + "\"}"))
             .andExpect(status().isOk());
 
-        mockMvc.perform(delete("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+        mockMvc.perform(delete("/v1/content-extraction/xhs-session").requestAttr(USER_ATTRIBUTE, "user-a"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.bound").value(false));
 
-        mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-a"))
+        mockMvc.perform(get("/v1/content-extraction/xhs-session").requestAttr(USER_ATTRIBUTE, "user-a"))
             .andExpect(jsonPath("$.data.bound").value(false))
             .andExpect(jsonPath("$.data.status").value("none"));
     }
@@ -159,13 +160,13 @@ class ContentExtractionControllerXhsSessionTest {
     @Test
     void rejectsBlankCookie() throws Exception {
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"   \"}"))
             .andExpect(jsonPath("$.success").value(false));
 
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
             .andExpect(jsonPath("$.success").value(false));
@@ -174,7 +175,7 @@ class ContentExtractionControllerXhsSessionTest {
     @Test
     void rejectsCookieWithoutWebSession() throws Exception {
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"a1=abc; other=def\"}"))
             .andExpect(jsonPath("$.success").value(false))
@@ -186,7 +187,7 @@ class ContentExtractionControllerXhsSessionTest {
         String tooLong = "web_session=" + "a".repeat(8192);
 
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"" + tooLong + "\"}"))
             .andExpect(jsonPath("$.success").value(false))
@@ -194,29 +195,30 @@ class ContentExtractionControllerXhsSessionTest {
     }
 
     @Test
-    void sessionsAreIsolatedPerUserHeader() throws Exception {
+    void sessionsAreIsolatedPerVerifiedUser() throws Exception {
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
-                .header(USER_HEADER, "user-a")
+                .requestAttr(USER_ATTRIBUTE, "user-a")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"" + SECRET + "\"}"))
             .andExpect(status().isOk());
 
-        mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-b"))
+        mockMvc.perform(get("/v1/content-extraction/xhs-session").requestAttr(USER_ATTRIBUTE, "user-b"))
             .andExpect(jsonPath("$.data.bound").value(false));
     }
 
     @Test
-    void missingTokenFallsBackToSharedTestUser() throws Exception {
-        // 无 X-User-Id / 无 token 时 resolveUserId 回落 test_user，多个匿名请求共用一份登录态。
+    void missingVerifiedIdentityIsRejected() throws Exception {
+        // 取不到可信身份（无已验证 JWT 写入的用户ID）即视为未登录，返回 401；不再回落到共享账号。
         mockMvc.perform(post("/v1/content-extraction/xhs-session")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cookie\":\"" + SECRET + "\"}"))
-            .andExpect(status().isOk());
+            .andExpect(status().isUnauthorized());
 
         mockMvc.perform(get("/v1/content-extraction/xhs-session"))
-            .andExpect(jsonPath("$.data.bound").value(true));
+            .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(get("/v1/content-extraction/xhs-session").header(USER_HEADER, "user-b"))
-            .andExpect(jsonPath("$.data.bound").value(false));
+        // 未带可信身份时伪造的 X-User-Id 请求头不得改变服务端身份
+        mockMvc.perform(get("/v1/content-extraction/xhs-session").header("X-User-Id", "user-b"))
+            .andExpect(status().isUnauthorized());
     }
 }

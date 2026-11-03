@@ -7,8 +7,8 @@ const SESSION_PATH = '/api/v1/content-extraction/xhs-session'
 const AUTH_SOURCE_ID = 'e2e-xhs-auth-source'
 const AUTH_SOURCE_TITLE = 'E2E 需要登录小红书'
 
-// 应用侧身份同时依赖 Authorization 与 X-User-Id（UserIdentityUtil 优先读后者），
-// 直连请求必须与之一致，否则会落到匿名兜底用户。
+// 内容提取接口现在只认已验证 JWT：Authorization 是唯一可信身份来源，
+// X-User-Id 不再影响内容提取的归属（其余模块尚未收紧，带上它无害且兼容）。
 async function authHeaders(page) {
   const { token, userId } = await page.evaluate(() => ({
     token: localStorage.getItem('auth_token'),

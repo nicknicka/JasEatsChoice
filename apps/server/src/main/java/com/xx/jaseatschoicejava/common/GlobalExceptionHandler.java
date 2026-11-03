@@ -1,6 +1,7 @@
 package com.xx.jaseatschoicejava.common;
 
 import com.xx.jaseatschoicejava.exception.BusinessException;
+import com.xx.jaseatschoicejava.util.UrlSecurityValidator;
 import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -45,6 +47,40 @@ public class GlobalExceptionHandler {
         logger.error("Business Exception: Code={}, Message={}", e.getCode(), e.getMessage());
         // 返回标准化的失败响应
         return ResponseResult.fail(e.getCode(), e.getMessage());
+    }
+
+    /**
+     * 处理内容提取链接校验失败（空、过长、格式非法、指向受限地址），统一返回 400。
+     */
+    @ExceptionHandler(UrlSecurityValidator.InvalidUrlException.class)
+    public ResponseEntity<ResponseResult<?>> handleInvalidUrl(UrlSecurityValidator.InvalidUrlException e) {
+        logger.warn("Invalid content url: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ResponseResult.fail("400", e.getMessage()));
+    }
+
+    /**
+     * 处理 @Valid 校验失败（如内容链接为空），统一返回 400。
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ResponseResult<?>> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldError() != null
+            ? e.getBindingResult().getFieldError().getDefaultMessage()
+            : "参数校验失败";
+        logger.warn("Validation failed: {}", message);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ResponseResult.fail("400", message));
+    }
+
+    /**
+     * 处理显式声明了 HTTP 状态码的异常（如未登录返回 401），按声明状态返回。
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ResponseResult<?>> handleResponseStatus(ResponseStatusException e) {
+        logger.warn("ResponseStatusException: status={}, reason={}", e.getStatusCode(), e.getReason());
+        String message = e.getReason() != null ? e.getReason() : "请求失败";
+        return ResponseEntity.status(e.getStatusCode())
+            .body(ResponseResult.fail(String.valueOf(e.getStatusCode().value()), message));
     }
 
     /**

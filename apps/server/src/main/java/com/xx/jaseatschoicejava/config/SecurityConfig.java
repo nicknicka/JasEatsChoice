@@ -17,6 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 @Configuration
@@ -89,9 +90,16 @@ public class SecurityConfig {
             .and()
             // Add JWT authentication filter
             .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.access.intercept.FilterSecurityInterceptor.class)
+            // 未登录访问受保护接口时返回 401，交由前端既有流程跳登录
+            .exceptionHandling(exception -> exception.authenticationEntryPoint((request, response, authException) -> {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":401,\"message\":\"未登录或登录已过期，请重新登录\"}");
+            }))
             // Configure authorization (Spring Security 6: authorizeHttpRequests + requestMatchers)
             .authorizeHttpRequests()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests
+            .requestMatchers("/v1/content-extraction/**").authenticated() // 内容提取一律要求登录
             .requestMatchers("/**").permitAll()
             .anyRequest().permitAll();
 
