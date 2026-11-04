@@ -19,6 +19,7 @@ import {
   MagicStick
 } from '@element-plus/icons-vue'
 import CommonMapLocationPicker from '../../components/CommonMapLocationPicker.vue'
+import WeatherCanvasFx from '../../components/WeatherCanvasFx.vue'
 import BitsCarousel from '../../components/BitsCarousel.vue'
 import { useRouter } from 'vue-router'
 import api from '../../utils/api.js'
@@ -896,6 +897,7 @@ watch(
 
             <!-- 天气卡片 -->
             <div v-else class="weather-card scale-in" :data-theme="weatherTheme" :style="{ background: weatherGradient }">
+              <WeatherCanvasFx :theme="weatherTheme" />
               <div class="weather-inner">
                 <div class="weather-temp-row">
                   <span class="weather-emoji">{{ weatherEmoji }}</span>
@@ -1543,16 +1545,6 @@ watch(
       }
     }
 
-    @keyframes weather-rain-fall {
-      0% { transform: translate3d(0, -46px, 0); }
-      100% { transform: translate3d(0, 46px, 0); }
-    }
-
-    @keyframes weather-sunny-pulse {
-      0%, 100% { transform: scale(1); opacity: 0.45; }
-      50% { transform: scale(1.08); opacity: 0.7; }
-    }
-
     @keyframes weather-thunder-flash {
       0%, 78%, 100% { opacity: 0; }
       80% { opacity: 0.35; }
@@ -1573,15 +1565,6 @@ watch(
       --card-glass-border: rgba(255, 244, 220, 0.4);
       --card-glass-border-strong: rgba(255, 244, 220, 0.5);
       --card-text-gradient: linear-gradient(180deg, #fffaf0 0%, rgba(255, 250, 240, 0.85) 100%);
-
-      &::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(circle at 85% 12%, rgba(255, 238, 160, 0.45) 0%, transparent 45%);
-        animation: weather-sunny-pulse 7s ease-in-out infinite;
-        pointer-events: none;
-      }
     }
 
     [data-theme='rain'] {
@@ -1589,16 +1572,6 @@ watch(
       --card-glass-bg-hover: rgba(255, 255, 255, 0.18);
       --card-glass-border: rgba(255, 255, 255, 0.2);
       --card-glass-border-strong: rgba(255, 255, 255, 0.28);
-
-      &::after {
-        content: '';
-        position: absolute;
-        inset: -60px;
-        background:
-          repeating-linear-gradient(100deg, rgba(255, 255, 255, 0.16) 0 2px, transparent 2px 16px);
-        animation: weather-rain-fall 1.2s linear infinite;
-        pointer-events: none;
-      }
     }
 
     [data-theme='snow'],
