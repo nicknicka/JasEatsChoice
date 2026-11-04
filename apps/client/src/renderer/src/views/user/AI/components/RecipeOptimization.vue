@@ -55,6 +55,7 @@
       <div class="action-bar">
         <button
           class="action-btn primary-btn"
+          type="button"
           @click="optimizeRecipe"
           :disabled="!originalRecipe || optimizationLoading"
         >
@@ -69,6 +70,14 @@
             </svg>
             {{ optimizationLoading ? '优化中...' : '开始优化' }}
           </span>
+        </button>
+        <button
+          v-if="optimizationLoading"
+          type="button"
+          class="action-btn cancel-btn"
+          @click="cancelOptimization"
+        >
+          取消优化
         </button>
       </div>
 
@@ -95,6 +104,30 @@
               <span class="dot"></span>
             </div>
           </div>
+          <!-- 模型实时输出 -->
+          <div v-if="streamedContent" class="stream-output">
+            <div class="stream-output-label">实时输出</div>
+            <pre class="stream-output-text">{{ streamedContent }}</pre>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- 失败或取消提示 -->
+      <Transition name="result-reveal">
+        <div
+          v-if="optimizationError || optimizationCancelled"
+          class="optimization-feedback"
+          :class="{ cancelled: optimizationCancelled }"
+        >
+          <div class="feedback-title">
+            {{ optimizationCancelled ? '已取消优化' : '优化未完成' }}
+          </div>
+          <p class="feedback-message">
+            {{ optimizationCancelled ? '原食谱已保留，可调整后重新优化。' : optimizationError }}
+          </p>
+          <span v-if="elapsedMs !== null" class="feedback-elapsed">
+            耗时 {{ formatElapsed(elapsedMs) }}
+          </span>
         </div>
       </Transition>
 
@@ -108,6 +141,9 @@
                 <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>
               </svg>
               AI 优化完成
+              <span v-if="elapsedMs !== null" class="result-elapsed">
+                耗时 {{ formatElapsed(elapsedMs) }}
+              </span>
             </div>
             <h3 class="result-title">食谱对比</h3>
             <p class="result-subtitle">左侧为原食谱，右侧为优化后的食谱</p>
@@ -239,7 +275,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { Loading, DocumentCopy, FolderAdd } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import axios from "axios";
@@ -251,6 +287,13 @@ import { useRecipeOptimizationTask } from "../../../../composables/useRecipeOpti
 
 defineOptions({
   name: "RecipeOptimization"
+});
+
+const props = defineProps({
+  recipeStreamTimeoutMs: {
+    type: Number,
+    default: 120000
+  }
 });
 
 // 初始化 Pinia store
@@ -266,8 +309,22 @@ const {
   optimizationLoading,
   smoothProgress,
   progressStatus,
-  optimizeRecipe
-} = useRecipeOptimizationTask();
+  streamedContent,
+  elapsedMs,
+  optimizationError,
+  optimizationCancelled,
+  optimizeRecipe,
+  cancelOptimization,
+  setRecipeStreamTimeoutMs
+} = useRecipeOptimizationTask({
+  recipeStreamTimeoutMs: props.recipeStreamTimeoutMs
+});
+
+watch(
+  () => props.recipeStreamTimeoutMs,
+  (timeoutMs) => setRecipeStreamTimeoutMs(timeoutMs),
+  { immediate: true }
+);
 
 // 优化目标选项
 const goalOptions = [
@@ -278,6 +335,14 @@ const goalOptions = [
 ];
 
 const numOrZero = (v) => Number(v) || 0;
+
+const formatElapsed = (ms) => {
+  const value = Number(ms);
+  if (!Number.isFinite(value) || value < 0) return "";
+  if (value < 1000) return `${Math.round(value)} 毫秒`;
+  const seconds = value / 1000;
+  return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)} 秒`;
+};
 
 // 营养对比行（原食谱 → 优化后）
 const nutritionRows = computed(() => {
@@ -596,6 +661,8 @@ const saveToMyRecipes = async () => {
 // ===== 操作按钮 =====
 .action-bar {
   margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
 }
 
 .action-btn {
@@ -616,6 +683,7 @@ const saveToMyRecipes = async () => {
   letter-spacing: -0.2px;
 
   &.primary-btn {
+    flex: 1;
     background: linear-gradient(135deg, @nordic-green, @nordic-green-dark);
     color: #fff;
     box-shadow: 0 4px 16px rgba(123, 174, 127, 0.25);
@@ -647,6 +715,20 @@ const saveToMyRecipes = async () => {
 
   .spin-icon {
     animation: spin 1s linear infinite;
+  }
+}
+
+.cancel-btn {
+  width: auto;
+  min-width: 120px;
+  flex-shrink: 0;
+  background: @nordic-surface;
+  border: 1px solid @nordic-border;
+  color: @nordic-text-secondary;
+
+  &:hover {
+    border-color: @nordic-accent;
+    color: @nordic-accent;
   }
 }
 
@@ -759,6 +841,33 @@ const saveToMyRecipes = async () => {
   }
 }
 
+.stream-output {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: @nordic-bg;
+  border: 1px solid @nordic-border;
+}
+
+.stream-output-label {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: @nordic-text-muted;
+}
+
+.stream-output-text {
+  margin: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  color: @nordic-text-secondary;
+}
+
 @keyframes dotPulse {
   0%, 80%, 100% {
     transform: scale(0.6);
@@ -814,6 +923,47 @@ const saveToMyRecipes = async () => {
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 12px;
+}
+
+.result-elapsed {
+  padding-left: 8px;
+  border-left: 1px solid currentColor;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.optimization-feedback {
+  margin-bottom: 20px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: #fff2ef;
+  border: 1px solid #efc2b8;
+  color: #8a3f2f;
+
+  &.cancelled {
+    background: @nordic-surface;
+    border-color: @nordic-border;
+    color: @nordic-text-secondary;
+  }
+}
+
+.feedback-title {
+  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.feedback-message {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.feedback-elapsed {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.75;
 }
 
 .result-title {

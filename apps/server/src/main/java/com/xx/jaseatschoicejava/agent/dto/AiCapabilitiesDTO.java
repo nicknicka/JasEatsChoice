@@ -67,6 +67,12 @@ public class AiCapabilitiesDTO {
     private boolean agentic;
 
     /**
+     * 食谱流式优化的统一超时时间（毫秒）。
+     * 前端据此设置取消定时器，并给出与实际配置一致的超时提示。
+     */
+    private long recipeStreamTimeoutMs;
+
+    /**
      * 不可用时的提示文案，供前端直接展示
      */
     private String unavailableMessage;

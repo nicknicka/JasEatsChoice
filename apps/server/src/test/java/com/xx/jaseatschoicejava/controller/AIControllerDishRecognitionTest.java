@@ -31,6 +31,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -42,7 +43,10 @@ import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.service.AiAssistantService;
+import com.xx.jaseatschoicejava.service.AiQuotaScope;
+import com.xx.jaseatschoicejava.service.AiQuotaService;
 import com.xx.jaseatschoicejava.service.DishRecognitionCacheService;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 
 @ExtendWith(MockitoExtension.class)
 class AIControllerDishRecognitionTest {
@@ -63,6 +67,9 @@ class AIControllerDishRecognitionTest {
     @Mock
     private DishRecognitionCacheService dishRecognitionCacheService;
 
+    @Mock
+    private AiQuotaService aiQuotaService;
+
     @TempDir
     private Path tempDir;
 
@@ -82,6 +89,13 @@ class AIControllerDishRecognitionTest {
         ReflectionTestUtils.setField(controller, "fileUploadConfig", fileUploadConfig);
         ReflectionTestUtils.setField(controller, "aiModelRegistry", aiModelRegistry);
         ReflectionTestUtils.setField(controller, "dishRecognitionCacheService", dishRecognitionCacheService);
+        ReflectionTestUtils.setField(controller, "aiQuotaService", aiQuotaService);
+    }
+
+    private static MockHttpServletRequest verifiedRequest(String userId) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(UserIdentityUtil.VERIFIED_USER_ID_ATTRIBUTE, userId);
+        return request;
     }
 
     @AfterEach
@@ -112,7 +126,7 @@ class AIControllerDishRecognitionTest {
             .thenReturn(successfulResult());
 
         ResponseResult<?> response = controller.dishRecognize(
-            new MockMultipartFile("image", filename, clientType, bytes), null);
+            new MockMultipartFile("image", filename, clientType, bytes), verifiedRequest("42"));
 
         assertTrue(response.getSuccess());
         assertEquals("200", response.getCode());
@@ -123,6 +137,7 @@ class AIControllerDishRecognitionTest {
         assertTrue(((String) data.get("imageUrl")).endsWith(expectedSuffix));
         verify(aiAssistantService).recognizeDishWithBase64(anyString(), eq(expectedMime));
         verify(dishRecognitionCacheService).put(bytes, null, null, 7L, data);
+        verify(aiQuotaService).consume("42", AiQuotaScope.DISH_RECOGNITION);
     }
 
     @Test
@@ -134,12 +149,13 @@ class AIControllerDishRecognitionTest {
             .thenReturn(Optional.of(cached));
 
         ResponseResult<?> response = controller.dishRecognize(
-            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), null);
+            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), verifiedRequest("42"));
 
         assertTrue(response.getSuccess());
         assertEquals(cached, response.getData());
         assertTrue(uploadDirIsEmpty());
         verifyNoInteractions(aiAssistantService);
+        verifyNoInteractions(aiQuotaService);
     }
 
     @Test
@@ -148,7 +164,8 @@ class AIControllerDishRecognitionTest {
         when(aiAssistantService.recognizeDishWithBase64(anyString(), eq("image/jpeg")))
             .thenReturn(successfulResult());
 
-        controller.dishRecognize(new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), null);
+        controller.dishRecognize(
+            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), verifiedRequest("42"));
 
         verify(dishRecognitionCacheService).find(JPEG, "openai-compatible", "vision-a", 7L);
     }
@@ -157,7 +174,7 @@ class AIControllerDishRecognitionTest {
     void dishRecognize_nonImage_returnsClearErrorWithoutCallingModel() {
         ResponseResult<?> response = controller.dishRecognize(
             new MockMultipartFile("image", "notes.txt", "image/jpeg", new byte[] { 'n', 'o', 't', 'i', 'm', 'a', 'g', 'e' }),
-            null);
+            verifiedRequest("42"));
 
         assertFalse(response.getSuccess());
         assertEquals("415", response.getCode());
@@ -169,7 +186,7 @@ class AIControllerDishRecognitionTest {
     void dishRecognize_unsupportedGif_returnsClearError() {
         ResponseResult<?> response = controller.dishRecognize(
             new MockMultipartFile("image", "dish.gif", "image/gif", "GIF89a123456".getBytes()),
-            null);
+            verifiedRequest("42"));
 
         assertFalse(response.getSuccess());
         assertEquals("415", response.getCode());
@@ -180,7 +197,7 @@ class AIControllerDishRecognitionTest {
     void dishRecognize_nonImageWithVisionDisabledStillReturnsFormatError() {
         ResponseResult<?> response = controller.dishRecognize(
             new MockMultipartFile("image", "notes.txt", "image/jpeg", new byte[] { 'n', 'o', 't', 'i', 'm', 'a', 'g', 'e' }),
-            null);
+            verifiedRequest("42"));
 
         assertFalse(response.getSuccess());
         assertEquals("415", response.getCode());
@@ -192,7 +209,7 @@ class AIControllerDishRecognitionTest {
         MultipartFile image = mock(MultipartFile.class);
         when(image.getSize()).thenReturn(11L * 1024 * 1024);
 
-        ResponseResult<?> response = controller.dishRecognize(image, null);
+        ResponseResult<?> response = controller.dishRecognize(image, verifiedRequest("42"));
 
         assertFalse(response.getSuccess());
         assertEquals("413", response.getCode());
@@ -207,7 +224,7 @@ class AIControllerDishRecognitionTest {
         when(image.isEmpty()).thenReturn(false);
         when(image.getBytes()).thenThrow(new IOException("broken stream"));
 
-        ResponseResult<?> response = controller.dishRecognize(image, null);
+        ResponseResult<?> response = controller.dishRecognize(image, verifiedRequest("42"));
 
         assertFalse(response.getSuccess());
         assertEquals("400", response.getCode());
@@ -221,7 +238,7 @@ class AIControllerDishRecognitionTest {
             .thenReturn(Map.of("error", true, "message", "视觉模型调用失败"));
 
         ResponseResult<?> response = controller.dishRecognize(
-            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), null);
+            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), verifiedRequest("42"));
 
         assertFalse(response.getSuccess());
         assertEquals("500", response.getCode());
@@ -237,7 +254,7 @@ class AIControllerDishRecognitionTest {
             .thenReturn(Map.of("error", true, "notDish", true, "message", "请上传食物图片"));
 
         ResponseResult<?> response = controller.dishRecognize(
-            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), null);
+            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), verifiedRequest("42"));
 
         assertFalse(response.getSuccess());
         assertEquals("4001", response.getCode());
@@ -254,7 +271,7 @@ class AIControllerDishRecognitionTest {
             .thenThrow(new IllegalStateException("vision unavailable"));
 
         ResponseResult<?> response = controller.dishRecognize(
-            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), null);
+            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), verifiedRequest("42"));
 
         assertFalse(response.getSuccess());
         assertEquals("500", response.getCode());
@@ -271,7 +288,7 @@ class AIControllerDishRecognitionTest {
         fileUploadConfig.setUploadPath(occupiedPath + "/");
 
         ResponseResult<?> response = controller.dishRecognize(
-            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), null);
+            new MockMultipartFile("image", "dish.jpg", "image/jpeg", JPEG), verifiedRequest("42"));
 
         assertFalse(response.getSuccess());
         assertEquals("500", response.getCode());

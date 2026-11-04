@@ -153,6 +153,17 @@ class AiAssistantServiceImplDishRecognitionTest {
         assertFalse(result.containsKey("isDish"));
     }
 
+    @Test
+    void recognizeDishWithBase64_timeoutReturnsUnifiedTimeoutMessage() {
+        when(visionModel.chat(any(UserMessage.class)))
+            .thenThrow(new dev.langchain4j.exception.TimeoutException("read timed out"));
+
+        Map<String, Object> result = service.recognizeDishWithBase64("AAAA", "image/jpeg");
+
+        assertEquals(true, result.get("error"));
+        assertEquals("识别超时，请稍后重试", result.get("message"));
+    }
+
     private ChatResponse chatResponse(String text) {
         return ChatResponse.builder().aiMessage(AiMessage.from(text)).build();
     }

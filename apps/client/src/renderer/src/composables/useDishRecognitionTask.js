@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { API_CONFIG } from '../config'
 import { logger } from '../config/chatConfig'
+import { useAuthStore } from '../store/authStore'
 
 const selectedImage = ref(null)
 const selectedFile = ref(null)
@@ -148,9 +149,15 @@ const runRecognition = async (file) => {
   const formData = new FormData()
   formData.append('image', compressedFile)
 
+  const authStore = useAuthStore()
+  const token = authStore.token || localStorage.getItem('admin_token')
+  const headers = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+
   const apiUrl = API_CONFIG.baseURL + API_CONFIG.ai.recognizeDish
   const response = await fetch(apiUrl, {
     method: 'POST',
+    headers,
     body: formData
   })
   const result = await response.json().catch(() => null)

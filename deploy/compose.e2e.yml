@@ -1,0 +1,30 @@
+# E2E 覆盖层：把通用 AI 适配器指向仓库内的假服务，让 Playwright 在没有真实
+# 厂商密钥时也能跑通菜品识别之外的全部 AI 主链路。
+# 用法：docker compose -f deploy/compose.yml -f deploy/compose.dev.yml -f deploy/compose.e2e.yml ...
+services:
+  fake-ai:
+    build:
+      context: ../tests/fake-ai
+    expose:
+      - "4011"
+    networks:
+      - jaseats-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4011/v1/models')"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+
+  spring-boot:
+    environment:
+      AI_API_KEY: test-key
+      AI_MODEL: fake-model
+      AI_BASE_URL: http://fake-ai:4011/v1
+      # 假服务的 success/stall 用例依赖这个超时：4s 触发 AI_TIMEOUT，UI 断言只等约 4s。
+      AI_RECIPE_STREAM_TIMEOUT_MS: "4000"
+      ANNOUNCEMENT_RAG_ENABLED: "false"
+    depends_on:
+      fake-ai:
+        condition: service_healthy

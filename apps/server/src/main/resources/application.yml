@@ -222,6 +222,8 @@ ai:
   timeout: ${AI_TIMEOUT:30000}
   # 温度参数
   temperature: ${AI_TEMPERATURE:0.7}
+  # 食谱优化的统一超时时间（毫秒），模型调用、SSE 连接与前端取消定时器共用
+  recipe-stream-timeout-ms: ${AI_RECIPE_STREAM_TIMEOUT_MS:120000}
 
 announcement-rag:
   enabled: ${ANNOUNCEMENT_RAG_ENABLED:true}

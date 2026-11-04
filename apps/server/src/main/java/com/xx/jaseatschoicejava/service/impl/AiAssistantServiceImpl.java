@@ -7,6 +7,7 @@ import com.xx.jaseatschoicejava.agent.config.NoopChatModel;
 import com.xx.jaseatschoicejava.agent.config.NoopStreamingChatModel;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.service.AiAssistantService;
+import dev.langchain4j.exception.TimeoutException;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
@@ -212,7 +213,9 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
         } catch (Exception e) {
             log.error("菜品识别失败", e);
-            return Map.of("error", true, "message", "菜品识别失败，请稍后重试");
+            // 超时与一般失败分开提示，前后端展示统一文案（见 spec #222 的「统一的未登录、限流与超时错误」）
+            String message = e instanceof TimeoutException ? "识别超时，请稍后重试" : "菜品识别失败，请稍后重试";
+            return Map.of("error", true, "message", message);
         }
     }
 
@@ -311,18 +314,18 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             String goal,
             java.util.function.Consumer<String> progressCallback,
             java.util.function.Consumer<String> tokenCallback,
-            Runnable onComplete) {
+            java.util.function.LongConsumer onComplete) {
 
         if (originalRecipe == null || originalRecipe.trim().isEmpty()) {
-            progressCallback.accept("ERROR:食谱内容不能为空");
-            onComplete.run();
+            progressCallback.accept("ERROR:INVALID_REQUEST:食谱内容不能为空");
+            onComplete.accept(0L);
             return;
         }
 
         StreamingChatModel recipeStreamingModel = recipeStreamingModel();
         if (recipeStreamingModel == null) {
-            progressCallback.accept("ERROR:食谱优化暂未开放：未配置流式模型");
-            onComplete.run();
+            progressCallback.accept("ERROR:AI_NOT_CONFIGURED:食谱优化暂未开放：未配置流式模型");
+            onComplete.accept(0L);
             return;
         }
 
@@ -339,49 +342,77 @@ public class AiAssistantServiceImpl implements AiAssistantService {
         progressCallback.accept("正在调用AI进行优化...");
         log.info("[食谱优化-流式] 阶段2：流式调用LLM");
         long startTime = System.currentTimeMillis();
-
+        java.util.concurrent.atomic.AtomicBoolean finished = new java.util.concurrent.atomic.AtomicBoolean(false);
         StringBuilder fullResponse = new StringBuilder();
 
-        recipeStreamingModel.chat(prompt, new StreamingChatResponseHandler() {
-            @Override
-            public void onPartialResponse(String partialResponse) {
-                if (partialResponse != null && !partialResponse.isEmpty()) {
-                    fullResponse.append(partialResponse);
-                    tokenCallback.accept(partialResponse);
-                }
-            }
-
-            @Override
-            public void onCompleteResponse(ChatResponse completeResponse) {
-                long elapsed = System.currentTimeMillis() - startTime;
-                log.info("[食谱优化-流式] LLM流式完成，耗时={}ms，结果长度={}", elapsed, fullResponse.length());
-
-                // 阶段3：解析结果
-                progressCallback.accept("正在生成优化结果...");
-                Map<String, Object> result = parseRecipeResult(fullResponse.toString(), normalizedGoal);
-
-                if (result == null) {
-                    progressCallback.accept("ERROR:没有找到合适的优化食谱");
-                } else {
-                    // 通过特殊前缀传递最终结果
-                    try {
-                        String resultJson = objectMapper.writeValueAsString(result);
-                        progressCallback.accept("RESULT:" + resultJson);
-                    } catch (Exception e) {
-                        progressCallback.accept("ERROR:结果解析失败");
+        try {
+            recipeStreamingModel.chat(prompt, new StreamingChatResponseHandler() {
+                @Override
+                public void onPartialResponse(String partialResponse) {
+                    if (!finished.get() && partialResponse != null && !partialResponse.isEmpty()) {
+                        fullResponse.append(partialResponse);
+                        tokenCallback.accept(partialResponse);
                     }
-                    log.info("[食谱优化-流式] 成功，目标: {}", normalizedGoal);
                 }
-                onComplete.run();
-            }
 
-            @Override
-            public void onError(Throwable error) {
-                log.error("[食谱优化-流式] LLM调用失败", error);
-                progressCallback.accept("ERROR:AI调用失败：" + error.getMessage());
-                onComplete.run();
-            }
-        });
+                @Override
+                public void onCompleteResponse(ChatResponse completeResponse) {
+                    if (!finished.compareAndSet(false, true)) {
+                        return;
+                    }
+                    long elapsed = System.currentTimeMillis() - startTime;
+                    String responseText = fullResponse.toString();
+                    if (responseText.isBlank() && completeResponse != null && completeResponse.aiMessage() != null) {
+                        responseText = completeResponse.aiMessage().text();
+                    }
+                    log.info("[食谱优化-流式] LLM流式完成，耗时={}ms，结果长度={}", elapsed, responseText.length());
+
+                    // 阶段3：解析结果
+                    progressCallback.accept("正在生成优化结果...");
+                    Map<String, Object> result = parseRecipeResult(responseText, normalizedGoal);
+
+                    if (result == null) {
+                        progressCallback.accept("ERROR:AI_RESULT_PARSE_FAILED:没有找到合适的优化食谱");
+                    } else {
+                        // 通过特殊前缀传递最终结果
+                        try {
+                            String resultJson = objectMapper.writeValueAsString(result);
+                            progressCallback.accept("RESULT:" + resultJson);
+                        } catch (Exception e) {
+                            log.error("序列化食谱优化结果失败", e);
+                            progressCallback.accept("ERROR:AI_RESULT_PARSE_FAILED:结果解析失败");
+                        }
+                        log.info("[食谱优化-流式] 成功，目标: {}", normalizedGoal);
+                    }
+                    onComplete.accept(elapsed);
+                }
+
+                @Override
+                public void onError(Throwable error) {
+                    emitRecipeStreamFailure(error, startTime, progressCallback, onComplete, finished);
+                }
+            });
+        } catch (Exception error) {
+            emitRecipeStreamFailure(error, startTime, progressCallback, onComplete, finished);
+        }
+    }
+
+    private void emitRecipeStreamFailure(Throwable error,
+            long startTime,
+            java.util.function.Consumer<String> progressCallback,
+            java.util.function.LongConsumer onComplete,
+            java.util.concurrent.atomic.AtomicBoolean finished) {
+        if (!finished.compareAndSet(false, true)) {
+            return;
+        }
+        long elapsed = System.currentTimeMillis() - startTime;
+        log.error("[食谱优化-流式] LLM调用失败，耗时={}ms", elapsed, error);
+        if (error instanceof TimeoutException) {
+            progressCallback.accept("ERROR:AI_TIMEOUT:生成超时，请稍后重试");
+        } else {
+            progressCallback.accept("ERROR:AI_CALL_FAILED:AI调用失败，请稍后重试");
+        }
+        onComplete.accept(elapsed);
     }
 
     // ==================== 推荐理由生成 ====================

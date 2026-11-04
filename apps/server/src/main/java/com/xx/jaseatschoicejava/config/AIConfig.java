@@ -59,4 +59,11 @@ public class AIConfig {
      * 温度参数
      */
     private Double temperature = 0.7;
+
+    /**
+     * 食谱优化的统一超时时间（毫秒）。
+     *
+     * 模型调用、SSE 连接与前端超时提示共用这一份配置，避免四处各自写死。
+     */
+    private Integer recipeStreamTimeoutMs = 120000;
 }

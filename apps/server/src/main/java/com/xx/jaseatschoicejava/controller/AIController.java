@@ -8,9 +8,15 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import cn.hutool.http.HttpException;
@@ -28,6 +35,7 @@ import cn.hutool.http.HttpResponse;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
+import com.xx.jaseatschoicejava.config.AIConfig;
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.dto.DishDescriptionRequestDTO;
 import com.xx.jaseatschoicejava.service.DishDescriptionService;
@@ -35,7 +43,10 @@ import com.xx.jaseatschoicejava.agent.config.ChatModelProvider;
 import com.xx.jaseatschoicejava.agent.config.DynamicAiModelRegistry;
 import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.service.AiAssistantService;
+import com.xx.jaseatschoicejava.service.AiQuotaScope;
+import com.xx.jaseatschoicejava.service.AiQuotaService;
 import com.xx.jaseatschoicejava.service.DishRecognitionCacheService;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -57,9 +68,17 @@ import jakarta.annotation.Resource;
 public class AIController {
 
     private static final Logger log = LoggerFactory.getLogger(AIController.class);
-    private static final long SSE_TIMEOUT_MS = 300000L;
     private static final String AI_NOT_CONFIGURED_CODE = "AI_NOT_CONFIGURED";
     private static final String AI_VISION_NOT_CONFIGURED_CODE = "AI_VISION_NOT_CONFIGURED";
+    private static final String INVALID_REQUEST_CODE = "INVALID_REQUEST";
+    private static final String AI_CALL_FAILED_CODE = "AI_CALL_FAILED";
+    private static final String AI_RESULT_PARSE_FAILED_CODE = "AI_RESULT_PARSE_FAILED";
+    private static final String AI_TIMEOUT_CODE = "AI_TIMEOUT";
+    /**
+     * SSE Emitter 超时相对统一超时配置的宽限；必须严格大于看门狗触发的超时，
+     * 保证先由看门狗发出 error(AI_TIMEOUT)+done，Emitter 超时仅作最后兜底。
+     */
+    private static final long RECIPE_STREAM_EMITTER_GRACE_MS = 5000L;
     private static final long MAX_REMOTE_IMAGE_BYTES = 10 * 1024 * 1024;
     private static final int MAX_REMOTE_IMAGE_REDIRECTS = 3;
     private static final int REMOTE_IMAGE_TIMEOUT_MS = 15000;
@@ -84,6 +103,12 @@ public class AIController {
     @Resource
     private DishRecognitionCacheService dishRecognitionCacheService;
 
+    @Resource
+    private AiQuotaService aiQuotaService;
+
+    @Resource
+    private AIConfig aiConfig;
+
     // ==================== 菜品识别 ====================
 
     /**
@@ -95,7 +120,8 @@ public class AIController {
     @ApiOperation(value = "AI菜品识别", notes = "使用通用视觉模型识别菜品图片")
     @PostMapping(value = "/dish-recognize", consumes = "multipart/form-data")
     public ResponseResult<?> dishRecognize(@RequestParam("image") MultipartFile image,
-                                          @RequestParam(value = "userId", required = false) String userId) {
+                                          HttpServletRequest request) {
+        String userId = requireVerifiedUserId(request);
         if (image == null || image.isEmpty()) {
             return ResponseResult.fail("400", "请上传菜品图片");
         }
@@ -127,6 +153,8 @@ public class AIController {
         if (cachedResult.isPresent()) {
             return ResponseResult.success(cachedResult.get());
         }
+
+        aiQuotaService.consume(userId, AiQuotaScope.DISH_RECOGNITION);
 
         String suffix = imageSuffix(contentType);
         String uploadDir = fileUploadConfig.getUploadPath() + "dish-recognition/";
@@ -207,14 +235,20 @@ public class AIController {
      * 兼容旧接口：通过JSON传图片URL识别
      */
     @PostMapping("/dish-recognize-url")
-    public ResponseResult<?> dishRecognizeByUrl(@RequestBody Map<String, Object> params) {
+    public ResponseResult<?> dishRecognizeByUrl(@RequestBody Map<String, Object> params,
+                                                HttpServletRequest request) {
+        String userId = requireVerifiedUserId(request);
+        String imageUrl = params.get("imageUrl") instanceof String value ? value.trim() : "";
+        if (imageUrl.isEmpty()) {
+            return ResponseResult.fail("400", "图片地址不能为空");
+        }
+        aiQuotaService.consume(userId, AiQuotaScope.DISH_RECOGNITION);
         try {
-            String imageUrl = (String) params.get("imageUrl");
             Map<String, Object> result = aiAssistantService.recognizeDish(imageUrl);
             return ResponseResult.success(result);
         } catch (RuntimeException e) {
             log.error("菜品识别失败", e);
-            return ResponseResult.fail("500", "菜品识别失败：" + e.getMessage());
+            return ResponseResult.fail("500", "菜品识别失败，请稍后重试");
         }
     }
 
@@ -409,19 +443,22 @@ public class AIController {
      */
     @ApiOperation(value = "AI食谱优化", notes = "上传食谱进行优化建议")
     @PostMapping("/recipe-upload")
-    public ResponseResult<?> recipeUpload(@RequestBody Map<String, Object> params) {
+    public ResponseResult<?> recipeUpload(@RequestBody Map<String, Object> params,
+                                          HttpServletRequest request) {
+        String userId = requireVerifiedUserId(request);
+        Object recipeObj = params.get("recipe");
+        if (!(recipeObj instanceof Map<?, ?> recipe)) {
+            return ResponseResult.fail("400", "食谱内容格式不正确");
+        }
+
+        Object recipeTextObj = recipe.get("text");
+        String recipeText = recipeTextObj != null ? recipeTextObj.toString() : null;
+        if (recipeText == null || recipeText.trim().isEmpty()) {
+            return ResponseResult.fail("400", "食谱内容不能为空");
+        }
+
+        aiQuotaService.consume(userId, AiQuotaScope.RECIPE);
         try {
-            Object recipeObj = params.get("recipe");
-            if (!(recipeObj instanceof Map<?, ?> recipe)) {
-                return ResponseResult.fail("400", "食谱内容格式不正确");
-            }
-
-            Object recipeTextObj = recipe.get("text");
-            String recipeText = recipeTextObj != null ? recipeTextObj.toString() : null;
-            if (recipeText == null || recipeText.trim().isEmpty()) {
-                return ResponseResult.fail("400", "食谱内容不能为空");
-            }
-
             Map<String, Object> result = aiAssistantService.optimizeRecipe(
                 recipeText, AiAssistantService.DEFAULT_RECIPE_GOAL);
             return ResponseResult.success(result);
@@ -442,23 +479,27 @@ public class AIController {
      */
     @ApiOperation(value = "AI食谱优化（统一入口）", notes = "根据食谱内容与优化目标生成单方案建议")
     @PostMapping("/recipe")
-    public ResponseResult<?> recipeOptimize(@RequestBody Map<String, Object> params) {
+    public ResponseResult<?> recipeOptimize(@RequestBody Map<String, Object> params,
+                                            HttpServletRequest request) {
+        String userId = requireVerifiedUserId(request);
+        Object recipeValue = params.get("recipe");
+        String recipeText = recipeValue == null ? null : recipeValue.toString();
+        if (recipeText == null || recipeText.trim().isEmpty()) {
+            return ResponseResult.fail("400", "食谱内容不能为空");
+        }
+
+        String goal = resolveRecipeGoal(params.get("goal"));
+        if (goal == null) {
+            return ResponseResult.fail("400", "不支持的优化目标：" + params.get("goal"));
+        }
+
+        if (!chatModelProvider.getCapabilities().isTextChat()) {
+            return ResponseResult.fail(AI_NOT_CONFIGURED_CODE, "食谱优化暂未开放：请先配置 AI 模型");
+        }
+
+        aiQuotaService.consume(userId, AiQuotaScope.RECIPE);
+
         try {
-            Object recipeValue = params.get("recipe");
-            String recipeText = recipeValue == null ? null : recipeValue.toString();
-            if (recipeText == null || recipeText.trim().isEmpty()) {
-                return ResponseResult.fail("400", "食谱内容不能为空");
-            }
-
-            String goal = resolveRecipeGoal(params.get("goal"));
-            if (goal == null) {
-                return ResponseResult.fail("400", "不支持的优化目标：" + params.get("goal"));
-            }
-
-            if (!chatModelProvider.getCapabilities().isTextChat()) {
-                return ResponseResult.fail(AI_NOT_CONFIGURED_CODE, "食谱优化暂未开放：请先配置 AI 模型");
-            }
-
             log.info("食谱优化请求，目标：{}，输入长度：{}", goal, recipeText.length());
             Map<String, Object> result = aiAssistantService.optimizeRecipe(recipeText, goal);
 
@@ -484,94 +525,172 @@ public class AIController {
      * AI食谱优化 SSE 流式端点（真正流式输出）
      *
      * 路由: POST /v1/ai/recipe/stream
-     * 事件格式（事件名统一为 message）：
-     * - 进度: {"message":"正在分析食谱内容...","progress":true}
-     * - 流式token: {"content":"token文本","streaming":true}
-     * - 结果: {"result":{...单方案统一结构...},"done":true}
-     * - 错误: {"error":true,"message":"...","done":true}
+     * 事件名：
+     * - progress: {"message":"正在分析食谱内容..."}
+     * - token:    {"content":"token文本"}
+     * - result:   {"result":{...单方案统一结构...}}
+     * - error:    {"code":"AI_TIMEOUT","message":"..."}
+     * - done:     {"elapsedMs":12345}
      */
-    @ApiOperation(value = "AI食谱优化（SSE流式进度）", notes = "实时推送优化进度和流式token，桌面端专用")
+    @ApiOperation(value = "AI食谱优化（SSE流式进度）", notes = "实时推送优化进度、流式token与真实耗时，桌面端专用")
     @PostMapping(value = "/recipe/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter recipeOptimizeStream(@RequestBody Map<String, Object> params) {
+    public SseEmitter recipeOptimizeStream(@RequestBody Map<String, Object> params,
+                                           HttpServletRequest request) {
+        String userId = requireVerifiedUserId(request);
+        long startedAt = System.currentTimeMillis();
+        long timeoutMs = recipeStreamTimeoutMs();
+        // Emitter 超时必须严格大于模型超时/看门狗，仅作最后兜底，避免抢在 error+done 之前关闭响应。
+        SseEmitter emitter = new SseEmitter(timeoutMs + RECIPE_STREAM_EMITTER_GRACE_MS);
+
         Object recipeValue = params.get("recipe");
         String recipeText = recipeValue == null ? null : recipeValue.toString();
-
-        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
-
         if (recipeText == null || recipeText.trim().isEmpty()) {
-            sendRecipeSseData(emitter, Map.of("error", true, "message", "食谱内容不能为空", "done", true));
-            emitter.complete();
+            finishRecipeStreamWithError(emitter, INVALID_REQUEST_CODE, "食谱内容不能为空",
+                startedAt, new AtomicBoolean(false));
             return emitter;
         }
 
         String goal = resolveRecipeGoal(params.get("goal"));
         if (goal == null) {
-            sendRecipeSseData(emitter, Map.of("error", true,
-                    "message", "不支持的优化目标：" + params.get("goal"), "done", true));
-            emitter.complete();
+            finishRecipeStreamWithError(emitter, INVALID_REQUEST_CODE,
+                "不支持的优化目标：" + params.get("goal"), startedAt, new AtomicBoolean(false));
             return emitter;
         }
 
         if (!chatModelProvider.getCapabilities().isStreaming()) {
-            sendRecipeSseData(emitter, Map.of("error", true,
-                    "message", "食谱优化暂未开放：请先配置支持流式输出的 AI 模型", "done", true));
-            emitter.complete();
+            finishRecipeStreamWithError(emitter, AI_NOT_CONFIGURED_CODE,
+                "食谱优化暂未开放：请先配置支持流式输出的 AI 模型", startedAt, new AtomicBoolean(false));
             return emitter;
         }
 
-        mapRecipeResultStream(emitter, recipeText, goal);
-
-        emitter.onTimeout(() -> {
-            log.warn("SSE食谱优化连接超时");
-            emitter.complete();
-        });
-        emitter.onError(e -> {
-            log.error("SSE食谱优化连接错误", e);
-        });
-
+        aiQuotaService.consume(userId, AiQuotaScope.RECIPE);
+        mapRecipeResultStream(emitter, recipeText, goal, startedAt, timeoutMs);
         return emitter;
     }
 
-    private void mapRecipeResultStream(SseEmitter emitter, String recipeText, String goal) {
+    private void mapRecipeResultStream(SseEmitter emitter, String recipeText, String goal, long startedAt,
+                                       long timeoutMs) {
+        AtomicBoolean done = new AtomicBoolean(false);
+        AtomicBoolean resultSent = new AtomicBoolean(false);
+
+        // langchain4j 默认的 JDK HttpClient 在流式读取时没有可用的读超时：上游发送响应头后挂起时
+        // 模型超时不会触发，而 Emitter 超时时响应已关闭、无法再补发事件。因此这里按统一配置主动兜底，
+        // 保证客户端一定收到 error(AI_TIMEOUT) + done，并保持与前端取消定时器一致的超时语义。
+        CompletableFuture.delayedExecutor(timeoutMs, TimeUnit.MILLISECONDS).execute(() -> {
+            if (done.get()) {
+                return;
+            }
+            log.warn("食谱优化生成超时，主动结束 SSE（{}ms）", timeoutMs);
+            sendRecipeErrorAndDone(emitter, resultSent, done, AI_TIMEOUT_CODE, "生成超时，请稍后重试", startedAt);
+        });
+
+        emitter.onTimeout(() -> {
+            log.warn("SSE食谱优化连接超时");
+            finishRecipeStreamWithError(emitter, AI_TIMEOUT_CODE, "生成超时，请稍后重试", startedAt, done);
+        });
+        emitter.onError(e -> log.error("SSE食谱优化连接错误", e));
+
         aiAssistantService.optimizeRecipeStreaming(
-                recipeText,
-                goal,
-                // progressCallback：处理进度和最终结果
-                message -> {
-                    if (message.startsWith("RESULT:")) {
-                        try {
-                            Object resultObj = objectMapper.readValue(message.substring(7), Object.class);
-                            sendRecipeSseData(emitter, Map.of("result", resultObj, "done", true));
-                        } catch (Exception e) {
-                            sendRecipeSseData(emitter, Map.of("error", true,
-                                    "message", "结果解析失败", "done", true));
-                        }
-                    } else if (message.startsWith("ERROR:")) {
-                        sendRecipeSseData(emitter, Map.of("error", true,
-                                "message", message.substring(6), "done", true));
-                    } else {
-                        sendRecipeSseEvent(emitter, message);
-                    }
-                },
-                // tokenCallback：逐token推送
-                token -> {
-                    try {
-                        final String jsonData = Objects.requireNonNull(objectMapper.writeValueAsString(
-                                Map.of("content", token, "streaming", true)));
-                        emitter.send(SseEmitter.event().name("message").data(jsonData));
-                    } catch (java.io.IOException e) {
-                        log.debug("SSE token发送失败: {}", e.getMessage());
-                    }
-                },
-                // onComplete
-                () -> {
-                    try {
-                        emitter.complete();
-                    } catch (Exception e) {
-                        log.debug("SSE emitter关闭异常: {}", e.getMessage());
-                    }
+            recipeText,
+            goal,
+            message -> {
+                if (done.get()) {
+                    return;
                 }
+                if (message.startsWith("RESULT:")) {
+                    if (!resultSent.compareAndSet(false, true)) {
+                        return;
+                    }
+                    try {
+                        Object resultObj = objectMapper.readValue(message.substring(7), Object.class);
+                        sendRecipeSseEvent(emitter, "result", Map.of("result", resultObj));
+                    } catch (Exception e) {
+                        log.error("SSE食谱优化结果解析失败", e);
+                        sendRecipeErrorAndDone(emitter, resultSent, done,
+                            AI_RESULT_PARSE_FAILED_CODE, "结果解析失败", startedAt);
+                    }
+                } else if (message.startsWith("ERROR:")) {
+                    sendRecipeErrorAndDone(emitter, resultSent, done,
+                        parseRecipeErrorCode(message), parseRecipeErrorMessage(message), startedAt);
+                } else {
+                    sendRecipeSseEvent(emitter, "progress", Map.of("message", message));
+                }
+            },
+            token -> {
+                if (!done.get() && !resultSent.get()) {
+                    sendRecipeSseEvent(emitter, "token", Map.of("content", token));
+                }
+            },
+            // done.elapsedMs 统一取本次请求的端到端耗时（startedAt），与错误/超时路径保持一致，
+            // 因此这里忽略服务层回传的模型调用耗时（serviceElapsedMs）。
+            serviceElapsedMs -> {
+                if (!resultSent.get()) {
+                    sendRecipeErrorAndDone(emitter, resultSent, done,
+                        AI_RESULT_PARSE_FAILED_CODE, "没有找到合适的优化食谱", startedAt);
+                    return;
+                }
+                finishRecipeStream(emitter, startedAt, done);
+            }
         );
+    }
+
+    /**
+     * 发送 error + done，并结束 SSE；同一连接只允许一次终态。
+     */
+    private void sendRecipeErrorAndDone(SseEmitter emitter,
+                                        AtomicBoolean resultSent,
+                                        AtomicBoolean done,
+                                        String code,
+                                        String message,
+                                        long startedAt) {
+        if (!done.compareAndSet(false, true)) {
+            return;
+        }
+        resultSent.set(true);
+        sendRecipeSseEvent(emitter, "error", Map.of("code", code, "message", message));
+        sendRecipeSseEvent(emitter, "done",
+            Map.of("elapsedMs", Math.max(0, System.currentTimeMillis() - startedAt)));
+        completeRecipeEmitter(emitter);
+    }
+
+    private void finishRecipeStreamWithError(SseEmitter emitter,
+                                             String code,
+                                             String message,
+                                             long startedAt,
+                                             AtomicBoolean done) {
+        sendRecipeErrorAndDone(emitter, new AtomicBoolean(false), done, code, message, startedAt);
+    }
+
+    private void finishRecipeStream(SseEmitter emitter, long startedAt, AtomicBoolean done) {
+        if (!done.compareAndSet(false, true)) {
+            return;
+        }
+        sendRecipeSseEvent(emitter, "done",
+            Map.of("elapsedMs", Math.max(0, System.currentTimeMillis() - startedAt)));
+        completeRecipeEmitter(emitter);
+    }
+
+    private String parseRecipeErrorCode(String message) {
+        // 约定格式为 ERROR:<CODE>:<MESSAGE>，错误码是 "ERROR:" 之后、首个冒号之前的那段
+        String[] parts = message.substring(6).split(":", 2);
+        return !parts[0].isBlank() ? parts[0] : AI_CALL_FAILED_CODE;
+    }
+
+    private String parseRecipeErrorMessage(String message) {
+        // 约定格式为 ERROR:<CODE>:<MESSAGE>，消息取冒号后的剩余全文，避免含冒号时被截断
+        String[] parts = message.substring(6).split(":", 2);
+        if (parts.length == 2 && !parts[1].isBlank()) {
+            return parts[1];
+        }
+        return "AI调用失败，请稍后重试";
+    }
+
+    private void completeRecipeEmitter(SseEmitter emitter) {
+        try {
+            emitter.complete();
+        } catch (Exception e) {
+            log.debug("SSE emitter关闭异常: {}", e.getMessage());
+        }
     }
 
     /**
@@ -588,23 +707,29 @@ public class AIController {
         return AiAssistantService.RECIPE_GOALS.contains(goal) ? goal : null;
     }
 
-    private void sendRecipeSseEvent(SseEmitter emitter, String message) {
+    private void sendRecipeSseEvent(SseEmitter emitter, String eventName, Object data) {
         try {
-            final String jsonData = Objects.requireNonNull(objectMapper.writeValueAsString(
-                    Map.of("message", message, "progress", true)));
-            emitter.send(SseEmitter.event().name("message").data(jsonData));
-        } catch (java.io.IOException e) {
-            log.debug("SSE进度事件发送失败: {}", e.getMessage());
+            final String jsonData = Objects.requireNonNull(objectMapper.writeValueAsString(data));
+            emitter.send(SseEmitter.event().name(eventName).data(jsonData));
+        } catch (IOException | IllegalStateException e) {
+            log.debug("SSE {}事件发送失败: {}", eventName, e.getMessage());
         }
     }
 
-    private void sendRecipeSseData(SseEmitter emitter, Object data) {
-        try {
-            final String jsonData = Objects.requireNonNull(objectMapper.writeValueAsString(data));
-            emitter.send(SseEmitter.event().name("message").data(jsonData));
-        } catch (java.io.IOException e) {
-            log.debug("SSE数据发送失败: {}", e.getMessage());
+    /**
+     * 只从 JwtAuthenticationFilter 写入的可信属性取用户 ID，忽略客户端传入的任何身份。
+     */
+    private String requireVerifiedUserId(HttpServletRequest request) {
+        String userId = UserIdentityUtil.extractVerifiedUserId(request);
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "当前账号缺少可用身份，请重新登录");
         }
+        return userId;
+    }
+
+    private long recipeStreamTimeoutMs() {
+        Integer configured = aiConfig == null ? null : aiConfig.getRecipeStreamTimeoutMs();
+        return configured != null && configured > 0 ? configured : 120000L;
     }
 
     // ==================== 菜品描述生成 ====================

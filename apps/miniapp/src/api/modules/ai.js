@@ -3,9 +3,11 @@
  * 对接后端 AIController 和 AIStreamController
  * 基础路径: /v1/ai
  */
-import { get, post, del } from '@/utils/request'
+import { get, post, del, request } from '@/utils/request'
 import config from '@/config/index.js'
 import { AI_API } from '../urlEnum'
+
+const AI_CAPABILITIES = '/v1/ai/capabilities'
 
 /**
  * 清理markdown代码块标记
@@ -48,6 +50,18 @@ export const aiApi = {
    * @returns {string} 清理后的内容
    */
   cleanMarkdownCodeBlocks,
+
+  /**
+   * 获取 AI 能力与统一超时配置
+   * GET /v1/ai/capabilities
+   * @returns {Promise} 返回统一响应结果
+   */
+  getCapabilities: () => request({
+    url: AI_CAPABILITIES,
+    method: 'GET',
+    needAuth: false,
+    showError: false
+  }),
 
   /**
    * AI对话（普通）
@@ -272,9 +286,10 @@ export const aiApi = {
    * @param {Object} data - 优化参数
    * @param {string} data.recipe - 食谱内容
    * @param {string} data.goal - 优化目标(balanced/fat_loss/muscle_gain/blood_sugar_control)，默认 balanced
+   * @param {Object} options - 请求配置（timeout、showError等）
    * @returns {Promise} 返回优化结果
    */
-  optimizeRecipe: (data) => post(AI_API.RECIPE, data),
+  optimizeRecipe: (data, options = {}) => post(AI_API.RECIPE, data, options),
 
   /**
    * 营养分析
