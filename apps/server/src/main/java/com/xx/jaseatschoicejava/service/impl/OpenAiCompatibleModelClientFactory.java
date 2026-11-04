@@ -54,7 +54,6 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
     /** 食谱优化任务使用独立参数，不与普通聊天混用。 */
     private static final double RECIPE_TEMPERATURE = 0.2;
     private static final int RECIPE_MAX_TOKENS = 4096;
-    private static final long RECIPE_TIMEOUT_MS = 60000L;
 
     private final AIConfig aiConfig;
     private final AiRuntimeKeyStore runtimeKeyStore;
@@ -201,7 +200,7 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
             .modelName(config.getModel())
             .temperature(RECIPE_TEMPERATURE)
             .maxTokens(RECIPE_MAX_TOKENS)
-            .timeout(Duration.ofMillis(RECIPE_TIMEOUT_MS))
+            .timeout(Duration.ofMillis(recipeStreamTimeoutMs()))
             // 不重试：食谱优化单次生成本身就要 30~150s，超时重试只会把等待时间翻倍，
             // 且每次重试都重复计费。
             .maxRetries(0)
@@ -269,7 +268,7 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
             .modelName(config.getModel())
             .temperature(RECIPE_TEMPERATURE)
             .maxTokens(RECIPE_MAX_TOKENS)
-            .timeout(Duration.ofMillis(RECIPE_TIMEOUT_MS))
+            .timeout(Duration.ofMillis(recipeStreamTimeoutMs()))
             .build();
     }
 
@@ -288,8 +287,14 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
             .vision(vision)
             .functionCalling(available)
             .agentic(available)
+            .recipeStreamTimeoutMs(recipeStreamTimeoutMs())
             .unavailableMessage(available ? "" : "AI 未配置：请设置 AI_API_KEY 和 AI_BASE_URL")
             .build();
+    }
+
+    private long recipeStreamTimeoutMs() {
+        Integer configured = aiConfig.getRecipeStreamTimeoutMs();
+        return configured != null && configured > 0 ? configured : 120000L;
     }
 
     private String key(String candidateApiKey) {

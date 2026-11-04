@@ -23,7 +23,7 @@ if [[ ${#SPECS[@]} -eq 1 && "${SPECS[0]}" == "all" ]]; then
   ALL_TESTS=1
 fi
 
-export COMPOSE_FLAGS="--env-file deploy/.env -f deploy/compose.yml -f deploy/compose.dev.yml"
+export COMPOSE_FLAGS="--env-file deploy/.env -f deploy/compose.yml -f deploy/compose.dev.yml -f deploy/compose.e2e.yml"
 export API_PROXY_TARGET="http://127.0.0.1:7777"
 export WS_PROXY_TARGET="http://127.0.0.1:11277"
 export VITE_DEV_HOST="127.0.0.1"

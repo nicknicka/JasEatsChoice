@@ -166,9 +166,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { formatTime } from '@/utils/helper'
 import { aiApi } from '@/api/modules/ai'
+
+const RECIPE_TIMEOUT_BUFFER_MS = 5000
 
 // 优化目标选项
 const optimizationOptions = ref([
@@ -186,6 +188,9 @@ const recipeText = ref('')
 
 // 是否正在优化
 const isOptimizing = ref(false)
+
+// 后端统一食谱优化超时配置
+const recipeTimeoutMs = ref(0)
 
 // 优化结果
 const optimizationResult = ref(null)
@@ -208,6 +213,51 @@ const clearText = () => {
 }
 
 /**
+ * 读取食谱优化超时配置
+ */
+const loadRecipeCapabilities = async () => {
+  try {
+    const res = await aiApi.getCapabilities()
+    const capabilities = res?.data || res
+    const timeout = Number(capabilities?.recipeStreamTimeoutMs)
+
+    if (!Number.isFinite(timeout) || timeout <= 0) {
+      throw new Error('AI 能力状态缺少超时配置')
+    }
+
+    recipeTimeoutMs.value = timeout
+    return timeout
+  } catch (error) {
+    recipeTimeoutMs.value = 0
+    console.warn('读取 AI 能力失败:', error)
+    return 0
+  }
+}
+
+/**
+ * 将接口错误转换为页面统一文案
+ */
+const getOptimizationErrorMessage = (error) => {
+  if (error?.timedOut || error?.code === 'AI_TIMEOUT') {
+    return '优化超时，请稍后重试'
+  }
+
+  if (error?.statusCode === 401) {
+    return '登录已过期，请重新登录'
+  }
+
+  if (error?.statusCode === 403) {
+    return '无权使用此功能，请重新登录后重试'
+  }
+
+  if (error?.statusCode === 429) {
+    return '使用次数已达上限，请稍后再试'
+  }
+
+  return error?.message || '优化失败，请重试'
+}
+
+/**
  * 优化食谱
  */
 const optimizeRecipe = async () => {
@@ -216,10 +266,21 @@ const optimizeRecipe = async () => {
   isOptimizing.value = true
 
   try {
-    const res = await aiApi.optimizeRecipe({
-      recipe: recipeText.value,
-      goal: selectedGoal.value
-    })
+    const timeout = recipeTimeoutMs.value || await loadRecipeCapabilities()
+    if (!timeout) {
+      throw new Error('AI 能力状态读取失败，请稍后重试')
+    }
+
+    const res = await aiApi.optimizeRecipe(
+      {
+        recipe: recipeText.value,
+        goal: selectedGoal.value
+      },
+      {
+        timeout: timeout + RECIPE_TIMEOUT_BUFFER_MS,
+        showError: false
+      }
+    )
 
     // 后端返回 ResponseResult 格式: { success: true, code: "200", data: {...} }
     const data = res.data || res
@@ -273,13 +334,15 @@ const optimizeRecipe = async () => {
   } catch (error) {
     console.error('优化失败:', error)
     uni.showToast({
-      title: error.message || '优化失败，请重试',
+      title: getOptimizationErrorMessage(error),
       icon: 'none'
     })
   } finally {
     isOptimizing.value = false
   }
 }
+
+onMounted(loadRecipeCapabilities)
 
 /**
  * 计算卡路里减少百分比

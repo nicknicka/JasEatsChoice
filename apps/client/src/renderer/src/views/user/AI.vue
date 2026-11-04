@@ -37,7 +37,13 @@
     <div class="tab-content-area">
       <!-- 缓存流式任务组件，避免切换 tab 时中断 -->
       <keep-alive :include="['AiChatFull', 'RecipeOptimization', 'DishRecognition']">
-        <component :is="currentTabComponent" :key="activeTab" ref="aiChatRef" class="tab-pane" />
+        <component
+          :is="currentTabComponent"
+          :key="activeTab"
+          ref="aiChatRef"
+          class="tab-pane"
+          v-bind="activeTab === 'recipe' ? { recipeStreamTimeoutMs } : {}"
+        />
       </keep-alive>
     </div>
   </el-main>
@@ -84,6 +90,7 @@ const activeTab = ref('')
 const capabilities = ref(null)
 const capabilitiesLoaded = ref(false)
 const capabilitiesError = ref('')
+const DEFAULT_RECIPE_STREAM_TIMEOUT_MS = 120000
 const sliderLeft = ref(0)
 const sliderWidth = ref(0)
 const aiChatRef = ref(null)
@@ -98,6 +105,11 @@ const tabComponents = {
 
 // 当前 tab 对应的组件
 const currentTabComponent = computed(() => tabComponents[activeTab.value] || null)
+
+const recipeStreamTimeoutMs = computed(() => {
+  const timeout = Number(capabilities.value?.recipeStreamTimeoutMs)
+  return Number.isFinite(timeout) && timeout > 0 ? timeout : DEFAULT_RECIPE_STREAM_TIMEOUT_MS
+})
 
 const isCapabilityControlled = (name) => name === 'recognition' || name === 'recipe'
 
@@ -187,9 +199,12 @@ watch(activeTab, async (newTab) => {
 
 onMounted(() => {
   loadCapabilities()
+  // 兜底：能力接口未及时返回时先展示聊天页；若用户已点开可用 tab，不能覆盖其选择。
   setTimeout(() => {
-    activeTab.value = 'chat'
-    updateSlider()
+    if (!activeTab.value || !isTabAvailable(activeTab.value)) {
+      activeTab.value = 'chat'
+      updateSlider()
+    }
   }, 100)
 })
 

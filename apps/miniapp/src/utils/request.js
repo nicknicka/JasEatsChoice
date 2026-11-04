@@ -37,9 +37,11 @@ const getStoredUserId = () => {
  * @param {Object} options.params - URL参数（GET请求使用）
  * @param {boolean} options.needAuth - 是否需要token（默认true，白名单自动判断）
  * @param {number} options.timeout - 超时时间（毫秒），默认使用配置文件中的值
+ * @param {boolean} options.showError - 是否由请求层展示错误提示，默认true
  */
 export const request = (options) => {
   return new Promise((resolve, reject) => {
+    const showError = options.showError !== false
     // 构建完整URL
     let url = options.url
     if (!url.startsWith('http')) {
@@ -132,36 +134,44 @@ export const request = (options) => {
           }
         } else if (res.statusCode === 401) {
           // 未授权，清除token并跳转登录
-          handleTokenExpired(options.url)
+          handleTokenExpired(options.url, showError)
           reject({ message: '未授权，请重新登录', statusCode: 401 })
         } else if (res.statusCode === 403) {
           // 权限不足
-          uni.showToast({
-            title: '权限不足',
-            icon: 'none'
-          })
+          if (showError) {
+            uni.showToast({
+              title: '权限不足',
+              icon: 'none'
+            })
+          }
           reject({ message: '权限不足', statusCode: 403 })
         } else if (res.statusCode === 404) {
           // 资源不存在
-          uni.showToast({
-            title: '请求的资源不存在',
-            icon: 'none'
-          })
+          if (showError) {
+            uni.showToast({
+              title: '请求的资源不存在',
+              icon: 'none'
+            })
+          }
           reject({ message: '请求的资源不存在', statusCode: 404 })
         } else if (res.statusCode >= 500) {
           // 服务器错误
-          uni.showToast({
-            title: '服务器错误，请稍后重试',
-            icon: 'none'
-          })
+          if (showError) {
+            uni.showToast({
+              title: '服务器错误，请稍后重试',
+              icon: 'none'
+            })
+          }
           reject({ message: '服务器错误', statusCode: res.statusCode })
         } else {
           // 其他错误
           const errorMsg = res.data?.message || `请求失败 (${res.statusCode})`
-          uni.showToast({
-            title: errorMsg,
-            icon: 'none'
-          })
+          if (showError) {
+            uni.showToast({
+              title: errorMsg,
+              icon: 'none'
+            })
+          }
           reject({ message: errorMsg, statusCode: res.statusCode, response: res.data })
         }
       },
@@ -174,19 +184,23 @@ export const request = (options) => {
         })
 
         let errorMsg = '网络连接失败'
+        let timedOut = false
         if (err.errMsg) {
           if (err.errMsg.includes('timeout')) {
             errorMsg = '请求超时，请检查网络'
+            timedOut = true
           } else if (err.errMsg.includes('fail')) {
             errorMsg = '网络连接失败'
           }
         }
 
-        uni.showToast({
-          title: errorMsg,
-          icon: 'none'
-        })
-        reject({ message: errorMsg, error: err })
+        if (showError) {
+          uni.showToast({
+            title: errorMsg,
+            icon: 'none'
+          })
+        }
+        reject({ message: errorMsg, error: err, timedOut })
       }
     })
   })
@@ -195,7 +209,7 @@ export const request = (options) => {
 /**
  * 处理token过期
  */
-const handleTokenExpired = (url) => {
+const handleTokenExpired = (url, showError) => {
   // 清除本地存储
   uni.removeStorageSync('token')
   uni.removeStorageSync('userInfo')
@@ -208,11 +222,13 @@ const handleTokenExpired = (url) => {
 
   // 如果当前不在登录页，则跳转
   if (currentRoute && !currentRoute.includes('/pages/login')) {
-    uni.showToast({
-      title: '登录已过期',
-      icon: 'none',
-      duration: 1500
-    })
+    if (showError) {
+      uni.showToast({
+        title: '登录已过期',
+        icon: 'none',
+        duration: 1500
+      })
+    }
 
     setTimeout(() => {
       // 根据URL判断跳转到哪个登录页
@@ -246,9 +262,11 @@ export const get = (url, params) => {
  * POST请求
  * @param {string} url - 请求路径
  * @param {Object} data - 请求数据
+ * @param {Object} options - 请求配置（timeout、showError等）
  */
-export const post = (url, data) => {
+export const post = (url, data, options = {}) => {
   return request({
+    ...options,
     url,
     method: 'POST',
     data

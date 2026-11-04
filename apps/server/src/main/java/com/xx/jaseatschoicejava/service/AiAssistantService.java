@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.service;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.LongConsumer;
 
 /**
  * AI 饮食助手服务接口
@@ -77,13 +78,13 @@ public interface AiAssistantService {
      * @param goal 优化目标，见 {@link #RECIPE_GOALS}
      * @param progressCallback 阶段进度回调
      * @param tokenCallback 逐 token 回调
-     * @param onComplete 流式结束回调
+     * @param onComplete 流式结束回调，参数为本次生成的真实耗时（毫秒）；成功与失败都会调用一次
      */
     void optimizeRecipeStreaming(String originalRecipe,
             String goal,
             Consumer<String> progressCallback,
             Consumer<String> tokenCallback,
-            Runnable onComplete);
+            LongConsumer onComplete);
 
     /**
      * AI生成推荐理由

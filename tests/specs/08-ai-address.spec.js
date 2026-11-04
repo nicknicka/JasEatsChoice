@@ -34,6 +34,14 @@ async function deleteAddressesByName(name) {
   }
 }
 
+// Playwright 的 page.request 不会自动携带页面 localStorage 中的登录态，
+// 受保护的 AI 端点需要显式带 Bearer token。
+async function authHeaders(page) {
+  const token = await page.evaluate(() => localStorage.getItem('auth_token'))
+  if (!token) throw new Error('未在 localStorage 中找到 auth_token，无法调用受保护接口')
+  return { Authorization: `Bearer ${token}` }
+}
+
 async function selectShanghaiDistrict(page, dialog, district) {
   const cascader = dialog.locator('.el-cascader')
   const visibleNodes = page.locator('.el-cascader-node:visible')
@@ -66,6 +74,43 @@ async function stubShanghaiCascader(page) {
   }))
 }
 
+// 伪造能力清单，隔离地验证前端在「流式/视觉不可用」时的降级表现，
+// 不依赖后端当前是否配置了真实模型。
+async function stubAiCapabilities(page, capabilities) {
+  await page.route('**/v1/ai/capabilities', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      success: true,
+      code: '200',
+      message: '成功',
+      data: {
+        available: true,
+        provider: 'openai-compatible',
+        model: 'fake-model',
+        visionModel: 'fake-model',
+        textChat: true,
+        streaming: true,
+        vision: false,
+        functionCalling: true,
+        agentic: true,
+        recipeStreamTimeoutMs: 120000,
+        unavailableMessage: '',
+        ...capabilities
+      }
+    })
+  }))
+}
+
+// 打开食谱优化 tab 并等待懒加载组件就绪。
+async function openRecipeTab(page) {
+  await page.goto('/user/home/ai')
+  const recipeTab = page.locator('#tab-btn-recipe')
+  await expect(recipeTab).toBeEnabled({ timeout: 10000 })
+  await recipeTab.click()
+  await expect(page.locator('.recipe-textarea')).toBeVisible({ timeout: 10000 })
+}
+
 test.describe('模块八：AI助手与地址管理', () => {
 
   test.beforeEach(async ({ page }) => { await loginAsUser(page) })
@@ -83,10 +128,12 @@ test.describe('模块八：AI助手与地址管理', () => {
   test('8.2 菜品识别接口契约与错误语义', async ({ page }) => {
     markRunning('8.2')
     try {
+      const headers = await authHeaders(page)
       const imageBuffer = require('fs').readFileSync(require('path').resolve(__dirname, '../../apps/miniapp/src/static/banner1.jpg'))
       const recognize = async (file) => {
         const response = await page.request.post('/api/v1/ai/dish-recognize', {
-          multipart: { image: file }
+          multipart: { image: file },
+          headers
         })
         return { response, body: await response.json() }
       }
@@ -154,7 +201,9 @@ test.describe('模块八：AI助手与地址管理', () => {
       await expect(page.locator('#tab-btn-recognition')).toHaveClass(/active/)
       await expect(page.locator('.recognition-content-wrapper')).toBeVisible({ timeout: 10000 })
 
+      let recognizeAuthHeader = null
       await page.route('**/v1/ai/dish-recognize', async (route) => {
+        recognizeAuthHeader = route.request().headers()['authorization'] || null
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -164,6 +213,8 @@ test.describe('模块八：AI助手与地址管理', () => {
 
       await page.locator('#dish-image-upload').setInputFiles(require('path').resolve(__dirname, '../../apps/miniapp/src/static/banner1.jpg'))
       await page.locator('.recognition-content-wrapper button.primary-btn').click()
+      // 受保护的识别接口必须由前端携带 Bearer token，否则真实后端会 401
+      await expect.poll(() => recognizeAuthHeader).toMatch(/^Bearer /)
       await expect(page.locator('.recognition-error')).toBeVisible({ timeout: 10000 })
       await expect(page.locator('.recognition-error')).toContainText('识别失败，请稍后重试')
       await expect(page.locator('.error-retry-btn')).toBeVisible()
@@ -233,53 +284,101 @@ test.describe('模块八：AI助手与地址管理', () => {
   test('8.2a 无视觉模型时菜品识别入口降级', async ({ page }) => {
     markRunning('8.2a')
     try {
+      // 后端在视觉模型未通过图片验证时的 AI_VISION_NOT_CONFIGURED 语义由后端单测覆盖；
+      // 这里只伪造能力清单，隔离验证前端的入口降级表现。
+      await stubAiCapabilities(page, { vision: false })
       await page.goto('/user/home/ai')
-      const capabilities = await getAiCapabilities()
-      expect(capabilities.vision).toBe(false)
       await expect(page.locator('.status-badge')).not.toHaveText('检测中', { timeout: 10000 })
       const recognitionTab = page.locator('#tab-btn-recognition')
       await expect(recognitionTab).toBeDisabled()
       await expect(recognitionTab).toContainText('暂未开放')
-
-      const response = await page.request.post('/api/v1/ai/dish-recognize', {
-        multipart: {
-          image: {
-            name: 'banner1.jpg',
-            mimeType: 'image/jpeg',
-            buffer: require('fs').readFileSync(require('path').resolve(__dirname, '../../apps/miniapp/src/static/banner1.jpg'))
-          }
-        }
-      })
-      const body = await response.json()
-      expect(response.status()).toBe(200)
-      expect(body.success).toBe(false)
-      expect(body.code).toBe('AI_VISION_NOT_CONFIGURED')
-      expect(body.message).toContain('暂未开放')
-      markPassed('8.2a', '无视觉模型时入口禁用且接口返回明确业务错误')
+      markPassed('8.2a', '无视觉模型时入口禁用并提示暂未开放')
     } catch (e) { markFailed('8.2a', e.message.slice(0, 50)); throw e }
   })
 
   test('8.3a 无流式模型时食谱优化入口降级', async ({ page }) => {
     markRunning('8.3a')
     try {
+      // 后端未配置流式模型时的真实错误语义由后端单测覆盖；
+      // 这里只伪造能力清单，隔离验证前端的入口降级表现。
+      await stubAiCapabilities(page, { streaming: false })
       await page.goto('/user/home/ai')
-      const capabilities = await getAiCapabilities()
-      expect(capabilities.streaming).toBe(false)
       await expect(page.locator('.status-badge')).not.toHaveText('检测中', { timeout: 10000 })
       const recipeTab = page.locator('#tab-btn-recipe')
       await expect(recipeTab).toBeDisabled()
       await expect(recipeTab).toContainText('暂未开放')
-
-      const response = await page.request.post('/api/v1/ai/recipe/stream', {
-        data: { recipe: '番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。' },
-        headers: { Accept: 'text/event-stream' }
-      })
-      expect(response.status()).toBe(200)
-      const body = await response.text()
-      expect(body).toContain('"error":true')
-      expect(body).toContain('暂未开放')
-      markPassed('8.3a', '无流式模型时入口禁用且 SSE 返回明确业务错误')
+      markPassed('8.3a', '无流式模型时入口禁用并提示暂未开放')
     } catch (e) { markFailed('8.3a', e.message.slice(0, 50)); throw e }
+  })
+
+  test('8.3b 食谱优化流式成功', async ({ page }) => {
+    markRunning('8.3b')
+    const input = '[normal] 番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。'
+    try {
+      await openRecipeTab(page)
+      await page.locator('.recipe-textarea').fill(input)
+      await page.locator('.recipe-content-wrapper .primary-btn').click()
+      // 流式阶段：token 作为可见内容展示
+      await expect(page.locator('.stream-output-text')).toContainText('优化', { timeout: 15000 })
+      // 终态：结果与端到端耗时可见
+      await expect(page.locator('.recipe-result')).toBeVisible({ timeout: 15000 })
+      await expect(page.locator('.result-elapsed')).toContainText('耗时')
+      await expect(page.locator('.result-title')).toContainText('食谱对比')
+      // 成功后保留原始输入
+      await expect(page.locator('.recipe-textarea')).toHaveValue(input)
+      markPassed('8.3b', '真实 SSE 流式 token 与最终结果可见且保留输入')
+    } catch (e) { markFailed('8.3b', e.message.slice(0, 50)); throw e }
+  })
+
+  test('8.3c 食谱优化失败保留输入', async ({ page }) => {
+    markRunning('8.3c')
+    const input = '[error] 番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。'
+    try {
+      await openRecipeTab(page)
+      await page.locator('.recipe-textarea').fill(input)
+      await page.locator('.recipe-content-wrapper .primary-btn').click()
+      const feedback = page.locator('.optimization-feedback')
+      await expect(feedback).toBeVisible({ timeout: 15000 })
+      await expect(feedback.locator('.feedback-title')).toContainText('优化未完成')
+      await expect(feedback.locator('.feedback-message')).not.toBeEmpty()
+      await expect(page.locator('.recipe-result')).toHaveCount(0)
+      await expect(page.locator('.recipe-textarea')).toHaveValue(input)
+      markPassed('8.3c', 'AI 调用失败提示可见且保留输入')
+    } catch (e) { markFailed('8.3c', e.message.slice(0, 50)); throw e }
+  })
+
+  test('8.3d 食谱优化超时提示', async ({ page }) => {
+    markRunning('8.3d')
+    const input = '[stall] 番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。'
+    try {
+      await openRecipeTab(page)
+      await page.locator('.recipe-textarea').fill(input)
+      await page.locator('.recipe-content-wrapper .primary-btn').click()
+      const feedback = page.locator('.optimization-feedback')
+      await expect(feedback).toBeVisible({ timeout: 15000 })
+      await expect(feedback.locator('.feedback-message')).toContainText('生成超时')
+      await expect(feedback.locator('.feedback-elapsed')).toContainText('耗时')
+      await expect(page.locator('.recipe-textarea')).toHaveValue(input)
+      markPassed('8.3d', '生成超时提示与真实耗时可见且保留输入')
+    } catch (e) { markFailed('8.3d', e.message.slice(0, 50)); throw e }
+  })
+
+  test('8.3e 食谱优化可取消', async ({ page }) => {
+    markRunning('8.3e')
+    const input = '[stall] 番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。'
+    try {
+      await openRecipeTab(page)
+      await page.locator('.recipe-textarea').fill(input)
+      await page.locator('.recipe-content-wrapper .primary-btn').click()
+      const cancelBtn = page.locator('.cancel-btn')
+      await expect(cancelBtn).toBeVisible({ timeout: 10000 })
+      await cancelBtn.click()
+      const feedback = page.locator('.optimization-feedback')
+      await expect(feedback).toBeVisible({ timeout: 10000 })
+      await expect(feedback.locator('.feedback-title')).toContainText('已取消优化')
+      await expect(page.locator('.recipe-textarea')).toHaveValue(input)
+      markPassed('8.3e', '取消进行中的生成后提示可见且保留输入')
+    } catch (e) { markFailed('8.3e', e.message.slice(0, 50)); throw e }
   })
 
   test('8.4 AI聊天历史', async ({ page }) => {

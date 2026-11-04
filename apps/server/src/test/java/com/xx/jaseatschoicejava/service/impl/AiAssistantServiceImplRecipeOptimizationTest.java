@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -31,6 +32,7 @@ import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.service.AiAssistantService;
 
 import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.exception.TimeoutException;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
@@ -194,10 +196,17 @@ class AiAssistantServiceImplRecipeOptimizationTest {
 
         List<String> progress = new ArrayList<>();
         boolean[] completed = {false};
+        long[] elapsedMs = {-1L};
+        List<String> tokens = new ArrayList<>();
 
-        service.optimizeRecipeStreaming("番茄炒蛋", "fat_loss", progress::add, token -> { }, () -> completed[0] = true);
+        service.optimizeRecipeStreaming("番茄炒蛋", "fat_loss", progress::add, tokens::add, elapsed -> {
+            completed[0] = true;
+            elapsedMs[0] = elapsed;
+        });
 
         assertTrue(completed[0], "应回调 onComplete");
+        assertTrue(elapsedMs[0] >= 0, "应回传真实耗时");
+        assertEquals(List.of(SINGLE_PLAN_JSON), tokens, "token 回调应保留模型流式内容");
         assertTrue(progress.stream().anyMatch(message -> message.startsWith("RESULT:")), "应推送 RESULT 事件");
         assertTrue(progress.stream().anyMatch(message -> message.contains("\"goal\":\"fat_loss\"")),
             "结果应带请求目标");
@@ -206,6 +215,53 @@ class AiAssistantServiceImplRecipeOptimizationTest {
         ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
         verify(streamingModel).chat(promptCaptor.capture(), any(StreamingChatResponseHandler.class));
         assertTrue(promptCaptor.getValue().contains("fat_loss"));
+    }
+
+    @Test
+    void optimizeRecipeStreaming_syncModelFailure_emitsErrorAndCompletes() {
+        StreamingChatModel streamingModel = mock(StreamingChatModel.class);
+        AiModelConfig config = config("openai-compatible");
+        when(dynamicAiModelRegistry.current()).thenReturn(
+            new DynamicAiModelRegistry.ActiveModels(config, null, null, null, 1L));
+        when(aiProviderRegistry.required("openai-compatible")).thenReturn(clientFactory);
+        when(clientFactory.buildRecipeStreamingModel(config)).thenReturn(streamingModel);
+        doThrow(new IllegalStateException("连接中断"))
+            .when(streamingModel).chat(anyString(), any(StreamingChatResponseHandler.class));
+
+        List<String> progress = new ArrayList<>();
+        boolean[] completed = {false};
+        long[] elapsedMs = {-1L};
+
+        service.optimizeRecipeStreaming("番茄炒蛋", "balanced", progress::add, ignored -> {
+        }, elapsed -> {
+            completed[0] = true;
+            elapsedMs[0] = elapsed;
+        });
+
+        assertTrue(completed[0], "同步异常也必须结束任务，不能让 SSE 悬空");
+        assertTrue(elapsedMs[0] >= 0, "失败时应回传真实耗时");
+        assertTrue(progress.contains("ERROR:AI_CALL_FAILED:AI调用失败，请稍后重试"));
+    }
+
+    @Test
+    void optimizeRecipeStreaming_syncTimeout_emitsTimeoutErrorAndCompletesOnce() {
+        StreamingChatModel streamingModel = mock(StreamingChatModel.class);
+        AiModelConfig config = config("openai-compatible");
+        when(dynamicAiModelRegistry.current()).thenReturn(
+            new DynamicAiModelRegistry.ActiveModels(config, null, null, null, 1L));
+        when(aiProviderRegistry.required("openai-compatible")).thenReturn(clientFactory);
+        when(clientFactory.buildRecipeStreamingModel(config)).thenReturn(streamingModel);
+        doThrow(new TimeoutException("timed out"))
+            .when(streamingModel).chat(anyString(), any(StreamingChatResponseHandler.class));
+
+        List<String> progress = new ArrayList<>();
+        int[] completions = {0};
+
+        service.optimizeRecipeStreaming("番茄炒蛋", "balanced", progress::add, ignored -> {
+        }, ignored -> completions[0]++);
+
+        assertEquals(1, completions[0], "同步异常和异步回调重复到达时只能完成一次");
+        assertTrue(progress.contains("ERROR:AI_TIMEOUT:生成超时，请稍后重试"));
     }
 
     @Test

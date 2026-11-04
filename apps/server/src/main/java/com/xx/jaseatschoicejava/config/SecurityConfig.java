@@ -104,8 +104,19 @@ public class SecurityConfig {
                 .accessDeniedHandler(securityAccessDeniedHandler))
             // Configure authorization (Spring Security 6: authorizeHttpRequests + requestMatchers)
             .authorizeHttpRequests()
+            // ASYNC 是同一请求的续派发（SSE 结束时容器会再走一遍过滤器链）。
+            // 首次 REQUEST 派发已经完成鉴权，这里放行以免 SseEmitter 完成时被二次拦截，
+            // 导致响应已提交却抛 AccessDenied，chunked 响应收不到终止块。
+            .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests
             .requestMatchers("/v1/content-extraction/**").authenticated() // 内容提取一律要求登录
+            .requestMatchers(
+                "/v1/ai/dish-recognize",
+                "/v1/ai/dish-recognize-url",
+                "/v1/ai/recipe",
+                "/v1/ai/recipe/stream",
+                "/v1/ai/recipe-upload"
+            ).authenticated() // AI 饮食助手禁止匿名消耗模型额度
             .requestMatchers("/**").permitAll()
             .anyRequest().permitAll();
 
