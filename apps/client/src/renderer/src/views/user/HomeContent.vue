@@ -41,7 +41,7 @@ const {
   showWeatherSkeleton,
   tempRangeText,
   weatherGradient,
-  weatherIcon,
+  weatherTheme,
   weatherEmoji,
   aqiInfo,
   clothingAdvice,
@@ -895,7 +895,7 @@ watch(
             </div>
 
             <!-- 天气卡片 -->
-            <div v-else class="weather-card scale-in" :style="{ background: weatherGradient }">
+            <div v-else class="weather-card scale-in" :data-theme="weatherTheme" :style="{ background: weatherGradient }">
               <div class="weather-inner">
                 <div class="weather-temp-row">
                   <span class="weather-emoji">{{ weatherEmoji }}</span>
@@ -1391,24 +1391,35 @@ watch(
     }
 
     .weather-card {
+      --card-glass-bg: rgba(255, 255, 255, 0.15);
+      --card-glass-bg-hover: rgba(255, 255, 255, 0.2);
+      --card-glass-border: rgba(255, 255, 255, 0.22);
+      --card-glass-border-strong: rgba(255, 255, 255, 0.3);
+      --card-text: #fff;
+      --card-text-gradient: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.82) 100%);
+      --card-text-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      --card-subtle-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+
       border-radius: @savour-radius-lg;
       overflow: hidden;
       position: relative;
       min-height: 240px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
 
       &::before {
         content: '';
         position: absolute;
         inset: 0;
-        background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        background-size: 200px 200px;
+        opacity: 0.09;
         pointer-events: none;
       }
 
       &:hover {
         transform: translateY(-4px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .weather-inner {
@@ -1418,7 +1429,7 @@ watch(
         display: flex;
         flex-direction: column;
         gap: 12px;
-        color: #fff;
+        color: var(--card-text);
       }
 
       .weather-temp-row {
@@ -1437,11 +1448,11 @@ watch(
           font-weight: 800;
           line-height: 1;
           letter-spacing: -2px;
-          background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.85) 100%);
+          background: var(--card-text-gradient);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
-          filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+          filter: drop-shadow(var(--card-text-shadow));
         }
       }
 
@@ -1449,7 +1460,7 @@ watch(
         font-size: 18px;
         font-weight: 500;
         opacity: 0.9;
-        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+        text-shadow: var(--card-subtle-shadow);
         margin-top: -4px;
       }
 
@@ -1458,18 +1469,18 @@ watch(
         align-items: center;
         gap: 8px;
         padding: 6px 16px;
-        background: rgba(255, 255, 255, 0.2);
+        background: var(--card-glass-bg);
         backdrop-filter: blur(10px);
         border-radius: 20px;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         transition: background 0.2s ease;
-        border: 1px solid rgba(255, 255, 255, 0.25);
+        border: 1px solid var(--card-glass-border);
         align-self: flex-start;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        text-shadow: var(--card-subtle-shadow);
 
-        &:hover { background: rgba(255, 255, 255, 0.3); }
+        &:hover { background: var(--card-glass-bg-hover); }
       }
 
       .weather-location {
@@ -1489,17 +1500,17 @@ watch(
 
         .location-change-btn {
           padding: 4px 12px;
-          background: rgba(255, 255, 255, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.3);
+          background: var(--card-glass-bg);
+          border: 1px solid var(--card-glass-border-strong);
           border-radius: 12px;
-          color: #fff;
+          color: var(--card-text);
           font-size: 12px;
           cursor: pointer;
           backdrop-filter: blur(8px);
           transition: all 0.2s ease;
 
           &:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: var(--card-glass-bg-hover);
             transform: translateY(-1px);
           }
         }
@@ -1510,10 +1521,10 @@ watch(
         align-items: center;
         gap: 8px;
         padding: 10px 16px;
-        background: rgba(255, 255, 255, 0.15);
+        background: var(--card-glass-bg);
         backdrop-filter: blur(10px);
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid var(--card-glass-border);
         font-size: 14px;
         font-weight: 600;
         margin-top: 4px;
@@ -1529,6 +1540,120 @@ watch(
           text-overflow: ellipsis;
           white-space: nowrap;
         }
+      }
+    }
+
+    @keyframes weather-rain-fall {
+      0% { transform: translate3d(0, -46px, 0); }
+      100% { transform: translate3d(0, 46px, 0); }
+    }
+
+    @keyframes weather-sunny-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.45; }
+      50% { transform: scale(1.08); opacity: 0.7; }
+    }
+
+    @keyframes weather-thunder-flash {
+      0%, 78%, 100% { opacity: 0; }
+      80% { opacity: 0.35; }
+      83% { opacity: 0; }
+      86% { opacity: 0.5; }
+      89% { opacity: 0; }
+    }
+
+    @keyframes weather-cloud-drift {
+      0%, 100% { transform: translate3d(0, 0, 0); }
+      50% { transform: translate3d(6%, 2%, 0); }
+    }
+
+    [data-theme='sunny'],
+    [data-theme='hot'] {
+      --card-glass-bg: rgba(255, 244, 220, 0.22);
+      --card-glass-bg-hover: rgba(255, 244, 220, 0.3);
+      --card-glass-border: rgba(255, 244, 220, 0.4);
+      --card-glass-border-strong: rgba(255, 244, 220, 0.5);
+      --card-text-gradient: linear-gradient(180deg, #fffaf0 0%, rgba(255, 250, 240, 0.85) 100%);
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 85% 12%, rgba(255, 238, 160, 0.45) 0%, transparent 45%);
+        animation: weather-sunny-pulse 7s ease-in-out infinite;
+        pointer-events: none;
+      }
+    }
+
+    [data-theme='rain'] {
+      --card-glass-bg: rgba(255, 255, 255, 0.12);
+      --card-glass-bg-hover: rgba(255, 255, 255, 0.18);
+      --card-glass-border: rgba(255, 255, 255, 0.2);
+      --card-glass-border-strong: rgba(255, 255, 255, 0.28);
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -60px;
+        background:
+          repeating-linear-gradient(100deg, rgba(255, 255, 255, 0.16) 0 2px, transparent 2px 16px);
+        animation: weather-rain-fall 1.2s linear infinite;
+        pointer-events: none;
+      }
+    }
+
+    [data-theme='snow'],
+    [data-theme='cold'] {
+      --card-glass-bg: rgba(245, 250, 255, 0.28);
+      --card-glass-bg-hover: rgba(245, 250, 255, 0.4);
+      --card-glass-border: rgba(255, 255, 255, 0.45);
+      --card-glass-border-strong: rgba(255, 255, 255, 0.55);
+      --card-text: #182438;
+      --card-text-gradient: linear-gradient(180deg, #22324a 0%, rgba(34, 50, 74, 0.85) 100%);
+      --card-text-shadow: none;
+      --card-subtle-shadow: none;
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.5) 0%, transparent 30%),
+          radial-gradient(circle at 80% 78%, rgba(255, 255, 255, 0.35) 0%, transparent 38%);
+        pointer-events: none;
+      }
+    }
+
+    [data-theme='cloudy'] {
+      --card-glass-bg: rgba(255, 255, 255, 0.1);
+      --card-glass-bg-hover: rgba(255, 255, 255, 0.16);
+      --card-glass-border: rgba(255, 255, 255, 0.18);
+      --card-glass-border-strong: rgba(255, 255, 255, 0.26);
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -12%;
+        background:
+          radial-gradient(ellipse 38% 18% at 18% 22%, rgba(255, 255, 255, 0.35) 0%, transparent 72%),
+          radial-gradient(ellipse 45% 20% at 78% 38%, rgba(255, 255, 255, 0.28) 0%, transparent 72%);
+        animation: weather-cloud-drift 11s ease-in-out infinite;
+        pointer-events: none;
+      }
+    }
+
+    [data-theme='thunder'] {
+      --card-glass-bg: rgba(255, 255, 255, 0.08);
+      --card-glass-bg-hover: rgba(255, 255, 255, 0.14);
+      --card-glass-border: rgba(255, 255, 255, 0.16);
+      --card-glass-border-strong: rgba(255, 255, 255, 0.24);
+
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 50% 8%, rgba(212, 180, 255, 0.45) 0%, transparent 50%);
+        animation: weather-thunder-flash 8s ease-in-out infinite;
+        pointer-events: none;
       }
     }
   }

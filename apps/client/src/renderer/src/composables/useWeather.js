@@ -66,44 +66,52 @@ export function useWeather() {
   // 天气详情弹窗
   const weatherDetailVisible = ref(false)
 
-  // 获取天气对应的主题渐变色
+  // 获取天气对应的主题渐变色（多层叠加，营造氛围感）
   const getWeatherGradient = () => {
     const condition = weather.value.condition
     const temp = weather.value.temp
 
     if (!condition || temp === '' || temp === null || temp === undefined) {
-      return 'linear-gradient(135deg, #C9C4BC 0%, #A8A29A 100%)'
+      return 'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.12) 0%, transparent 50%), linear-gradient(135deg, #C9C4BC 0%, #A8A29A 100%)'
     }
     if (condition.includes('晴') || condition.includes('热')) {
-      // 晴天/热天 - 橙红色
-      return 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)'
+      return 'radial-gradient(circle at 82% 12%, rgba(255,235,160,0.4) 0%, transparent 45%), radial-gradient(circle at 8% 88%, rgba(255,90,50,0.2) 0%, transparent 50%), linear-gradient(135deg, #FFB347 0%, #FF8C42 45%, #FF6B6B 100%)'
     }
     if (condition.includes('雨')) {
-      // 雨天 - 蓝紫色
-      return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      return 'radial-gradient(circle at 50% 0%, rgba(160,180,220,0.2) 0%, transparent 55%), radial-gradient(circle at 85% 80%, rgba(50,70,130,0.3) 0%, transparent 50%), linear-gradient(135deg, #5B7BAA 0%, #4A6A9E 45%, #3D5A8C 100%)'
     }
     if (condition.includes('雪')) {
-      // 雪天 - 浅蓝色
-      return 'linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%)'
+      return 'radial-gradient(circle at 25% 10%, rgba(255,255,255,0.5) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(100,140,180,0.25) 0%, transparent 45%), linear-gradient(135deg, #8EB4D4 0%, #70A0C8 50%, #5A8AB8 100%)'
     }
     if (condition.includes('云') || condition.includes('阴')) {
-      // 多云/阴天 - 天蓝色
-      return 'linear-gradient(135deg, #89c4f4 0%, #5d9cec 100%)'
+      return 'radial-gradient(ellipse at 30% 15%, rgba(255,255,255,0.15) 0%, transparent 50%), radial-gradient(ellipse at 75% 55%, rgba(140,160,190,0.3) 0%, transparent 45%), linear-gradient(135deg, #5A789A 0%, #4A6888 50%, #385068 100%)'
     }
     if (condition.includes('雷') || condition.includes('暴')) {
-      // 雷暴天气 - 深紫色
-      return 'linear-gradient(135deg, #4a569d 0%, #243b55 100%)'
+      return 'radial-gradient(circle at 50% 0%, rgba(180,140,200,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(70,50,130,0.3) 0%, transparent 45%), linear-gradient(135deg, #3D3A5C 0%, #2E2A4A 45%, #1E1A38 100%)'
     }
     if (temp > 30) {
-      // 高温 - 火红渐变
-      return 'linear-gradient(135deg, #f83600 0%, #f9d423 100%)'
+      return 'radial-gradient(circle at 80% 15%, rgba(255,220,100,0.4) 0%, transparent 45%), linear-gradient(135deg, #F85636 0%, #F59E2F 50%, #FFD723 100%)'
     }
     if (temp < 10) {
-      // 低温 - 冰蓝渐变
-      return 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)'
+      return 'radial-gradient(circle at 30% 15%, rgba(255,255,255,0.2) 0%, transparent 50%), linear-gradient(135deg, #5B8AB8 0%, #4A7AA8 50%, #7AB0D8 100%)'
     }
-    // 默认 - 温暖橙
-    return 'linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%)'
+    return 'radial-gradient(circle at 75% 15%, rgba(255,230,180,0.3) 0%, transparent 45%), linear-gradient(135deg, #FFB347 0%, #FF8C42 50%, #FF6B6B 100%)'
+  }
+
+  // 获取天气主题键（用于 CSS 装饰动画）
+  const getWeatherTheme = () => {
+    const condition = weather.value.condition
+    const temp = weather.value.temp
+
+    if (!condition || temp === '' || temp === null || temp === undefined) return 'default'
+    if (condition.includes('晴') || condition.includes('热')) return 'sunny'
+    if (condition.includes('雨')) return 'rain'
+    if (condition.includes('雪')) return 'snow'
+    if (condition.includes('云') || condition.includes('阴')) return 'cloudy'
+    if (condition.includes('雷') || condition.includes('暴')) return 'thunder'
+    if (temp > 30) return 'hot'
+    if (temp < 10) return 'cold'
+    return 'default'
   }
 
   // 获取天气对应的图标
@@ -515,6 +523,7 @@ export function useWeather() {
     // 计算属性
     tempRangeText,
     weatherGradient: computed(() => getWeatherGradient()),
+    weatherTheme: computed(() => getWeatherTheme()),
     weatherIcon: computed(() => getWeatherIcon()),
     weatherEmoji: computed(() => getWeatherEmoji()),
     aqiInfo: computed(() => getAQIDescription()),
