@@ -186,8 +186,8 @@ const fetchRecommendedDishes = async () => {
 
     // 转换数据格式以兼容轮播组件
     if (allRecommendations && allRecommendations.length > 0) {
-      // 取前3个推荐用于首页轮播
-      const topRecommendations = allRecommendations.slice(0, 3)
+      // 取前4个推荐铺满首页推荐网格（宽屏正好 4 列）
+      const topRecommendations = allRecommendations.slice(0, 4)
 
       // 转换数据格式以匹配原recipe格式
       recommendedDishes.value = topRecommendations.map(rec => {

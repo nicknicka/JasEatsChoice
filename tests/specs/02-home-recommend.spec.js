@@ -73,7 +73,7 @@ test.describe('模块二：用户首页与推荐', () => {
       await expect(page.getByText('今日推荐', { exact: true })).toBeVisible({ timeout: 15000 })
       await expect.poll(async () => {
         const visibleNames = await page.locator('.rec-card .rec-dish-name').allTextContents()
-        return visibleNames.length === 3 && visibleNames.every((name) => expectedNames.includes(name))
+        return visibleNames.length === 4 && visibleNames.every((name) => expectedNames.includes(name))
       }).toBe(true)
       await expect(page.locator('.hot-content')).toHaveText(hotTopic.content)
 
