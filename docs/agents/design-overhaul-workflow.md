@@ -108,11 +108,12 @@
 
 单页实现 sub issue 通过需同时满足：
 
-1. `make screenshots` 重拍该页 1440×900，PR 里附前后对比图。
-2. 视觉对齐 `DESIGN-BASELINE.md` 的 token，并已按该页修改方案逐条落实。
-3. 该页相关的 Playwright spec 全绿（涉及 03/05/06/07/08/09/11~14 的改动必须本地跑对应 spec，不能只看 PR smoke `01/04/10`）。
-4. 审查 agent 独立看图通过，且不只看制作过程与代码。
-5. 不新增 ESLint error；warning 不强求。
+1. `make screenshots` 重拍该页 1440×900；渲染/对比图落 `output/design-l1/<issue>-<名字>.png` 与 `output/design-l2/<slug>-{before,after}.png`（两者都被 gitignore，不入库），PR 正文记录截图路径与渲染场景，由主 agent 看图复核。
+2. 组件类 issue（L1）允许临时挂载渲染取图，但**合入前必须撤掉临时挂载**，PR diff 只允许含目标组件文件。
+3. 视觉对齐 `DESIGN-BASELINE.md` 的 token，并已按该页修改方案逐条落实。
+4. 该页相关的 Playwright spec 全绿（涉及 03/05/06/07/08/09/11~14 的改动必须本地跑对应 spec，不能只看 PR smoke `01/04/10`）。
+5. 审查 agent 独立看图通过，且不只看制作过程与代码。
+6. 不新增 ESLint error；warning 不强求。
 
 不引入自动视觉 diff——截图基线不入库，跑不通。
 
