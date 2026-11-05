@@ -99,7 +99,9 @@
 
 - 一个 issue = 一个 worktree + 一个分支，分支名 `codex/<issue>-<slug>`。
 - 起隔离验证栈时统一 `docker compose --project-name codex<issue> ...`，收尾 `down -v`。
-- `deploy/.env` 是 gitignore 的，worktree 里不存在：用临时 env 或接受无 key 降级验证。
+- `deploy/.env` 是 gitignore 的，worktree 里不存在。直接软链主检出的那份最省事，路径同样被 gitignore，不会污染 diff：
+  `ln -sf /Users/nickxiao/jaseats-choice/deploy/.env deploy/.env`。
+- **不软链就会掉用例**：`04-order.spec.js` 的优惠券清理用例依赖后端连到真库，缺 `deploy/.env` 时该 spec 稳定失败 1 条；掉的是环境不是代码，别按代码问题排查。
 - 提交前 `git checkout -- tests/progress.txt`，任何 PR 都不该含它的 diff。
 
 ## 8. 验收标准
@@ -126,3 +128,4 @@
 - 颜色只有一个来源：`apps/client/src/renderer/src/assets/css/tokens.css`。组件写 CSS 变量，不写裸色值；改主色只改这一处，见 `DESIGN-BASELINE.md` §7.1。
 - Web 与桌面共用同一份 renderer；新增 `window.api.xxx` 必须同步 `platform/webShim.js`。
 - ESLint 只清零 error，warning 不强求。
+- **已知共性残留：`#409eff`（Element Plus 默认蓝）被页面写死**。L0 只切干净了全局变量，源码里仍有 71 处裸色值，集中在 `components/chat/dialogs/*`（`GroupOrderDrawer` 12 处最多）、`ContentSourceList.vue`、`WishListAudit.vue`、`chat/MessageSearchPanel.vue` 与若干 `views/admin/*`。这些不单独开 issue，归到 L2 对应页面的 issue 里清掉；排查用 `grep -rn --include='*.vue' '409eff' apps/client/src/renderer/src`。
