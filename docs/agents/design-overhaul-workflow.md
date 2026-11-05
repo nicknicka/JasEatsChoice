@@ -101,6 +101,8 @@
 - 起隔离验证栈时统一 `docker compose --project-name codex<issue> ...`，收尾 `down -v`。
 - `deploy/.env` 是 gitignore 的，worktree 里不存在。直接软链主检出的那份最省事，路径同样被 gitignore，不会污染 diff：
   `ln -sf /Users/nickxiao/jaseats-choice/deploy/.env deploy/.env`。
+- **`node_modules` 同样不在 worktree 里**（已 gitignore），`make web` / `make check` 会直接找不到依赖。从主检出软链：
+  `ln -sfn /Users/nickxiao/jaseats-choice/apps/client/node_modules apps/client/node_modules`，`tests/node_modules` 同理。`ln -sfn` 的 `-n` 不能省，否则第二次执行会套进上一层的软链里去。
 - **不软链就会掉用例**：`04-order.spec.js` 的优惠券清理用例依赖后端连到真库，缺 `deploy/.env` 时该 spec 稳定失败 1 条；掉的是环境不是代码，别按代码问题排查。
 - 提交前 `git checkout -- tests/progress.txt`，任何 PR 都不该含它的 diff。
 
