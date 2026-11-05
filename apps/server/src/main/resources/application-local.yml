@@ -24,6 +24,6 @@ ai:
   provider: ${AI_PROVIDER:openai-compatible}
   api-key: ${AI_API_KEY:}
   model: ${AI_MODEL:gpt-4o-mini}
-  supervisor-model: ${AI_SUPERVISOR_MODEL:gpt-4o-mini}
+  supervisor-model: ${AI_SUPERVISOR_MODEL:}
   vision-model: ${AI_VISION_MODEL:gpt-4o-mini}
   base-url: ${AI_BASE_URL:}

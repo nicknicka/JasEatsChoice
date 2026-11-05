@@ -17,7 +17,7 @@ x-app-env: &app-env
   - AI_ACTIVE_KEY_FILE=/app/runtime/secrets/ai/active-key
   - AI_EMBEDDING_ACTIVE_KEY_FILE=/app/runtime/secrets/ai/embedding-key
   - AI_MODEL=${AI_MODEL:-gpt-4o-mini}
-  - AI_SUPERVISOR_MODEL=${AI_SUPERVISOR_MODEL:-gpt-4o-mini}
+  - AI_SUPERVISOR_MODEL=${AI_SUPERVISOR_MODEL:-}
   - AI_VISION_MODEL=${AI_VISION_MODEL:-gpt-4o-mini}
   - AI_BASE_URL=${AI_BASE_URL:-}
   - AI_TIMEOUT=${AI_TIMEOUT:-30000}

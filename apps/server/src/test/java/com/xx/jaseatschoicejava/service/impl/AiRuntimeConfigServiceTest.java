@@ -266,6 +266,37 @@ class AiRuntimeConfigServiceTest {
     }
 
     @Test
+    void supervisorModelFollowsChatModelWhenCandidateLeavesItBlank(@TempDir Path tempDir) throws Exception {
+        AiRuntimeKeyStore keyStore = new AiRuntimeKeyStore(tempDir.resolve("active-key").toString());
+        when(modelFactory.resolveKey(any(AiRuntimeKeyStore.class)))
+            .thenAnswer(ignored -> keyStore.readKey());
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        when(systemConfigService.setConfigValue(anyString(), anyString(), anyString(), anyString()))
+            .thenReturn(true);
+        AiRuntimeConfigServiceImpl activationService = new AiRuntimeConfigServiceImpl(
+            aiConfig, systemConfigService, registry(), new AiProviderRegistry(List.of(modelFactory)),
+            new ObjectMapper(), keyStore, null, null, null, null);
+
+        ChatModel chatModel = mock(ChatModel.class);
+        when(chatModel.chat("ping")).thenReturn("pong");
+        when(modelFactory.buildChatModel(any(AiModelConfig.class), eq(CANDIDATE_KEY)))
+            .thenReturn(chatModel);
+        when(modelFactory.buildSupervisorModel(any(AiModelConfig.class), eq(CANDIDATE_KEY)))
+            .thenReturn(mock(ChatModel.class));
+        when(modelFactory.buildVisionModel(any(AiModelConfig.class), eq(CANDIDATE_KEY)))
+            .thenReturn(mock(ChatModel.class));
+
+        AiRuntimeConfigSnapshot snapshot = activationService.saveAndActivate(AiModelCandidateDTO.builder()
+            .provider("openai-compatible")
+            .model("chat-model")
+            .visionModel("vision-model")
+            .apiKey(CANDIDATE_KEY)
+            .build(), "tester");
+
+        assertEquals("chat-model", snapshot.getSupervisorModel());
+    }
+
+    @Test
     void unconfiguredKeyFailsConnectivityBeforeCallingProviderModel() throws Exception {
         aiConfig.setApiKey("");
 

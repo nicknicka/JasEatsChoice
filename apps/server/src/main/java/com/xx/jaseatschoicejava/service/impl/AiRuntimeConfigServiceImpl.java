@@ -773,7 +773,6 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         if (candidate == null
                 || !hasText(candidate.getProvider())
                 || !hasText(candidate.getModel())
-                || !hasText(candidate.getSupervisorModel())
                 || !hasText(candidate.getVisionModel())) {
             throw new BusinessException("AI_CONFIG_INVALID", "provider 和模型名不能为空");
         }
@@ -788,10 +787,13 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         if (temperature < 0 || temperature > 2) {
             throw new BusinessException("AI_CONFIG_INVALID", "温度必须在 0 到 2 之间");
         }
+        String model = candidate.getModel().trim();
         return AiModelConfig.builder()
             .provider(normalizeProvider(candidate.getProvider()))
-            .model(candidate.getModel().trim())
-            .supervisorModel(candidate.getSupervisorModel().trim())
+            .model(model)
+            // Supervisor 未单独指定时跟随聊天模型
+            .supervisorModel(hasText(candidate.getSupervisorModel())
+                ? candidate.getSupervisorModel().trim() : model)
             .visionModel(candidate.getVisionModel().trim())
             .baseUrl(candidate.getBaseUrl() == null ? "" : candidate.getBaseUrl().trim())
             .timeoutMs(timeout)
