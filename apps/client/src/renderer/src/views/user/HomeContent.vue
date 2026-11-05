@@ -1158,17 +1158,18 @@ watch(
 @import '../../assets/css/nordic-theme.less';
 
 // ===== Savour 设计系统 =====
-@savour-bg: #F6F3ED;
+// tokens.css 的编译期镜像，待退役；颜色函数要求这里的值保持静态字面量。
+@savour-bg: #FBF7F3;
 @savour-surface: #FFFFFF;
-@savour-text: #2D2A26;
-@savour-text-sec: #8A857E;
-@savour-text-muted: #B5AFA6;
-@savour-accent: #C67B5C;
-@savour-accent-hover: #B56A4A;
-@savour-accent-light: #F4E6DE;
-@savour-green: #7BAE7F;
-@savour-gold: #D4A855;
-@savour-border: #E8E2D8;
+@savour-text: #1F1B18;
+@savour-text-sec: #6B625B;
+@savour-text-muted: #8C8179;
+@savour-accent: #ED6A42;
+@savour-accent-hover: #D9532C;
+@savour-accent-light: #FDE4D8;
+@savour-green: #2E9E5B;
+@savour-gold: #E08A00;
+@savour-border: #E8E1DA;
 @savour-radius: 16px;
 @savour-radius-lg: 24px;
 @savour-pill: 100px;
