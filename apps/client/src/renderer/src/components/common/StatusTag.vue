@@ -28,7 +28,7 @@ const NEUTRAL_META = Object.freeze({ type: 'neutral', text: '无状态' })
 // 业务状态词典：type 决定语义色，text 是缺省中文文案。
 // key 统一去掉下划线和连字符，兼容 pending_review / pendingReview / PENDING_REVIEW。
 const STATUS_DICT = Object.freeze({
-  // success：已完成、已通过、已上架、成功
+  // success：已完成、已通过、成功、营业中（DESIGN-BASELINE §3.1 状态表）
   approved: { type: 'success', text: '已通过' },
   autoapproved: { type: 'success', text: '超时自动通过' },
   appealapproved: { type: 'success', text: '申诉成功' },
@@ -37,12 +37,8 @@ const STATUS_DICT = Object.freeze({
   delivered: { type: 'success', text: '已送达' },
   success: { type: 'success', text: '成功' },
   published: { type: 'success', text: '已发布' },
-  online: { type: 'success', text: '已上架' },
-  active: { type: 'success', text: '已启用' },
-  available: { type: 'success', text: '可用' },
   received: { type: 'success', text: '已领取' },
   open: { type: 'success', text: '营业中' },
-  enabled: { type: 'success', text: '已启用' },
   replied: { type: 'success', text: '已回复' },
   sent: { type: 'success', text: '已发送' },
   read: { type: 'success', text: '已读' },
@@ -96,8 +92,14 @@ const STATUS_DICT = Object.freeze({
   blocked: { type: 'danger', text: '已拉黑' },
   timeout: { type: 'danger', text: '超时' },
 
-  // info：进行中、已受理
+  // info：进行中、已上架/在售、生效中/启用、配送中、已受理（DESIGN-BASELINE §3.1 状态表）
   processing: { type: 'info', text: '进行中' },
+  online: { type: 'info', text: '已上架' },
+  onshelf: { type: 'info', text: '已上架' },
+  active: { type: 'info', text: '生效中' },
+  enabled: { type: 'info', text: '已启用' },
+  available: { type: 'info', text: '可用' },
+  onsale: { type: 'info', text: '在售' },
   confirmed: { type: 'info', text: '已接单' },
   ready: { type: 'info', text: '备餐完成' },
   delivering: { type: 'info', text: '配送中' },
