@@ -22,6 +22,12 @@ tests/reports/
 .env.*.local
 deploy/.env
 
+# 设计与本地调试临时产物
+.archify/
+.oil-ui/
+apps/client/.tmp-baseline/
+*.bak
+
 # 编辑器与系统
 .DS_Store
 .idea/
