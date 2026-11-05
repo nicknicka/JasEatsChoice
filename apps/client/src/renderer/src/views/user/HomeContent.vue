@@ -7,20 +7,24 @@ import { useRecommendations } from '../../composables/useRecommendations.js'
 // 导入 Element Plus 图标
 import {
   Location,
+  Calendar,
+  Promotion,
   VideoCamera,
   ArrowRight,
   Star,
   Share,
-  Search,
   Coffee,
   Document,
   Check,
   Shop,
-  MagicStick
+  MagicStick,
+  Sunny,
+  Cloudy,
+  Drizzling,
+  Lightning
 } from '@element-plus/icons-vue'
 import CommonMapLocationPicker from '../../components/CommonMapLocationPicker.vue'
 import WeatherCanvasFx from '../../components/WeatherCanvasFx.vue'
-import BitsCarousel from '../../components/BitsCarousel.vue'
 import { useRouter } from 'vue-router'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
@@ -43,7 +47,6 @@ const {
   tempRangeText,
   weatherGradient,
   weatherTheme,
-  weatherEmoji,
   aqiInfo,
   clothingAdvice,
   exerciseAdvice,
@@ -57,13 +60,28 @@ const {
 // 使用智能推荐系统
 const { loadAllRecommendations } = useRecommendations()
 
+// 天气图标统一使用线性图标，避免 emoji 在不同系统下渲染不一致
+const weatherIconComponent = computed(() => {
+  switch (weatherTheme.value) {
+    case 'sunny':
+    case 'hot':
+      return Sunny
+    case 'rain':
+      return Drizzling
+    case 'thunder':
+      return Lightning
+    default:
+      return Cloudy
+  }
+})
+
 // 默认菜品占位图 - 更精美的设计
 const defaultDishImage =
-  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Cdefs%3E%3ClinearGradient id="grad1" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%23ff6b6b;stop-opacity:0.1" /%3E%3Cstop offset="100%25" style="stop-color:%23ffa8a8;stop-opacity:0.2" /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill="url(%23grad1)" width="400" height="300"/%3E%3Ccircle cx="200" cy="130" r="50" fill="%23ff6b6b" opacity="0.15"/%3E%3Ctext x="200" y="130" font-size="48" text-anchor="middle" fill="%23ff6b6b" opacity="0.3"%3E🍽️%3C/text%3E%3Ctext x="200" y="200" font-family="Arial, sans-serif" font-size="20" font-weight="600" text-anchor="middle" fill="%23999"%3E暂无图片%3C/text%3E%3Ctext x="200" y="230" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="%23bbb"%3E精彩美食即将呈现%3C/text%3E%3C/svg%3E'
+  'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'480\' height=\'360\' viewBox=\'0 0 480 360\'%3E%3Cdefs%3E%3ClinearGradient id=\'d\' x1=\'0\' y1=\'0\' x2=\'0\' y2=\'1\'%3E%3Cstop offset=\'0\' stop-color=\'%23FBF8F4\'/%3E%3Cstop offset=\'1\' stop-color=\'%23F1E7DB\'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=\'480\' height=\'360\' fill=\'url(%23d)\'/%3E%3Ccircle cx=\'240\' cy=\'178\' r=\'96\' fill=\'%23EFDDCD\' opacity=\'0.62\'/%3E%3Cg fill=\'none\' stroke=\'%23C67B5C\' stroke-width=\'7\' stroke-linecap=\'round\' stroke-linejoin=\'round\' opacity=\'0.82\'%3E%3Cpath d=\'M170 178h140a10 10 0 0 1 10 10c0 36-29 66-66 66h-28c-37 0-66-30-66-66a10 10 0 0 1 10-10z\'/%3E%3Cpath d=\'M210 168c0-16 16-18 16-34\'/%3E%3Cpath d=\'M254 166c0-18 18-20 18-38\'/%3E%3Cpath d=\'M204 268h72\'/%3E%3C/g%3E%3C/svg%3E'
 
 // 默认教程缩略图 - 更精美的设计
 const defaultTutorialThumbnail =
-  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="200"%3E%3Cdefs%3E%3ClinearGradient id="grad2" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:%236ba4ff;stop-opacity:0.1" /%3E%3Cstop offset="100%25" style="stop-color:%23a8c8ff;stop-opacity:0.2" /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill="url(%23grad2)" width="300" height="200"/%3E%3Ccircle cx="150" cy="85" r="40" fill="%236ba4ff" opacity="0.15"/%3E%3Ctext x="150" y="90" font-size="40" text-anchor="middle" fill="%236ba4ff" opacity="0.3"%3E📖%3C/text%3E%3Ctext x="150" y="150" font-family="Arial, sans-serif" font-size="16" font-weight="600" text-anchor="middle" fill="%23999"%3E暂无缩略图%3C/text%3E%3Ctext x="150" y="175" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="%23bbb"%3E教程内容加载中%3C/text%3E%3C/svg%3E'
+  'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'480\' height=\'360\' viewBox=\'0 0 480 360\'%3E%3Cdefs%3E%3ClinearGradient id=\'t\' x1=\'0\' y1=\'0\' x2=\'0\' y2=\'1\'%3E%3Cstop offset=\'0\' stop-color=\'%23FAF9F6\'/%3E%3Cstop offset=\'1\' stop-color=\'%23EAEEE6\'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=\'480\' height=\'360\' fill=\'url(%23t)\'/%3E%3Ccircle cx=\'240\' cy=\'176\' r=\'94\' fill=\'%23DEE9DC\' opacity=\'0.7\'/%3E%3Cg fill=\'none\' stroke=\'%237BAE7F\' stroke-width=\'7\' stroke-linecap=\'round\' stroke-linejoin=\'round\' opacity=\'0.85\'%3E%3Cpath d=\'M168 160h60a12 12 0 0 1 12 12v62a12 12 0 0 1-12 12h-60a12 12 0 0 1-12-12v-62a12 12 0 0 1 12-12z\'/%3E%3Cpath d=\'M252 160h60a12 12 0 0 1 12 12v62a12 12 0 0 1-12 12h-60a12 12 0 0 1-12-12v-62a12 12 0 0 1 12-12z\'/%3E%3Cpath d=\'M180 190h36M180 212h36\'/%3E%3Cpath d=\'M264 190h36M264 212h36\'/%3E%3C/g%3E%3C/svg%3E'
 
 // 图片加载错误处理
 const handleImageError = (event) => {
@@ -153,8 +171,6 @@ const hotTopic = ref({
 })
 // 收藏的菜品ID列表
 const favoriteDishIds = ref(new Set())
-// 搜索关键字
-const searchKeyword = ref('')
 
 // 位置选择弹窗
 const mapLocationPickerVisible = ref(false)
@@ -421,36 +437,18 @@ const handleDishClick = (dish) => {
   // router.push(`/user/home/dish/${dish.id}`)
 }
 
-// 过滤后的推荐菜品(基于搜索关键字)
-const filteredDishes = computed(() => {
-  if (!searchKeyword.value) {
-    return recommendedDishes.value
-  }
-  const keyword = searchKeyword.value.toLowerCase()
-  return recommendedDishes.value.filter((dish) => {
-    return (
-      dish.name?.toLowerCase().includes(keyword) ||
-      dish.category?.toLowerCase().includes(keyword) ||
-      dish.tags?.toLowerCase().includes(keyword) ||
-      dish.reason?.toLowerCase().includes(keyword)
-    )
-  })
-})
+// 首页展示的推荐菜品
+const filteredDishes = computed(() => recommendedDishes.value)
 
-// 推荐空状态消息（根据搜索状态动态变化）
+// 推荐空状态消息
 const recommendEmptyMessage = computed(() => {
-  if (recommendLoadFailed.value) {
-    return '加载失败,请重试'
-  }
-  if (searchKeyword.value) {
-    return `没有找到包含"${searchKeyword.value}"的菜品`
-  }
-  return '暂无推荐菜品'
+  return recommendLoadFailed.value ? '加载失败,请重试' : '暂无推荐菜品'
 })
 
-// 处理搜索
-const handleSearch = () => {
-  console.log('搜索:', searchKeyword.value)
+// 热量统一格式
+const formatKcal = (value) => {
+  const kcal = Number(value)
+  return Number.isFinite(kcal) && kcal > 0 ? `${Math.round(kcal)} kcal` : '热量待补'
 }
 
 // 问候语
@@ -470,10 +468,6 @@ const todayDate = computed(() => {
   return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${weekdays[now.getDay()]}`
 })
 
-// 清空搜索
-const clearSearch = () => {
-  searchKeyword.value = ''
-}
 
 // 错误提示函数
 const showError = (message, duration = 3000) => {
@@ -865,15 +859,15 @@ watch(
                 @click="handleNearbySearch"
                 :disabled="nearbyLoading"
               >
-                <span class="pill-icon">📍</span>
+                <el-icon class="pill-icon"><Location /></el-icon>
                 <span>附近商家</span>
               </button>
               <button class="action-pill" @click="router.push('/user/home/ai')">
-                <span class="pill-icon">🤖</span>
+                <el-icon class="pill-icon"><MagicStick /></el-icon>
                 <span>AI 助手</span>
               </button>
               <button class="action-pill" @click="router.push('/user/home/today-recipe')">
-                <span class="pill-icon">📅</span>
+                <el-icon class="pill-icon"><Calendar /></el-icon>
                 <span>今日食谱</span>
               </button>
             </div>
@@ -900,7 +894,7 @@ watch(
               <WeatherCanvasFx :theme="weatherTheme" />
               <div class="weather-inner">
                 <div class="weather-temp-row">
-                  <span class="weather-emoji">{{ weatherEmoji }}</span>
+                  <el-icon class="weather-icon"><component :is="weatherIconComponent" /></el-icon>
                   <span class="weather-temp-value">{{ weather.temp }}°</span>
                 </div>
                 <div v-if="tempRangeText" class="weather-range">{{ tempRangeText }}</div>
@@ -908,37 +902,20 @@ watch(
                   {{ weather.condition || '未知天气' }}
                 </div>
                 <div class="weather-location">
-                  <span>📍</span>
+                  <el-icon class="weather-location-icon"><Location /></el-icon>
                   <span class="location-name">{{ weather.address || weather.city || '当前位置' }}</span>
                   <button class="location-change-btn" @click="mapLocationPickerVisible = true">
                     更换位置
                   </button>
                 </div>
                 <div class="weather-recommendation">
-                  <span class="sparkle">✨</span>
+                  <el-icon class="sparkle"><MagicStick /></el-icon>
                   <span class="rec-text">{{ getWeatherRecommendation() }}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </section>
-
-      <!-- 搜索栏 -->
-      <section class="search-section fade-in-up-delay-100">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索菜品、教程、商家..."
-          clearable
-          size="large"
-          class="savour-search"
-          @keyup.enter="handleSearch"
-          @clear="clearSearch"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
       </section>
 
       <!-- 今日推荐 -->
@@ -975,69 +952,58 @@ watch(
         </div>
 
         <!-- 推荐卡片 -->
-        <BitsCarousel
-          v-else
-          :items="filteredDishes"
-          :base-width="300"
-          :aspect-ratio="0.94"
-          :gap="16"
-          :arrows="false"
-          indicator="bars"
-          loop
-        >
-          <template #default="{ item: dish }">
-            <div
-              class="rec-card"
-              @click="handleDishClick(dish)"
-              tabindex="0"
-              @keyup.enter="handleDishClick(dish)"
-            >
-              <div class="rec-card-image">
-                <img :src="dish.image || defaultDishImage" :alt="dish.name" loading="lazy" @error="handleImageError" />
-                <span class="rec-category-badge">{{ dish.category || '推荐' }}</span>
-                <div class="rec-card-overlay">
-                  <div class="rec-card-top">
-                    <button class="rec-action-btn" @click="shareDish(dish, $event)" title="分享">
-                      <el-icon><Share /></el-icon>
-                    </button>
-                    <button
-                      class="rec-action-btn"
-                      :class="{ 'is-fav': isFavorite(dish) }"
-                      @click="toggleFavorite(dish, $event)"
-                      :title="isFavorite(dish) ? '取消收藏' : '收藏'"
-                    >
-                      <el-icon><Star /></el-icon>
-                    </button>
-                  </div>
-                  <div class="rec-card-bottom">
-                    <h3 class="rec-dish-name">{{ dish.name }}</h3>
-                    <div class="rec-dish-meta">
-                      <span class="rec-kcal">{{ dish.kcal }} kcal</span>
-                      <span v-if="dish.tags" class="rec-tags">{{ dish.tags }}</span>
-                    </div>
-                    <div class="rec-rating">
-                      <el-rate
-                        v-if="dish.rating && dish.rating > 0"
-                        v-model="dish.rating"
-                        disabled
-                        show-score
-                        size="small"
-                      />
-                      <span v-else class="no-rating">暂无评分</span>
-                    </div>
-                  </div>
-                </div>
+        <div v-else class="rec-grid">
+          <div
+            v-for="dish in filteredDishes"
+            :key="dish.id"
+            class="rec-card"
+            @click="handleDishClick(dish)"
+            tabindex="0"
+            @keyup.enter="handleDishClick(dish)"
+          >
+            <div class="rec-card-image">
+              <img :src="dish.image || defaultDishImage" :alt="dish.name" loading="lazy" @error="handleImageError" />
+              <span class="rec-category-badge">{{ dish.category || '推荐' }}</span>
+              <div class="rec-card-actions">
+                <button class="rec-action-btn" @click="shareDish(dish, $event)" title="分享">
+                  <el-icon><Share /></el-icon>
+                </button>
+                <button
+                  class="rec-action-btn"
+                  :class="{ 'is-fav': isFavorite(dish) }"
+                  @click="toggleFavorite(dish, $event)"
+                  :title="isFavorite(dish) ? '取消收藏' : '收藏'"
+                >
+                  <el-icon><Star /></el-icon>
+                </button>
               </div>
             </div>
-          </template>
-        </BitsCarousel>
+            <div class="rec-card-body">
+              <h3 class="rec-dish-name">{{ dish.name }}</h3>
+              <div class="rec-dish-meta">
+                <span class="rec-kcal">{{ formatKcal(dish.kcal) }}</span>
+                <span v-if="dish.tags" class="rec-tags">{{ dish.tags }}</span>
+              </div>
+              <div class="rec-rating">
+                <el-rate
+                  v-if="dish.rating && dish.rating > 0"
+                  v-model="dish.rating"
+                  disabled
+                  show-score
+                  size="small"
+                />
+                <span v-else class="no-rating">暂无评分</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- 今日热点 -->
       <section v-if="hotTopic.content" class="hot-section fade-in-up-delay-300" @click="handleHotTopicClick">
         <div class="hot-card" :class="{ clickable: hotTopic.clickable }">
           <div class="hot-left">
-            <span class="hot-emoji">🔥</span>
+            <span class="hot-emoji"><el-icon><Promotion /></el-icon></span>
             <span class="hot-badge">HOT</span>
           </div>
           <div class="hot-center">
@@ -1086,56 +1052,48 @@ watch(
         </div>
 
         <!-- 教程卡片 -->
-        <BitsCarousel
-          v-else
-          :items="featuredTutorials.slice(0, 4)"
-          :base-width="260"
-          :aspect-ratio="1.1"
-          :gap="16"
-          :arrows="false"
-          indicator="bars"
-          loop
-        >
-          <template #default="{ item: tutorial }">
-            <div
-              class="tut-card"
-              @click="handleTutorialClick(tutorial)"
-              tabindex="0"
-              @keyup.enter="handleTutorialClick(tutorial)"
-            >
-              <div class="tut-image">
-                <img
-                  :src="tutorial.thumbnail || defaultTutorialThumbnail"
-                  :alt="tutorial.name || tutorial.title"
-                  loading="lazy"
-                  @error="handleTutorialImageError"
-                />
-                <div class="tut-type-badge">
-                  <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
-                  <span v-else>💡</span>
-                </div>
-              </div>
-              <div class="tut-info">
-                <div class="tut-badges">
-                  <el-tag v-if="tutorial.source_type === 'ADMIN' && tutorial.is_official" type="danger" size="small" effect="dark">
-                    <el-icon><Check /></el-icon> 官方
-                  </el-tag>
-                  <el-tag v-if="tutorial.source_type === 'MERCHANT'" type="warning" size="small" effect="plain">
-                    <el-icon><Shop /></el-icon> {{ tutorial.merchantName || '商家' }}
-                  </el-tag>
-                  <el-tag v-if="tutorial.source_type === 'AI_GENERATED'" :type="tutorial.review_status === 'APPROVED' ? 'success' : 'info'" size="small" effect="plain">
-                    <el-icon><MagicStick /></el-icon> AI
-                  </el-tag>
-                </div>
-                <h4 class="tut-title">{{ tutorial.name || tutorial.title }}</h4>
-                <div class="tut-meta">
-                  <span class="tut-duration">{{ tutorial.duration || '5分钟' }}</span>
-                  <el-rate v-if="tutorial.rating" v-model="tutorial.rating" disabled size="small" show-score />
-                </div>
+        <div v-else class="tut-grid">
+          <div
+            v-for="tutorial in featuredTutorials.slice(0, 4)"
+            :key="tutorial.id || tutorial.name || tutorial.title"
+            class="tut-card"
+            @click="handleTutorialClick(tutorial)"
+            tabindex="0"
+            @keyup.enter="handleTutorialClick(tutorial)"
+          >
+            <div class="tut-image">
+              <img
+                :src="tutorial.thumbnail || defaultTutorialThumbnail"
+                :alt="tutorial.name || tutorial.title"
+                loading="lazy"
+                @error="handleTutorialImageError"
+              />
+              <div class="tut-type-badge">
+                <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
+                <el-icon v-else><MagicStick /></el-icon>
+                <span>{{ tutorial.type === 'video' ? '视频' : '图文' }}</span>
               </div>
             </div>
-          </template>
-        </BitsCarousel>
+            <div class="tut-info">
+              <div class="tut-badges">
+                <el-tag v-if="tutorial.source_type === 'ADMIN' && tutorial.is_official" type="danger" size="small" effect="dark">
+                  <el-icon><Check /></el-icon> 官方
+                </el-tag>
+                <el-tag v-if="tutorial.source_type === 'MERCHANT'" type="warning" size="small" effect="plain">
+                  <el-icon><Shop /></el-icon> {{ tutorial.merchantName || '商家' }}
+                </el-tag>
+                <el-tag v-if="tutorial.source_type === 'AI_GENERATED'" :type="tutorial.review_status === 'APPROVED' ? 'success' : 'info'" size="small" effect="plain">
+                  <el-icon><MagicStick /></el-icon> AI
+                </el-tag>
+              </div>
+              <h4 class="tut-title">{{ tutorial.name || tutorial.title }}</h4>
+              <div class="tut-meta">
+                <span class="tut-duration">{{ tutorial.duration || '5分钟' }}</span>
+                <el-rate v-if="tutorial.rating" v-model="tutorial.rating" disabled size="small" show-score />
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div class="bottom-spacer"></div>
@@ -1154,7 +1112,10 @@ watch(
         </div>
         <div class="detail-row">
           <span class="detail-label">天气状况</span>
-          <span class="detail-value">{{ weatherEmoji }} {{ weather.condition || '未知' }}</span>
+          <span class="detail-value weather-detail-condition">
+            <el-icon><component :is="weatherIconComponent" /></el-icon>
+            {{ weather.condition || '未知' }}
+          </span>
         </div>
         <div class="detail-row">
           <span class="detail-label">湿度</span>
@@ -1237,11 +1198,6 @@ watch(
   50% { transform: translateY(-6px); }
 }
 
-@keyframes fire-dance {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  25% { transform: scale(1.05) rotate(-3deg); }
-  75% { transform: scale(1.05) rotate(3deg); }
-}
 
 @keyframes shimmer {
   0% { background-position: 200% 0; }
@@ -1283,7 +1239,14 @@ watch(
     overflow-y: auto;
     overflow-x: hidden;
     box-sizing: border-box;
-    padding: @nordic-space-lg @nordic-space-xl @nordic-space-2xl;
+    padding: @nordic-space-lg @nordic-space-lg @nordic-space-2xl;
+
+    > section {
+      width: 100%;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
 
     &::-webkit-scrollbar { width: 6px; }
     &::-webkit-scrollbar-track { background: transparent; }
@@ -1301,12 +1264,16 @@ watch(
 
   .hero-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
     gap: @nordic-space-lg;
     align-items: stretch;
   }
 
   .hero-greeting {
+    min-height: 196px;
+    display: flex;
+    flex-direction: column;
+
     .greeting-label {
       .font-display();
       font-size: @nordic-text-md;
@@ -1381,11 +1348,14 @@ watch(
           transform: none;
         }
       }
+
+      margin-top: auto;
     }
   }
 
   .hero-weather {
     .weather-skeleton {
+      min-height: 196px;
       background: @savour-surface;
       border-radius: @savour-radius-lg;
       border: 1px solid @savour-border;
@@ -1405,7 +1375,7 @@ watch(
       border-radius: @savour-radius-lg;
       overflow: hidden;
       position: relative;
-      min-height: 240px;
+      min-height: 196px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
 
@@ -1439,8 +1409,9 @@ watch(
         align-items: center;
         gap: 12px;
 
-        .weather-emoji {
+        .weather-icon {
           font-size: 40px;
+          color: #fff;
           filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
           animation: weather-float 3s ease-in-out infinite;
         }
@@ -1616,36 +1587,6 @@ watch(
   }
 }
 
-// ===== 搜索栏 =====
-.search-section {
-  width: 100%;
-  margin-bottom: @nordic-space-lg;
-
-  .savour-search {
-    width: clamp(360px, 62vw, 760px);
-    max-width: 100%;
-
-    :deep(.el-input__wrapper) {
-      border-radius: @savour-pill;
-      background: @savour-surface;
-      border: 1.5px solid @savour-border;
-      box-shadow: none;
-      padding: 4px 20px;
-      transition: all 0.25s ease;
-
-      &:hover {
-        border-color: @savour-accent;
-        box-shadow: 0 2px 8px rgba(198, 123, 92, 0.1);
-      }
-
-      &.is-focus {
-        border-color: @savour-accent;
-        box-shadow: 0 4px 16px rgba(198, 123, 92, 0.15);
-      }
-    }
-  }
-}
-
 // ===== 通用区域头部 =====
 .section-header-row {
   display: flex;
@@ -1692,170 +1633,160 @@ watch(
 
 // ===== 推荐区域 =====
 .recs-section {
-  margin-bottom: @nordic-space-lg;
+  margin-bottom: @nordic-space-xl;
 }
 
-.recs-scroll {
-  display: flex;
-  gap: @nordic-space-md;
-  overflow-x: auto;
-  padding-bottom: @nordic-space-sm;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar { display: none; }
+.rec-grid,
+.tut-grid,
+.recs-scroll,
+.tuts-scroll {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: @nordic-space-lg;
 }
 
 .rec-card {
   width: 100%;
-  height: 100%;
   border-radius: @savour-radius;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid rgba(232, 226, 216, 0.95);
+  border: 1px solid @savour-border;
   background: @savour-surface;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.8) inset,
-    0 20px 46px -26px rgba(45, 42, 38, 0.38),
-    0 8px 20px -12px rgba(45, 42, 38, 0.22);
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 
   &:hover {
-    transform: translateY(-6px);
-    border-color: rgba(198, 123, 92, 0.45);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.9) inset,
-      0 28px 60px -28px rgba(45, 42, 38, 0.48),
-      0 12px 26px -14px rgba(45, 42, 38, 0.3);
+    transform: translateY(-4px);
+    border-color: rgba(198, 123, 92, 0.35);
+    box-shadow: 0 10px 24px rgba(45, 42, 38, 0.08);
 
-    .rec-card-image img { transform: scale(1.06); }
-    .rec-action-btn { opacity: 1; transform: translateY(0); }
+    .rec-card-image img { transform: scale(1.04); }
+    .rec-action-btn { opacity: 1; }
   }
 
   .rec-card-image {
     position: relative;
     width: 100%;
-    height: 100%;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
+    background: @savour-bg;
 
     img {
       width: 100%;
       height: 100%;
-      object-fit: contain;
-      background: @savour-bg;
-      transition: transform 0.5s ease;
+      object-fit: cover;
+      transition: transform 0.4s ease;
     }
 
     .rec-category-badge {
       position: absolute;
       top: 12px;
       left: 12px;
-      padding: 6px 14px;
-      background: @savour-accent;
-      color: #fff;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      z-index: 3;
-      box-shadow: 0 2px 8px rgba(198, 123, 92, 0.4);
-    }
-
-    .rec-card-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.5) 40%, transparent 70%);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 16px;
       z-index: 2;
+      padding: 4px 8px;
+      background: rgba(0, 0, 0, 0.45);
+      color: #fff;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
     }
 
-    .rec-card-top {
+    .rec-card-actions {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 2;
       display: flex;
-      justify-content: flex-end;
       gap: 8px;
     }
 
     .rec-action-btn {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       border: none;
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(8px);
-      color: #fff;
+      background: rgba(255, 255, 255, 0.9);
+      color: @savour-text;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.25s ease;
       opacity: 0;
-      transform: translateY(-8px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+      transition: all 0.2s ease;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: scale(1.1);
+        background: #fff;
+        color: @savour-accent;
+        transform: scale(1.06);
       }
 
       &.is-fav {
-        background: rgba(212, 168, 85, 0.35);
-        color: @savour-gold;
         opacity: 1;
-        transform: translateY(0);
+        color: @savour-gold;
+      }
+    }
+  }
+
+  .rec-card-body {
+    padding: 16px;
+
+    .rec-dish-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: @savour-text;
+      margin: 0 0 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rec-dish-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      min-height: 24px;
+
+      .rec-kcal {
+        padding: 3px 8px;
+        background: @savour-accent-light;
+        border-radius: 6px;
+        color: @savour-accent-hover;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .rec-tags {
+        color: @savour-text-sec;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
     }
 
-    .rec-card-bottom {
-      .rec-dish-name {
-        font-size: 20px;
-        font-weight: 700;
-        color: #fff;
-        margin: 0 0 8px;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    .rec-rating {
+      display: flex;
+      align-items: center;
+      min-height: 18px;
+
+      :deep(.el-rate) { height: 18px; }
+      :deep(.el-rate__icon) {
+        color: @savour-gold;
+        margin-right: 2px;
       }
-
-      .rec-dish-meta {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
-
-        .rec-kcal {
-          padding: 4px 12px;
-          background: @savour-accent;
-          border-radius: 16px;
-          color: #fff;
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-        .rec-tags {
-          padding: 4px 10px;
-          background: rgba(255, 255, 255, 0.15);
-          backdrop-filter: blur(8px);
-          border-radius: 12px;
-          color: rgba(255, 255, 255, 0.9);
-          font-size: 12px;
-        }
+      :deep(.el-rate__text) {
+        color: @savour-text-sec !important;
+        font-size: 12px;
       }
+    }
 
-      .rec-rating {
-        :deep(.el-rate__icon) {
-          color: @savour-gold;
-          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-        }
-        :deep(.el-rate__text) {
-          color: #fff !important;
-          font-size: 13px;
-        }
-      }
-
-      .no-rating {
-        color: rgba(255, 255, 255, 0.6);
-        font-size: 13px;
-      }
+    .no-rating {
+      color: @savour-text-muted;
+      font-size: 12px;
     }
   }
 }
@@ -1863,7 +1794,6 @@ watch(
 // 骨架屏
 .rec-skeleton,
 .tut-skeleton {
-  flex: 0 0 280px;
   background: @savour-surface;
   border-radius: @savour-radius;
   overflow: hidden;
@@ -1952,8 +1882,10 @@ watch(
       flex-shrink: 0;
 
       .hot-emoji {
-        font-size: 32px;
-        animation: fire-dance 2s ease-in-out infinite;
+        display: inline-flex;
+        align-items: center;
+        color: #E25B45;
+        font-size: 24px;
       }
 
       .hot-badge {
@@ -2001,79 +1933,60 @@ watch(
 
 // ===== 教程区域 =====
 .tutorials-section {
-  margin-bottom: @nordic-space-lg;
-}
-
-.tuts-scroll {
-  display: flex;
-  gap: @nordic-space-md;
-  overflow-x: auto;
-  padding-bottom: @nordic-space-sm;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar { display: none; }
+  margin-bottom: @nordic-space-xl;
 }
 
 .tut-card {
   width: 100%;
-  height: 100%;
   background: @savour-surface;
   border-radius: @savour-radius;
   overflow: hidden;
   cursor: pointer;
   border: 1px solid @savour-border;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.8) inset,
-    0 20px 46px -26px rgba(45, 42, 38, 0.34),
-    0 8px 20px -12px rgba(45, 42, 38, 0.2);
-  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 
   &:hover {
     transform: translateY(-4px);
-    border-color: rgba(198, 123, 92, 0.32);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.9) inset,
-      0 28px 60px -28px rgba(45, 42, 38, 0.44),
-      0 12px 26px -14px rgba(45, 42, 38, 0.26);
+    border-color: rgba(198, 123, 92, 0.35);
+    box-shadow: 0 10px 24px rgba(45, 42, 38, 0.08);
 
-    .tut-image img { transform: scale(1.05); }
+    .tut-image img { transform: scale(1.04); }
   }
 
   .tut-image {
     width: 100%;
-    height: 150px;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
     position: relative;
+    background: @savour-bg;
 
     img {
       width: 100%;
       height: 100%;
-      object-fit: contain;
-      background: @savour-bg;
+      object-fit: cover;
       transition: transform 0.4s ease;
     }
 
     .tut-type-badge {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 28px;
-      height: 28px;
-      background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(4px);
-      border-radius: 50%;
-      display: flex;
+      top: 12px;
+      left: 12px;
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      border-radius: 6px;
       color: #fff;
       font-size: 12px;
+      font-weight: 600;
     }
   }
 
   .tut-info {
-    padding: 12px 16px;
+    padding: 16px;
 
     .tut-badges {
       display: flex;
@@ -2093,7 +2006,7 @@ watch(
     }
 
     .tut-title {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 600;
       color: @savour-text;
       margin: 0 0 8px;
@@ -2162,6 +2075,12 @@ watch(
       color: @savour-text;
       font-weight: 700;
     }
+
+    .weather-detail-condition {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
   }
 
   .detail-advice-section {
@@ -2208,22 +2127,42 @@ watch(
     gap: @nordic-space-md;
   }
 
+  .hero-greeting {
+    min-height: auto;
+  }
+
   .hero-greeting .greeting-title {
     font-size: 28px;
   }
 
-  .search-section .savour-search {
-    width: 100%;
+  .weather-card {
+    min-height: 220px;
+  }
+}
+
+@media (max-width: 600px) {
+  .home-scroll-container {
+    padding: 16px 16px 32px;
   }
 
-  .rec-card {
-    flex: 0 0 260px;
-
-    .rec-card-image { height: 260px; }
+  .hero-greeting .greeting-title {
+    font-size: 26px;
   }
 
-  .tut-card {
-    flex: 0 0 220px;
+  .hero-actions .action-pill {
+    flex: 1 1 calc(50% - 8px);
+    justify-content: center;
+  }
+
+  .section-header-row {
+    align-items: flex-start;
+  }
+
+  .rec-grid,
+  .tut-grid,
+  .recs-scroll,
+  .tuts-scroll {
+    grid-template-columns: 1fr;
   }
 }
 </style>
