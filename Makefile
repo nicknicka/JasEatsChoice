@@ -10,6 +10,7 @@
 #   make test-smoke  只跑 01/04/10 三条冒烟
 #   make check       静态防线：单测 + 路由漂移 + 小程序 API 调用 + lint 门禁（不起容器）
 #   make desktop     Electron 打包回归（build:mac）
+#   make screenshots 全量网页截图 + 索引页（产出在 output/，不入库）
 #   make logs        跟随后端日志
 
 SHELL := /bin/bash
@@ -20,7 +21,7 @@ NPM := npm --no-audit --no-fund
 # 后端路由来源：auto=栈在跑就读 OpenAPI，否则静态解析 Controller；CI 一般走 static
 CHECK_SOURCE ?= auto
 
-.PHONY: doctor env deps up down ps logs reset-db web desktop test test-smoke lint \
+.PHONY: doctor env deps up down ps logs reset-db web desktop screenshots test test-smoke lint \
 	check check-unit check-routes check-miniapp-api check-lint nginx-test config-prod
 
 doctor:
@@ -93,6 +94,11 @@ web:
 
 desktop:
 	cd apps/client && $(NPM) run build:mac
+
+# 全量网页截图：按需拉起前端 dev server → 逐页截图 → 重建 index.html/README.md。
+# 需要后端栈已 make up；截图与索引都落在 output/web-screenshots（.gitignore，不入库）。
+screenshots:
+	bash scripts/screenshots.sh
 
 # 用例需要三样东西：容器栈、渲染进程 dev server（5173）、以及可登录的种子账号
 test:
