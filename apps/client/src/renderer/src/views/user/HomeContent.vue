@@ -1553,11 +1553,6 @@ watch(
       89% { opacity: 0; }
     }
 
-    @keyframes weather-cloud-drift {
-      0%, 100% { transform: translate3d(0, 0, 0); }
-      50% { transform: translate3d(6%, 2%, 0); }
-    }
-
     [data-theme='sunny'],
     [data-theme='hot'] {
       --card-glass-bg: rgba(255, 244, 220, 0.22);
@@ -1601,17 +1596,6 @@ watch(
       --card-glass-bg-hover: rgba(255, 255, 255, 0.16);
       --card-glass-border: rgba(255, 255, 255, 0.18);
       --card-glass-border-strong: rgba(255, 255, 255, 0.26);
-
-      &::after {
-        content: '';
-        position: absolute;
-        inset: -12%;
-        background:
-          radial-gradient(ellipse 38% 18% at 18% 22%, rgba(255, 255, 255, 0.35) 0%, transparent 72%),
-          radial-gradient(ellipse 45% 20% at 78% 38%, rgba(255, 255, 255, 0.28) 0%, transparent 72%);
-        animation: weather-cloud-drift 11s ease-in-out infinite;
-        pointer-events: none;
-      }
     }
 
     [data-theme='thunder'] {

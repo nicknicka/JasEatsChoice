@@ -84,12 +84,14 @@ const PRESETS = {
   },
   cloudy: {
     kind: 'haze',
-    count: 16,
-    radius: [34, 86],
-    speed: [4, 13],
-    alpha: [0.04, 0.11],
-    color: [255, 255, 255],
-    push: 70
+    count: 4,
+    // 云团尺寸按卡片宽度取比例：卡片变大时云跟着变大，而不是数量变多
+    radius: [0.13, 0.21],
+    speed: [5, 14],
+    alpha: [0.44, 0.62],
+    color: [244, 249, 255],
+    shade: [46, 72, 110],
+    push: 84
   },
   default: {
     kind: 'none',
@@ -146,8 +148,17 @@ function createParticle(fromEdge) {
     particle.vy = -rand(spec.speed[0], spec.speed[1])
     particle.driftAmp = rand(spec.drift[0], spec.drift[1])
   } else if (spec.kind === 'haze') {
-    particle.r = rand(spec.radius[0], spec.radius[1])
+    particle.r = rand(spec.radius[0], spec.radius[1]) * cssWidth
     particle.vx = (Math.random() < 0.5 ? -1 : 1) * rand(spec.speed[0], spec.speed[1])
+    // 一团云 = 底部宽基座 + 两三处凸起，左右再随机翻一下，避免每团云都是同一个形状
+    const k = rand(0.86, 1.12)
+    particle.flip = Math.random() < 0.5 ? -1 : 1
+    particle.puffs = [
+      { dx: -0.5, dy: 0.16, rx: 0.42, ry: 0.34 },
+      { dx: 0.04, dy: -0.14, rx: 0.46, ry: 0.42 },
+      { dx: 0.5, dy: 0.2, rx: 0.38, ry: 0.3 },
+      { dx: 0, dy: 0.34, rx: 0.92, ry: 0.32 }
+    ].map((puff) => ({ ...puff, rx: puff.rx * k, ry: puff.ry * k }))
   }
 
   return particle
@@ -157,9 +168,16 @@ function seed() {
   particles = []
   if (spec.kind === 'none' || cssWidth === 0 || cssHeight === 0) return
   const scale = Math.min(1.8, Math.max(0.5, (cssWidth * cssHeight) / REFERENCE_AREA))
-  const total = Math.round(spec.count * scale)
+  // 云团已经按卡片宽度缩放过，再按面积加数量只会糊成一片
+  const total = spec.kind === 'haze' ? spec.count : Math.round(spec.count * scale)
   for (let i = 0; i < total; i += 1) {
-    particles.push(createParticle(false))
+    const particle = createParticle(false)
+    if (spec.kind === 'haze') {
+      // 横向均匀铺开，几团大云才不会挤在一起叠成一团白雾
+      particle.x = ((i + rand(0.15, 0.85)) / total) * cssWidth
+      particle.y = rand(-cssHeight * 0.05, cssHeight * 0.55)
+    }
+    particles.push(particle)
   }
 }
 
@@ -269,22 +287,33 @@ function draw() {
       ctx.lineTo(particle.x, particle.y)
       ctx.stroke()
     } else if (spec.kind === 'haze') {
-      // 云影用径向渐变收边，避免实心圆透出硬边
-      const flare = ctx.createRadialGradient(
-        particle.x,
-        particle.y,
-        0,
-        particle.x,
-        particle.y,
-        particle.r
-      )
-      flare.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${particle.alpha})`)
-      flare.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, ${particle.alpha * 0.55})`)
-      flare.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`)
-      ctx.fillStyle = flare
+      // 云团：几个椭圆并成一条轮廓后一次性填充，边缘再收一点模糊——
+      // 有形状、轮廓又不过分生硬，才不会糊成一团白雾，也不像贴纸
+      const [sr, sg, sb] = spec.shade
+      const rad = particle.r
+      const dir = particle.flip || 1
+      ctx.save()
+      ctx.filter = `blur(${Math.max(2, rad * 0.05).toFixed(1)}px)`
       ctx.beginPath()
-      ctx.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2)
+      for (const puff of particle.puffs) {
+        ctx.ellipse(
+          particle.x + rad * puff.dx * dir,
+          particle.y + rad * puff.dy,
+          rad * puff.rx,
+          rad * puff.ry,
+          0,
+          0,
+          Math.PI * 2
+        )
+      }
+      // 顶部受光偏白、底部收进灰蓝，一个纵向渐变撑出体积
+      const body = ctx.createLinearGradient(0, particle.y - rad * 0.72, 0, particle.y + rad * 0.78)
+      body.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${particle.alpha})`)
+      body.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${particle.alpha * 0.88})`)
+      body.addColorStop(1, `rgba(${sr}, ${sg}, ${sb}, ${particle.alpha * 0.62})`)
+      ctx.fillStyle = body
       ctx.fill()
+      ctx.restore()
     } else {
       ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${particle.alpha})`
       ctx.beginPath()
@@ -332,9 +361,9 @@ function stop() {
 
 function resize() {
   if (!canvasRef.value || !host) return
-  const rect = host.getBoundingClientRect()
-  const nextWidth = Math.round(rect.width)
-  const nextHeight = Math.round(rect.height)
+  // 用 clientWidth/clientHeight：卡片入场有 scale 动画，getBoundingClientRect 会量到缩放后的小尺寸
+  const nextWidth = host.clientWidth
+  const nextHeight = host.clientHeight
   if (nextWidth === 0 || nextHeight === 0) return
 
   cssWidth = nextWidth
