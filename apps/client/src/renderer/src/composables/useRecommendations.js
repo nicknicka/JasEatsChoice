@@ -335,7 +335,7 @@ export function useRecommendations() {
             const dishName = dish.dishName || dish.name || dish.dish_name
             const dishImage = dish.dishImage || dish.image || dish.dish_image
             const calories = dish.calories || dish.calorie || dish.calories
-            const score = dish.score || dish.rating || dish.avgRating || dish.avg_rating
+            const rating = Number(dish.rating ?? dish.avgRating ?? dish.avg_rating)
 
             return {
               id: dish.id || Date.now() + index + 2000,
@@ -347,7 +347,7 @@ export function useRecommendations() {
               type: dish.type,
               calories: calories,
               price: dish.price,
-              rating: score || 4.5,
+              rating: Number.isFinite(rating) && rating > 0 ? rating : 4.5,
               tags: dish.tags || [],
               nutrition: dish.nutrition,
               recommendSource: RECOMMENDATION_TYPES.PERSONALIZED,
