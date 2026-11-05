@@ -1,0 +1,39 @@
+/* ============================================
+ * Element Plus 变量映射
+ * 对应 DESIGN-BASELINE.md §7.2；必须整体覆盖主色派生档，避免残留默认蓝。
+ * ============================================ */
+
+:root {
+  --el-color-primary: var(--brand-500);
+  --el-color-primary-light-3: var(--brand-400);
+  --el-color-primary-light-5: var(--brand-300);
+  --el-color-primary-light-7: var(--brand-200);
+  --el-color-primary-light-8: var(--brand-100);
+  --el-color-primary-light-9: var(--brand-50);
+  --el-color-primary-dark-2: var(--brand-600);
+
+  --el-color-success: var(--success);
+  --el-color-warning: var(--warning);
+  --el-color-danger:  var(--danger);
+  --el-color-error:   var(--danger);
+  --el-color-info:    var(--info);
+
+  --el-text-color-primary:   var(--ink-900);
+  --el-text-color-regular:   var(--ink-700);
+  --el-text-color-secondary: var(--ink-500);
+  --el-text-color-placeholder: var(--ink-400);
+
+  --el-border-color:        var(--line);
+  --el-border-color-light:  var(--line);
+  --el-border-color-lighter: var(--line);
+  --el-bg-color:            var(--surface);
+  --el-bg-color-page:       var(--canvas);
+  --el-fill-color-blank:    var(--surface);
+
+  --el-border-radius-base:  var(--radius-sm);
+  --el-border-radius-small: var(--radius-sm);
+  --el-border-radius-round: var(--radius-full);
+
+  --el-font-family: var(--font-sans);
+  --el-transition-duration: var(--duration-base);
+}

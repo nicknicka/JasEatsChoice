@@ -3,50 +3,52 @@
 // 基于北欧暖光主题，专为商家管理后台设计
 // ============================================
 
+// tokens.css 的编译期镜像，待退役；颜色函数要求这里的值保持静态字面量。
+
 // --- 背景色 ---
-@merchant-bg:            #F0EDE8;        // 主背景 - 暖灰（比用户端略深）
+@merchant-bg:            #FBF7F3;        // 主背景 - 暖白
 @merchant-surface:       #FFFFFF;        // 卡片表面
-@merchant-surface-alt:   #FAF8F5;        // 备用表面色（hover状态）
+@merchant-surface-alt:   #F4EDE6;        // 备用表面色（hover状态）
 
 // --- 主色调 ---
-@merchant-primary:       #4A7A4D;        // 深鼠尾草绿 - 主强调色
-@merchant-primary-light: #E3F0E4;        // 浅绿背景
-@merchant-primary-dark:  #3A603D;        // 深绿文字/边框
+@merchant-primary:       #ED6A42;        // 品牌暖橙 - 主强调色
+@merchant-primary-light: #FDE4D8;        // 品牌暖橙浅色背景
+@merchant-primary-dark:  #D9532C;        // 品牌暖橙深色文字/边框
 
-@merchant-secondary:     #B56A4A;        // 深陶土色 - 次要强调色
-@merchant-secondary-light: #F4E6DE;      // 浅陶土背景
+@merchant-secondary:     #B43F1F;        // 品牌暖橙深色 - 次要强调色
+@merchant-secondary-light: #FEF4EF;      // 品牌暖橙极浅背景
 
 // --- 功能色 ---
-@merchant-success:       #5A8F5E;        // 成功绿 - 比用户端更深
-@merchant-success-light: #E8F4E9;        // 浅绿背景
+@merchant-success:       #2E9E5B;        // 成功色
+@merchant-success-light: #E8F6EE;        // 浅绿背景
 
-@merchant-warning:       #D4A855;        // 暖金
-@merchant-warning-light: #F7EDDA;        // 浅金背景
+@merchant-warning:       #E08A00;        // 警告色
+@merchant-warning-light: #FFF3DC;        // 浅金背景
 
-@merchant-error:         #C45B5B;        // 柔红
-@merchant-error-light:   #F6E0E0;        // 浅红背景
+@merchant-error:         #D93B36;        // 危险色
+@merchant-error-light:   #FDECEB;        // 浅红背景
 
-@merchant-info:          #5B8BD2;        // 雾蓝
-@merchant-info-light:    #E0EDF6;        // 浅蓝背景
+@merchant-info:          #2F6FE4;        // 信息色
+@merchant-info-light:    #EAF1FE;        // 浅蓝背景
 
 // --- 文字色 ---
-@merchant-text:          #2D2A26;        // 主文字
-@merchant-text-sec:      #6B6560;        // 次要文字
-@merchant-text-muted:    #9E9893;        // 弱化文字
+@merchant-text:          #1F1B18;        // 主文字
+@merchant-text-sec:      #6B625B;        // 次要文字
+@merchant-text-muted:    #8C8179;        // 弱化文字
 
 // --- 边框与分割 ---
-@merchant-border:        #E2DED8;        // 边框色
-@merchant-divider:       #EBE7E2;        // 分割线
+@merchant-border:        #E8E1DA;        // 边框色
+@merchant-divider:       #E8E1DA;        // 分割线
 
 // --- 阴影 ---
 @merchant-shadow:        rgba(45, 42, 38, 0.06);
 @merchant-shadow-hover:  rgba(45, 42, 38, 0.12);
 
 // --- 状态色 ---
-@merchant-status-pending:   #E6A23C;     // 待处理 - 橙色
-@merchant-status-processing: #5B8BD2;    // 处理中 - 蓝色
-@merchant-status-completed: #5A8F5E;     // 已完成 - 绿色
-@merchant-status-cancelled:  #9E9893;    // 已取消 - 灰色
+@merchant-status-pending:   #E08A00;     // 待处理 - 警告色
+@merchant-status-processing: #2F6FE4;    // 处理中 - 信息色
+@merchant-status-completed: #2E9E5B;     // 已完成 - 成功色
+@merchant-status-cancelled:  #D93B36;    // 已取消 - 危险色
 
 // ============================================
 // 通用混合类

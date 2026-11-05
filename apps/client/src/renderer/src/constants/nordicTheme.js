@@ -1,34 +1,36 @@
 /**
  * 北欧暖光主题 - JavaScript 常量
- * 与 nordic-theme.less 中的变量保持同步
- * 供 <script> 中需要动态引用主题值的场景使用
+ * 颜色统一从 tokens.css 的 CSS 变量读取，供 <script> 中需要动态引用主题值的场景使用
  */
+
+const readToken = (name) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 
 // --- 颜色 ---
 export const NORDIC_COLORS = {
-  bg: '#F5F3EF',
-  surface: '#FFFFFF',
-  white: '#FFFFFF',
-  text: '#1A1A1A',
-  textSecondary: '#6B6B6B',
-  textMuted: '#9E9E9E',
-  accent: '#D4845A',
-  accentLight: '#F0D5C4',
-  accentDark: '#B8704A',
-  green: '#7BAE7F',
-  greenLight: '#E3F0E4',
-  greenDark: '#4a7a4d',
-  blue: '#6B9BD2',
-  blueLight: '#E0EDF6',
-  yellow: '#E2B455',
-  yellowLight: '#F7EDDA',
-  yellowDark: '#8B6914',
-  red: '#D47B7B',
-  redLight: '#F6E0E0',
-  border: '#E8E4DE',
-  divider: '#F0ECE6',
-  shadow: 'rgba(0, 0, 0, 0.06)',
-  shadowHover: 'rgba(0, 0, 0, 0.1)'
+  bg: readToken('--canvas'),
+  surface: readToken('--surface'),
+  white: readToken('--surface'),
+  text: readToken('--ink-900'),
+  textSecondary: readToken('--ink-500'),
+  textMuted: readToken('--ink-400'),
+  accent: readToken('--brand-500'),
+  accentLight: readToken('--brand-100'),
+  accentDark: readToken('--brand-600'),
+  green: readToken('--success'),
+  greenLight: readToken('--success-bg'),
+  greenDark: readToken('--success'),
+  blue: readToken('--info'),
+  blueLight: readToken('--info-bg'),
+  yellow: readToken('--warning'),
+  yellowLight: readToken('--warning-bg'),
+  yellowDark: readToken('--warning'),
+  red: readToken('--danger'),
+  redLight: readToken('--danger-bg'),
+  border: readToken('--line'),
+  divider: readToken('--line'),
+  shadow: readToken('--shadow-sm'),
+  shadowHover: readToken('--shadow-md')
 }
 
 // 营养素颜色映射
