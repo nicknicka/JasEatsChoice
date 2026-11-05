@@ -83,14 +83,16 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { adminLogin } from '@/api/admin'
 import { setAdminToken, setAdminInfo } from '@/utils/auth'
 import { useWindowControl } from '@/composables/useWindowControl'
 import WindowTitleBar from '@/components/WindowTitleBar.vue'
+import { safeRedirect } from '@/utils/authSession'
 
 const router = useRouter()
+const route = useRoute()
 const { expandToMain } = useWindowControl()
 
 const loginFormRef = ref(null)
@@ -128,7 +130,8 @@ const handleLogin = async () => {
       ElMessage.success('登录成功')
 
       await expandToMain()
-      router.push('/admin/dashboard')
+      const redirect = safeRedirect(route.query.redirect, '/admin')
+      router.push(redirect && redirect !== '/admin/login' ? redirect : '/admin/dashboard')
     } else {
       ElMessage.error(response.message || '登录失败')
     }

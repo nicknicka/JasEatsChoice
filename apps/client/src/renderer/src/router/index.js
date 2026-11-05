@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
-import { isAdminLoggedIn } from '../utils/auth'
+import { clearAuthState } from '../utils/authSession'
+import { decodeJwtToken, isTokenExpired } from '../utils/tokenCleaner'
 
 const useFileProtocolHistory =
   typeof window !== 'undefined' && window.location && window.location.protocol === 'file:'
@@ -575,6 +576,15 @@ const router = createRouter({
   ]
 })
 
+// 判断本地登录态是否可用：无 token 视为失效；能解析且已过期视为失效；
+// 无法解析的 token 交给后端 401 兜底，避免误伤非标准 token
+const isSessionUsable = (token) => {
+  if (!token) return false
+  const payload = decodeJwtToken(token)
+  if (!payload || !payload.exp) return true
+  return !isTokenExpired(token)
+}
+
 const runWindowAction = async (action, timeout = 1500) => {
   if (!action) return
 
@@ -621,10 +631,24 @@ router.beforeEach(async (to, from, next) => {
       return
     }
 
-    // 其他管理员页面需要验证登录状态
-    if (!isAdminLoggedIn()) {
-      // 未登录，跳转到登录页
-      next('/admin/login')
+    // 其他管理员页面需要验证登录状态，且登录态不能已过期
+    const adminToken = localStorage.getItem('admin_token')
+    if (!isSessionUsable(adminToken)) {
+      if (adminToken) clearAuthState('admin')
+      next({ path: '/admin/login', query: { redirect: to.fullPath } })
+      return
+    }
+  }
+
+  // 用户/商家路由权限验证（商家注册页除外）
+  if (
+    to.path.startsWith('/user') ||
+    (to.path.startsWith('/merchant') && to.path !== '/merchant/register')
+  ) {
+    const userToken = localStorage.getItem('auth_token')
+    if (!isSessionUsable(userToken)) {
+      if (userToken) clearAuthState('user')
+      next({ path: '/login', query: { redirect: to.fullPath } })
       return
     }
   }
