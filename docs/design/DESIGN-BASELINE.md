@@ -1,9 +1,10 @@
-# JasEatsChoice 全站设计基调（冻结草案）
+# JasEatsChoice 全站设计基调（冻结）
 
-- 适用范围：public（4 页）、user（34 页）、merchant（16 页）、admin（21 页），共 75 个已评审页面。
+- 适用范围：public（4 页）、user（34 页）、merchant（16 页）、admin（21 页），共 75 个已评审页面；小程序（`apps/miniapp`）不在 75 页截图范围内，但按 §3.6 收敛到同一主色。
 - 依据：`docs/design-review/{public,user,merchant,admin}/*.md` 全部 75 份评审 + `docs/agents/design-overhaul-workflow.md`。
 - 性质：本文只冻结视觉与交互基线，不含实现代码；落地时按本文 token 与组件约定改造现有 Vue 3 + Element Plus 组件。
 - 一句话原则：**先统一语言，再谈风格。** 任何角色、任何页面都不允许出现第二套主色、第二套字阶或第二套状态色。
+- 第二轮冻结（2026-11）在草案基础上追加四条硬约束：颜色收敛到唯一 `tokens.css`（§2、§7）、卡片按 L0–L3 表面阶梯给质感（§3.4）、动效引入 GSAP 但限定用途（§3.5）、小程序主色并入 `--brand-500`（§3.6）。
 
 ## 0. 北极星
 
@@ -41,7 +42,7 @@
 - Card Resize：参数 `spring(320, 24)`，实现 `cubic-bezier(0.34, 1.56, 0.64, 1)`，高度展开时长 `0.5s`，次要文字 `opacity 0.3s ease 0.1s` 延迟淡入。
 - Tab Pill Glide：`--glide: cubic-bezier(0.16, 1, 0.3, 1)`，指示器移动 `0.4s`；同页 hover 态 `background / border-color / color 0.15s ease`。
 - 该站明确提示实现时必须"保持可见焦点态、为手势提供按钮替代、尊重 reduced-motion"。
-- 本轮采用：把 `cubic-bezier(0.16, 1, 0.3, 1)` 作为标准出场曲线，把 `cubic-bezier(0.34, 1.56, 0.64, 1)` 限定为「一次性进场/展开」的弹性曲线；时长从示例的 `0.4–0.5s` 收敛到 `150–240ms`，避免后台频繁交互显得拖沓。**不引入 GSAP、不引入 spring 运行时**，只用 CSS transition/animation 与 Element Plus 现有过渡。
+- 本轮采用：把 `cubic-bezier(0.16, 1, 0.3, 1)` 作为标准出场曲线，把 `cubic-bezier(0.34, 1.56, 0.64, 1)` 限定为「一次性进场/展开」的弹性曲线；时长从示例的 `0.4–0.5s` 收敛到 `150–240ms`，避免后台频繁交互显得拖沓。引入 GSAP 时沿用这两条曲线（`CustomEase` 或等价 `ease`），不为 GSAP 另立一套动效语言。
 
 ## 2. 冲突裁决
 
@@ -58,7 +59,8 @@
 | 统计卡/KPI 形态 | 统一"一个数值 + 一个标签 + 一个线性图标"的浅底卡片；4 个一行，5 个改"主指标 + 次级条" | 彩色渐变图标块、5 卡 4+1 空网格、KPI 卡双重选中边框 | admin 01/08/20 的渐变图标块与 merchant 01/02/03 的 4+1 空网格是同一类问题的两端，必须用同一组件收口 | admin 去掉渐变与六色实色图标；merchant 把 4+1 改为闭合等宽网格或主+次结构；双重边框删除 |
 | 页头语言 | 统一"标题容器"：标题 + 可选描述 + 右侧动作区；merchant/admin 用紧凑版，高度减一档 | merchant 的深绿整条标题条、白卡标题区、无标题三种并存 | 页头是用户判断"我在哪、能做什么"的第一锚点，跨页分裂会直接造成割裂感 | merchant 01–13 统一到同一页头容器，颜色由深绿改为中性表面 + 品牌橙点缀；admin 08/09/15、user 26/32/34 同步 |
 | 表单宽度 | 登录/注册/找回/支付密码等单列表单固定窄列居中（`--form-width-auth: 400px`）；设置/编辑类表单限宽 2 栏铺满卡片（`--form-width-settings: 720px`） | 表单铺满 1400px 全宽、或单列窄表单让卡片右半永远空白 | public 01–03 与 merchant 06/08、admin 17 是同一个问题的两种表现：要么太宽，要么太窄导致右侧空白 | 认证类收窄到 400px 居中；编辑类改两栏铺满；所有表单列宽来自 token，不逐页自定义 |
-| 动效引入方式 | CSS transition/animation + Element Plus 现有过渡 | GSAP、Framer Motion、spring 运行时 | 本阶段只冻结基调，引入动画运行时属于实现升级，超出范围且增加依赖 | 可实现的观感用 start 曲线 + 弹性曲线近似；`prefers-reduced-motion` 时直接落终值 |
+| 主题色常量来源 | 单一 `tokens.css`（`:root` CSS 变量）作为唯一颜色源，Element Plus 与 less 变量都从它取值 | `nordic-theme.less`、`merchant-theme.less` 与 `HomeContent.vue` 内 `@savour-*` 三套 less 变量 + 组件内硬编码色值 | 同一主色历史上并存陶土 `#D4845A`、深绿 `#4A7A4D`、`#C67B5C` 三个值，改一次主色要动三处且必然漂移；`constants/nordicTheme.js` 还是 less 的手抄第二份 | 新增 `apps/client/src/renderer/src/assets/css/tokens.css` 作为唯一来源；三套 less 变量改为指向 CSS 变量后逐步退役；`nordicTheme.js` 改为运行时读 `getComputedStyle`，不再手抄 |
+| 动效引入方式 | 引入 GSAP，但限定「进场 / 展开 / 列表重排」三类用途，只在 Web 与桌面 renderer 生效；其余交互仍走 CSS transition + Element Plus 过渡 | 全站铺开 GSAP、用 GSAP 做 hover 等高频微交互、在小程序端引入 GSAP | 用户明确要求用 GSAP 提升生气与交互感；GSAP 自 2025-04 起全部插件免费商用，Electron 内置 Chromium 原生支持、无原生依赖 | 日常 hover/focus/press 仍用 §3.5 的 CSS token；GSAP 只在 §3.5 列出的三类场景注册，`prefers-reduced-motion` 下直接落终值 |
 
 ## 3. Design Tokens（CSS 变量）
 
@@ -205,9 +207,28 @@
 
 形状硬规则：
 
-- 卡片默认 = `--surface` 底 + `1px solid var(--line)` + `--radius-lg` + `--shadow-sm`；只有浮层/弹窗用 `--shadow-md/lg`，列表卡片不用大阴影。
 - 按钮统一 `--radius-md`；不允许同一页面同时出现 2px、4px、8px、pill 四种按钮圆角。
+- 卡片圆角只用 `--radius-md` / `--radius-lg`，同一列表内所有卡片圆角一致。
 - 禁止使用彩色渐变作为卡片或统计块背景；渐变只允许出现在 public 品牌背景与 user 首页/热点等营销区块。
+- 只有浮层/弹窗用 `--shadow-md/lg`，列表卡片不用大阴影。
+
+#### 卡片质感阶梯（L0–L3）
+
+纯色平铺显得廉价，全站铺玻璃又会脏。统一用四级阶梯表达质感，**同一列表内只用一个层级**，层级由卡片所处的背景决定，不由页面风格决定：
+
+| 层级 | 组成 | 用在哪 |
+|---|---|---|
+| L0 平面 | `--surface` 纯色，无描边、无阴影 | merchant/admin 密集表格行、卡片内嵌分区 |
+| L1 微质感 | L0 + `1px solid var(--line)` 描边 + 顶部内高光 `inset 0 1px 0 rgba(255, 255, 255, 0.6)` | 默认卡片：KPI 卡、表单分组、列表卡片 |
+| L2 浮起 | L1 + `--shadow-sm`，hover 升 `--shadow-md` 并 `translateY(-1px)` | 可点击卡片、弹层触发器 |
+| L3 玻璃 | L2 + 半透明底 `rgba(255, 255, 255, 0.72)` + `backdrop-filter: blur(16px)` | **仅**叠加在彩色或图像背景之上：public 品牌区、user 首页营销块、横幅上的浮层 |
+
+质感硬规则：
+
+- 质感只靠「描边 + 顶部内高光 + 阴影 + 半透明」四件事表达，不引入噪点贴图、纹理图片或彩色渐变铺底。
+- L3 玻璃只在彩色/图像背景之上成立；白底页面（merchant/admin 绝大多数页面）不得用玻璃卡，会显脏。
+- L2 的 hover 位移上限 `2px`，不做缩放跳动。
+- 同一屏内不混用两层，例如同一列表里既有 L1 又有 L3。
 
 ### 3.5 动效 token
 
@@ -248,7 +269,7 @@
 |---|---|---|---|
 | 按钮/链接 hover、focus | 150ms | `--ease-out` | 颜色、边框、轻微 `translateY(-1px)`；不做缩放跳动 |
 | 按钮 press | 120ms | `--ease-standard` | 只做 1px 位移或亮度变化 |
-| 卡片/分区首次进入 | 200ms | `--ease-out` | `opacity 0→1` + `translateY(4px)→0`，只播一次 |
+| 卡片/分区首次进入 | 200ms | `--ease-out` | 单个卡片/分区用 CSS：`opacity 0→1` + `translateY(4px)→0`，只播一次；卡片流用 GSAP stagger（见下） |
 | 状态标签切换 | 180–200ms | `--ease-standard` | 底色与文字色同时过渡 |
 | 抽屉/弹层 | 200ms | `--ease-out` | 位移不超过 16px |
 | 可展开卡片 | 240ms | `--ease-spring` | 仅用于"展开/收起"这类一次性动作，不用于列表 hover |
@@ -257,11 +278,37 @@
 | loading 旋转 | 800ms/圈 | linear | 持续旋转；不做缓动 |
 | 刷新完成反馈 | 300ms | `--ease-spring` | 旋转停 + 一次轻微回弹 |
 
+#### GSAP 使用边界
+
+已确认引入 GSAP（在 `apps/client/package.json` 增加 `gsap` 依赖，只 import 用到的模块），但**只解决 CSS 做不好的三类场景**，其余一律走上面的 CSS token：
+
+1. **一次性进场**：卡片流/列表首次渲染的 stagger 入场，只播一次，不重复播。
+2. **展开 / 收起**：折叠面板、详情展开、抽屉内容的时序编排。
+3. **列表重排**：同一列表内增删、排序时的位置补间（`Flip`），让重排可被看懂。
+
+GSAP 硬规则：
+
+- **只在 Web 与桌面 renderer 生效**：GSAP 依赖 DOM，小程序没有 DOM，动效仍走 CSS/uni 方式，不引入 GSAP。
+- 只动 `transform` 与 `opacity`，不动 `width` / `height` / `margin` / `top` 等触发布局的属性。
+- 用 `gsap.context()` 挂载、`onUnmounted` 里 `ctx.revert()` 清理，组件卸载不留悬挂 tween。
+- 注册在 `gsap.matchMedia()` 的 `(prefers-reduced-motion: no-preference)` 分支里；减少动态偏好下不注册任何 tween，直接落终值。
+- **merchant / admin 不加装饰性进场**：这两端只允许用 GSAP 做「展开 / 收起」和「列表重排」，不做首屏 stagger。
+
 动效硬规则：
 
-- 只用 CSS `transition` / `animation` 与 Element Plus 自带过渡；**不引入 GSAP、Framer Motion 或任何动画运行时**。
+- 高频微交互（hover / focus / press / 状态切换）只用 CSS `transition` / `animation` 与 Element Plus 自带过渡，不用 GSAP。
 - 所有动效必须有 `prefers-reduced-motion` 降级。
-- 动效不得改变布局尺寸（用 transform/opacity，不用 width/height 动画）。唯一例外是折叠面板高度，且必须用 Kinetics 式单曲线近似，不做 JS 逐帧。
+- 动效不得改变布局尺寸（用 transform/opacity，不用 width/height 动画）。折叠面板高度是唯一例外，且必须用 Kinetics 式单曲线近似，不做 JS 逐帧。
+
+### 3.6 小程序（UniApp）跨端一致
+
+小程序不在 75 页截图范围内，但它是同一产品的第五个端，颜色必须和 Web/桌面同一套：
+
+- 主色 `$primary-500: #FF6B35` 收敛为 `#ED6A42`，与 `--brand-500` 同值，`$primary-color` 同步。
+- 现有 10 级色阶（`$primary-50` … `$primary-900`）按 §3.1 的 `--brand-*` 十档重取；现有色阶本身不自洽（`$primary-800 #FF8B5D` 比 `$primary-700 #FF4D1F` 更浅），一并修正。
+- `$secondary-color: #667eea` 这类紫色辅助色与「唯一主色」冲突，退为信息语义或删除。
+- 成功/警告/危险/信息语义色对齐 §3.1；小程序不做玻璃质感，卡片只走 L1 / L2。
+- 小程序不引入 GSAP，动效走 §3.5 的 CSS token。
 
 ## 4. 组件约定
 
@@ -292,7 +339,7 @@
 [可选主图/头像] → 标题 → 状态标签 → 关键数值(金额/评分/距离等) → 次要信息 → 操作区(右上或底部)
 ```
 
-- 外形：`--surface` 底 + `1px solid var(--line)` + `--radius-lg` + `--shadow-sm`；user/public 内边距 `--card-padding`，merchant/admin 用 `--card-padding-compact`。
+- 外形：默认走 §3.4 的 L1 微质感（`--surface` 底 + `1px solid var(--line)` + 顶部内高光），可点击卡片升 L2（`--shadow-sm`，hover `--shadow-md`）；圆角 `--radius-lg`；user/public 内边距 `--card-padding`，merchant/admin 用 `--card-padding-compact`。
 - 图片：固定比例（菜品卡 4:3、商家头像 1:1、教程封面 16:9），`object-fit: cover`；加载失败显示中性底 + 首字母或线性图标，**不允许出现碎图链接、白色空块或占位文字**（user 01/03/04/05/11/28/29/31/33、merchant 07/08 的问题）。
 - 同一列表内卡片高度与图片比例必须一致；首屏至少露出 2 张完整卡片（user）或 3 行（admin 表格）。
 - 禁止彩色左边框当作"分类"，分类/状态只能用标签表达（user 08 的问题）。
@@ -437,12 +484,23 @@
 | 布局 | 单列/卡片流，强调图片与留白 | 多列、表格、筛选条，强调信息密度 |
 | 字阶上限 | 允许 `--text-display` 32px 用于首页/热点 | 不使用 `--text-display`，最高 `--text-h1` 24px |
 | 渐变 | 允许品牌背景与营销区块使用暖橙渐变 | 禁止渐变，统一纯色表面 |
-| 动效频率 | 允许一次性进场、count-up、卡片 hover | 只保留 hover/focus/loading/状态切换，不加装饰性进场 |
+| 动效频率 | 允许一次性进场（含 GSAP stagger）、count-up、卡片 hover | 只允许 hover/focus/loading/状态切换，加 GSAP 展开与列表重排，不加装饰性首屏进场 |
 | 装饰图形 | 允许适度插画/氛围 | 只保留功能性图标 |
 
 角色内差异的边界：**紧凑不等于换语言。** merchant/admin 可以更小、更密、更快，但颜色、字体、状态语义、图标、金额与日期格式必须与 public/user 完全一致；反过来，public/user 也不能使用蓝色主按钮或结构性 emoji。
 
-## 7. Element Plus 变量映射
+## 7. 落地：唯一颜色源与 Element Plus 映射
+
+### 7.1 唯一颜色源 `tokens.css`
+
+全站颜色只有一份来源：新增 `apps/client/src/renderer/src/assets/css/tokens.css`，在 `main.js` 里 import，文件内只有 `:root { … }` 定义，即本文 §3.1 的色彩表 + §3.4 的形状/阴影 + §3.5 的动效 token。
+
+- 现有三套 less 变量（`nordic-theme.less`、`merchant-theme.less`、`HomeContent.vue` 内的 `@savour-*`）不再是颜色来源：变量值改为引用 CSS 变量（如 `@nordic-accent: var(--brand-500);`），随后逐步退役；不允许新增第二处定义。
+- 组件里一律写 `var(--brand-500)` 这类 CSS 变量，不再写 `#ED6A42` 之类的裸色值；圆角、阴影、`backdrop-filter` 同理。
+- JS 里需要颜色时（图表、canvas 等）用 `getComputedStyle(document.documentElement).getPropertyValue('--brand-500')` 读取；`constants/nordicTheme.js` 按此改造，不再手抄 less 值。
+- 小程序是独立工程，颜色源是 `apps/miniapp/src/styles/variables.scss`，其值必须与 §3.1 对齐（§3.6）。
+
+### 7.2 Element Plus 变量映射
 
 落地时在全局样式覆盖 Element Plus 默认变量，避免出现「组件库默认蓝」与品牌橙并存：
 
@@ -505,4 +563,6 @@
 - [ ] 结构性 emoji 已替换为 Element Plus 线性图标。
 - [ ] hover/focus/active/disabled 四态可见，提交类操作有 loading 与防重复。
 - [ ] 动效时长与曲线取自 3.5，且 `prefers-reduced-motion` 下直接落终值。
-- [ ] 未引入 GSAP 或任何动画运行时。
+- [ ] GSAP 只用于进场 / 展开 / 列表重排三类，只动 transform 与 opacity，`prefers-reduced-motion` 下不注册 tween；hover 等高频微交互仍是 CSS。
+- [ ] 卡片质感取自 L0–L3，同一列表内只用一个层级；白底页面没有用玻璃卡。
+- [ ] 颜色全部来自 `tokens.css` 的 CSS 变量，没有新增裸色值或第二处主题变量定义。

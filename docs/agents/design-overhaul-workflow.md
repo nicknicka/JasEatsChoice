@@ -122,6 +122,7 @@
 
 ## 10. 技术约定
 
-- 动效现阶段只用 CSS transition/animation + Element Plus 现有过渡，抽一份共享 motion token 写进 `DESIGN-BASELINE.md`，每页按"三处基本动效"落地；暂不引入 GSAP，真出现滚动叙事/复杂时间轴再单独立项。
+- 动效分两层：高频微交互用 CSS transition/animation + Element Plus 现有过渡；进场 / 展开 / 列表重排用 GSAP，用途边界与降级规则见 `DESIGN-BASELINE.md` §3.5。GSAP 只在 Web 与桌面 renderer 生效，小程序不用。
+- 颜色只有一个来源：`apps/client/src/renderer/src/assets/css/tokens.css`。组件写 CSS 变量，不写裸色值；改主色只改这一处，见 `DESIGN-BASELINE.md` §7.1。
 - Web 与桌面共用同一份 renderer；新增 `window.api.xxx` 必须同步 `platform/webShim.js`。
 - ESLint 只清零 error，warning 不强求。
