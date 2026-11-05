@@ -104,10 +104,16 @@
               <span class="dot"></span>
             </div>
           </div>
-          <!-- 模型实时输出 -->
+          <!-- 模型实时输出：阶段提示随真实 token 推进，原始 JSON 默认折叠 -->
           <div v-if="streamedContent" class="stream-output">
-            <div class="stream-output-label">实时输出</div>
-            <pre class="stream-output-text">{{ streamedContent }}</pre>
+            <div class="stream-live">
+              <span class="stream-live-stage">{{ streamStage }}</span>
+              <span class="stream-live-count">已生成 {{ streamedContent.length }} 字</span>
+            </div>
+            <details class="stream-raw" @toggle="onStreamRawToggle">
+              <summary class="stream-raw-summary">查看模型原始输出</summary>
+              <pre ref="streamOutputRef" class="stream-output-text">{{ streamedContent }}</pre>
+            </details>
           </div>
         </div>
       </Transition>
@@ -275,7 +281,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { Loading, DocumentCopy, FolderAdd } from "@element-plus/icons-vue";
 import { ElMessage } from "element-plus";
 import axios from "axios";
@@ -325,6 +331,36 @@ watch(
   (timeoutMs) => setRecipeStreamTimeoutMs(timeoutMs),
   { immediate: true }
 );
+
+// 模型原始输出节点：仅在用户展开后，新 token 到达时自动滚到底部
+const streamOutputRef = ref(null);
+
+// 阶段提示依据已到达的真实 token 内容判断，而不是模拟进度
+const streamStage = computed(() => {
+  const text = streamedContent.value || "";
+  if (!text) return "";
+  if (text.includes("improvements")) return "正在整理改进建议…";
+  if (text.includes("nutrition")) return "正在估算营养数据…";
+  if (text.includes("steps")) return "正在编写烹饪步骤…";
+  if (text.includes("ingredients")) return "正在搭配食材用量…";
+  if (text.includes("recipe") || text.includes("name")) return "正在构思食谱方案…";
+  return "AI 正在生成…";
+});
+
+const scrollStreamOutput = () => {
+  const el = streamOutputRef.value;
+  if (el) el.scrollTop = el.scrollHeight;
+};
+
+const onStreamRawToggle = (event) => {
+  if (event.target.open) nextTick(scrollStreamOutput);
+};
+
+watch(streamedContent, () => {
+  if (streamOutputRef.value?.closest("details")?.open) {
+    nextTick(scrollStreamOutput);
+  }
+});
 
 // 优化目标选项
 const goalOptions = [
@@ -849,11 +885,35 @@ const saveToMyRecipes = async () => {
   border: 1px solid @nordic-border;
 }
 
-.stream-output-label {
+.stream-live {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 8px;
-  font-size: 12px;
+}
+
+.stream-live-stage {
+  font-size: 13px;
   font-weight: 600;
+  color: @nordic-accent-dark;
+}
+
+.stream-live-count {
+  font-size: 12px;
   color: @nordic-text-muted;
+  white-space: nowrap;
+}
+
+.stream-raw-summary {
+  font-size: 12px;
+  color: @nordic-text-muted;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stream-raw[open] .stream-raw-summary {
+  margin-bottom: 8px;
 }
 
 .stream-output-text {
