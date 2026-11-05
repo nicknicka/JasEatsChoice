@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Setting, Connection, Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { Setting, Connection, Refresh, Warning } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getSystemConfigsByGroup,
   batchUpdateSystemConfigs,
@@ -49,6 +49,12 @@ const rollingBackAi = ref(false)
 const refreshingAiState = ref(false)
 const rebuildingEmbedding = ref(false)
 const aiAdvanced = ref(false)
+const supervisorFollowsChat = ref(true)
+const aiEditing = ref(false)
+const embeddingCollapsed = ref(["embedding"])
+const historyCollapsed = ref([])
+const embeddingExpanded = ref(false)
+const candidateTestResult = ref(null)
 const aiDiscoveredModels = ref([])
 const loadingAiModels = ref(false)
 const previousAiConfig = ref(null)
@@ -335,7 +341,7 @@ function resetAiCandidateFromCurrent(config = {}) {
   aiCandidate.value = {
     provider: config.provider || '',
     model: config.model || '',
-    supervisorModel: config.supervisorModel || '',
+    supervisorModel: config.model || '',
     visionModel: config.visionModel || '',
     baseUrl: config.baseUrl || '',
     timeoutMs: config.timeoutMs || 30000,
@@ -349,6 +355,18 @@ function resetAiCandidateFromCurrent(config = {}) {
       apiKey: ''
     }
   }
+  supervisorFollowsChat.value = true
+}
+
+// Supervisor 默认跟随聊天模型；用户在高级设置里单独选择其它模型后才停止跟随
+function handleChatModelChange(value) {
+  if (supervisorFollowsChat.value) {
+    aiCandidate.value.supervisorModel = value
+  }
+}
+
+function handleSupervisorModelChange() {
+  supervisorFollowsChat.value = false
 }
 
 function selectedProviderModels() {
@@ -373,6 +391,60 @@ const aiVisionModelOptions = computed(() => {
   }
   return aiModelOptions.value
 })
+
+// 能力清单（用于状态总览卡）
+const capabilityList = computed(() => [
+  { key: 'textChat', label: '文本对话', enabled: aiConfig.value.capabilities?.textChat },
+  { key: 'streaming', label: '流式输出', enabled: aiConfig.value.capabilities?.streaming },
+  { key: 'vision', label: '视觉理解', enabled: aiConfig.value.capabilities?.vision },
+  { key: 'functionCalling', label: '函数调用', enabled: aiConfig.value.capabilities?.functionCalling },
+  { key: 'agentic', label: 'Agent', enabled: aiConfig.value.capabilities?.agentic }
+])
+
+// AI 整体状态
+const aiOverallStatus = computed(() => {
+  if (!aiConfig.value.capabilities?.available) {
+    return { label: '未配置', type: 'info', description: aiConfig.value.capabilities?.unavailableMessage || '尚未配置 AI 服务' }
+  }
+  if (!aiConfig.value.visionVerified && aiConfig.value.visionVerificationReason) {
+    return { label: '部分能力受限', type: 'warning', description: '视觉理解未通过验证：' + aiConfig.value.visionVerificationReason }
+  }
+  return { label: '运行正常', type: 'success', description: '全部能力可用' }
+})
+
+// 进入编辑模式
+function enterEditMode() {
+  resetAiCandidateFromCurrent(aiConfig.value)
+  aiDiscoveredModels.value = []
+  candidateTestResult.value = null
+  // 有 embedding 配置时默认展开
+  embeddingExpanded.value = !!(aiConfig.value.embedding?.provider || aiConfig.value.embedding?.model)
+  aiEditing.value = true
+}
+
+function cancelEditMode() {
+  aiEditing.value = false
+  candidateTestResult.value = null
+}
+
+function handleSaveAndActivate() {
+  saveAndActivateAi().then((saved) => {
+    if (saved) {
+      aiEditing.value = false
+      candidateTestResult.value = null
+    }
+  })
+}
+
+function handleCandidateTest() {
+  runAiCandidateTest().then(() => {
+    candidateTestResult.value = connectivityResult.value
+  })
+}
+
+function handleCurrentTest() {
+  runAiConnectivityTest()
+}
 
 function onProviderChange() {
   aiDiscoveredModels.value = []
@@ -445,6 +517,32 @@ async function loadAiPreviousSummary() {
   }
 }
 
+// 后端 message 可能内嵌网关返回的 JSON，取出可读原因后原样展示
+function aiErrorText(raw, fallback) {
+  const message = typeof raw === 'string' ? raw : raw?.message || ''
+  const text = message.trim()
+  if (!text) {
+    return fallback
+  }
+  if (text.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(text)
+      return parsed?.error?.message || parsed?.message || text
+    } catch {
+      return text
+    }
+  }
+  return text
+}
+
+function showAiSaveError(rawMessage) {
+  const message = aiErrorText(rawMessage, '保存或激活失败，当前配置未改变')
+  ElMessageBox.alert(message, 'AI 配置保存失败', {
+    type: 'error',
+    confirmButtonText: '知道了'
+  }).catch(() => {})
+}
+
 async function saveAndActivateAi() {
   activatingAi.value = true
   try {
@@ -453,9 +551,13 @@ async function saveAndActivateAi() {
       applyAiSnapshot(response.data)
       await loadAiPreviousSummary()
       ElMessage.success('AI 配置已保存并激活')
+      return true
     }
+    showAiSaveError(response?.message)
+    return false
   } catch (error) {
-    ElMessage.error(error?.response?.data?.message || '保存或激活失败，当前配置未改变')
+    showAiSaveError(error?.response?.data?.message)
+    return false
   } finally {
     activatingAi.value = false
   }
@@ -629,296 +731,389 @@ onMounted(async () => {
             </el-form-item>
           </el-form>
         </el-tab-pane>
-        <!-- AI 模型（只读） -->
+        <!-- AI 模型 -->
         <el-tab-pane label="AI 模型" name="ai">
-          <div v-loading="aiLoading" style="max-width: 900px">
-            <el-alert
-              title="AI 模型热切换"
-              description="这里展示后端当前生效的 AI 运行时配置；候选配置测试通过后可保存并激活。API key 不会返回明文。首期仅支持单后端实例，运行时配置和 key 不会广播到其他实例。"
-              type="info"
-              show-icon
-              :closable="false"
-              class="ai-alert"
-            />
+          <div v-loading="aiLoading" class="ai-settings-wrapper">
+            <!-- 状态总览卡 -->
+            <el-card class="status-card" shadow="never">
+              <template #header>
+                <div class="status-card-header">
+                  <div class="status-title-group">
+                    <span class="status-dot" :class="aiOverallStatus.type"></span>
+                    <span class="status-title">AI 服务</span>
+                    <el-tag :type="aiOverallStatus.type" effect="dark" size="small" class="status-tag">
+                      {{ aiOverallStatus.label }}
+                    </el-tag>
+                  </div>
+                  <el-button v-if="!aiEditing" type="primary" size="default" @click="enterEditMode">
+                    编辑配置
+                  </el-button>
+                  <el-button v-else text size="default" @click="cancelEditMode">
+                    取消编辑
+                  </el-button>
+                </div>
+              </template>
 
-            <el-alert
-              v-if="aiConfig.needsReconfiguration"
-              title="当前 AI 配置需要重新填写"
-              :description="aiConfig.configurationNotice || '旧服务地址无法安全转换，请重新填写 OpenAI 兼容服务根地址。'"
-              type="warning"
-              show-icon
-              :closable="false"
-              class="ai-alert"
-            />
-
-            <h4>当前配置</h4>
-            <el-descriptions :column="2" border>
-              <el-descriptions-item label="Provider">{{ aiConfig.provider || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="更新时间">{{ aiConfig.updatedAt || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="聊天模型">{{ aiConfig.model || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="Supervisor 模型">{{ aiConfig.supervisorModel || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="视觉模型">
-                {{ aiConfig.visionModel || '-' }}
-                <el-tag :type="aiConfig.visionVerified ? 'success' : 'info'" size="small">
-                  {{ aiConfig.visionVerified ? '已验证' : '未验证' }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item label="服务地址">{{ aiConfig.baseUrl || '未配置（需显式填写）' }}</el-descriptions-item>
-              <el-descriptions-item label="超时时间">{{ aiConfig.timeoutMs }} ms</el-descriptions-item>
-              <el-descriptions-item label="温度">{{ aiConfig.temperature }}</el-descriptions-item>
-            </el-descriptions>
-            <div v-if="!aiConfig.visionVerified && aiConfig.visionVerificationReason" class="vision-verification-reason">
-              视觉验证失败：{{ aiConfig.visionVerificationReason }}
-            </div>
-
-            <h4>Embedding 配置</h4>
-            <div class="embedding-summary">
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="Embedding Provider">{{ aiConfig.embedding.provider || '-' }}</el-descriptions-item>
-                <el-descriptions-item label="Embedding 模型">{{ aiConfig.embedding.model || '-' }}</el-descriptions-item>
-                <el-descriptions-item label="向量维度">{{ aiConfig.embedding.dimensions }}</el-descriptions-item>
-                <el-descriptions-item label="服务地址">{{ aiConfig.embedding.baseUrl || '未配置（需显式填写）' }}</el-descriptions-item>
-              </el-descriptions>
-              <div class="embedding-key-status">
-                <el-tag :type="aiConfig.embedding.keyStatus.configured ? 'success' : 'danger'">
-                  {{ aiConfig.embedding.keyStatus.configured ? '已配置' : '未配置' }}
-                </el-tag>
-                <span v-if="aiConfig.embedding.keyStatus.configured" class="key-status">
-                  指纹：{{ aiConfig.embedding.keyStatus.fingerprint }}
-                </span>
-                <span class="key-status">更新时间：{{ aiConfig.embedding.keyStatus.updatedAt || '-' }}</span>
-              </div>
-              <div class="embedding-state">
-                <span class="key-status">索引状态：</span>
-                <el-tag :type="embeddingStateMeta.type">{{ embeddingStateMeta.label }}</el-tag>
-                <span v-if="aiConfig.embedding.statusReason" class="embedding-state-reason">
-                  {{ aiConfig.embedding.statusReason }}
-                </span>
-                <el-button :icon="Refresh" :loading="refreshingAiState" @click="refreshAiState">
-                  刷新状态
-                </el-button>
-                <el-button
-                  type="primary"
-                  :loading="rebuildingEmbedding"
-                  @click="retryEmbeddingRebuild"
+              <div class="capability-row">
+                <div
+                  v-for="cap in capabilityList"
+                  :key="cap.key"
+                  class="capability-item"
+                  :class="{ enabled: cap.enabled }"
                 >
-                  重试重建
-                </el-button>
+                  <div class="capability-icon">
+                    <svg v-if="cap.enabled" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </div>
+                  <span class="capability-label">{{ cap.label }}</span>
+                </div>
               </div>
-            </div>
 
-            <h4>上一版有效配置</h4>
-            <el-descriptions v-if="previousAiConfig" :column="2" border>
-              <el-descriptions-item label="版本">{{ previousAiConfig.version || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="生效时间">{{ previousAiConfig.updatedAt || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="聊天模型">{{ previousAiConfig.model || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="Supervisor 模型">{{ previousAiConfig.supervisorModel || '-' }}</el-descriptions-item>
+              <div v-if="aiOverallStatus.type !== 'success'" class="status-description">
+                {{ aiOverallStatus.description }}
+              </div>
+
+              <div v-if="aiConfig.needsReconfiguration" class="status-warning">
+                <el-icon><Warning /></el-icon>
+                <span>{{ aiConfig.configurationNotice || '当前配置需要重新填写' }}</span>
+              </div>
+            </el-card>
+
+            <!-- 配置卡：只读态 -->
+            <el-card v-if="!aiEditing" class="config-card" shadow="never">
+              <template #header>
+                <div class="card-header">
+                  <span class="card-title">当前配置</span>
+                  <span class="card-subtitle">更新于 {{ aiConfig.updatedAt || '—' }}</span>
+                </div>
+              </template>
+
+              <el-descriptions :column="2" border size="default">
+                <el-descriptions-item label="服务商">{{ aiConfig.provider || '—' }}</el-descriptions-item>
+                <el-descriptions-item label="服务地址">
+                  <span class="mono-text">{{ aiConfig.baseUrl || '未配置' }}</span>
+                </el-descriptions-item>
+                <el-descriptions-item label="聊天模型">
+                  <span class="mono-text">{{ aiConfig.model || '—' }}</span>
+                </el-descriptions-item>
+                <el-descriptions-item label="API Key">
+                  <el-tag :type="aiConfig.keyStatus.configured ? 'success' : 'danger'" size="small">
+                    {{ aiConfig.keyStatus.configured ? '已配置' : '未配置' }}
+                  </el-tag>
+                  <span v-if="aiConfig.keyStatus.configured" class="key-fingerprint">
+                    指纹：{{ aiConfig.keyStatus.fingerprint }}
+                  </span>
+                </el-descriptions-item>
                 <el-descriptions-item label="视觉模型">
-                  {{ previousAiConfig.visionModel || '-' }}
-                  <el-tag :type="previousAiConfig.visionVerified ? 'success' : 'info'" size="small">
-                    {{ previousAiConfig.visionVerified ? '已验证' : '未验证' }}
+                  <span class="mono-text">{{ aiConfig.visionModel || '—' }}</span>
+                  <el-tag
+                    :type="aiConfig.visionVerified ? 'success' : 'warning'"
+                    size="small"
+                    style="margin-left: 8px"
+                  >
+                    {{ aiConfig.visionVerified ? '已验证' : '未验证' }}
                   </el-tag>
                 </el-descriptions-item>
-              <el-descriptions-item label="Key 状态">
-                {{ previousAiConfig.keyConfigured ? `已配置（${previousAiConfig.keyFingerprint || '-'}）` : '未配置' }}
-              </el-descriptions-item>
-            </el-descriptions>
-            <el-empty v-else description="暂无可回滚的上一版配置" :image-size="60" />
-            <div class="connectivity-section">
-              <el-button
-                type="warning"
-                :loading="rollingBackAi"
-                :disabled="!previousAiConfig"
-                @click="rollbackAi"
-              >
-                回滚上一版
-              </el-button>
-              <span v-if="previousAiConfig && !previousAiConfig.keyConfigured" class="connectivity-message">
-                上一版 key 已清除，回滚前请重新输入有效 key。
-              </span>
-            </div>
+                <el-descriptions-item label="Supervisor 模型">
+                  <span class="mono-text">{{ aiConfig.supervisorModel || '—' }}</span>
+                </el-descriptions-item>
+              </el-descriptions>
 
-            <h4>API Key 状态</h4>
-            <el-tag :type="aiConfig.keyStatus.configured ? 'success' : 'danger'">
-              {{ aiConfig.keyStatus.configured ? '已配置' : '未配置' }}
-            </el-tag>
-            <span v-if="aiConfig.keyStatus.configured" class="key-status">
-              指纹：{{ aiConfig.keyStatus.fingerprint }}
-            </span>
-            <span class="key-status">更新时间：{{ aiConfig.keyStatus.updatedAt || '-' }}</span>
-
-            <h4>能力状态</h4>
-            <div class="capability-tags">
-              <el-tag :type="aiConfig.capabilities.available ? 'success' : 'info'">可用</el-tag>
-              <el-tag :type="aiConfig.capabilities.textChat ? 'success' : 'info'">文本对话</el-tag>
-              <el-tag :type="aiConfig.capabilities.streaming ? 'success' : 'info'">流式输出</el-tag>
-              <el-tag :type="aiConfig.capabilities.vision ? 'success' : 'info'">视觉理解</el-tag>
-              <el-tag :type="aiConfig.capabilities.functionCalling ? 'success' : 'info'">函数调用</el-tag>
-              <el-tag :type="aiConfig.capabilities.agentic ? 'success' : 'info'">Agent</el-tag>
-            </div>
-            <div v-if="aiConfig.capabilities.unavailableMessage" class="unavailable-message">
-              {{ aiConfig.capabilities.unavailableMessage }}
-            </div>
-
-            <h4>支持模型</h4>
-            <div class="model-tags">
-              <el-tag v-for="model in aiConfig.supportedModels" :key="model" class="model-tag">
-                {{ model }}
-              </el-tag>
-            </div>
-
-            <div class="connectivity-section">
-              <el-button :icon="Connection" :loading="testingAi" @click="runAiConnectivityTest">
-                测试当前配置连通性
-              </el-button>
-              <div v-if="connectivityResult" class="connectivity-result">
-                <el-tag :type="connectivityResult.success ? 'success' : 'danger'">
-                  {{ connectivityResult.success ? '连通成功' : '连通失败' }}
-                </el-tag>
-                <span class="connectivity-message">{{ connectivityResult.message }}</span>
-                <span v-if="connectivityResult.model" class="connectivity-message">（{{ connectivityResult.model }}）</span>
-              </div>
-            </div>
-
-            <h4>候选配置</h4>
-            <el-form :model="aiCandidate" label-width="180px" style="max-width: 700px">
-              <el-form-item label="API Key">
-                <el-input
-                  v-model="aiCandidate.apiKey"
-                  type="password"
-                  show-password
-                  autocomplete="new-password"
-                  placeholder="输入新 active key；留空沿用当前 key"
-                />
-              </el-form-item>
-
-              <el-form-item label="Provider">
-                <el-select v-model="aiCandidate.provider" placeholder="选择后端支持的 Provider" @change="onProviderChange">
-                  <el-option
-                    v-for="provider in aiConfig.providers"
-                    :key="provider.code"
-                    :label="provider.name"
-                    :value="provider.code"
-                  />
-                </el-select>
-              </el-form-item>
-
-              <el-form-item label="模型列表">
-                <el-button :icon="Refresh" :loading="loadingAiModels" @click="loadAiModels">
-                  从网关获取模型
+              <div class="config-actions">
+                <el-button :icon="Connection" :loading="testingAi" @click="handleCurrentTest">
+                  测试连接
                 </el-button>
-                <span v-if="aiDiscoveredModels.length" class="form-tip">已获取 {{ aiDiscoveredModels.length }} 个模型</span>
-              </el-form-item>
+                <el-button type="primary" @click="enterEditMode">
+                  修改配置
+                </el-button>
+                <div v-if="connectivityResult" class="connectivity-inline-result">
+                  <el-tag :type="connectivityResult.success ? 'success' : 'danger'" size="small">
+                    {{ connectivityResult.success ? '连通成功' : '连通失败' }}
+                  </el-tag>
+                  <span class="connectivity-message">{{ connectivityResult.message }}</span>
+                </div>
+              </div>
+            </el-card>
 
-              <el-form-item label="聊天模型">
-                <el-select
-                  v-model="aiCandidate.model"
-                  filterable
-                  :allow-create="aiAdvanced"
-                  default-first-option
-                  :placeholder="aiAdvanced ? '从已知模型选择或输入自定义模型' : '从已知模型选择'"
-                >
-                  <el-option v-for="option in aiModelOptions" :key="option.value" :label="option.label" :value="option.value" />
-                </el-select>
-              </el-form-item>
+            <!-- 配置卡：编辑态 -->
+            <el-card v-else class="config-card editing" shadow="never">
+              <template #header>
+                <div class="card-header">
+                  <span class="card-title">编辑配置</span>
+                  <span class="card-subtitle editing-hint">修改后需保存并激活才会生效</span>
+                </div>
+              </template>
 
-              <el-form-item label="Supervisor 模型">
-                <el-select
-                  v-model="aiCandidate.supervisorModel"
-                  filterable
-                  :allow-create="aiAdvanced"
-                  default-first-option
-                  :placeholder="aiAdvanced ? '从已知模型选择或输入自定义模型' : '从已知模型选择'"
-                >
-                  <el-option v-for="option in aiModelOptions" :key="option.value" :label="option.label" :value="option.value" />
-                </el-select>
-              </el-form-item>
+              <el-form :model="aiCandidate" label-width="120px" class="config-form">
+                <el-form-item label="API Key">
+                  <el-input
+                    v-model="aiCandidate.apiKey"
+                    type="password"
+                    show-password
+                    autocomplete="new-password"
+                    placeholder="留空则沿用当前 key"
+                  />
+                </el-form-item>
 
-              <el-form-item label="视觉模型">
-                <el-select
-                  v-model="aiCandidate.visionModel"
-                  filterable
-                  :allow-create="aiAdvanced"
-                  default-first-option
-                  :placeholder="aiAdvanced ? '从已知模型选择或输入自定义模型' : '从已知模型选择'"
-                >
-                  <el-option v-for="option in aiVisionModelOptions" :key="option.value" :label="option.label" :value="option.value" />
-                </el-select>
-                <span class="form-tip">保存时会发送真实图片请求；验证失败时菜品识别保持关闭。</span>
-              </el-form-item>
-
-              <div class="embedding-candidate">
-                <el-form-item label="Embedding Provider">
-                  <el-select v-model="aiCandidate.embedding.provider" placeholder="选择后端支持的 Provider">
+                <el-form-item label="服务商">
+                  <el-select v-model="aiCandidate.provider" placeholder="选择 Provider" @change="onProviderChange" style="width: 100%">
                     <el-option
-                      v-for="provider in aiConfig.embedding.providers"
-                      :key="provider"
-                      :label="provider"
-                      :value="provider"
+                      v-for="provider in aiConfig.providers"
+                      :key="provider.code"
+                      :label="provider.name"
+                      :value="provider.code"
                     />
                   </el-select>
                 </el-form-item>
 
-                <el-form-item label="Embedding 模型">
-                  <el-input v-model="aiCandidate.embedding.model" placeholder="例如 bge-m3" />
-                </el-form-item>
-
-                <el-form-item label="向量维度">
-                  <el-input-number v-model="aiCandidate.embedding.dimensions" :min="1" />
-                </el-form-item>
-
                 <el-form-item label="服务地址">
-                  <el-input v-model="aiCandidate.embedding.baseUrl" placeholder="请输入 OpenAI 兼容服务根地址" />
+                  <el-input v-model="aiCandidate.baseUrl" placeholder="OpenAI 兼容服务根地址" />
                 </el-form-item>
 
-                <el-form-item label="Embedding API Key">
-                  <el-input
-                    v-model="aiCandidate.embedding.apiKey"
-                    type="password"
-                    show-password
-                    autocomplete="new-password"
-                    placeholder="输入新 Embedding key；留空沿用当前"
-                  />
+                <el-form-item label="模型列表">
+                  <el-button :icon="Refresh" :loading="loadingAiModels" @click="loadAiModels">
+                    从网关获取模型
+                  </el-button>
+                  <span v-if="aiDiscoveredModels.length" class="form-tip">已获取 {{ aiDiscoveredModels.length }} 个模型</span>
                 </el-form-item>
-              </div>
 
-              <el-form-item>
-                <el-switch v-model="aiAdvanced" active-text="高级设置" />
-              </el-form-item>
+                <el-form-item label="聊天模型">
+                  <el-select
+                    v-model="aiCandidate.model"
+                    filterable
+                    :allow-create="aiAdvanced"
+                    default-first-option
+                    :placeholder="aiAdvanced ? '选择或输入自定义模型' : '选择模型'"
+                    style="width: 100%"
+                    @change="handleChatModelChange"
+                  >
+                    <el-option v-for="option in aiModelOptions" :key="option.value" :label="option.label" :value="option.value" />
+                  </el-select>
+                </el-form-item>
 
-              <template v-if="aiAdvanced">
-                <el-form-item label="服务地址">
-                  <el-input v-model="aiCandidate.baseUrl" placeholder="请输入 OpenAI 兼容服务根地址" />
+                <el-form-item label="视觉模型">
+                  <el-select
+                    v-model="aiCandidate.visionModel"
+                    filterable
+                    :allow-create="aiAdvanced"
+                    default-first-option
+                    :placeholder="aiAdvanced ? '选择或输入自定义模型' : '选择模型'"
+                    style="width: 100%"
+                  >
+                    <el-option v-for="option in aiVisionModelOptions" :key="option.value" :label="option.label" :value="option.value" />
+                  </el-select>
+                  <div class="form-tip">保存激活时会发送真实图片请求验证；验证失败时菜品识别保持关闭。</div>
                 </el-form-item>
-                <el-form-item label="超时时间">
-                  <el-input-number v-model="aiCandidate.timeoutMs" :min="1000" :step="1000" />
-                  <span class="form-tip">单位：毫秒</span>
-                </el-form-item>
-                <el-form-item label="温度">
-                  <el-input-number v-model="aiCandidate.temperature" :min="0" :max="2" :step="0.1" />
-                </el-form-item>
-              </template>
 
-              <el-form-item>
-                <el-button :icon="Connection" :loading="testingAi" @click="runAiCandidateTest">
+                <el-form-item label="高级设置">
+                  <el-switch v-model="aiAdvanced" active-text="展开" inactive-text="收起" />
+                </el-form-item>
+
+                <template v-if="aiAdvanced">
+                  <el-form-item label="Supervisor">
+                    <el-select
+                      v-model="aiCandidate.supervisorModel"
+                      filterable
+                      :allow-create="aiAdvanced"
+                      default-first-option
+                      placeholder="选择 Supervisor 模型"
+                      style="width: 100%"
+                      @change="handleSupervisorModelChange"
+                    >
+                      <el-option v-for="option in aiModelOptions" :key="option.value" :label="option.label" :value="option.value" />
+                    </el-select>
+                    <div class="form-tip">默认跟随聊天模型；选择其它模型可单独指定。</div>
+                  </el-form-item>
+                  <el-form-item label="超时时间">
+                    <el-input-number v-model="aiCandidate.timeoutMs" :min="1000" :step="1000" />
+                    <span class="form-tip">毫秒</span>
+                  </el-form-item>
+                  <el-form-item label="温度">
+                    <el-input-number v-model="aiCandidate.temperature" :min="0" :max="2" :step="0.1" />
+                  </el-form-item>
+                </template>
+
+                <el-form-item label="Embedding">
+                  <el-switch v-model="embeddingExpanded" active-text="配置" inactive-text="不配置" />
+                </el-form-item>
+
+                <template v-if="embeddingExpanded">
+                  <div class="embedding-candidate">
+                    <el-form-item label="Provider">
+                      <el-select v-model="aiCandidate.embedding.provider" placeholder="选择 Embedding Provider" style="width: 100%">
+                        <el-option
+                          v-for="provider in aiConfig.embedding.providers"
+                          :key="provider"
+                          :label="provider"
+                          :value="provider"
+                        />
+                      </el-select>
+                    </el-form-item>
+                    <el-form-item label="模型">
+                      <el-input v-model="aiCandidate.embedding.model" placeholder="例如 bge-m3" />
+                    </el-form-item>
+                    <el-form-item label="向量维度">
+                      <el-input-number v-model="aiCandidate.embedding.dimensions" :min="1" />
+                    </el-form-item>
+                    <el-form-item label="服务地址">
+                      <el-input v-model="aiCandidate.embedding.baseUrl" placeholder="OpenAI 兼容服务根地址" />
+                    </el-form-item>
+                    <el-form-item label="API Key">
+                      <el-input
+                        v-model="aiCandidate.embedding.apiKey"
+                        type="password"
+                        show-password
+                        autocomplete="new-password"
+                        placeholder="留空沿用当前"
+                      />
+                    </el-form-item>
+                  </div>
+                </template>
+              </el-form>
+
+              <div class="edit-actions">
+                <el-button @click="cancelEditMode">取消</el-button>
+                <el-button :icon="Connection" :loading="testingAi" @click="handleCandidateTest">
                   测试候选配置
                 </el-button>
-                <el-button type="primary" :loading="activatingAi" @click="saveAndActivateAi">
+                <el-button type="primary" :loading="activatingAi" @click="handleSaveAndActivate">
                   保存并激活
                 </el-button>
-              </el-form-item>
-            </el-form>
+              </div>
 
+              <div v-if="candidateTestResult" class="test-result" :class="{ success: candidateTestResult.success, fail: !candidateTestResult.success }">
+                <el-tag :type="candidateTestResult.success ? 'success' : 'danger'" size="small">
+                  {{ candidateTestResult.success ? '测试通过' : '测试失败' }}
+                </el-tag>
+                <span class="test-result-message">{{ candidateTestResult.message }}</span>
+                <span v-if="candidateTestResult.model" class="test-result-model">（{{ candidateTestResult.model }}）</span>
+              </div>
+            </el-card>
+
+            <!-- Embedding 状态（折叠） -->
+            <el-card class="section-card embedding-summary" shadow="never">
+              <template #header>
+                <el-collapse v-model="embeddingCollapsed">
+                  <el-collapse-item name="embedding">
+                    <template #title>
+                      <div class="collapse-header">
+                        <span>Embedding 配置</span>
+                        <el-tag :type="embeddingStateMeta.type" size="small">
+                          {{ embeddingStateMeta.label }}
+                        </el-tag>
+                      </div>
+                    </template>
+
+                    <el-descriptions :column="2" border size="small">
+                      <el-descriptions-item label="Provider">{{ aiConfig.embedding.provider || '—' }}</el-descriptions-item>
+                      <el-descriptions-item label="模型">
+                        <span class="mono-text">{{ aiConfig.embedding.model || '—' }}</span>
+                      </el-descriptions-item>
+                      <el-descriptions-item label="向量维度">{{ aiConfig.embedding.dimensions || '—' }}</el-descriptions-item>
+                      <el-descriptions-item label="服务地址">
+                        <span class="mono-text">{{ aiConfig.embedding.baseUrl || '未配置' }}</span>
+                      </el-descriptions-item>
+                      <el-descriptions-item label="Key 状态" :span="2">
+                        <el-tag :type="aiConfig.embedding.keyStatus?.configured ? 'success' : 'danger'" size="small">
+                          {{ aiConfig.embedding.keyStatus?.configured ? '已配置' : '未配置' }}
+                        </el-tag>
+                        <span v-if="aiConfig.embedding.keyStatus?.configured" class="key-fingerprint">
+                          指纹：{{ aiConfig.embedding.keyStatus.fingerprint }}
+                          · 更新于 {{ aiConfig.embedding.keyStatus.updatedAt || '—' }}
+                        </span>
+                      </el-descriptions-item>
+                    </el-descriptions>
+
+                    <div class="embedding-actions">
+                      <el-button :icon="Refresh" :loading="refreshingAiState" size="small" @click="refreshAiState">
+                        刷新状态
+                      </el-button>
+                      <el-button type="primary" :loading="rebuildingEmbedding" size="small" @click="retryEmbeddingRebuild">
+                        重试重建索引
+                      </el-button>
+                      <span v-if="aiConfig.embedding.statusReason" class="embedding-state-reason">
+                        {{ aiConfig.embedding.statusReason }}
+                      </span>
+                    </div>
+                  </el-collapse-item>
+                </el-collapse>
+              </template>
+            </el-card>
+
+            <!-- 配置历史（折叠） -->
+            <el-card class="section-card" shadow="never">
+              <el-collapse v-model="historyCollapsed">
+                <el-collapse-item name="history">
+                  <template #title>
+                    <div class="collapse-header">
+                      <span>配置历史</span>
+                      <span v-if="previousAiConfig" class="history-subtitle">上一版可回滚</span>
+                      <span v-else class="history-subtitle muted">暂无可回滚版本</span>
+                    </div>
+                  </template>
+
+                  <div v-if="previousAiConfig" class="history-item">
+                    <el-descriptions :column="2" border size="small">
+                      <el-descriptions-item label="版本">{{ previousAiConfig.version || '—' }}</el-descriptions-item>
+                      <el-descriptions-item label="生效时间">{{ previousAiConfig.updatedAt || '—' }}</el-descriptions-item>
+                      <el-descriptions-item label="聊天模型">
+                        <span class="mono-text">{{ previousAiConfig.model || '—' }}</span>
+                      </el-descriptions-item>
+                      <el-descriptions-item label="视觉模型">
+                        <span class="mono-text">{{ previousAiConfig.visionModel || '—' }}</span>
+                        <el-tag
+                          :type="previousAiConfig.visionVerified ? 'success' : 'info'"
+                          size="small"
+                          style="margin-left: 8px"
+                        >
+                          {{ previousAiConfig.visionVerified ? '已验证' : '未验证' }}
+                        </el-tag>
+                      </el-descriptions-item>
+                      <el-descriptions-item label="Key 状态" :span="2">
+                        {{ previousAiConfig.keyConfigured ? `已配置（${previousAiConfig.keyFingerprint || '—'}）` : '未配置' }}
+                      </el-descriptions-item>
+                    </el-descriptions>
+                    <div class="history-actions">
+                      <el-button
+                        type="warning"
+                        :loading="rollingBackAi"
+                        :disabled="!previousAiConfig"
+                        @click="rollbackAi"
+                        size="small"
+                      >
+                        回滚上一版
+                      </el-button>
+                      <span v-if="previousAiConfig && !previousAiConfig.keyConfigured" class="form-tip">
+                        上一版 key 已清除，回滚前请重新输入有效 key。
+                      </span>
+                    </div>
+                  </div>
+
+                  <el-empty v-else description="暂无可回滚的上一版配置" :image-size="60" />
+                </el-collapse-item>
+              </el-collapse>
+            </el-card>
+
+            <!-- 热切换说明 -->
             <el-alert
-              title="热切换说明"
-              description="新请求立即使用新模型；正在执行的请求继续使用旧模型。候选 key 测试成功后写入运行时密钥文件，并优先于 AI_API_KEY。页面只显示状态和不可逆指纹，不显示明文 key。"
-              type="warning"
-              show-icon
+              type="info"
               :closable="false"
-              class="ai-alert"
-            />
+              show-icon
+              class="bottom-alert"
+            >
+              <template #title>热切换说明</template>
+              <template #default>
+                新请求立即使用新模型；正在执行的请求继续使用旧模型。API key 不会返回明文，只显示指纹。首期仅支持单后端实例，运行时配置不会广播到其他实例。
+              </template>
+            </el-alert>
           </div>
         </el-tab-pane>
+
       </el-tabs>
     </el-card>
   </div>
@@ -947,71 +1142,301 @@ onMounted(async () => {
       border-bottom: 2px solid #ff6b6b;
   }
 
-  .ai-alert {
-    margin-bottom: 16px;
+  // ===== AI 设置页新样式 =====
+  .ai-settings-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 960px;
   }
 
-  .key-status {
-    margin-left: 10px;
-    color: #606266;
+  .mono-text {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
   }
 
-  .embedding-summary {
-    margin-bottom: 8px;
+  .key-fingerprint {
+    margin-left: 8px;
+    color: #909399;
+    font-size: 12px;
   }
 
-  .embedding-key-status {
-    margin-top: 10px;
+  // 状态总览卡
+  .status-card {
+    border: none;
+    background: linear-gradient(135deg, #f8f9ff 0%, #fff5f0 100%);
+    border-radius: 12px;
+
+    :deep(.el-card__header) {
+      padding: 0;
+      border-bottom: none;
+    }
+
+    :deep(.el-card__body) {
+      padding-top: 8px;
+    }
   }
 
-  .embedding-state {
+  .status-card-header {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
+    justify-content: space-between;
   }
 
-  .embedding-state-reason {
-    color: #606266;
+  .status-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
-  .capability-tags,
-  .model-tags {
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #909399;
+
+    &.success { background: #67c23a; box-shadow: 0 0 0 4px rgba(103,194,58,0.15); }
+    &.warning { background: #e6a23c; box-shadow: 0 0 0 4px rgba(230,162,60,0.15); }
+    &.danger  { background: #f56c6c; box-shadow: 0 0 0 4px rgba(245,108,108,0.15); }
+    &.info    { background: #909399; box-shadow: 0 0 0 4px rgba(144,147,153,0.15); }
+  }
+
+  .status-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .status-tag {
+    margin-left: 4px;
+  }
+
+  .capability-row {
     display: flex;
     flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .capability-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(144,147,153,0.2);
+    color: #909399;
+    font-size: 13px;
+    transition: all 0.2s;
+
+    &.enabled {
+      color: #67c23a;
+      border-color: rgba(103,194,58,0.3);
+      background: rgba(103,194,58,0.08);
+    }
+  }
+
+  .capability-icon {
+    display: flex;
+    align-items: center;
+  }
+
+  .capability-label {
+    font-weight: 500;
+  }
+
+  .status-description {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 8px;
+    font-size: 13px;
+    color: #e6a23c;
+    line-height: 1.5;
+  }
+
+  .status-warning {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(245,108,108,0.08);
+    border-radius: 8px;
+    font-size: 13px;
+    color: #f56c6c;
+    display: flex;
+    align-items: center;
     gap: 8px;
   }
 
-  .model-tag {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  // 配置卡
+  .config-card {
+    border-radius: 12px;
+
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+    }
+
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
   }
 
-  .unavailable-message {
-    margin-top: 8px;
+  .card-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .card-subtitle {
+    font-size: 12px;
     color: #909399;
   }
 
-  .vision-verification-reason {
-    margin-top: 8px;
+  .editing-hint {
     color: #e6a23c;
   }
 
-  .connectivity-section {
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid #ebeef5;
+  .config-actions {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
-  .connectivity-result {
+  .connectivity-inline-result {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 12px;
   }
 
   .connectivity-message {
     color: #606266;
+    font-size: 13px;
+  }
+
+  // 编辑态
+  .config-form {
+    :deep(.el-form-item) {
+      margin-bottom: 18px;
+    }
+
+    .form-tip {
+      display: block;
+      margin-left: 0;
+      margin-top: 4px;
+    }
+  }
+
+  .edit-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid #ebeef5;
+  }
+
+  .test-result {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+
+    &.success {
+      background: rgba(103,194,58,0.08);
+      color: #67c23a;
+    }
+    &.fail {
+      background: rgba(245,108,108,0.08);
+      color: #f56c6c;
+    }
+  }
+
+  .test-result-message {
+    color: #606266;
+  }
+
+  .test-result-model {
+    color: #909399;
+  }
+
+  // 折叠分区卡
+  .section-card {
+    border-radius: 12px;
+
+    :deep(.el-card__header) {
+      padding: 0 20px;
+      border-bottom: none;
+    }
+
+    :deep(.el-card__body) {
+      padding-top: 0;
+    }
+
+    :deep(.el-collapse-item__header) {
+      padding-left: 0;
+      padding-right: 0;
+      font-weight: 500;
+    }
+
+    :deep(.el-collapse-item__wrap) {
+      border-bottom: none;
+    }
+
+    :deep(.el-collapse-item__content) {
+      padding-bottom: 0;
+    }
+  }
+
+  .collapse-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .history-subtitle {
+    font-size: 12px;
+    color: #e6a23c;
+    font-weight: normal;
+
+    &.muted {
+      color: #c0c4cc;
+    }
+  }
+
+  .embedding-actions {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .embedding-state-reason {
+    color: #909399;
+    font-size: 12px;
+  }
+
+  .history-item {
+    .history-actions {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+  }
+
+  .bottom-alert {
+    margin-top: 4px;
   }
 
   .form-tip {

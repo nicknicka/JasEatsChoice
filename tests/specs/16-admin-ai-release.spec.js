@@ -153,7 +153,7 @@ test.describe('AI 热加载发布验收', () => {
         content: '*, *::before, *::after { transition: none !important; animation: none !important; }'
       })
       await page.getByRole('tab', { name: 'AI 模型' }).click()
-      const aiSection = page.locator('.el-tab-pane').filter({ hasText: '当前配置' })
+      const aiSection = page.locator('.el-tab-pane').filter({ hasText: 'AI 服务' })
 
       await expect(page.getByText('首期仅支持单后端实例')).toBeVisible()
       await expect(page.getByText('Embedding 模型与向量维度不在线切换')).toHaveCount(0)
@@ -166,13 +166,16 @@ test.describe('AI 热加载发布验收', () => {
 
       await expect(aiSection.getByText(currentModel).first()).toBeVisible()
       await expect(aiSection.getByText(`指纹：${ACTIVE_FINGERPRINT}`)).toBeVisible()
-      await expect(aiSection.getByText('更新时间：2026-10-31T08:30:00')).toBeVisible()
+      await expect(aiSection.getByText('更新于 2026-10-31T09:00:00')).toBeVisible()
+
+      // 只读态 -> 编辑态：候选配置收在「修改配置」编辑卡里
+      await aiSection.getByRole('button', { name: '修改配置' }).click()
 
       const formItem = label => aiSection.locator('.el-form-item').filter({ hasText: label, hasNotText: 'Embedding' })
       const embeddingItem = label => aiSection.locator('.embedding-candidate .el-form-item').filter({ hasText: label })
-      await formItem('API Key').locator('input[type="password"]').fill(SECRET_KEY)
+      await formItem('API Key').first().locator('input[type="password"]').fill(SECRET_KEY)
 
-      await formItem('Provider').locator('.el-select').click()
+      await formItem('服务商').locator('.el-select').click()
       await page.getByRole('option', { name: 'OpenAI 兼容' }).click()
 
       await Promise.all([
@@ -184,7 +187,9 @@ test.describe('AI 热加载发布验收', () => {
       await formItem('聊天模型').locator('.el-select').click()
       await page.getByRole('option', { name: candidateModel, exact: true }).last().click()
 
-      await formItem('Supervisor 模型').locator('.el-select').click()
+      // Supervisor 收在「高级设置」里，默认跟随聊天模型
+      await formItem('高级设置').locator('.el-switch').click()
+      await formItem('Supervisor').locator('.el-select').click()
       await page.getByRole('option', { name: candidateModel, exact: true }).last().click()
 
       await formItem('视觉模型').locator('.el-select').click()
@@ -192,9 +197,9 @@ test.describe('AI 热加载发布验收', () => {
 
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/test'),
-        formItem('测试候选配置').getByRole('button', { name: '测试候选配置' }).click()
+        aiSection.getByRole('button', { name: '测试候选配置' }).click()
       ])
-      await expect(aiSection.getByText('连通成功')).toBeVisible()
+      await expect(aiSection.getByText('测试通过')).toBeVisible()
       expect(capturedRequests.test.embedding).toMatchObject({
         provider: EMBED_PROVIDER,
         model: EMBED_MODEL,
@@ -204,7 +209,7 @@ test.describe('AI 热加载发布验收', () => {
       })
 
       await embeddingItem('服务地址').locator('input').fill(NEW_EMBED_BASE_URL)
-      await embeddingItem('Embedding 模型').locator('input').fill(NEW_EMBED_MODEL)
+      await embeddingItem('模型').locator('input').fill(NEW_EMBED_MODEL)
 
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/activate'),
@@ -212,7 +217,7 @@ test.describe('AI 热加载发布验收', () => {
       ])
       await expect(aiSection.getByText(candidateModel).first()).toBeVisible()
       await expect(aiSection.getByText(`指纹：${NEW_FINGERPRINT}`)).toBeVisible()
-      await expect(formItem('API Key').locator('input[type="password"]')).toHaveValue('')
+      await expect(aiSection.locator('input[type="password"]')).toHaveCount(0)
       expect(capturedRequests.activate.embedding).toMatchObject({
         provider: EMBED_PROVIDER,
         model: NEW_EMBED_MODEL,
@@ -224,7 +229,7 @@ test.describe('AI 热加载发布验收', () => {
 
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/embedding/rebuild'),
-        page.getByRole('button', { name: '重试重建' }).click()
+        aiSection.getByRole('button', { name: '重试重建索引' }).click()
       ])
       await expect(embeddingSummary.getByText('就绪')).toBeVisible()
       expect(rebuildCalls, '重试重建应发出请求').toBe(1)
@@ -236,6 +241,8 @@ test.describe('AI 热加载发布验收', () => {
       await expect(embeddingSummary.getByText('不可用')).toBeVisible()
       await expect(embeddingSummary.getByText(EMBED_REBUILD_FAILURE)).toBeVisible()
 
+      // 配置历史收在折叠面板里，先展开再回滚
+      await aiSection.getByText('配置历史').click()
       await Promise.all([
         page.waitForResponse(response => new URL(response.url()).pathname === '/api/admin/settings/ai/rollback'),
         page.getByRole('button', { name: '回滚上一版' }).click()

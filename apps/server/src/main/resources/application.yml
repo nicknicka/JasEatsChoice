@@ -213,7 +213,7 @@ ai:
   # 通用文本推理模型名
   model: ${AI_MODEL:gpt-4o-mini}
   # Supervisor 专用模型名（推理更强、温度更低）
-  supervisor-model: ${AI_SUPERVISOR_MODEL:gpt-4o-mini}
+  supervisor-model: ${AI_SUPERVISOR_MODEL:}
   # 视觉识别模型名
   vision-model: ${AI_VISION_MODEL:gpt-4o-mini}
   # OpenAI-compatible API 根地址；留空时 AI 能力标记为未配置
