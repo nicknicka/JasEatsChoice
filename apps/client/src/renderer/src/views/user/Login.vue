@@ -164,7 +164,7 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
 import { useAuthStore } from '../../store/authStore'
@@ -173,8 +173,10 @@ import { useWindowControl } from '../../composables/useWindowControl'
 import { useLoginTransition } from '../../composables/useLoginTransition'
 import WindowTitleBar from '../../components/WindowTitleBar.vue'
 import { resolveAndStorePublicIp } from '../../utils/publicIp'
+import { safeRedirect } from '../../utils/authSession'
 
 const router = useRouter()
+const route = useRoute()
 const { expandToMain } = useWindowControl()
 const { showTransition, hideTransition } = useLoginTransition()
 
@@ -440,7 +442,11 @@ const submitForm = async () => {
           setTimeout(async () => {
             try {
               await expandToMain()
-              await router.push('/user/home')
+              const redirect =
+                safeRedirect(route.query.redirect, '/user') ||
+                safeRedirect(route.query.redirect, '/merchant') ||
+                '/user/home'
+              await router.push(redirect)
             } catch (error) {
               console.error('登录后跳转失败:', error)
               ElMessage.error('登录成功，但页面跳转失败，请重试')

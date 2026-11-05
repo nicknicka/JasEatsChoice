@@ -56,50 +56,8 @@ const DEFAULT_RETRIES = 2
 // 重试延迟（毫秒）
 const RETRY_DELAY = 1000
 
-// 不需要token的接口白名单
-const AUTH_WHITELIST = [
-  '/admin/login', // 管理员登录
-  '/user/login', // 用户登录
-  '/merchant/login', // 商家登录
-  '/v1/user/send-code', // 发送验证码
-  '/v1/user/login', // 用户验证码登录
-  '/v1/user/register', // 用户注册
-  '/v1/captcha' // 验证码接口
-]
-
-// 检查请求是否在白名单中
-const isWhitelisted = (url) => {
-  return AUTH_WHITELIST.some((path) => url.includes(path))
-}
-
 // 请求拦截器
-import pinia from '../store'
-import { useAuthStore } from '../store/authStore'
-import { removeAdminToken } from './auth'
-
-// 处理 token 过期
-const handleTokenExpired = () => {
-  const authStore = useAuthStore(pinia)
-
-  // 清除用户端认证信息
-  authStore.clearAuth()
-
-  // 清除管理员认证信息
-  removeAdminToken()
-
-  // 如果当前不在登录页，则跳转到登录页
-  if (window.location.pathname !== '/login' && window.location.pathname !== '/admin/login') {
-    // 保存当前路径，登录后可以返回
-    const currentPath = window.location.pathname + window.location.search
-
-    // 根据当前路径判断跳转到哪个登录页
-    if (currentPath.startsWith('/admin')) {
-      window.location.href = '/admin/login'
-    } else {
-      window.location.href = '/login?redirect=' + encodeURIComponent(currentPath)
-    }
-  }
-}
+import { addAuthorization, handleAuthExpired, isPublicApi, resolveAuthScope } from './authSession'
 
 api.interceptors.request.use(
   (config) => {
@@ -119,32 +77,7 @@ api.interceptors.request.use(
       })
     }
 
-    // 检查请求是否在白名单中（不需要token的接口）
-    if (isWhitelisted(config.url || '')) {
-      // 白名单接口不添加token
-      return config
-    }
-
-    // 添加请求头，如token等
-    // 优先从 authStore 获取 token（用户端）
-    const authStore = useAuthStore(pinia)
-    let token = authStore.token
-
-    // 如果没有找到 token，尝试从 localStorage 读取管理员 token
-    if (!token) {
-      token = localStorage.getItem('admin_token')
-    }
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-
-      // 从JWT token解析用户ID，添加到请求头用于行为追踪
-      const decoded = decodeJwt(token)
-      if (decoded && decoded.userId) {
-        config.headers['X-User-Id'] = decoded.userId
-      }
-    }
-    return config
+    return addAuthorization(config)
   },
   (error) => {
     console.error('请求错误:', error)
@@ -218,13 +151,12 @@ api.interceptors.response.use(
           break
         case 401:
           formattedError.message = '未授权，请重新登录'
-          // 自动登出并跳转到登录页
-          handleTokenExpired()
+          if (!isPublicApi(error.config?.url)) {
+            handleAuthExpired(resolveAuthScope(error.config?.url))
+          }
           break
         case 403:
-          formattedError.message = '权限不足或登录已过期'
-          // 处理权限不足或token过期情况
-          handleTokenExpired()
+          formattedError.message = '权限不足'
           break
         case 404:
           formattedError.message = '请求的资源不存在'

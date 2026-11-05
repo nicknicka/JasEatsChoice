@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 import { API_CONFIG } from '../config'
 import { useAuthStore } from './authStore'
-const authStore = useAuthStore()
 
 export interface UserInfo {
   userId: string
@@ -53,7 +52,7 @@ export const useUserStore = defineStore('user', {
 
   // Getters (计算属性)
   getters: {
-    isMerchantRegistered: (state) => !!state.userInfo?.merchantId || authStore.hasMerchantId
+    isMerchantRegistered: (state) => !!state.userInfo?.merchantId || !!useAuthStore().hasMerchantId
   },
 
   // Actions (方法)

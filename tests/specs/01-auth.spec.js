@@ -1,4 +1,5 @@
-const { test, expect, loginAsUser, loginAsAdmin, USER_CREDENTIALS } = require('../fixtures/test-base')
+const { test, expect, loginAsUser, loginAsAdmin, bootstrapAdminSession, USER_CREDENTIALS } = require('../fixtures/test-base')
+const { LoginPage } = require('../pages/common')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 const { TEST_API_BASE } = require('../utils/api')
 
@@ -332,6 +333,154 @@ test.describe('模块一：认证模块', () => {
       markPassed('1.7', '退出成功、返回登录页并清空登录态')
     } catch (e) {
       markFailed('1.7', e.message.slice(0, 50))
+      throw e
+    }
+  })
+
+  test('1.8 用户 401 只清用户态并回跳', async ({ page }) => {
+    markRunning('1.8')
+    try {
+      await bootstrapAdminSession(page)
+      await loginAsUser(page)
+
+      await page.route('**/api/v1/auth-expired-probe', (route) =>
+        route.fulfill({ status: 401, contentType: 'application/json', body: '{"code":401}' })
+      )
+      await page.evaluate(() => fetch('/api/v1/auth-expired-probe'))
+
+      await expect(page).toHaveURL(/\/login\?redirect=/)
+      const loginUrl = new URL(page.url())
+      expect(loginUrl.pathname).toBe('/login')
+      expect(loginUrl.searchParams.get('redirect')).toBe('/user/home')
+      const auth = await page.evaluate(() => ({
+        userToken: localStorage.getItem('auth_token'),
+        adminToken: localStorage.getItem('admin_token')
+      }))
+      expect(auth.userToken).toBeNull()
+      expect(auth.adminToken).toBeTruthy()
+
+      markPassed('1.8', '用户 401 清理用户态并保留管理员态')
+    } catch (e) {
+      markFailed('1.8', e.message.slice(0, 50))
+      throw e
+    }
+  })
+
+  test('1.9 管理员 401 只清管理员态并回管理员登录页', async ({ page }) => {
+    markRunning('1.9')
+    try {
+      await loginAsUser(page)
+      await loginAsAdmin(page)
+
+      await page.route('**/api/v1/tutorial/admin/auth-expired-probe', (route) =>
+        route.fulfill({ status: 401, contentType: 'application/json', body: '{"code":401}' })
+      )
+      await page.evaluate(() => fetch('/api/v1/tutorial/admin/auth-expired-probe'))
+
+      await expect(page).toHaveURL(/\/admin\/login\?redirect=/)
+      const loginUrl = new URL(page.url())
+      expect(loginUrl.pathname).toBe('/admin/login')
+      expect(loginUrl.searchParams.get('redirect')).toBe('/admin/dashboard')
+      const auth = await page.evaluate(() => ({
+        userToken: localStorage.getItem('auth_token'),
+        adminToken: localStorage.getItem('admin_token')
+      }))
+      expect(auth.adminToken).toBeNull()
+      expect(auth.userToken).toBeTruthy()
+
+      markPassed('1.9', '管理员 401 清理管理员态并保留用户态')
+    } catch (e) {
+      markFailed('1.9', e.message.slice(0, 50))
+      throw e
+    }
+  })
+
+  test('1.10 公共接口 401 不跳转、不清认证态', async ({ page }) => {
+    markRunning('1.10')
+    try {
+      await loginAsUser(page)
+      await page.goto('/login')
+
+      await page.route('**/api/v1/users/login', (route) =>
+        route.fulfill({ status: 401, contentType: 'application/json', body: '{"code":401}' })
+      )
+      await page.evaluate(() => fetch('/api/v1/users/login', { method: 'POST' }))
+
+      await expect(page).toHaveURL(/\/login$/)
+      const token = await page.evaluate(() => localStorage.getItem('auth_token'))
+      expect(token).toBeTruthy()
+
+      markPassed('1.10', '公共登录接口 401 不误清登录态')
+    } catch (e) {
+      markFailed('1.10', e.message.slice(0, 50))
+      throw e
+    }
+  })
+
+  test('1.11 合法 redirect 登录后回跳', async ({ page }) => {
+    markRunning('1.11')
+    try {
+      await page.goto('/login?redirect=%2Fuser%2Fhome%2Fprofile')
+      const loginPage = new LoginPage(page)
+      await loginPage.ensureAgreementAccepted()
+      await loginPage.fillCredentials(USER_CREDENTIALS.phone, USER_CREDENTIALS.password)
+      await loginPage.submit()
+
+      await page.waitForURL('**/user/home/profile**', { timeout: 20000 })
+
+      markPassed('1.11', '登录成功后按合法 redirect 回跳')
+    } catch (e) {
+      markFailed('1.11', e.message.slice(0, 50))
+      throw e
+    }
+  })
+
+  test('1.12 无 token 直接访问用户页自动跳登录', async ({ page }) => {
+    markRunning('1.12')
+    try {
+      await page.goto('/login')
+      await page.evaluate(() => {
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('auth_userId')
+      })
+
+      await page.goto('/user/home?fromSidebar=true')
+      await page.waitForURL(/\/login\?redirect=/, { timeout: 10000 })
+
+      const loginUrl = new URL(page.url())
+      expect(loginUrl.pathname).toBe('/login')
+      expect(loginUrl.searchParams.get('redirect')).toBe('/user/home?fromSidebar=true')
+
+      markPassed('1.12', '无 token 访问用户页自动跳登录并带 redirect')
+    } catch (e) {
+      markFailed('1.12', e.message.slice(0, 50))
+      throw e
+    }
+  })
+
+  test('1.13 过期 token 直接访问用户页自动跳登录并清理', async ({ page }) => {
+    markRunning('1.13')
+    try {
+      await page.goto('/login')
+      await page.evaluate(() => {
+        const encode = (value) => btoa(JSON.stringify(value)).replace(/=+$/, '')
+        const payload = encode({ userId: '1', exp: Math.floor(Date.now() / 1000) - 3600 })
+        localStorage.setItem('auth_token', `e2e.${payload}.e2e`)
+        localStorage.setItem('auth_userId', '1')
+      })
+
+      await page.goto('/user/home')
+      await page.waitForURL(/\/login\?redirect=/, { timeout: 10000 })
+
+      const loginUrl = new URL(page.url())
+      expect(loginUrl.pathname).toBe('/login')
+      expect(loginUrl.searchParams.get('redirect')).toBe('/user/home')
+      const token = await page.evaluate(() => localStorage.getItem('auth_token'))
+      expect(token).toBeNull()
+
+      markPassed('1.13', '过期 token 访问用户页自动跳登录并清理')
+    } catch (e) {
+      markFailed('1.13', e.message.slice(0, 50))
       throw e
     }
   })
