@@ -99,18 +99,23 @@
 
 - 一个 issue = 一个 worktree + 一个分支，分支名 `codex/<issue>-<slug>`。
 - 起隔离验证栈时统一 `docker compose --project-name codex<issue> ...`，收尾 `down -v`。
-- `deploy/.env` 是 gitignore 的，worktree 里不存在：用临时 env 或接受无 key 降级验证。
+- `deploy/.env` 是 gitignore 的，worktree 里不存在。直接软链主检出的那份最省事，路径同样被 gitignore，不会污染 diff：
+  `ln -sf /Users/nickxiao/jaseats-choice/deploy/.env deploy/.env`。
+- **`node_modules` 同样不在 worktree 里**（已 gitignore），`make web` / `make check` 会直接找不到依赖。从主检出软链：
+  `ln -sfn /Users/nickxiao/jaseats-choice/apps/client/node_modules apps/client/node_modules`，`tests/node_modules` 同理。`ln -sfn` 的 `-n` 不能省，否则第二次执行会套进上一层的软链里去。
+- **不软链就会掉用例**：`04-order.spec.js` 的优惠券清理用例依赖后端连到真库，缺 `deploy/.env` 时该 spec 稳定失败 1 条；掉的是环境不是代码，别按代码问题排查。
 - 提交前 `git checkout -- tests/progress.txt`，任何 PR 都不该含它的 diff。
 
 ## 8. 验收标准
 
 单页实现 sub issue 通过需同时满足：
 
-1. `make screenshots` 重拍该页 1440×900，PR 里附前后对比图。
-2. 视觉对齐 `DESIGN-BASELINE.md` 的 token，并已按该页修改方案逐条落实。
-3. 该页相关的 Playwright spec 全绿（涉及 03/05/06/07/08/09/11~14 的改动必须本地跑对应 spec，不能只看 PR smoke `01/04/10`）。
-4. 审查 agent 独立看图通过，且不只看制作过程与代码。
-5. 不新增 ESLint error；warning 不强求。
+1. `make screenshots` 重拍该页 1440×900；渲染/对比图落 `output/design-l1/<issue>-<名字>.png` 与 `output/design-l2/<slug>-{before,after}.png`（两者都被 gitignore，不入库），PR 正文记录截图路径与渲染场景，由主 agent 看图复核。
+2. 组件类 issue（L1）允许临时挂载渲染取图，但**合入前必须撤掉临时挂载**，PR diff 只允许含目标组件文件。
+3. 视觉对齐 `DESIGN-BASELINE.md` 的 token，并已按该页修改方案逐条落实。
+4. 该页相关的 Playwright spec 全绿（涉及 03/05/06/07/08/09/11~14 的改动必须本地跑对应 spec，不能只看 PR smoke `01/04/10`）。
+5. 审查 agent 独立看图通过，且不只看制作过程与代码。
+6. 不新增 ESLint error；warning 不强求。
 
 不引入自动视觉 diff——截图基线不入库，跑不通。
 
@@ -126,3 +131,4 @@
 - 颜色只有一个来源：`apps/client/src/renderer/src/assets/css/tokens.css`。组件写 CSS 变量，不写裸色值；改主色只改这一处，见 `DESIGN-BASELINE.md` §7.1。
 - Web 与桌面共用同一份 renderer；新增 `window.api.xxx` 必须同步 `platform/webShim.js`。
 - ESLint 只清零 error，warning 不强求。
+- **已知共性残留：`#409eff`（Element Plus 默认蓝）被页面写死**。L0 只切干净了全局变量，源码里仍有 71 处裸色值，集中在 `components/chat/dialogs/*`（`GroupOrderDrawer` 12 处最多）、`ContentSourceList.vue`、`WishListAudit.vue`、`chat/MessageSearchPanel.vue` 与若干 `views/admin/*`。这些不单独开 issue，归到 L2 对应页面的 issue 里清掉；排查用 `grep -rn --include='*.vue' '409eff' apps/client/src/renderer/src`。
