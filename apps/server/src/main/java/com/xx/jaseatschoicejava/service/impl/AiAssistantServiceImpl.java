@@ -114,29 +114,26 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
         请严格返回以下 JSON 对象（不要添加任何其他文字，不要用 markdown 代码块）：
         {
-          "goal": "优化目标标识",
           "recipe": {
             "name": "食谱名称",
-            "difficulty": "简单/中等/困难",
             "ingredients": "食材及用量列表",
-            "steps": "详细烹饪步骤"
+            "steps": "4-6 个简洁烹饪步骤"
           },
           "nutrition": {
             "original": {"calorie": 数字, "protein": 数字, "fat": 数字, "carb": 数字},
             "optimized": {"calorie": 数字, "protein": 数字, "fat": 数字, "carb": 数字}
           },
           "improvements": [
-            {"title": "改进项标题", "detail": "具体说明与量化变化"}
-          ],
-          "estimationNote": "营养数值为 AI 估算，仅供参考"
+            {"title": "改进项标题", "detail": "具体说明变化"}
+          ]
         }
 
         要求：
         1. 只返回 1 个优化方案，不要返回多个方案
-        2. 围绕优化目标调整食谱，goal 字段回填该目标的标识
+        2. 围绕优化目标调整食谱
         3. nutrition.original 为原食谱估算，nutrition.optimized 为优化后的估算
-        4. improvements 每条包含 title 与 detail，说明具体改进与量化变化
-        5. 食材搭配合理，步骤清晰，易于操作
+        4. improvements 返回 2-3 条，detail 说明具体变化，不必强行量化
+        5. 食材搭配合理，步骤控制在 4-6 个，简洁且易于操作
         6. 只返回 JSON 对象，不要其他解释文字
         """;
 

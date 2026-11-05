@@ -318,15 +318,16 @@ test.describe('模块八：AI助手与地址管理', () => {
       await openRecipeTab(page)
       await page.locator('.recipe-textarea').fill(input)
       await page.locator('.recipe-content-wrapper .primary-btn').click()
-      // 流式阶段：token 作为可见内容展示
-      await expect(page.locator('.stream-output-text')).toContainText('优化', { timeout: 15000 })
+      // 流式阶段：真实 token 到达后，阶段提示与已生成字数可见（模型原始 JSON 默认折叠）
+      await expect(page.locator('.stream-live-stage')).toBeVisible({ timeout: 15000 })
+      await expect(page.locator('.stream-live-count')).toContainText('已生成')
       // 终态：结果与端到端耗时可见
       await expect(page.locator('.recipe-result')).toBeVisible({ timeout: 15000 })
       await expect(page.locator('.result-elapsed')).toContainText('耗时')
       await expect(page.locator('.result-title')).toContainText('食谱对比')
       // 成功后保留原始输入
       await expect(page.locator('.recipe-textarea')).toHaveValue(input)
-      markPassed('8.3b', '真实 SSE 流式 token 与最终结果可见且保留输入')
+      markPassed('8.3b', '真实 SSE 流式阶段提示与最终结果可见且保留输入')
     } catch (e) { markFailed('8.3b', e.message.slice(0, 50)); throw e }
   })
 
