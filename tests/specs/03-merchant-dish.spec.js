@@ -194,7 +194,7 @@ test.describe('模块三：商家浏览与详情', () => {
       await page.goto(`/user/home/dish-detail/${encodeURIComponent(dishId)}`)
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
-      await expect(page.locator('.page-title')).toHaveText('菜品详情')
+      await expect(page.locator('.app-page-header__title')).toHaveText('菜品详情')
       await expect(page.locator('.dish-name')).toHaveText(dishName)
       await expect(page.locator('.current-price')).toContainText(`¥${Number(dish.price).toFixed(2)}`)
       markPassed('3.7', `菜品详情展示真实菜品 ${dishName}`)
