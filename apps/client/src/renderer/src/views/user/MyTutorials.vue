@@ -12,6 +12,10 @@ import { Plus, Edit, Delete, Promotion, VideoCamera, Document, View, Clock, Star
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import StatusTag from '../../components/common/StatusTag.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
 
 const router = useRouter()
 
@@ -19,8 +23,9 @@ const router = useRouter()
 const myTutorials = ref([])
 const loading = ref(false)
 const activeTab = ref('all')
+const failedCovers = ref({})
 
-// 统计数据
+// 状态筛选的数量（只驱动 tabs，不再另立统计卡）
 const stats = computed(() => {
   const all = myTutorials.value
   return {
@@ -31,6 +36,29 @@ const stats = computed(() => {
     rejected: all.filter(t => t.status === 'REJECTED').length
   }
 })
+
+// 状态文案统一走一份词典（§3.1、P1 统一状态色与状态文字）
+const STATUS_TEXT = {
+  DRAFT: '草稿',
+  PENDING: '待审核',
+  PUBLISHED: '已发布',
+  REJECTED: '已拒绝'
+}
+const statusText = (status) => STATUS_TEXT[status] || status
+
+// 难度不是语义状态，只用中性标签文字，不参与状态配色
+const DIFFICULTY_TEXT = {
+  BEGINNER: '初级',
+  INTERMEDIATE: '中级',
+  ADVANCED: '高级'
+}
+const difficultyText = (difficulty) => DIFFICULTY_TEXT[difficulty] || ''
+
+// 封面：加载失败立刻退回统一空封面，不再露出 alt 文本（P0）
+const hasCover = (tutorial) => Boolean(tutorial.coverImage) && !failedCovers.value[tutorial.id]
+const markCoverFailed = (id) => {
+  failedCovers.value = { ...failedCovers.value, [id]: true }
+}
 
 // 获取我的教程
 const fetchMyTutorials = async () => {
@@ -203,42 +231,6 @@ const viewTutorial = (tutorial) => {
   router.push(`/user/home/tutorials/${tutorial.id}?from=my`)
 }
 
-// 获取状态标签
-const getStatusTag = (status) => {
-  const map = {
-    DRAFT: { type: 'info', effect: 'plain', text: '草稿', icon: '📝' },
-    PENDING: { type: 'warning', effect: 'plain', text: '待审核', icon: '⏳' },
-    PUBLISHED: { type: 'success', effect: 'dark', text: '已发布', icon: '✅' },
-    REJECTED: { type: 'danger', effect: 'plain', text: '已拒绝', icon: '❌' }
-  }
-  return map[status] || { type: 'info', text: status, icon: '' }
-}
-
-// 获取难度标签
-const getDifficultyTag = (difficulty) => {
-  const map = {
-    BEGINNER: { text: '初级', icon: '🌱', color: '#67c23a' },
-    INTERMEDIATE: { text: '中级', icon: '🌿', color: '#e6a23c' },
-    ADVANCED: { text: '高级', icon: '🌳', color: '#f56c6c' }
-  }
-  return map[difficulty] || { text: '', icon: '', color: '' }
-}
-
-// 判断是否可编辑
-const isEditable = (tutorial) => {
-  return tutorial.status === 'DRAFT' || tutorial.status === 'REJECTED'
-}
-
-// 判断是否可提交
-const canSubmit = (tutorial) => {
-  return tutorial.status === 'DRAFT' || tutorial.status === 'REJECTED'
-}
-
-// 判断是否可删除
-const canDelete = (tutorial) => {
-  return tutorial.status === 'DRAFT'
-}
-
 // 根据Tab筛选数据
 const filteredTutorials = computed(() => {
   switch (activeTab.value) {
@@ -255,6 +247,20 @@ const filteredTutorials = computed(() => {
   }
 })
 
+// 空状态要说清为什么空 + 下一步做什么（§4.5）
+const emptyDescription = computed(() => {
+  if (myTutorials.value.length === 0) {
+    return '还没有教程，发布你的第一条美食制作教程吧'
+  }
+  const label = {
+    draft: '草稿',
+    pending: '待审核',
+    published: '已发布',
+    rejected: '已拒绝'
+  }[activeTab.value]
+  return label ? `当前没有${label}状态的教程，可切换到其他状态查看` : '还没有教程'
+})
+
 // 页面加载时获取数据
 onMounted(() => {
   fetchMyTutorials()
@@ -263,94 +269,22 @@ onMounted(() => {
 
 <template>
   <div class="my-tutorials-container">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="breadcrumb-nav">
-          <el-breadcrumb separator=">">
-            <el-breadcrumb-item
-              @click="() => router.push('/user/home/tutorials')"
-              style="color: #e8eaf5; font-weight: 500; font-size: 0.929rem /* 原值: 13px */; cursor: pointer; transition: all 0.3s;"
-              onmouseover="this.style.color='#ffffff'"
-              onmouseout="this.style.color='#e8eaf5'"
-            >
-              教程广场
-            </el-breadcrumb-item>
-            <el-breadcrumb-item style="color: #ffffff; font-weight: 600; font-size: 0.929rem /* 原值: 13px */;">
-              我的教程
-            </el-breadcrumb-item>
-          </el-breadcrumb>
-          <div class="title-section">
-            <h1>我的教程</h1>
-            <p class="subtitle">管理和分享你的美食制作技巧</p>
-          </div>
-        </div>
-        <el-button type="primary" @click="publishNew" class="publish-btn" size="large">
+    <!-- 页头：标准版标题 --text-h1 + 上下 --space-6，返回放右侧动作区（§4.7） -->
+    <AppPageHeader title="我的教程" subtitle="管理和分享你的美食制作技巧">
+      <template #actions>
+        <CommonBackButton type="default" />
+        <el-button type="primary" @click="publishNew">
           <el-icon><Plus /></el-icon> 发布新教程
         </el-button>
-      </div>
-    </div>
+      </template>
+    </AppPageHeader>
 
-    <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <div class="stat-card total">
-        <div class="stat-icon">
-          <el-icon :size="28"><Document /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.total }}</div>
-          <div class="stat-label">全部教程</div>
-        </div>
-      </div>
-
-      <div class="stat-card draft">
-        <div class="stat-icon">
-          <span class="icon-emoji">📝</span>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.draft }}</div>
-          <div class="stat-label">草稿</div>
-        </div>
-      </div>
-
-      <div class="stat-card pending">
-        <div class="stat-icon">
-          <span class="icon-emoji">⏳</span>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.pending }}</div>
-          <div class="stat-label">待审核</div>
-        </div>
-      </div>
-
-      <div class="stat-card published">
-        <div class="stat-icon">
-          <span class="icon-emoji">✅</span>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.published }}</div>
-          <div class="stat-label">已发布</div>
-        </div>
-      </div>
-
-      <div class="stat-card rejected">
-        <div class="stat-icon">
-          <span class="icon-emoji">❌</span>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.rejected }}</div>
-          <div class="stat-label">已拒绝</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tab切换和内容 -->
-    <div class="content-card">
+    <!-- 状态筛选：全空时收起，避免空状态与筛选重复（§4.5、§4.8） -->
+    <div v-if="myTutorials.length > 0" class="filter-bar">
       <el-tabs v-model="activeTab" class="custom-tabs">
         <el-tab-pane name="all">
           <template #label>
             <span class="tab-label">
-              <span class="tab-icon">📚</span>
               全部教程
               <el-badge v-if="stats.total > 0" :value="stats.total" class="tab-badge" />
             </span>
@@ -360,7 +294,6 @@ onMounted(() => {
         <el-tab-pane name="draft">
           <template #label>
             <span class="tab-label">
-              <span class="tab-icon">📝</span>
               草稿
               <el-badge v-if="stats.draft > 0" :value="stats.draft" class="tab-badge" />
             </span>
@@ -370,7 +303,6 @@ onMounted(() => {
         <el-tab-pane name="pending">
           <template #label>
             <span class="tab-label">
-              <span class="tab-icon">⏳</span>
               待审核
               <el-badge v-if="stats.pending > 0" :value="stats.pending" class="tab-badge" />
             </span>
@@ -380,7 +312,6 @@ onMounted(() => {
         <el-tab-pane name="published">
           <template #label>
             <span class="tab-label">
-              <span class="tab-icon">✅</span>
               已发布
               <el-badge v-if="stats.published > 0" :value="stats.published" class="tab-badge" />
             </span>
@@ -390,761 +321,384 @@ onMounted(() => {
         <el-tab-pane name="rejected">
           <template #label>
             <span class="tab-label">
-              <span class="tab-icon">❌</span>
               已拒绝
               <el-badge v-if="stats.rejected > 0" :value="stats.rejected" class="tab-badge" />
             </span>
           </template>
         </el-tab-pane>
       </el-tabs>
+    </div>
 
-      <!-- 教程列表 -->
-      <div v-loading="loading" class="tutorial-list">
-        <el-empty v-if="!loading && filteredTutorials.length === 0" description="暂无教程">
-          <template #image>
-            <div class="empty-icon">
-              <el-icon :size="100" color="#ddd"><Document /></el-icon>
+    <!-- 教程列表 -->
+    <div v-loading="loading" class="tutorial-list">
+      <AppEmptyState
+        v-if="!loading && filteredTutorials.length === 0"
+        :description="emptyDescription"
+        action-text="发布新教程"
+        :icon="Document"
+        @action="publishNew"
+      />
+
+      <div v-else :key="activeTab" class="tutorial-grid">
+        <article
+          v-for="tutorial in filteredTutorials"
+          :key="tutorial.id"
+          class="tutorial-card"
+          tabindex="0"
+          @click="viewTutorial(tutorial)"
+          @keydown.enter="viewTutorial(tutorial)"
+        >
+          <!-- 教程封面：失败或缺失都退回同一套空封面（P0） -->
+          <div class="tutorial-cover">
+            <img
+              v-if="hasCover(tutorial)"
+              :src="tutorial.coverImage"
+              :alt="tutorial.title"
+              @error="markCoverFailed(tutorial.id)"
+            />
+            <div v-else class="tutorial-cover__placeholder">
+              <el-icon :size="40">
+                <VideoCamera v-if="tutorial.type === 'video'" />
+                <Document v-else />
+              </el-icon>
+              <span>{{ tutorial.type === 'video' ? '视频教程' : '图文指南' }}</span>
             </div>
-          </template>
-          <el-button type="primary" @click="publishNew" :icon="Plus">
-            发布第一个教程
-          </el-button>
-        </el-empty>
+            <span class="tutorial-cover__badge">
+              <el-icon>
+                <VideoCamera v-if="tutorial.type === 'video'" />
+                <Document v-else />
+              </el-icon>
+              {{ tutorial.type === 'video' ? '视频' : '图文' }}
+            </span>
+          </div>
 
-        <div v-else class="tutorial-grid">
-          <div
-            v-for="tutorial in filteredTutorials"
-            :key="tutorial.id"
-            class="tutorial-card"
-            @click="viewTutorial(tutorial)"
-          >
-            <!-- 教程封面 -->
-            <div class="tutorial-cover" v-if="tutorial.coverImage">
-              <img :src="tutorial.coverImage" :alt="tutorial.title" />
-              <div class="cover-type-badge" :class="tutorial.type">
-                <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
-                <el-icon v-else><Document /></el-icon>
-              </div>
+          <!-- 教程内容 -->
+          <div class="tutorial-content">
+            <div class="tutorial-tags">
+              <StatusTag :status="tutorial.status" :text="statusText(tutorial.status)" size="sm" />
+              <el-tag v-if="tutorial.difficulty" size="small" effect="plain" class="difficulty-tag">
+                {{ difficultyText(tutorial.difficulty) }}
+              </el-tag>
             </div>
-            <div class="tutorial-cover placeholder" :class="`type-${tutorial.type}`" v-else>
-              <div class="placeholder-content">
-                <div class="placeholder-icon">
-                  <el-icon :size="64">
-                    <VideoCamera v-if="tutorial.type === 'video'" />
-                    <Document v-else />
-                  </el-icon>
-                </div>
-                <div class="placeholder-text">
-                  <span class="placeholder-type">{{ tutorial.type === 'video' ? '视频教程' : '图文指南' }}</span>
-                  <span class="placeholder-hint">暂无封面</span>
-                </div>
+
+            <h3 class="tutorial-title">{{ tutorial.title }}</h3>
+
+            <div class="tutorial-meta">
+              <div class="meta-item" v-if="tutorial.duration">
+                <el-icon><Clock /></el-icon>
+                <span>{{ tutorial.duration }}</span>
               </div>
-              <div class="cover-type-badge" :class="tutorial.type">
-                <el-icon v-if="tutorial.type === 'video'"><VideoCamera /></el-icon>
-                <el-icon v-else><Document /></el-icon>
+              <div class="meta-item" v-if="tutorial.view_count !== undefined">
+                <el-icon><View /></el-icon>
+                <span>{{ tutorial.view_count?.toLocaleString() || 0 }} 次浏览</span>
+              </div>
+              <div class="meta-item" v-if="tutorial.rating > 0">
+                <el-icon><Star /></el-icon>
+                <span>{{ tutorial.rating }} ({{ tutorial.rating_count }}人评价)</span>
               </div>
             </div>
 
-            <!-- 教程内容 -->
-            <div class="tutorial-content">
-              <!-- 状态标签 -->
-              <div class="status-tags">
-                <el-tag
-                  :type="getStatusTag(tutorial.status).type"
-                  :effect="getStatusTag(tutorial.status).effect"
-                  size="small"
-                  class="status-tag"
-                >
-                  <span class="tag-icon">{{ getStatusTag(tutorial.status).icon }}</span>
-                  {{ getStatusTag(tutorial.status).text }}
-                </el-tag>
-                <el-tag
-                  v-if="tutorial.difficulty"
-                  size="small"
-                  effect="plain"
-                  class="difficulty-tag"
-                  :style="{ color: getDifficultyTag(tutorial.difficulty).color }"
-                >
-                  <span class="tag-icon">{{ getDifficultyTag(tutorial.difficulty).icon }}</span>
-                  {{ getDifficultyTag(tutorial.difficulty).text }}
-                </el-tag>
-              </div>
-
-              <h3 class="tutorial-title">{{ tutorial.title }}</h3>
-
-              <div class="tutorial-meta">
-                <div class="meta-item" v-if="tutorial.duration">
-                  <el-icon><Clock /></el-icon>
-                  <span>{{ tutorial.duration }}</span>
-                </div>
-                <div class="meta-item" v-if="tutorial.view_count !== undefined">
-                  <el-icon><View /></el-icon>
-                  <span>{{ tutorial.view_count?.toLocaleString() || 0 }} 次浏览</span>
-                </div>
-                <div class="meta-item" v-if="tutorial.rating > 0">
-                  <el-icon><Star /></el-icon>
-                  <span>{{ tutorial.rating }} ({{ tutorial.rating_count }}人评价)</span>
-                </div>
-              </div>
-
-              <div class="tutorial-footer">
-                <span class="create-time">{{ tutorial.created_at?.split(' ')[0] || '' }}</span>
-                <div class="action-buttons" @click.stop>
-                  <el-button
-                    v-if="isEditable(tutorial)"
-                    type="primary"
-                    size="small"
-                    @click="editTutorial(tutorial)"
-                  >
+            <div class="tutorial-footer">
+              <span class="create-time">{{ tutorial.created_at?.split(' ')[0] || '' }}</span>
+              <div class="action-buttons" @click.stop>
+                <!-- 草稿：编辑 / 提交审核 / 删除 -->
+                <template v-if="tutorial.status === 'DRAFT'">
+                  <el-button type="primary" link @click="editTutorial(tutorial)">
                     <el-icon><Edit /></el-icon> 编辑
                   </el-button>
-                  <el-button
-                    v-if="canSubmit(tutorial)"
-                    type="success"
-                    size="small"
-                    @click="submitForReview(tutorial)"
-                  >
+                  <el-button link @click="submitForReview(tutorial)">
                     <el-icon><Promotion /></el-icon> 提交审核
                   </el-button>
-                  <el-button
-                    v-if="canDelete(tutorial)"
-                    type="danger"
-                    size="small"
-                    @click="deleteTutorial(tutorial)"
-                  >
+                  <el-button type="danger" link @click="deleteTutorial(tutorial)">
                     <el-icon><Delete /></el-icon> 删除
                   </el-button>
-                  <el-button
-                    v-if="tutorial.status === 'PUBLISHED'"
-                    type="info"
-                    size="small"
-                    @click="viewTutorial(tutorial)"
-                  >
+                </template>
+                <!-- 已拒绝：重新提交 / 编辑 -->
+                <template v-else-if="tutorial.status === 'REJECTED'">
+                  <el-button type="primary" link @click="submitForReview(tutorial)">
+                    <el-icon><Promotion /></el-icon> 重新提交
+                  </el-button>
+                  <el-button link @click="editTutorial(tutorial)">
+                    <el-icon><Edit /></el-icon> 编辑
+                  </el-button>
+                </template>
+                <!-- 待审核：查看审核 -->
+                <template v-else-if="tutorial.status === 'PENDING'">
+                  <el-button type="primary" link @click="viewTutorial(tutorial)">
+                    <el-icon><View /></el-icon> 查看审核
+                  </el-button>
+                </template>
+                <!-- 已发布：查看 -->
+                <template v-else>
+                  <el-button type="primary" link @click="viewTutorial(tutorial)">
                     <el-icon><View /></el-icon> 查看
                   </el-button>
-                </div>
+                </template>
               </div>
             </div>
-
-            <!-- 装饰性渐变 -->
-            <div class="card-decoration" :class="getStatusTag(tutorial.status).type"></div>
           </div>
-        </div>
+        </article>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
+/* 颜色、间距、圆角、字阶全部来自 tokens.css（§3、§7.1）。 */
 .my-tutorials-container {
-  padding: @nordic-space-lg;
-  background: linear-gradient(180deg, @nordic-bg 0%, @nordic-surface 100%);
-  min-height: calc(100vh - 60px);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
+}
 
-  .page-header {
-    margin-bottom: @nordic-space-lg;
+/* 页头动作区控件高度取 --control-height-md（§3.4、§4.7）。 */
+.my-tutorials-container :deep(.app-page-header__actions .el-button) {
+  height: var(--control-height-md);
+  min-height: var(--control-height-md);
+}
 
-    .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 28px @nordic-space-xl;
-      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
-      border-radius: @nordic-radius-lg;
-      box-shadow: 0 8px 24px fade(@nordic-accent, 25%);
+/* 状态筛选条：本页唯一的状态入口，不与统计卡重复（§4.5、§4.8）。 */
+.filter-bar {
+  padding: 0 var(--space-5);
+  margin-bottom: var(--card-gap);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
 
-      .breadcrumb-nav {
-        display: flex;
-        flex-direction: column;
-        gap: @nordic-space-sm + 4px;
-
-        :deep(.el-breadcrumb) {
-          .el-breadcrumb__separator {
-            color: @nordic-border !important;
-          }
-
-          .el-breadcrumb__inner {
-            color: @nordic-border !important;
-            font-weight: 500 !important;
-            font-size: @nordic-text-sm !important;
-            transition: all 0.3s ease;
-          }
-
-          .el-breadcrumb__item {
-            &:hover .el-breadcrumb__inner {
-              color: @nordic-surface !important;
-              text-shadow: 0 0 8px rgba(255, 255, 255, 0.5) !important;
-            }
-          }
-
-          .el-breadcrumb__item:last-child {
-            .el-breadcrumb__inner {
-              color: @nordic-surface !important;
-              font-weight: 600 !important;
-            }
-          }
-        }
-
-        .title-section {
-          h1 {
-            margin: 0 0 6px 0;
-            font-size: 30px;
-            font-weight: 800;
-            color: @nordic-surface;
-            letter-spacing: 0.5px;
-            line-height: 1.3;
-          }
-
-          .subtitle {
-            margin: 0;
-            font-size: @nordic-text-base;
-            font-weight: 400;
-            color: rgba(255, 255, 255, 0.75);
-            letter-spacing: 0.3px;
-            line-height: 1.5;
-          }
-        }
-      }
-
-      .publish-btn {
-        background: @nordic-surface;
-        border: none;
-        color: @nordic-accent;
-        font-weight: 600;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
-
-        &:hover {
-          background: @nordic-bg;
-          transform: translateY(-2px) scale(1.02);
-          box-shadow: 0 8px 20px rgba(255, 255, 255, 0.4);
-        }
-
-        &:active {
-          transform: translateY(0) scale(0.98);
-        }
-      }
-    }
+  :deep(.el-tabs__header) {
+    margin: 0;
   }
 
-  .stats-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: @nordic-space-md;
-    margin-bottom: @nordic-space-lg;
-
-    .stat-card {
-      .nordic-card();
-      border-radius: @nordic-radius-md;
-      padding: 20px @nordic-space-lg;
-      display: flex;
-      align-items: center;
-      gap: @nordic-space-md;
-      box-shadow: 0 2px 12px @nordic-shadow;
-      transition: all 0.3s;
-      position: relative;
-      overflow: hidden;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-      }
-
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px @nordic-shadow-hover;
-      }
-
-      &.total::before {
-        background: linear-gradient(180deg, @nordic-accent 0%, @nordic-blue 100%);
-      }
-
-      &.draft::before {
-        background: linear-gradient(180deg, @nordic-text-muted 0%, @nordic-text-secondary 100%);
-      }
-
-      &.pending::before {
-        background: linear-gradient(180deg, @nordic-yellow 0%, #d9983a 100%);
-      }
-
-      &.published::before {
-        background: linear-gradient(180deg, @nordic-green 0%, #5abd34 100%);
-      }
-
-      &.rejected::before {
-        background: linear-gradient(180deg, @nordic-red 0%, #f35858 100%);
-      }
-
-      .stat-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: @nordic-radius-md;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-
-        .total & {
-          background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
-          color: @nordic-surface;
-        }
-
-        .draft & {
-          background: linear-gradient(135deg, @nordic-text-muted 0%, @nordic-text-secondary 100%);
-        }
-
-        .pending & {
-          background: linear-gradient(135deg, @nordic-yellow 0%, #d9983a 100%);
-        }
-
-        .published & {
-          background: linear-gradient(135deg, @nordic-green 0%, #5abd34 100%);
-        }
-
-        .rejected & {
-          background: linear-gradient(135deg, @nordic-red 0%, #f35858 100%);
-        }
-
-        .icon-emoji {
-          font-size: 2rem /* 原值: 28px */;
-        }
-      }
-
-      .stat-info {
-        .stat-value {
-          font-size: 2rem /* 原值: 28px */;
-          font-weight: bold;
-          color: @nordic-text;
-          margin-bottom: 4px;
-          line-height: 1;
-        }
-
-        .stat-label {
-          font-size: @nordic-text-sm;
-          color: @nordic-text-muted;
-        }
-      }
-    }
+  :deep(.el-tabs__nav-wrap::after) {
+    display: none;
   }
 
-  .content-card {
-    .nordic-card();
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 2px 12px @nordic-shadow;
-    overflow: hidden;
+  :deep(.el-tabs__item) {
+    padding: var(--space-4);
+    font-size: var(--text-body);
+    font-weight: var(--weight-medium);
+    color: var(--ink-500);
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
 
-    .custom-tabs {
-      padding: 0 @nordic-space-lg;
+  :deep(.el-tabs__item.is-active) {
+    color: var(--brand-600);
+  }
 
-      :deep(.el-tabs__header) {
-        margin: 0;
-        border-bottom: 2px solid @nordic-divider;
-      }
+  :deep(.el-tabs__active-bar) {
+    height: 2px;
+    border-radius: var(--radius-full);
+    background-color: var(--brand-500);
+  }
 
-      :deep(.el-tabs__nav-wrap::after) {
-        display: none;
-      }
+  :deep(.el-badge__content) {
+    border: none;
+    background-color: var(--neutral-bg);
+    color: var(--ink-700);
+  }
 
-      :deep(.el-tabs__item) {
-        padding: 20px @nordic-space-lg;
-        font-size: 1.071rem /* 原值: 15px */;
-        font-weight: 500;
-        color: @nordic-text-secondary;
+  .tab-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
 
-        &.is-active {
-          color: @nordic-accent;
-        }
-
-        .tab-label {
-          display: flex;
-          align-items: center;
-          gap: @nordic-space-sm;
-
-          .tab-icon {
-            font-size: 1.286rem /* 原值: 18px */;
-          }
-
-          .tab-badge {
-            margin-left: 4px;
-          }
-        }
-      }
-
-      :deep(.el-tabs__active-bar) {
-        background-color: @nordic-accent;
-        height: 3px;
-        border-radius: 3px 3px 0 0;
-      }
-    }
-
-    .tutorial-list {
-      padding: @nordic-space-lg;
-      min-height: 400px;
-
-      .tutorial-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: @nordic-space-lg;
-
-        .tutorial-card {
-          background: @nordic-surface;
-          border: 1px solid @nordic-border;
-          border-radius: @nordic-radius-md;
-          overflow: hidden;
-          cursor: pointer;
-          transition: all 0.3s;
-          position: relative;
-
-          &:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 32px @nordic-shadow-hover;
-            border-color: @nordic-accent;
-          }
-
-          .tutorial-cover {
-            position: relative;
-            height: 180px;
-            overflow: hidden;
-
-            img {
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-            }
-
-            &.placeholder {
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: @nordic-surface;
-              position: relative;
-
-              // 视频教程的渐变背景
-              &.type-video {
-                background: linear-gradient(135deg, @nordic-red 0%, #ff8e8e 50%, #ffa8a8 100%);
-              }
-
-              // 图文指南的渐变背景
-              &.type-article {
-                background: linear-gradient(135deg, @nordic-yellow 0%, #ffcc80 50%, #ffd699 100%);
-              }
-
-              // 装饰性图案
-              &::before {
-                content: '';
-                position: absolute;
-                top: -50%;
-                left: -50%;
-                width: 200%;
-                height: 200%;
-                background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-                animation: rotate 20s linear infinite;
-              }
-
-              @keyframes rotate {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-              }
-
-              .placeholder-content {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 12px;
-                z-index: 1;
-                position: relative;
-
-                .placeholder-icon {
-                  opacity: 0.9;
-                  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
-                  animation: float 3s ease-in-out infinite;
-                }
-
-                @keyframes float {
-                  0%, 100% { transform: translateY(0); }
-                  50% { transform: translateY(-8px); }
-                }
-
-                .placeholder-text {
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  gap: 4px;
-
-                  .placeholder-type {
-                    font-size: 1.143rem /* 原值: 16px */;
-                    font-weight: 600;
-                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                  }
-
-                  .placeholder-hint {
-                    font-size: 0.857rem /* 原值: 12px */;
-                    opacity: 0.85;
-                    font-weight: 400;
-                  }
-                }
-              }
-            }
-
-            .cover-type-badge {
-              position: absolute;
-              top: 12px;
-              right: 12px;
-              width: 36px;
-              height: 36px;
-              border-radius: @nordic-radius-sm;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              backdrop-filter: blur(10px);
-              color: @nordic-surface;
-              z-index: 2;
-
-              &.video {
-                background: rgba(212, 123, 123, 0.9);
-              }
-
-              &.article {
-                background: rgba(226, 180, 85, 0.9);
-              }
-            }
-          }
-
-          .tutorial-content {
-            padding: 20px;
-
-            .status-tags {
-              display: flex;
-              gap: @nordic-space-sm;
-              margin-bottom: 12px;
-              flex-wrap: wrap;
-
-              .status-tag,
-              .difficulty-tag {
-                border-radius: 20px;
-                font-weight: 500;
-
-                .tag-icon {
-                  margin-right: 4px;
-                }
-              }
-            }
-
-            .tutorial-title {
-              font-size: 1.286rem /* 原值: 18px */;
-              font-weight: 700;
-              color: @nordic-text;
-              margin: 0 0 12px 0;
-              line-height: 1.5;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              display: -webkit-box;
-              -webkit-line-clamp: 2;
-              -webkit-box-orient: vertical;
-              min-height: 54px;
-            }
-
-            .tutorial-meta {
-              display: flex;
-              gap: @nordic-space-md;
-              margin-bottom: @nordic-space-md;
-              flex-wrap: wrap;
-
-              .meta-item {
-                display: flex;
-                align-items: center;
-                gap: 4px;
-                font-size: @nordic-text-sm;
-                color: @nordic-text-muted;
-
-                .el-icon {
-                  font-size: 1rem /* 原值: 14px */;
-                }
-              }
-            }
-
-            .tutorial-footer {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              padding-top: 12px;
-              border-top: 1px solid @nordic-divider;
-
-              .create-time {
-                font-size: @nordic-text-xs;
-                color: @nordic-text-muted;
-              }
-
-              .action-buttons {
-                display: flex;
-                gap: @nordic-space-sm;
-              }
-            }
-          }
-
-          .card-decoration {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            opacity: 0;
-            transition: opacity 0.3s;
-
-            &.info {
-              background: linear-gradient(90deg, @nordic-text-muted 0%, @nordic-text-secondary 100%);
-            }
-
-            &.warning {
-              background: linear-gradient(90deg, @nordic-yellow 0%, #d9983a 100%);
-            }
-
-            &.success {
-              background: linear-gradient(90deg, @nordic-green 0%, #5abd34 100%);
-            }
-
-            &.danger {
-              background: linear-gradient(90deg, @nordic-red 0%, #f35858 100%);
-            }
-          }
-
-          &:hover .card-decoration {
-            opacity: 1;
-          }
-        }
-      }
-    }
-
-    .empty-icon {
-      margin-bottom: 20px;
-      animation: float 3s ease-in-out infinite;
-    }
+  .tab-badge {
+    margin-left: var(--space-1);
   }
 }
 
-@keyframes float {
-  0%, 100% {
+.tutorial-list {
+  min-height: 320px;
+}
+
+.tutorial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--card-gap);
+  animation: grid-enter var(--duration-base) var(--ease-out) both;
+}
+
+/* 列表进入：只做一次性位移 + 淡入，时长/曲线取 token（§3.5） */
+@keyframes grid-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
     transform: translateY(0);
   }
-  50% {
-    transform: translateY(-10px);
+}
+
+/* 教程卡：L2 浮起，hover 抬升不超过 2px（§3.4） */
+.tutorial-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--surface-highlight);
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: var(--brand-300);
+    box-shadow: var(--shadow-md), inset 0 1px 0 var(--surface-highlight);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-400);
+    outline-offset: 2px;
   }
 }
 
-@media (max-width: 1200px) {
-  .my-tutorials-container {
-    .stats-cards {
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    }
+.tutorial-cover {
+  position: relative;
+  height: 176px;
+  background: var(--canvas-sunken);
 
-    .content-card {
-      .tutorial-list {
-        .tutorial-grid {
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        }
-      }
-    }
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* 统一空封面：中性表面，不用彩色渐变铺底（§3.4、§7.1） */
+.tutorial-cover__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 100%;
+  color: var(--ink-400);
+  font-size: var(--text-body-sm);
+}
+
+.tutorial-cover__badge {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--surface-scrim);
+  backdrop-filter: blur(8px);
+  color: var(--ink-700);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-medium);
+}
+
+.tutorial-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: var(--space-3);
+  padding: var(--card-padding);
+}
+
+.tutorial-tags {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.difficulty-tag {
+  border-color: var(--line-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink-500);
+}
+
+.tutorial-title {
+  margin: 0;
+  min-height: 48px;
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 24px;
+  color: var(--ink-900);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.tutorial-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.tutorial-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.create-time {
+  font-size: var(--text-caption);
+  color: var(--ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 卡片动作取 --control-height-sm（§3.4） */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  :deep(.el-button) {
+    height: var(--control-height-sm);
+    min-height: var(--control-height-sm);
+    padding: 0;
+    font-size: var(--text-body-sm);
   }
 }
 
 @media (max-width: 768px) {
   .my-tutorials-container {
-    padding: @nordic-space-md;
+    padding: 0 var(--space-4) var(--space-8);
+  }
 
-    .page-header {
-      .header-content {
-        flex-direction: column;
-        gap: @nordic-space-md;
-        padding: 20px;
+  .filter-bar {
+    padding: 0 var(--space-3);
 
-        .breadcrumb-nav {
-          width: 100%;
-          gap: @nordic-space-sm;
-
-          :deep(.el-breadcrumb) {
-            font-size: @nordic-text-sm;
-
-            .breadcrumb-item,
-            .breadcrumb-current {
-              font-size: @nordic-text-sm;
-            }
-          }
-
-          .title-section {
-            h1 {
-              font-size: 22px;
-            }
-
-            .subtitle {
-              font-size: @nordic-text-sm;
-            }
-          }
-        }
-
-        .publish-btn {
-          width: 100%;
-        }
-      }
+    :deep(.el-tabs__item) {
+      padding: var(--space-3) var(--space-2);
+      font-size: var(--text-body-sm);
     }
+  }
 
-    .stats-cards {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-
-      .stat-card {
-        padding: @nordic-space-md;
-
-        .stat-icon {
-          width: 48px;
-          height: 48px;
-        }
-
-        .stat-info {
-          .stat-value {
-            font-size: 1.714rem /* 原值: 24px */;
-          }
-
-          .stat-label {
-            font-size: @nordic-text-xs;
-          }
-        }
-      }
-    }
-
-    .content-card {
-      .custom-tabs {
-        padding: 0 @nordic-space-md;
-
-        :deep(.el-tabs__item) {
-          padding: @nordic-space-md 12px;
-          font-size: @nordic-text-base;
-
-          .tab-label {
-            gap: 4px;
-
-            .tab-icon {
-              font-size: 1.143rem /* 原值: 16px */;
-            }
-          }
-        }
-      }
-
-      .tutorial-list {
-        padding: @nordic-space-md;
-
-        .tutorial-grid {
-          grid-template-columns: 1fr;
-          gap: @nordic-space-md;
-        }
-      }
-    }
+  .tutorial-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
