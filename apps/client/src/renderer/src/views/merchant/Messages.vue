@@ -834,8 +834,6 @@ const refreshMessages = async () => {
 @import '../../assets/css/merchant-theme.less';
 
 .messages-management-container {
-  --card-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-
   box-sizing: border-box;
   padding: 0 var(--space-6) var(--space-6);
 
@@ -867,7 +865,7 @@ const refreshMessages = async () => {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
-    box-shadow: var(--card-highlight);
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
   }
 
   .stats-secondary__value {
@@ -894,7 +892,7 @@ const refreshMessages = async () => {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
-    box-shadow: var(--card-highlight);
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
   }
 
   .category-tags {
@@ -932,6 +930,11 @@ const refreshMessages = async () => {
     &:hover {
       color: var(--brand-500);
       border-color: var(--brand-300);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brand-400);
+      outline-offset: 2px;
     }
 
     &.active {
@@ -987,7 +990,7 @@ const refreshMessages = async () => {
           border-radius: var(--radius-lg);
           margin-bottom: var(--card-gap-compact);
           background: var(--surface);
-          box-shadow: var(--card-highlight);
+          box-shadow: inset 0 1px 0 var(--surface-highlight);
           cursor: pointer;
           transition:
             border-color var(--duration-fast) var(--ease-standard),
