@@ -25,6 +25,8 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden; /* 防止出现双滚动条 */
+  /* §3.2 全局默认字体：没有显式写 font-family 的元素回落到 Inter/PingFang SC，而非浏览器默认 Times */
+  font-family: var(--font-sans);
 }
 
 #app {
