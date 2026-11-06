@@ -8,164 +8,170 @@
     <!-- 自定义标题栏 -->
     <WindowTitleBar />
 
-    <!-- 标题 -->
-    <div class="register-header">
-      <h1 class="register-title">创建账号</h1>
-      <!-- 步骤指示器 -->
-      <div class="steps-indicator">
-        <div class="step-dot" :class="{ active: currentStep >= 1, done: currentStep > 1 }">
-          <span v-if="currentStep > 1">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </span>
-          <span v-else>1</span>
-        </div>
-        <div class="step-line" :class="{ filled: currentStep > 1 }"></div>
-        <div class="step-dot" :class="{ active: currentStep >= 2 }">2</div>
+    <main class="register-panel">
+      <!-- 标题 -->
+      <div class="register-header">
+        <h1 class="register-title">创建账号</h1>
+        <!-- 步骤指示器 -->
+        <ol class="steps-indicator">
+          <li class="step-item" :class="{ 'is-active': currentStep === 1, 'is-done': currentStep > 1 }">
+            <span class="step-dot">
+              <svg v-if="currentStep > 1" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              <span v-else>1</span>
+            </span>
+            <span class="step-label">设置登录信息</span>
+          </li>
+          <li class="step-item" :class="{ 'is-active': currentStep === 2 }">
+            <span class="step-dot">2</span>
+            <span class="step-label">完成注册</span>
+          </li>
+        </ol>
       </div>
-      <p class="step-desc">{{ currentStep === 1 ? '设置登录信息' : '填写联系方式' }}</p>
-    </div>
 
-    <!-- 表单卡片 -->
-    <div class="glass-card">
-      <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" @submit.prevent>
-        <transition name="slide" mode="out-in">
-          <!-- 步骤1：基本信息 -->
-          <div v-if="currentStep === 1" key="step1" class="step-content">
-            <el-form-item prop="nickname">
-              <el-input
-                v-model="registerForm.nickname"
-                placeholder="用户名"
-                autocomplete="off"
-              >
-                <template #prefix>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item prop="password">
-              <el-input
-                v-model="registerForm.password"
-                type="password"
-                placeholder="密码（6-32位）"
-                show-password
-              >
-                <template #prefix>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <rect x="3" y="11" width="18" height="11" rx="2"/>
-                    <path d="M7 11V7a5 5 0 0110 0v4"/>
-                  </svg>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item prop="confirmPassword">
-              <el-input
-                v-model="registerForm.confirmPassword"
-                type="password"
-                placeholder="确认密码"
-                show-password
-              >
-                <template #prefix>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  </svg>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <button class="step-btn next-btn" @click="nextStep">
-              <span>下一步</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            </button>
-          </div>
-
-          <!-- 步骤2：联系方式 -->
-          <div v-else key="step2" class="step-content">
-            <el-form-item prop="email">
-              <el-input
-                v-model="registerForm.email"
-                placeholder="邮箱"
-                type="email"
-              >
-                <template #prefix>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <rect x="2" y="4" width="20" height="16" rx="2"/>
-                    <path d="M22 4l-10 8L2 4"/>
-                  </svg>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item prop="phone">
-              <el-input
-                v-model="registerForm.phone"
-                placeholder="手机号"
-              >
-                <template #prefix>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <rect x="5" y="2" width="14" height="20" rx="2"/>
-                    <line x1="12" y1="18" x2="12" y2="18.01"/>
-                  </svg>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item prop="captcha">
-              <div class="captcha-row">
+      <!-- 表单卡片 -->
+      <AppFormContainer variant="auth">
+        <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" @submit.prevent>
+          <transition name="slide" mode="out-in">
+            <!-- 步骤1：基本信息 -->
+            <div v-if="currentStep === 1" key="step1" class="step-content">
+              <el-form-item prop="nickname">
                 <el-input
-                  v-model="registerForm.captcha"
-                  placeholder="验证码"
+                  v-model="registerForm.nickname"
+                  placeholder="用户名"
+                  autocomplete="off"
                 >
                   <template #prefix>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                      <path d="M2 17l10 5 10-5"/>
-                      <path d="M2 12l10 5 10-5"/>
+                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
                     </svg>
                   </template>
                 </el-input>
-                <img
-                  :src="captchaBase64"
-                  alt="验证码"
-                  class="captcha-img"
-                  @click="generateCaptcha"
-                />
-                <button class="captcha-refresh" @click.prevent="generateCaptcha" title="刷新验证码">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M23 4v6h-6"/>
-                    <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
-                  </svg>
-                </button>
-              </div>
-            </el-form-item>
+              </el-form-item>
 
-            <div class="btn-row">
-              <button class="step-btn back-btn" @click="prevStep">
+              <el-form-item prop="password" class="password-field">
+                <el-input
+                  v-model="registerForm.password"
+                  type="password"
+                  placeholder="密码（6-32位）"
+                  show-password
+                >
+                  <template #prefix>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/>
+                      <path d="M7 11V7a5 5 0 0110 0v4"/>
+                    </svg>
+                  </template>
+                </el-input>
+                <p class="field-hint">密码需为 6-32 位字符</p>
+              </el-form-item>
+
+              <el-form-item prop="confirmPassword">
+                <el-input
+                  v-model="registerForm.confirmPassword"
+                  type="password"
+                  placeholder="确认密码"
+                  show-password
+                >
+                  <template #prefix>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                  </template>
+                </el-input>
+              </el-form-item>
+
+              <button class="step-btn next-btn" @click="nextStep">
+                <span>下一步</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="15 18 9 12 15 6"/>
+                  <polyline points="9 18 15 12 9 6"/>
                 </svg>
-                <span>返回</span>
-              </button>
-              <button class="step-btn submit-btn" @click="submitForm" :disabled="isSubmitting">
-                <span>{{ isSubmitting ? '注册中...' : '注册' }}</span>
               </button>
             </div>
-          </div>
-        </transition>
-      </el-form>
 
-      <!-- 底部链接 -->
-      <div class="bottom-links">
-        <span>已有账号？</span>
-        <a class="link" @click="toLogin">立即登录</a>
-      </div>
-    </div>
+            <!-- 步骤2：联系方式 -->
+            <div v-else key="step2" class="step-content">
+              <h2 class="step-title">填写联系方式</h2>
+              <el-form-item prop="email">
+                <el-input
+                  v-model="registerForm.email"
+                  placeholder="邮箱"
+                  type="email"
+                >
+                  <template #prefix>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <rect x="2" y="4" width="20" height="16" rx="2"/>
+                      <path d="M22 4l-10 8L2 4"/>
+                    </svg>
+                  </template>
+                </el-input>
+              </el-form-item>
+
+              <el-form-item prop="phone">
+                <el-input
+                  v-model="registerForm.phone"
+                  placeholder="手机号"
+                >
+                  <template #prefix>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <rect x="5" y="2" width="14" height="20" rx="2"/>
+                      <line x1="12" y1="18" x2="12" y2="18.01"/>
+                    </svg>
+                  </template>
+                </el-input>
+              </el-form-item>
+
+              <el-form-item prop="captcha">
+                <div class="captcha-row">
+                  <el-input
+                    v-model="registerForm.captcha"
+                    placeholder="验证码"
+                  >
+                    <template #prefix>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                      </svg>
+                    </template>
+                  </el-input>
+                  <img
+                    :src="captchaBase64"
+                    alt="验证码"
+                    class="captcha-img"
+                    @click="generateCaptcha"
+                  />
+                  <button class="captcha-refresh" @click.prevent="generateCaptcha" title="刷新验证码">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M23 4v6h-6"/>
+                      <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+                    </svg>
+                  </button>
+                </div>
+              </el-form-item>
+
+              <div class="btn-row">
+                <button class="step-btn back-btn" @click="prevStep">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"/>
+                  </svg>
+                  <span>返回</span>
+                </button>
+                <button class="step-btn submit-btn" @click="submitForm" :disabled="isSubmitting">
+                  <span>{{ isSubmitting ? '注册中...' : '注册' }}</span>
+                </button>
+              </div>
+            </div>
+          </transition>
+        </el-form>
+
+        <!-- 底部链接 -->
+        <div class="bottom-links">
+          <span>已有账号？</span>
+          <a class="link" @click="toLogin">立即登录</a>
+        </div>
+      </AppFormContainer>
+    </main>
   </div>
 </template>
 
@@ -176,6 +182,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
 import { useWindowControl } from '../../composables/useWindowControl'
+import AppFormContainer from '../../components/common/AppFormContainer.vue'
 import WindowTitleBar from '../../components/WindowTitleBar.vue'
 
 const router = useRouter()
@@ -350,28 +357,17 @@ const toLogin = async () => {
 </script>
 
 <style scoped lang="less">
-// === 配色：简约暖橙 + 玻璃感 ===
-@accent: #F2784B;
-@accent-light: #FF9A76;
-@accent-gradient: linear-gradient(135deg, #F2784B, #E85D3A);
-@text-dark: #2C3E50;
-@text-muted: #8E9AAF;
-@text-placeholder: #B8C4CE;
-@card-bg: rgba(255, 255, 255, 0.55);
-@card-border: rgba(255, 255, 255, 0.7);
-@input-bg: #FFFFFF;
-@input-border: #E8E4E0;
-
 .register-container {
+  box-sizing: border-box;
   width: 100%;
   height: 100vh;
-  background: #FFF7F2;
+  background: var(--canvas);
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
-  overflow: hidden;
-  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  overflow: auto;
+  font-family: var(--font-sans);
 }
 
 // 装饰光球
@@ -385,7 +381,7 @@ const toLogin = async () => {
 .orb-1 {
   width: 260px;
   height: 260px;
-  background: radial-gradient(circle, rgba(242, 120, 75, 0.2) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand-500) 20%, transparent) 0%, transparent 70%);
   top: -70px;
   left: -50px;
 }
@@ -393,7 +389,7 @@ const toLogin = async () => {
 .orb-2 {
   width: 180px;
   height: 180px;
-  background: radial-gradient(circle, rgba(255, 154, 118, 0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand-400) 18%, transparent) 0%, transparent 70%);
   bottom: 30px;
   right: -50px;
 }
@@ -401,105 +397,125 @@ const toLogin = async () => {
 .orb-3 {
   width: 120px;
   height: 120px;
-  background: radial-gradient(circle, rgba(242, 120, 75, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand-500) 12%, transparent) 0%, transparent 70%);
   top: 50%;
   left: 65%;
+}
+
+.register-panel {
+  box-sizing: border-box;
+  width: min(100%, var(--form-width-auth));
+  margin-block: auto;
+  padding-block: var(--space-6);
+  position: relative;
+  z-index: 2;
 }
 
 // 标题区域
 .register-header {
   text-align: center;
-  margin-top: 8px;
+  margin-bottom: var(--space-5);
   position: relative;
-  z-index: 2;
 }
 
 .register-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: @text-dark;
-  margin-bottom: 16px;
-  letter-spacing: 2px;
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-h1);
+  line-height: 32px;
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
+  letter-spacing: var(--tracking-tight);
 }
 
 // 步骤指示器
 .steps-indicator {
   display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-item {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0;
+  gap: var(--space-2);
+  color: var(--ink-500);
+}
+
+.step-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: calc(50% + 18px);
+  width: calc(100% - 36px);
+  height: 2px;
+  background: var(--line-strong);
+  transition: background var(--duration-base) var(--ease-standard);
+}
+
+.step-item.is-done:not(:last-child)::after {
+  background: var(--brand-500);
 }
 
 .step-dot {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 2px solid #E0D8D2;
+  border: 2px solid var(--line-strong);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  color: @text-muted;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  background: white;
-
-  &.active {
-    border-color: @accent;
-    background: @accent;
-    color: white;
-  }
-
-  &.done {
-    border-color: @accent;
-    background: @accent;
-    color: white;
-  }
+  font-size: var(--text-caption);
+  color: var(--ink-500);
+  background: var(--surface);
+  transition:
+    color var(--duration-base) var(--ease-standard),
+    background-color var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard);
 }
 
-.step-line {
-  width: 40px;
-  height: 2px;
-  background: #E0D8D2;
-  transition: all 0.4s ease;
-
-  &.filled {
-    background: @accent;
-  }
+.step-item.is-active .step-dot,
+.step-item.is-done .step-dot {
+  border-color: var(--brand-500);
+  background: var(--brand-500);
+  color: var(--surface);
 }
 
-.step-desc {
-  font-size: 11px;
-  color: @text-muted;
-  margin-top: 10px;
-  letter-spacing: 1px;
+.step-label {
+  font-size: var(--text-caption);
+  line-height: 18px;
+  white-space: nowrap;
+  transition: color var(--duration-base) var(--ease-standard);
 }
 
-// 毛玻璃卡片
-.glass-card {
-  width: calc(100% - 40px);
-  margin: 14px 20px 16px;
-  padding: 22px 24px 16px;
-  background: @card-bg;
-  backdrop-filter: blur(24px) saturate(1.3);
-  -webkit-backdrop-filter: blur(24px) saturate(1.3);
-  border: 1px solid @card-border;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  position: relative;
-  z-index: 2;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
+.step-title {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  line-height: 24px;
+  font-weight: var(--weight-semibold);
+}
+
+.step-item.is-active .step-label,
+.step-item.is-done .step-label {
+  color: var(--ink-900);
+  font-weight: var(--weight-medium);
 }
 
 // 步骤切换动画
 .slide-enter-active {
-  animation: slideIn 0.3s ease forwards;
+  animation: slideIn var(--duration-base) var(--ease-out) forwards;
 }
 
 .slide-leave-active {
-  animation: slideOut 0.2s ease forwards;
+  animation: slideOut var(--duration-base) var(--ease-standard) forwards;
 }
 
 @keyframes slideIn {
@@ -526,62 +542,79 @@ const toLogin = async () => {
 
 // Element Plus 输入框
 :deep(.el-form-item) {
-  margin-bottom: 10px;
+  margin-bottom: var(--space-4);
+}
+
+:deep(.el-form-item:last-child) {
+  margin-bottom: 0;
 }
 
 :deep(.el-form-item__error) {
-  color: #E07060;
-  font-size: 11px;
-  padding-top: 2px;
+  color: var(--danger);
+  font-size: var(--text-caption);
+  padding-top: var(--space-1);
 }
 
 :deep(.el-input__wrapper) {
-  background: @input-bg;
-  border: 1px solid @input-border;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  padding: 7px 12px;
-  transition: all 0.2s ease;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-2) var(--space-3);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 
   &:hover {
-    border-color: darken(@input-border, 12%);
+    border-color: var(--line-strong);
   }
 
   &.is-focus {
-    border-color: @accent;
-    box-shadow: 0 0 0 3px rgba(242, 120, 75, 0.1);
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 14%, transparent);
   }
 }
 
 :deep(.el-input__inner) {
-  color: @text-dark;
-  font-size: 13px;
-  caret-color: @accent;
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  caret-color: var(--brand-500);
 
   &::placeholder {
-    color: @text-placeholder;
-    font-size: 13px;
+    color: var(--ink-400);
+    font-size: var(--text-body);
   }
 }
 
 :deep(.el-input__prefix) {
-  color: @text-muted;
-  margin-right: 6px;
+  color: var(--ink-400);
+  margin-right: var(--space-2);
 }
 
 :deep(.el-input__suffix) {
-  color: @text-muted;
+  color: var(--ink-400);
 }
 
 :deep(.el-input__password) {
-  color: @text-muted;
-  &:hover { color: @text-dark; }
+  color: var(--ink-400);
+  &:hover { color: var(--ink-700); }
+}
+
+.password-field :deep(.el-form-item__content) {
+  display: block;
+}
+
+.field-hint {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+  line-height: 18px;
 }
 
 // 验证码行
 .captcha-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
   width: 100%;
 
@@ -594,17 +627,17 @@ const toLogin = async () => {
 .captcha-img {
   height: 36px;
   width: 90px;
-  border-radius: 8px;
-  border: 1px solid @input-border;
-  background: #FAFAFA;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--canvas-sunken);
   cursor: pointer;
   object-fit: contain;
-  transition: all 0.2s;
+  transition: border-color var(--duration-fast) var(--ease-out);
   flex-shrink: 0;
   padding: 2px;
 
   &:hover {
-    border-color: @accent;
+    border-color: var(--brand-500);
   }
 }
 
@@ -616,13 +649,15 @@ const toLogin = async () => {
   justify-content: center;
   background: none;
   border: none;
-  color: @text-muted;
+  color: var(--ink-400);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
   flex-shrink: 0;
 
   &:hover {
-    color: @accent;
+    color: var(--brand-500);
     transform: rotate(90deg);
   }
 }
@@ -631,16 +666,19 @@ const toLogin = async () => {
 .step-btn {
   height: 42px;
   border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: var(--radius-md);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  transition: all 0.25s ease;
-  letter-spacing: 2px;
+  gap: var(--space-2);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 
   &:disabled {
     opacity: 0.5;
@@ -650,14 +688,13 @@ const toLogin = async () => {
 
 .next-btn {
   width: 100%;
-  margin-top: 4px;
-  background: @accent-gradient;
-  color: white;
-  box-shadow: 0 4px 14px rgba(242, 120, 75, 0.3);
+  margin-top: var(--space-1);
+  background: var(--brand-500);
+  color: var(--surface);
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(242, 120, 75, 0.4);
+    background: var(--brand-600);
   }
 
   &:active {
@@ -667,31 +704,30 @@ const toLogin = async () => {
 
 .btn-row {
   display: flex;
-  gap: 10px;
-  margin-top: 4px;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
 }
 
 .back-btn {
   flex: 0 0 100px;
-  background: white;
-  border: 1px solid @input-border;
-  color: @text-muted;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-500);
 
   &:hover {
-    border-color: @accent;
-    color: @accent;
+    border-color: var(--brand-500);
+    color: var(--brand-600);
   }
 }
 
 .submit-btn {
   flex: 1;
-  background: @accent-gradient;
-  color: white;
-  box-shadow: 0 4px 14px rgba(242, 120, 75, 0.3);
+  background: var(--brand-500);
+  color: var(--surface);
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(242, 120, 75, 0.4);
+    background: var(--brand-600);
   }
 
   &:active:not(:disabled) {
@@ -702,18 +738,19 @@ const toLogin = async () => {
 // 底部链接
 .bottom-links {
   text-align: center;
-  margin-top: auto;
-  padding-top: 14px;
-  font-size: 12px;
-  color: @text-muted;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
 
   .link {
-    color: @accent;
+    color: var(--brand-600);
     cursor: pointer;
-    font-weight: 500;
-    transition: opacity 0.2s;
+    font-weight: var(--weight-medium);
+    transition: color var(--duration-fast) var(--ease-out);
 
-    &:hover { opacity: 0.8; }
+    &:hover { color: var(--brand-700); }
   }
 }
 </style>
