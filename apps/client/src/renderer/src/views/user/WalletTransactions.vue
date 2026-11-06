@@ -1,30 +1,53 @@
 <template>
-  <div class="wallet-transactions-container">
-    <common-back-button
-      type="default"
-      size="small"
-      @click="goBack"
-      :use-router-back="false"
-      style="margin-bottom: 20px"
-    />
+  <div class="wallet-transactions-page">
+    <!-- 页头：标准版，标题 --text-h1，返回统一放右侧动作区（§4.7） -->
+    <AppPageHeader title="钱包交易记录">
+      <template #actions>
+        <CommonBackButton type="default" :use-router-back="false" @click="goBack" />
+      </template>
+    </AppPageHeader>
 
-    <h2 class="page-title">钱包交易记录</h2>
+    <!-- 余额摘要：余额 + 收支概览收敛为一块，交易列表提前进首屏（P0，§4.8） -->
+    <AppCard class="summary-card" padding="md">
+      <div class="summary">
+        <div class="summary-balance">
+          <div class="summary-balance__label">当前余额</div>
+          <div class="balance-amount">{{ formatNumber(walletBalance) }} 平台币</div>
+        </div>
 
-    <!-- 钱包余额卡片 -->
-    <el-card class="balance-card" shadow="hover">
-      <div class="balance-info">
-        <div class="balance-label">当前余额</div>
-        <div class="balance-amount">{{ formatNumber(walletBalance) }} 平台币</div>
+        <div class="stats-row">
+          <div class="stat-card">
+            <el-icon class="stat-card__icon"><Top /></el-icon>
+            <div class="stat-card__body">
+              <div class="stat-card__label">总收入</div>
+              <div class="stat-value">+{{ formatNumber(totalIncome) }}</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <el-icon class="stat-card__icon"><Bottom /></el-icon>
+            <div class="stat-card__body">
+              <div class="stat-card__label">总支出</div>
+              <div class="stat-value">-{{ formatNumber(totalExpense) }}</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <el-icon class="stat-card__icon"><Tickets /></el-icon>
+            <div class="stat-card__body">
+              <div class="stat-card__label">交易笔数</div>
+              <div class="stat-value">{{ totalCount }}</div>
+            </div>
+          </div>
+        </div>
       </div>
-    </el-card>
+    </AppCard>
 
-    <!-- 筛选条件 -->
-    <el-card class="filter-card" shadow="hover">
+    <!-- 筛选工具栏：控件同高、同间距（§3.3、§4.3） -->
+    <AppCard class="filter-card" padding="md">
       <div class="filter-bar">
         <el-select
           v-model="filterForm.type"
+          class="filter-control filter-control--select"
           placeholder="交易类型"
-          style="width: 150px"
           clearable
           @change="handleFilterChange"
         >
@@ -36,8 +59,8 @@
 
         <el-select
           v-model="filterForm.status"
+          class="filter-control filter-control--select"
           placeholder="交易状态"
-          style="width: 150px"
           clearable
           @change="handleFilterChange"
         >
@@ -48,11 +71,11 @@
 
         <el-date-picker
           v-model="filterForm.dateRange"
+          class="filter-control filter-control--date"
           type="daterange"
           range-separator="至"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
-          style="width: 280px"
           @change="handleFilterChange"
         />
 
@@ -66,45 +89,22 @@
           重置
         </el-button>
       </div>
-    </el-card>
+    </AppCard>
 
-    <!-- 交易统计 -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon recharge-icon">💰</div>
-        <div class="stat-content">
-          <div class="stat-label">总收入</div>
-          <div class="stat-value recharge-color">+{{ formatNumber(totalIncome) }}</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon expense-icon">🛒</div>
-        <div class="stat-content">
-          <div class="stat-label">总支出</div>
-          <div class="stat-value expense-color">-{{ formatNumber(totalExpense) }}</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon count-icon">📊</div>
-        <div class="stat-content">
-          <div class="stat-label">交易笔数</div>
-          <div class="stat-value">{{ totalCount }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 交易列表 -->
-    <el-card class="transactions-card" shadow="hover">
+    <!-- 交易列表：收入 / 支出统一为「图标 + 类型 + 状态标签 + 符号金额 + 收支角色」（P0、P1，§4.3、§5.2） -->
+    <AppCard class="transactions-card" padding="md">
       <div v-loading="loading" class="transactions-list">
-        <div v-if="transactions.length > 0">
+        <div v-if="transactions.length > 0" class="transaction-rows">
           <div
             v-for="transaction in transactions"
             :key="transaction.id"
             class="transaction-item"
+            tabindex="0"
             @click="viewTransactionDetail(transaction)"
+            @keydown.enter="viewTransactionDetail(transaction)"
           >
-            <div class="transaction-icon" :class="getTransactionIconClass(transaction.type)">
-              {{ getTransactionIcon(transaction.type) }}
+            <div class="transaction-icon">
+              <el-icon><component :is="getTransactionIcon(transaction.type)" /></el-icon>
             </div>
             <div class="transaction-info">
               <div class="transaction-header">
@@ -119,13 +119,15 @@
               <div class="transaction-desc">{{ transaction.description }}</div>
               <div class="transaction-time">{{ formatDateTime(transaction.createdAt) }}</div>
             </div>
-            <div class="transaction-amount" :class="getAmountClass(transaction.type)">
-              {{ transaction.type === 'recharge' ? '+' : '-'
-              }}{{ formatNumber(transaction.amount) }}
+            <div class="transaction-amount-wrap">
+              <div class="transaction-amount">
+                {{ getAmountSign(transaction.type) }}{{ formatNumber(transaction.amount) }}
+              </div>
+              <div class="transaction-amount-role">{{ getAmountRole(transaction.type) }}</div>
             </div>
           </div>
         </div>
-        <el-empty v-else description="暂无交易记录" />
+        <AppEmptyState v-else icon="Money" description="暂无交易记录" />
       </div>
 
       <!-- 分页 -->
@@ -140,21 +142,21 @@
           @current-change="handlePageChange"
         />
       </div>
-    </el-card>
+    </AppCard>
 
     <!-- 交易详情对话框 -->
     <el-dialog v-model="detailDialogVisible" title="交易详情" width="500px" center>
       <div v-if="selectedTransaction" class="transaction-detail">
         <div class="detail-row">
           <span class="detail-label">交易类型：</span>
-          <el-tag :type="getDetailTagType(selectedTransaction.type)">
-            {{ getTransactionTypeText(selectedTransaction.type) }}
-          </el-tag>
+          <span class="detail-value">{{ getTransactionTypeText(selectedTransaction.type) }}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">交易金额：</span>
-          <span class="detail-amount" :class="getAmountClass(selectedTransaction.type)">
-            {{ formatNumber(selectedTransaction.amount) }} 平台币
+          <span class="detail-amount">
+            {{ getAmountSign(selectedTransaction.type)
+            }}{{ formatNumber(selectedTransaction.amount) }} 平台币
+            <span class="detail-role">{{ getAmountRole(selectedTransaction.type) }}</span>
           </span>
         </div>
         <div class="detail-row">
@@ -183,7 +185,20 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh } from '@element-plus/icons-vue'
+import {
+  Search,
+  Refresh,
+  Wallet,
+  ShoppingCart,
+  CreditCard,
+  Top,
+  Bottom,
+  Tickets,
+  Money
+} from '@element-plus/icons-vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import walletApi from '../../api/wallet'
 import { useAuthStore } from '../../store/authStore'
@@ -254,24 +269,14 @@ const formatDateTime = (dateTime) => {
   })
 }
 
-// 获取交易图标
+// 交易类型图标：结构性图标统一用 Element Plus 线性图标（§4.9）
 const getTransactionIcon = (type) => {
   const icons = {
-    recharge: '💰',
-    consume: '🛒',
-    withdraw: '🏦'
+    recharge: Wallet,
+    consume: ShoppingCart,
+    withdraw: CreditCard
   }
-  return icons[type] || '📄'
-}
-
-// 获取交易图标样式类
-const getTransactionIconClass = (type) => {
-  const classes = {
-    recharge: 'icon-recharge',
-    consume: 'icon-consume',
-    withdraw: 'icon-withdraw'
-  }
-  return classes[type] || ''
+  return icons[type] || Money
 }
 
 // 获取交易类型文本
@@ -284,20 +289,11 @@ const getTransactionTypeText = (type) => {
   return texts[type] || '其他'
 }
 
-// 获取金额样式类
-const getAmountClass = (type) => {
-  return type === 'recharge' ? 'amount-income' : 'amount-expense'
-}
+// 金额方向：充值入账为正，消费/提现出账为负（§5.2 符号先于颜色）
+const getAmountSign = (type) => (type === 'recharge' ? '+' : '-')
 
-// 获取详情标签类型
-const getDetailTagType = (type) => {
-  const types = {
-    recharge: 'success',
-    consume: 'warning',
-    withdraw: 'info'
-  }
-  return types[type] || 'info'
-}
+// 金额角色：用文字说清收支含义，金额本身不再靠红绿蓝编码（§5.2）
+const getAmountRole = (type) => (type === 'recharge' ? '收入' : '支出')
 
 // 获取钱包余额
 const fetchWalletBalance = async () => {
@@ -412,181 +408,178 @@ onMounted(() => {
 })
 </script>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
-.wallet-transactions-container {
-  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-  min-height: 100vh;
-  background: @nordic-bg;
+<style scoped>
+/* 页面颜色、间距、圆角、字阶与动效均取自 tokens.css（§3、§7.1），无裸色值。 */
+.wallet-transactions-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 }
 
-.page-title {
-  font-size: @nordic-text-xl;
-  margin: 0 0 25px 0;
-  color: @nordic-text;
-  font-weight: 700;
+/* 余额摘要：余额 + 收支概览合并为一块，不再逐层堆卡片（P0，§4.8） */
+.summary-card {
+  margin-bottom: var(--space-6);
 }
 
-.balance-card {
-  background: linear-gradient(135deg, @nordic-accent-light 0%, darken(@nordic-accent-light, 5%) 100%);
-  border-radius: @nordic-radius-lg;
-  margin-bottom: @nordic-space-lg;
-  border: none;
-}
-
-.balance-info {
-  text-align: center;
-  padding: @nordic-space-lg;
-}
-
-.balance-label {
-  font-size: @nordic-text-md;
-  color: @nordic-text-secondary;
-  margin-bottom: @nordic-space-sm;
-}
-
-.balance-amount {
-  font-size: @nordic-text-2xl;
-  font-weight: 700;
-  color: @nordic-yellow;
-}
-
-.filter-card {
-  border-radius: @nordic-radius-lg;
-  margin-bottom: @nordic-space-lg;
-  border: none;
-}
-
-.filter-bar {
+.summary {
   display: flex;
-  align-items: center;
-  gap: 12px;
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
 }
 
+.summary-balance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 200px;
+  padding-right: var(--space-8);
+  border-right: 1px solid var(--line);
+}
+
+.summary-balance__label {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+}
+
+/* 余额数值：--font-num + tabular-nums，与消费记录同格式（§3.2、§4.8） */
+.balance-amount {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+  line-height: 32px;
+}
+
+/* 收支概览：线性图标 + 中性底色 + 数值，不用彩色渐变图标块（§3.4、§4.8） */
 .stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: @nordic-space-lg;
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--space-6);
 }
 
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: @nordic-space-lg;
-  background: @nordic-surface;
-  border-radius: @nordic-radius-md;
-  box-shadow: 0 2px 8px @nordic-shadow;
-  transition: all @nordic-transition-slow ease;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px @nordic-shadow-hover;
-}
-
-.stat-icon {
-  font-size: 2.857rem;
-  width: 60px;
-  height: 60px;
+.stat-card__icon {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  background: @nordic-divider;
-  border-radius: @nordic-radius-md;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--canvas-sunken);
+  color: var(--ink-500);
+  font-size: var(--text-h3);
 }
 
-.recharge-icon {
-  background: linear-gradient(135deg, @nordic-green-light 0%, darken(@nordic-green-light, 5%) 100%);
+.stat-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
-.expense-icon {
-  background: linear-gradient(135deg, @nordic-red-light 0%, darken(@nordic-red-light, 5%) 100%);
-}
-
-.count-icon {
-  background: linear-gradient(135deg, @nordic-blue-light 0%, darken(@nordic-blue-light, 5%) 100%);
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-label {
-  font-size: @nordic-text-base;
-  color: @nordic-text-secondary;
-  margin-bottom: 5px;
+.stat-card__label {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
 }
 
 .stat-value {
-  font-size: 1.714rem;
-  font-weight: 700;
-  color: @nordic-text;
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 24px;
 }
 
-.recharge-color {
-  color: @nordic-green;
+/* 筛选工具栏 */
+.filter-card {
+  margin-bottom: var(--space-6);
 }
 
-.expense-color {
-  color: @nordic-red;
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
 }
 
+.filter-control--select {
+  width: 160px;
+}
+
+.filter-control--date {
+  width: 300px;
+}
+
+/* 交易列表 */
 .transactions-card {
-  border-radius: @nordic-radius-lg;
-  border: none;
+  margin-bottom: var(--space-6);
 }
 
 .transactions-list {
-  min-height: 300px;
+  min-height: 240px;
 }
 
+.transaction-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 每行等高、行内控件 32px 档，不写死高度（§3.4、§4.3） */
 .transaction-item {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: @nordic-space-md;
-  background: @nordic-divider;
-  border-radius: @nordic-radius-md;
-  margin-bottom: 12px;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all @nordic-transition-fast ease;
-}
-
-.transaction-item:hover {
-  background: @nordic-border;
-  transform: translateX(4px);
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .transaction-item:last-child {
-  margin-bottom: 0;
+  /* 保留 1px 占位，保证所有交易行等高（§4.3） */
+  border-bottom-color: transparent;
+}
+
+.transaction-item:hover,
+.transaction-item:focus-visible {
+  background: var(--canvas-sunken);
+  outline: none;
+}
+
+.transaction-item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--brand-400);
 }
 
 .transaction-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: @nordic-radius-md;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  font-size: 1.714rem;
-  background: @nordic-surface;
-  flex-shrink: 0;
-}
-
-.icon-recharge {
-  background: linear-gradient(135deg, @nordic-green-light 0%, darken(@nordic-green-light, 5%) 100%);
-}
-
-.icon-consume {
-  background: linear-gradient(135deg, @nordic-red-light 0%, darken(@nordic-red-light, 5%) 100%);
-}
-
-.icon-withdraw {
-  background: linear-gradient(135deg, @nordic-blue-light 0%, darken(@nordic-blue-light, 5%) 100%);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--canvas-sunken);
+  color: var(--ink-500);
+  font-size: var(--text-h3);
 }
 
 .transaction-info {
@@ -597,81 +590,106 @@ onMounted(() => {
 .transaction-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 5px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .transaction-type {
-  font-size: 1.071rem;
-  font-weight: 600;
-  color: @nordic-text;
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 22px;
 }
 
 .transaction-desc {
-  font-size: @nordic-text-sm;
-  color: @nordic-text-secondary;
-  margin-bottom: 5px;
   overflow: hidden;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .transaction-time {
-  font-size: @nordic-text-xs;
-  color: @nordic-text-muted;
+  margin-top: var(--space-1);
+  color: var(--ink-400);
+  font-size: var(--text-caption);
+  line-height: 18px;
+}
+
+/* 金额：中性色 + 符号 + 收支角色文字，不靠红绿编码（P1，§5.2） */
+.transaction-amount-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: var(--space-1);
+  text-align: right;
 }
 
 .transaction-amount {
-  font-size: 1.286rem;
-  font-weight: 600;
-  flex-shrink: 0;
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.amount-income {
-  color: @nordic-green;
-}
-
-.amount-expense {
-  color: @nordic-red;
+.transaction-amount-role {
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+  line-height: 18px;
 }
 
 .pagination-container {
-  margin-top: @nordic-space-lg;
   display: flex;
   justify-content: center;
+  margin-top: var(--space-6);
 }
 
+/* 详情弹层 */
 .transaction-detail {
-  padding: 10px 0;
+  padding: var(--space-2) 0;
 }
 
 .detail-row {
   display: flex;
   align-items: center;
-  margin-bottom: @nordic-space-lg;
-  padding-bottom: 15px;
-  border-bottom: 1px solid @nordic-divider;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
 }
 
 .detail-row:last-child {
   border-bottom: none;
-  margin-bottom: 0;
 }
 
 .detail-label {
-  font-size: @nordic-text-base;
-  color: @nordic-text-secondary;
-  width: 100px;
   flex-shrink: 0;
+  width: 84px;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
 }
 
 .detail-value {
-  font-size: @nordic-text-base;
-  color: @nordic-text;
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
 }
 
 .detail-amount {
-  font-size: 1.286rem;
-  font-weight: 600;
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-role {
+  margin-left: var(--space-2);
+  color: var(--ink-500);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
 }
 </style>
