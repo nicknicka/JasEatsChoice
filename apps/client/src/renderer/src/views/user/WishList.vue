@@ -1,33 +1,38 @@
 <template>
   <div class="wish-list-page">
-    <div class="page-header">
-      <div>
-        <h2>我的想吃列表</h2>
-        <p>提交想吃的菜品，等待商家审核上架</p>
-      </div>
-      <div class="header-actions">
+    <AppPageHeader title="我的想吃列表" subtitle="提交想吃的菜品，等待商家审核上架">
+      <template #actions>
         <el-button :icon="Refresh" :loading="loading" @click="loadItems">刷新</el-button>
         <el-button type="primary" :icon="Plus" @click="openCreateDialog">发布想吃</el-button>
-      </div>
-    </div>
+      </template>
+    </AppPageHeader>
 
     <div class="summary-row">
-      <el-card shadow="never" class="summary-card">
+      <div class="summary-block">
         <span class="summary-number">{{ items.length }}</span>
         <span class="summary-label">全部</span>
-      </el-card>
-      <el-card shadow="never" class="summary-card">
+      </div>
+      <div class="summary-block">
         <span class="summary-number">{{ countByStatus(0) }}</span>
-        <span class="summary-label">待审核</span>
-      </el-card>
-      <el-card shadow="never" class="summary-card">
+        <span class="summary-label">
+          <i class="summary-dot summary-dot--warning"></i>
+          待审核
+        </span>
+      </div>
+      <div class="summary-block">
         <span class="summary-number">{{ countByStatus(1) + countByStatus(6) }}</span>
-        <span class="summary-label">已通过</span>
-      </el-card>
-      <el-card shadow="never" class="summary-card">
+        <span class="summary-label">
+          <i class="summary-dot summary-dot--info"></i>
+          已通过
+        </span>
+      </div>
+      <div class="summary-block">
         <span class="summary-number">{{ countByStatus(2) }}</span>
-        <span class="summary-label">已拒绝</span>
-      </el-card>
+        <span class="summary-label">
+          <i class="summary-dot summary-dot--danger"></i>
+          已拒绝
+        </span>
+      </div>
     </div>
 
     <div class="filter-bar">
@@ -49,7 +54,7 @@
 
     <div v-loading="loading" class="content-area">
       <div v-if="filteredItems.length" class="wish-grid">
-        <el-card v-for="item in filteredItems" :key="item.id" class="wish-card" shadow="hover">
+        <el-card v-for="item in filteredItems" :key="item.id" class="wish-card" shadow="never">
           <div class="card-top">
             <div class="image-box">
               <img v-if="isUsableImage(item.dishImage)" :src="item.dishImage" :alt="item.dishName" />
@@ -61,9 +66,11 @@
             <div class="dish-info">
               <div class="title-row">
                 <h3>{{ item.dishName || '未命名菜品' }}</h3>
-                <el-tag :type="getStatusType(item.auditStatus)">
-                  {{ item.auditStatusName || getStatusText(item.auditStatus) }}
-                </el-tag>
+                <StatusTag
+                  :status="getStatusKey(item.auditStatus)"
+                  :text="item.auditStatusName || getStatusText(item.auditStatus)"
+                  size="sm"
+                />
               </div>
               <p v-if="item.tasteRequirement" class="taste">{{ item.tasteRequirement }}</p>
               <p class="desc">{{ item.description || '暂无描述' }}</p>
@@ -88,11 +95,11 @@
 
           <template #footer>
             <div class="card-actions">
-              <el-button size="small" @click="viewDetail(item)">详情</el-button>
+              <el-button size="small" type="primary" @click="viewDetail(item)">查看详情</el-button>
               <el-button
                 v-if="item.canWithdraw || item.auditStatus === 0"
                 size="small"
-                type="warning"
+                class="action-text"
                 @click="withdraw(item)"
               >
                 撤回
@@ -100,7 +107,7 @@
               <el-button
                 v-if="item.canAppeal || item.auditStatus === 2"
                 size="small"
-                type="primary"
+                class="action-text"
                 @click="openAppealDialog(item)"
               >
                 申诉
@@ -110,9 +117,10 @@
         </el-card>
       </div>
 
-      <el-empty v-else description="暂无想吃记录">
+      <div v-else class="empty-wrap">
+        <AppEmptyState description="还没有想吃记录" :icon="Bowl" />
         <el-button type="primary" @click="openCreateDialog">发布第一条想吃</el-button>
-      </el-empty>
+      </div>
     </div>
 
     <el-dialog v-model="createDialogVisible" title="发布想吃" width="560px">
@@ -180,6 +188,9 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Bowl, Plus, Refresh, Search } from '@element-plus/icons-vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
 import wishListApi from '@/api/wishList'
 
 const loading = ref(false)
@@ -372,18 +383,18 @@ const getStatusText = (status) => {
   return map[status] || '未知'
 }
 
-const getStatusType = (status) => {
+const getStatusKey = (status) => {
   const map = {
-    0: 'warning',
-    1: 'success',
-    2: 'danger',
-    3: 'primary',
-    4: 'success',
-    5: 'danger',
-    6: 'success',
-    7: 'info'
+    0: 'pendingaudit',
+    1: 'approved',
+    2: 'rejected',
+    3: 'appealing',
+    4: 'appealapproved',
+    5: 'appealrejected',
+    6: 'autoapproved',
+    7: 'withdrawn'
   }
-  return map[status] || 'info'
+  return map[status] || 'unknown'
 }
 
 const formatDate = (value) => {
@@ -400,97 +411,91 @@ onMounted(loadItems)
 </script>
 
 <style scoped lang="less">
-@accent: #d67a58;
-@accent-strong: #c96b49;
-@ink: #26384d;
-@muted: #8b98a8;
-@line: #eadfd5;
-@paper: rgba(255, 255, 255, 0.86);
-
+/* 页面基准色调全部来自 tokens.css（§3.1/§3.4/§7.1），不写裸色值。 */
 .wish-list-page {
+  box-sizing: border-box;
+  max-width: var(--page-max);
   min-height: 100%;
-  padding: 30px 38px 40px;
-  background:
-    radial-gradient(circle at 8% 6%, rgba(214, 122, 88, 0.12), transparent 28%),
-    linear-gradient(180deg, #fffaf6 0%, #f7f9fc 58%, #f5f7fb 100%);
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
-  padding: 22px 24px;
-  border: 1px solid rgba(234, 223, 213, 0.9);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.76);
-  box-shadow: 0 12px 28px rgba(120, 91, 72, 0.07);
-
-  h2 {
-    margin: 0;
-    font-size: 28px;
-    font-weight: 750;
-    color: @ink;
-    letter-spacing: 0;
-  }
-
-  p {
-    margin: 8px 0 0;
-    color: @muted;
-    font-size: 15px;
-  }
+/* 页头：AppPageHeader 标准版（标题 --text-h1 + --space-6，§4.7）。 */
+:deep(.app-page-header) {
+  background: var(--canvas);
 }
 
-.header-actions {
-  display: flex;
-  gap: 10px;
-}
-
+/* 概览卡压缩成一条摘要，把首屏让给列表（§4.8）。 */
 .summary-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
-.summary-card {
-  border: 1px solid @line;
-  border-radius: 8px;
-  background: @paper;
-  box-shadow: 0 10px 22px rgba(49, 56, 67, 0.04);
-
-  :deep(.el-card__body) {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    padding: 15px 18px;
-  }
+.summary-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
 }
 
 .summary-number {
-  font-size: 28px;
-  font-weight: 700;
-  color: @accent;
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1;
 }
 
 .summary-label {
-  color: #5f6e7d;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+}
+
+/* 统计卡的状态指示点只做语义标记（§3.1、§4.8）。 */
+.summary-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: var(--radius-full);
+}
+
+.summary-dot--warning {
+  background: var(--warning);
+}
+
+.summary-dot--info {
+  background: var(--info);
+}
+
+.summary-dot--danger {
+  background: var(--danger);
 }
 
 .filter-bar {
   display: grid;
   grid-template-columns: minmax(240px, 1fr) 180px;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
 
-  :deep(.el-input__wrapper),
-  :deep(.el-select__wrapper) {
-    min-height: 38px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0 0 1px @line inset;
-  }
+.filter-bar :deep(.el-input__wrapper),
+.filter-bar :deep(.el-select__wrapper) {
+  min-height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line) inset;
 }
 
 .content-area {
@@ -500,52 +505,48 @@ onMounted(loadItems)
 .wish-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: var(--space-4);
 }
 
+/* 想吃条：L1 微质感卡片，同列高度与图片比例一致（§3.4、§4.2）。 */
 .wish-card {
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid @line;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 12px 28px rgba(49, 56, 67, 0.06);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 34px rgba(49, 56, 67, 0.09);
-  }
 
   :deep(.el-card__body) {
-    padding: 20px 22px 18px;
+    padding: var(--card-padding);
   }
 
   :deep(.el-card__footer) {
-    padding: 10px 20px;
-    background: linear-gradient(90deg, rgba(255, 248, 244, 0.9), rgba(255, 255, 255, 0.9));
-    border-top: 1px solid #f0e6de;
+    padding: var(--space-3) var(--card-padding);
+    border-top: 1px solid var(--line);
+    background: var(--surface);
   }
+}
+
+.wish-card :deep(.el-card__body) {
+  border-bottom: 0;
 }
 
 .card-top {
   display: flex;
-  gap: 18px;
+  align-items: flex-start;
+  gap: var(--card-padding);
 }
 
+/* 图片统一 4:3 裁切（§4.2）：144 × 108。 */
 .image-box {
-  width: 92px;
-  height: 92px;
-  flex: 0 0 92px;
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(214, 122, 88, 0.92), rgba(240, 169, 125, 0.92)),
-    #fff2ea;
+  width: 144px;
+  height: 108px;
+  flex: 0 0 144px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  color: #e8825c;
-  font-size: 32px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--brand-400), var(--brand-200));
+  color: var(--brand-700);
+  font-size: var(--text-display);
 
   img {
     width: 100%;
@@ -559,88 +560,105 @@ onMounted(loadItems)
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  color: #fff;
-  font-weight: 700;
+  gap: var(--space-1);
+  color: var(--surface);
+  font-weight: var(--weight-bold);
 
   .el-icon {
-    font-size: 26px;
+    font-size: 24px;
     opacity: 0.9;
   }
 
   span {
-    max-width: 78px;
-    font-size: 17px;
+    max-width: 116px;
+    overflow: hidden;
+    font-size: var(--text-body-sm);
     line-height: 1.2;
     text-align: center;
-    word-break: break-all;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
 .dish-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   min-width: 0;
   flex: 1;
 }
 
 .title-row {
   display: flex;
-  justify-content: space-between;
-  gap: 10px;
   align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
 
+  /* 标题为卡片第一扫描点（§3.2：--text-h2）。 */
   h3 {
     margin: 0;
-    font-size: 20px;
-    color: @ink;
-    word-break: break-word;
-  }
-
-  :deep(.el-tag) {
-    border-radius: 6px;
-    font-weight: 700;
+    min-width: 0;
+    color: var(--ink-900);
+    font-size: var(--text-h2);
+    font-weight: var(--weight-semibold);
+    line-height: 28px;
+    letter-spacing: var(--tracking-tight);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
 .taste {
-  margin: 9px 0 0;
-  color: @accent-strong;
-  font-weight: 600;
+  margin: 0;
+  color: var(--brand-600);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
 }
 
 .desc {
-  margin: 8px 0 0;
-  color: #5f6e7d;
-  line-height: 1.6;
+  margin: 0;
   max-width: 760px;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px dashed #eadfd5;
-  color: @muted;
-  font-size: 13px;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--line);
+  color: var(--ink-400);
+  font-size: var(--text-caption);
 }
 
 .reject-box,
 .appeal-box {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #fff7f4;
-  color: #755247;
-  border: 1px solid #f2ded5;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.reject-box {
+  border: 1px solid var(--danger-bg);
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .appeal-box {
-  background: #f2f7ff;
-  color: #36526f;
+  border: 1px solid var(--info-bg);
+  background: var(--info-bg);
+  color: var(--info);
 
   p {
     margin: 0;
@@ -650,39 +668,67 @@ onMounted(loadItems)
 .card-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-:deep(.el-button--primary) {
-  --el-button-bg-color: @accent;
-  --el-button-border-color: @accent;
-  --el-button-hover-bg-color: @accent-strong;
-  --el-button-hover-border-color: @accent-strong;
-  --el-button-active-bg-color: @accent-strong;
-  --el-button-active-border-color: @accent-strong;
+/* 卡片主操作唯一实心按钮；次要动作走文字层级（§4.1）。 */
+.wish-card :deep(.action-text) {
+  --el-button-text-color: var(--brand-600);
+  --el-button-hover-text-color: var(--brand-700);
+  --el-button-hover-bg-color: var(--brand-50);
+  --el-button-hover-border-color: transparent;
+  --el-button-active-text-color: var(--brand-700);
+  --el-button-active-bg-color: var(--brand-100);
+  border-color: transparent;
+  background: transparent;
 }
 
-:deep(.el-button) {
-  border-radius: 7px;
+.empty-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding-bottom: var(--space-8);
 }
 
 @media (max-width: 920px) {
   .wish-list-page {
-    padding: 22px;
-  }
-
-  .page-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 14px;
+    padding: 0 var(--page-gutter) var(--space-8);
   }
 
   .summary-row {
-    grid-template-columns: repeat(2, minmax(120px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .filter-bar {
     grid-template-columns: 1fr;
+  }
+
+  .card-top {
+    gap: var(--space-4);
+  }
+
+  .image-box {
+    width: 120px;
+    height: 90px;
+    flex: 0 0 120px;
+  }
+}
+
+@media (max-width: 640px) {
+  .wish-list-page {
+    padding: 0 var(--space-4) var(--space-8);
+  }
+
+  .image-box {
+    width: 108px;
+    height: 81px;
+    flex: 0 0 108px;
+  }
+
+  .title-row h3 {
+    font-size: var(--text-h3);
+    line-height: 24px;
   }
 }
 </style>
