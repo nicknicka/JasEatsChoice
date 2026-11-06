@@ -12,6 +12,8 @@ import {
   Food
 } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
 
 // 统计时间范围选项
 const timeRangeOptions = ['all', 'today', 'yesterday', 'week', 'month']
@@ -173,14 +175,11 @@ let resizeObserver = null
 // 菜品销量排行数据
 const dishSalesRank = ref([])
 
-// 配置订单趋势图表
+// 图表用 Canvas 渲染，拿不到 CSS 变量，运行时从 tokens.css 读唯一颜色源（§7.1）
+const tokenColor = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+
+// 配置订单趋势图表（§4.7：区块标题只在卡头出现一次，画布内不再重复；§3.4：网格线取 --line）
 const orderChartOptions = ref({
-  title: {
-    text: '订单趋势',
-    textStyle: {
-      fontSize: 14
-    }
-  },
   tooltip: {
     trigger: 'axis',
     formatter: (params) => {
@@ -191,14 +190,40 @@ const orderChartOptions = ref({
       return ''
     }
   },
+  grid: {
+    left: 8,
+    right: 16,
+    top: 16,
+    bottom: 8,
+    containLabel: true
+  },
   xAxis: {
     type: 'category',
-    data: []
+    data: [],
+    axisLine: {
+      lineStyle: {
+        color: tokenColor('--line')
+      }
+    },
+    axisLabel: {
+      color: tokenColor('--ink-500'),
+      fontSize: 12
+    }
   },
   yAxis: {
     type: 'value',
     minInterval: 1,
+    axisLine: {
+      show: false
+    },
+    splitLine: {
+      lineStyle: {
+        color: tokenColor('--line')
+      }
+    },
     axisLabel: {
+      color: tokenColor('--ink-500'),
+      fontSize: 12,
       formatter: (value) => {
         // 确保显示为整数
         return Math.round(value) + ' 单'
@@ -211,11 +236,13 @@ const orderChartOptions = ref({
       data: [],
       type: 'line',
       smooth: true,
+      symbolSize: 6,
       lineStyle: {
-        color: '#5A8F5E' // @merchant-success
+        width: 2,
+        color: tokenColor('--success')
       },
       itemStyle: {
-        color: '#5A8F5E' // @merchant-success
+        color: tokenColor('--success')
       }
     }
   ]
@@ -275,572 +302,423 @@ watch(currentOrderTrend, () => {
 
 <template>
   <div class="statistics-container">
-    <!-- 页面头部 -->
-    <div class="stats-header">
-      <div class="header-left">
-        <h3 class="page-title">
-          <el-icon class="title-icon"><TrendCharts /></el-icon>
-          经营统计
-        </h3>
-      </div>
-      <div class="header-right">
-        <div class="time-range-selector">
-          <el-tag
+    <!-- 页头：merchant 紧凑版，周期筛选在右侧、返回在动作区（§4.7） -->
+    <AppPageHeader title="经营统计" compact>
+      <template #actions>
+        <div class="time-range-selector" role="group" aria-label="统计周期">
+          <button
             v-for="range in timeRangeOptions"
             :key="range"
-            :type="activeTimeRange === range ? 'primary' : 'info'"
-            effect="plain"
-            class="time-range-tag"
+            type="button"
+            class="time-range-chip"
+            :class="{ 'is-active': activeTimeRange === range }"
+            :aria-pressed="activeTimeRange === range"
             @click="changeTimeRange(range)"
           >
             {{ getTimeRangeLabel(range) }}
-          </el-tag>
+          </button>
         </div>
-      </div>
-    </div>
+        <CommonBackButton type="default" />
+      </template>
+    </AppPageHeader>
 
     <div v-loading="isLoading" class="stats-content">
-      <!-- 基本统计卡片 -->
-      <el-row :gutter="20" class="basic-stats-section">
-        <el-col :span="12">
-          <div class="stat-card stat-card-primary">
-            <div class="stat-row-first">
-              <div class="stat-icon">
-                <el-icon><ShoppingCart /></el-icon>
-              </div>
-              <div class="stat-value">{{ currentBasicStats.orders }}</div>
-            </div>
-            <div class="stat-label">总订单数</div>
+      <!-- 概览：4 列等宽 KPI，图标+标签在上、数值在下，数值与标签贴近（§4.8） -->
+      <div class="basic-stats-section">
+        <div class="stat-card">
+          <div class="stat-card__head">
+            <span class="stat-icon"><el-icon><ShoppingCart /></el-icon></span>
+            <span class="stat-label">总订单数</span>
           </div>
-        </el-col>
-        <el-col :span="12">
-          <div class="stat-card stat-card-success">
-            <div class="stat-row-first">
-              <div class="stat-icon">
-                <el-icon><Coin /></el-icon>
-              </div>
-              <div class="stat-value">{{ formatCurrency(currentBasicStats.totalAmount) }}</div>
-            </div>
-            <div class="stat-label">总销售额</div>
-          </div>
-        </el-col>
-        <el-col :span="12">
-          <div class="stat-card stat-card-info">
-            <div class="stat-row-first">
-              <div class="stat-icon">
-                <el-icon><TrendCharts /></el-icon>
-              </div>
-              <div class="stat-value">{{ formatCurrency(currentBasicStats.avgAmount) }}</div>
-            </div>
-            <div class="stat-label">客单价</div>
-          </div>
-        </el-col>
-        <el-col :span="12">
-          <div class="stat-card stat-card-warning">
-            <div class="stat-row-first">
-              <div class="stat-icon">
-                <el-icon><User /></el-icon>
-              </div>
-              <div class="stat-value">{{ currentBasicStats.newCustomers }}</div>
-            </div>
-            <div class="stat-label">新客户数</div>
-          </div>
-        </el-col>
-      </el-row>
+          <div class="stat-value">{{ currentBasicStats.orders }}</div>
+        </div>
 
-      <!-- 订单趋势图表 -->
-      <el-row :gutter="20" class="order-trend-section">
-        <el-col :span="24">
-          <el-card class="chart-card">
-            <template #header>
-              <div class="card-header">
-                <h4 class="section-title">
-                  <el-icon class="title-icon"><TrendCharts /></el-icon>
-                  订单趋势
-                </h4>
-              </div>
-            </template>
-            <div class="chart-container">
-              <div v-show="currentOrderTrend.length > 0" ref="orderChartRef" class="chart"></div>
-              <div v-show="currentOrderTrend.length === 0" class="chart-placeholder">
-                <el-empty description="暂时没有数据提供" :image-size="100" />
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
+        <div class="stat-card">
+          <div class="stat-card__head">
+            <span class="stat-icon"><el-icon><Coin /></el-icon></span>
+            <span class="stat-label">总销售额</span>
+          </div>
+          <div class="stat-value">{{ formatCurrency(currentBasicStats.totalAmount) }}</div>
+        </div>
 
-      <!-- 菜品销量排行 -->
-      <el-row :gutter="20" class="dish-sales-section">
-        <el-col :span="24">
-          <el-card class="rank-card">
-            <template #header>
-              <div class="card-header">
-                <h4 class="section-title">
-                  <el-icon class="title-icon"><Trophy /></el-icon>
-                  菜品销量排行
-                </h4>
-              </div>
-            </template>
-            <div v-if="dishSalesRank.length > 0" class="sales-rank-list">
-              <div v-for="(dish, index) in dishSalesRank" :key="dish.name" class="sales-rank-item">
-                <div class="rank-badge" :class="`rank-${index + 1}`">
-                  <span class="rank-number">{{ index + 1 }}</span>
-                </div>
-                <div class="dish-info">
-                  <div class="dish-name">
-                    <el-icon class="dish-icon"><Food /></el-icon>
-                    {{ dish.name }}
-                  </div>
-                  <div class="dish-sales">销量: {{ dish.sales }} 份</div>
-                </div>
-                <div class="dish-revenue">
-                  <span class="revenue-label">销售额</span>
-                  <span class="revenue-value">{{ formatFullCurrency(dish.revenue) }}</span>
-                </div>
-              </div>
+        <div class="stat-card">
+          <div class="stat-card__head">
+            <span class="stat-icon"><el-icon><TrendCharts /></el-icon></span>
+            <span class="stat-label">客单价</span>
+          </div>
+          <div class="stat-value">{{ formatCurrency(currentBasicStats.avgAmount) }}</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-card__head">
+            <span class="stat-icon"><el-icon><User /></el-icon></span>
+            <span class="stat-label">新客户数</span>
+          </div>
+          <div class="stat-value">{{ currentBasicStats.newCustomers }}</div>
+        </div>
+      </div>
+
+      <!-- 订单趋势：区块标题只在卡头出现一次，不在画布内重复（§4.7、§3.4） -->
+      <section class="order-trend-section">
+        <el-card class="chart-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <h2 class="section-title">
+                <el-icon class="title-icon"><TrendCharts /></el-icon>
+                订单趋势
+              </h2>
             </div>
-            <div v-else class="no-data-placeholder">
+          </template>
+          <div class="chart-container">
+            <div v-show="currentOrderTrend.length > 0" ref="orderChartRef" class="chart"></div>
+            <div v-show="currentOrderTrend.length === 0" class="chart-placeholder">
               <el-empty description="暂时没有数据提供" :image-size="100" />
             </div>
-          </el-card>
-        </el-col>
-      </el-row>
+          </div>
+        </el-card>
+      </section>
+
+      <!-- 菜品销量排行 -->
+      <section class="dish-sales-section">
+        <el-card class="rank-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <h2 class="section-title">
+                <el-icon class="title-icon"><Trophy /></el-icon>
+                菜品销量排行
+              </h2>
+            </div>
+          </template>
+          <div v-if="dishSalesRank.length > 0" class="sales-rank-list">
+            <div v-for="(dish, index) in dishSalesRank" :key="dish.name" class="sales-rank-item">
+              <div class="rank-badge" :class="`rank-${index + 1}`">
+                <span class="rank-number">{{ index + 1 }}</span>
+              </div>
+              <div class="dish-info">
+                <div class="dish-name">
+                  <el-icon class="dish-icon"><Food /></el-icon>
+                  {{ dish.name }}
+                </div>
+                <div class="dish-sales">销量: {{ dish.sales }} 份</div>
+              </div>
+              <div class="dish-revenue">
+                <span class="revenue-label">销售额</span>
+                <span class="revenue-value">{{ formatFullCurrency(dish.revenue) }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="no-data-placeholder">
+            <el-empty description="暂时没有数据提供" :image-size="100" />
+          </div>
+        </el-card>
+      </section>
     </div>
   </div>
 </template>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
+<style scoped>
+/* 本页颜色、间距、圆角、字阶一律取自 tokens.css（§3、§7.1），无裸色值。 */
 .statistics-container {
-  padding: @nordic-space-lg;
-  background: @merchant-bg;
-  min-height: calc(100vh - 40px);
-
-  // 页面头部
-  .stats-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: @nordic-space-lg;
-    padding: @nordic-space-lg;
-    background: @merchant-surface;
-    border-radius: @nordic-radius-md;
-    box-shadow: 0 2px 12px @merchant-shadow;
-
-    .header-left {
-      .page-title {
-        display: flex;
-        align-items: center;
-        gap: @nordic-space-md;
-        font-size: @nordic-text-xl;
-        font-weight: 600;
-        margin: 0;
-        color: @merchant-text;
-
-        .title-icon {
-          font-size: 2rem;
-          color: @merchant-primary;
-        }
-      }
-    }
-
-    .header-right {
-      .time-range-selector {
-        display: flex;
-        gap: @nordic-space-sm;
-
-        .time-range-tag {
-          cursor: pointer;
-          transition: all @nordic-transition-base ease;
-          padding: @nordic-space-sm @nordic-space-md;
-          font-size: @nordic-text-sm;
-          border-radius: @nordic-radius-sm;
-
-          &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(74, 122, 77, 0.2);
-          }
-        }
-      }
-    }
-  }
-
-  .stats-content {
-    // 统计卡片样式
-    .basic-stats-section {
-      margin-bottom: @nordic-space-lg;
-
-      .stat-card {
-        display: flex;
-        flex-direction: column;
-        gap: @nordic-radius-lg;
-        padding: @nordic-space-lg;
-        background: @merchant-surface;
-        border-radius: @nordic-radius-md;
-        box-shadow: 0 2px 12px @merchant-shadow;
-        transition: all @nordic-transition-base ease;
-        cursor: default;
-        min-height: 120px;
-
-        &:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 8px 24px @merchant-shadow-hover;
-        }
-
-        // 第一行：图标 + 数值
-        .stat-row-first {
-          display: flex;
-          align-items: center;
-          gap: @nordic-space-md;
-          flex: 1;
-
-          .stat-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 48px;
-            height: 48px;
-            border-radius: 10px;
-            font-size: 1.5rem;
-            color: white;
-            flex-shrink: 0;
-          }
-
-          .stat-value {
-            font-size: clamp(1.286rem, 3vw, 2.286rem);
-            font-weight: 700;
-            color: @merchant-text;
-            line-height: 1.2;
-            flex: 1;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-        }
-
-        // 第二行：描述
-        .stat-label {
-          font-size: @nordic-text-sm;
-          color: @merchant-text-muted;
-          text-align: center;
-        }
-
-        // 不同颜色主题
-        &.stat-card-primary {
-          .stat-icon {
-            background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-          }
-          .stat-value {
-            background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-          }
-        }
-
-        &.stat-card-success {
-          .stat-icon {
-            background: linear-gradient(135deg, @merchant-success 0%, @merchant-success-light 100%);
-          }
-          .stat-value {
-            color: @merchant-success;
-          }
-        }
-
-        &.stat-card-info {
-          .stat-icon {
-            background: linear-gradient(135deg, @merchant-info 0%, @merchant-info-light 100%);
-          }
-          .stat-value {
-            color: @merchant-info;
-          }
-        }
-
-        &.stat-card-warning {
-          .stat-icon {
-            background: linear-gradient(135deg, @merchant-warning 0%, @merchant-warning-light 100%);
-          }
-          .stat-value {
-            color: @merchant-warning;
-          }
-        }
-      }
-    }
-
-    // 图表卡片样式
-    .order-trend-section {
-      margin-bottom: @nordic-space-lg;
-
-      .chart-card {
-        border-radius: @nordic-radius-md;
-        box-shadow: 0 2px 12px @merchant-shadow;
-        transition: all @nordic-transition-base ease;
-
-        &:hover {
-          box-shadow: 0 4px 20px @merchant-shadow-hover;
-        }
-
-        :deep(.el-card__header) {
-          background: @merchant-surface-alt;
-          border-bottom: 1px solid @merchant-divider;
-          padding: @nordic-space-md 24px;
-
-          .card-header {
-            .section-title {
-              display: flex;
-              align-items: center;
-              gap: @nordic-space-sm;
-              margin: 0;
-              font-size: @nordic-text-md;
-              font-weight: 600;
-              color: @merchant-text;
-
-              .title-icon {
-                font-size: @nordic-text-lg;
-                color: @merchant-primary;
-              }
-            }
-          }
-        }
-
-        :deep(.el-card__body) {
-          padding: 24px;
-        }
-
-        .chart-container {
-          width: 100%;
-          height: 350px;
-          position: relative;
-
-          .chart {
-            width: 100%;
-            height: 100%;
-          }
-
-          .chart-placeholder {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-        }
-      }
-    }
-
-    // 销量排行卡片样式
-    .dish-sales-section {
-      margin-bottom: @nordic-space-lg;
-
-      .rank-card {
-        border-radius: @nordic-radius-md;
-        box-shadow: 0 2px 12px @merchant-shadow;
-        transition: all @nordic-transition-base ease;
-
-        &:hover {
-          box-shadow: 0 4px 20px @merchant-shadow-hover;
-        }
-
-        :deep(.el-card__header) {
-          background: @merchant-surface-alt;
-          border-bottom: 1px solid @merchant-divider;
-          padding: @nordic-space-md 24px;
-
-          .card-header {
-            .section-title {
-              display: flex;
-              align-items: center;
-              gap: @nordic-space-sm;
-              margin: 0;
-              font-size: @nordic-text-md;
-              font-weight: 600;
-              color: @merchant-text;
-
-              .title-icon {
-                font-size: @nordic-text-lg;
-                color: @merchant-warning;
-              }
-            }
-          }
-        }
-
-        :deep(.el-card__body) {
-          padding: 24px;
-        }
-
-        .no-data-placeholder {
-          text-align: center;
-          padding: 40px 0;
-        }
-
-        .sales-rank-list {
-          .sales-rank-item {
-            display: flex;
-            align-items: center;
-            gap: @nordic-radius-lg;
-            padding: @nordic-space-md;
-            border: 1px solid @merchant-border;
-            border-radius: @nordic-radius-md;
-            margin-bottom: @nordic-radius-lg;
-            background: @merchant-surface;
-            transition: all @nordic-transition-base ease;
-            animation: slideInUp 0.5s ease-out forwards;
-
-            &:last-child {
-              margin-bottom: 0;
-            }
-
-            &:hover {
-              box-shadow: 0 8px 24px @merchant-shadow-hover;
-              transform: translateY(-3px);
-              border-color: @merchant-primary;
-            }
-
-            .rank-badge {
-              width: 48px;
-              height: 48px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              border-radius: @nordic-radius-md;
-              flex-shrink: 0;
-              background: @merchant-surface-alt;
-
-              .rank-number {
-                font-size: @nordic-text-lg;
-                font-weight: 700;
-                color: @merchant-text-sec;
-              }
-
-              // 前三名特殊样式
-              &.rank-1 {
-                background: linear-gradient(135deg, @merchant-warning, lighten(@merchant-warning, 25%));
-                box-shadow: 0 4px 12px rgba(212, 168, 85, 0.3);
-
-                .rank-number {
-                  color: @merchant-surface;
-                  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-                }
-              }
-
-              &.rank-2 {
-                background: linear-gradient(135deg, @merchant-text-muted, lighten(@merchant-text-muted, 12%));
-                box-shadow: 0 4px 12px rgba(158, 152, 147, 0.3);
-
-                .rank-number {
-                  color: @merchant-surface;
-                  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-                }
-              }
-
-              &.rank-3 {
-                background: linear-gradient(135deg, @merchant-secondary, lighten(@merchant-secondary, 15%));
-                box-shadow: 0 4px 12px rgba(181, 106, 74, 0.3);
-
-                .rank-number {
-                  color: @merchant-surface;
-                  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-                }
-              }
-            }
-
-            .dish-info {
-              flex: 1;
-
-              .dish-name {
-                display: flex;
-                align-items: center;
-                gap: @nordic-space-sm;
-                font-size: 1rem;
-                font-weight: 600;
-                margin-bottom: 6px;
-                color: @merchant-text;
-
-                .dish-icon {
-                  color: @merchant-warning;
-                  font-size: @nordic-text-md;
-                }
-              }
-
-              .dish-sales {
-                font-size: @nordic-text-xs;
-                color: @merchant-text-muted;
-              }
-            }
-
-            .dish-revenue {
-              display: flex;
-              flex-direction: column;
-              align-items: flex-end;
-              gap: @nordic-space-xs;
-
-              .revenue-label {
-                font-size: @nordic-text-xs;
-                color: @merchant-text-muted;
-              }
-
-              .revenue-value {
-                font-size: @nordic-text-lg;
-                font-weight: 700;
-                color: @merchant-success;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+  box-sizing: border-box;
+  padding: 0 var(--space-6) var(--space-6);
 }
 
-// 动画定义
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* 页头动作区：周期 chip 取 --control-height-sm，返回按钮取 --control-height-md（§3.4、§4.7） */
+.statistics-container :deep(.app-page-header__actions) {
+  flex-wrap: wrap;
 }
 
-// 响应式布局
+.time-range-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* 周期筛选：与 02/03 的状态 chip 同一套形态（§3.4、§4.6） */
+.time-range-chip {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-500);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.time-range-chip:hover {
+  border-color: var(--brand-400);
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+
+.time-range-chip:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+}
+
+.time-range-chip.is-active {
+  border-color: var(--brand-500);
+  background: var(--brand-500);
+  color: var(--surface);
+}
+
+/* 概览：4 列等宽 KPI 网格，图标+标签一行、数值紧随其下（§4.8） */
+.basic-stats-section {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--card-gap-compact);
+  margin-bottom: var(--card-gap-compact);
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--card-padding-compact);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+}
+
+.stat-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* 四项指标共用同一浅底品牌图标，不再各配一色（§4.8、§7.1） */
+.stat-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-50);
+  color: var(--brand-500);
+  font-size: var(--text-h2);
+}
+
+.stat-label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  line-height: 32px; /* 与 32px 图标同高，标签盒底即行底，数值紧随 --space-2（§4.8） */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 数值：--font-num + tabular-nums，与标签贴近（§4.8） */
+.stat-value {
+  overflow: hidden;
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+  line-height: 32px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 图表卡 / 排行卡：L1 微质感，不做大阴影（§3.4） */
+.order-trend-section,
+.dish-sales-section {
+  margin-bottom: var(--card-gap-compact);
+}
+
+.chart-card,
+.rank-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+}
+
+.chart-card :deep(.el-card__header),
+.rank-card :deep(.el-card__header) {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.chart-card :deep(.el-card__body),
+.rank-card :deep(.el-card__body) {
+  padding: var(--space-5);
+}
+
+.card-header .section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+}
+
+.section-title .title-icon {
+  color: var(--brand-500);
+  font-size: var(--text-h3);
+}
+
+.chart-container {
+  position: relative;
+  height: 320px;
+}
+
+.chart {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-data-placeholder {
+  padding: var(--space-8) 0;
+  text-align: center;
+}
+
+/* 排行行：L1 微质感列表，静态内容不做 hover 位移（§3.4） */
+.sales-rank-list .sales-rank-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.sales-rank-item:last-child {
+  margin-bottom: 0;
+}
+
+.rank-badge {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--canvas-sunken);
+}
+
+.rank-badge .rank-number {
+  color: var(--ink-700);
+  font-family: var(--font-num);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 前三名用品牌色阶强调，不引第二套色系（§0、§3.4） */
+.rank-badge.rank-1 {
+  background: var(--brand-500);
+}
+
+.rank-badge.rank-1 .rank-number {
+  color: var(--surface);
+}
+
+.rank-badge.rank-2 {
+  background: var(--brand-300);
+}
+
+.rank-badge.rank-3 {
+  background: var(--brand-200);
+}
+
+.rank-badge.rank-2 .rank-number,
+.rank-badge.rank-3 .rank-number {
+  color: var(--ink-900);
+}
+
+.dish-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dish-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  overflow: hidden;
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dish-name .dish-icon {
+  color: var(--ink-400);
+  font-size: var(--text-body);
+}
+
+.dish-sales {
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+}
+
+.dish-revenue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.revenue-label {
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+}
+
+/* 金额统一 --ink-900 + tabular-nums，不带红绿蓝（§4.3、§7.1） */
+.revenue-value {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 1200px) {
-  .statistics-container {
-    .stats-content {
-      .basic-stats-section {
-        .el-col {
-          margin-bottom: @nordic-radius-lg;
-        }
-      }
-    }
+  .basic-stats-section {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .statistics-container {
-    padding: @nordic-space-md;
+    padding: 0 var(--space-4) var(--space-4);
+  }
 
-    .stats-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: @nordic-space-md;
-    }
-
-    .stats-content {
-      .basic-stats-section {
-        .el-col {
-          margin-bottom: @nordic-space-md;
-        }
-      }
-    }
+  .basic-stats-section {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>
