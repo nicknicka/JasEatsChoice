@@ -8,23 +8,23 @@
     <!-- 自定义标题栏 -->
     <WindowTitleBar />
 
-    <!-- 品牌区域 -->
+    <!-- 品牌区域：与表单共用同一 400px 中轴（§4.4） -->
     <div class="brand-area">
       <div class="brand-logo">
         <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M6 20C6 20 8 34 24 34C40 34 42 20 42 20" stroke="#E8825C" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-          <path d="M4 20H44" stroke="#E8825C" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
-          <path d="M20 16L30 4" stroke="#E8825C" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
-          <path d="M24 16L36 6" stroke="#E8825C" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
-          <path d="M18 38H30" stroke="#E8825C" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+          <path d="M6 20C6 20 8 34 24 34C40 34 42 20 42 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M4 20H44" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+          <path d="M20 16L30 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+          <path d="M24 16L36 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+          <path d="M18 38H30" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
         </svg>
       </div>
       <h1 class="brand-name">佳食宜选</h1>
       <p class="brand-tagline">美食由你选择</p>
     </div>
 
-    <!-- 表单卡片 -->
-    <div class="glass-card">
+    <!-- 表单卡片：认证类 400px 窄列居中（§4.4） -->
+    <AppFormContainer variant="auth" class="login-form-container">
       <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" @submit.prevent>
         <!-- 手机号 -->
         <el-form-item prop="phone">
@@ -126,38 +126,40 @@
         </button>
       </el-form>
 
-      <!-- 第三方登录 -->
-      <div class="third-party">
-        <div class="divider-line">
-          <span>其他方式</span>
+      <template #actions>
+        <!-- 第三方登录 -->
+        <div class="third-party">
+          <div class="divider-line">
+            <span>其他方式</span>
+          </div>
+          <div class="social-btns">
+            <button class="social-btn wechat-btn" @click="wechatScanLogin" title="微信登录">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M9.5 4C5.36 4 2 6.69 2 10c0 1.89 1.08 3.56 2.78 4.66L4 17l2.5-1.18C7.45 16.07 8.46 16.2 9.5 16.2c.34 0 .67-.02 1-.06C10.17 15.7 10 15.12 10 14.5 10 11.47 12.69 9 16 9c.35 0 .69.03 1.02.08C16.43 6.15 13.27 4 9.5 4zM7 9a1 1 0 110-2 1 1 0 010 2zm5 0a1 1 0 110-2 1 1 0 010 2z" fill="#07C160"/>
+                <path d="M22 14.5c0-2.49-2.46-4.5-5.5-4.5S11 12.01 11 14.5 13.46 19 16.5 19c.86 0 1.67-.15 2.39-.42L21 20l-.58-2.11C21.37 16.95 22 15.79 22 14.5zm-7-1a.75.75 0 110-1.5.75.75 0 010 1.5zm3.5 0a.75.75 0 110-1.5.75.75 0 010 1.5z" fill="#07C160"/>
+              </svg>
+            </button>
+            <button class="social-btn qq-btn" @click="thirdPartyLogin('QQ')" title="QQ登录">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2C8.13 2 5 5.13 5 9.5c0 2.38 1 4.28 2.5 5.5v3.5l2.83-1.42C11.18 17.36 11.57 17.5 12 17.5c.43 0 .82-.14 1.67-.42L16.5 18.5V15c1.5-1.22 2.5-3.12 2.5-5.5C19 5.13 15.87 2 12 2z" fill="#12B7F5"/>
+                <circle cx="9.8" cy="9" r="1.3" fill="white"/>
+                <circle cx="14.2" cy="9" r="1.3" fill="white"/>
+                <path d="M7 15.5c-1.5 1.5-1 3.5.5 4.5" stroke="#12B7F5" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M17 15.5c1.5 1.5 1 3.5-.5 4.5" stroke="#12B7F5" stroke-width="1.2" stroke-linecap="round"/>
+                <ellipse cx="12" cy="14" rx="2.5" ry="1.2" fill="#FFD54F" opacity="0.8"/>
+                <path d="M9.5 21c.83.5 1.5.5 2.5.5s1.67 0 2.5-.5" stroke="#12B7F5" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
-        <div class="social-btns">
-          <button class="social-btn wechat-btn" @click="wechatScanLogin" title="微信登录">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M9.5 4C5.36 4 2 6.69 2 10c0 1.89 1.08 3.56 2.78 4.66L4 17l2.5-1.18C7.45 16.07 8.46 16.2 9.5 16.2c.34 0 .67-.02 1-.06C10.17 15.7 10 15.12 10 14.5 10 11.47 12.69 9 16 9c.35 0 .69.03 1.02.08C16.43 6.15 13.27 4 9.5 4zM7 9a1 1 0 110-2 1 1 0 010 2zm5 0a1 1 0 110-2 1 1 0 010 2z" fill="#07C160"/>
-              <path d="M22 14.5c0-2.49-2.46-4.5-5.5-4.5S11 12.01 11 14.5 13.46 19 16.5 19c.86 0 1.67-.15 2.39-.42L21 20l-.58-2.11C21.37 16.95 22 15.79 22 14.5zm-7-1a.75.75 0 110-1.5.75.75 0 010 1.5zm3.5 0a.75.75 0 110-1.5.75.75 0 010 1.5z" fill="#07C160"/>
-            </svg>
-          </button>
-          <button class="social-btn qq-btn" @click="thirdPartyLogin('QQ')" title="QQ登录">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2C8.13 2 5 5.13 5 9.5c0 2.38 1 4.28 2.5 5.5v3.5l2.83-1.42C11.18 17.36 11.57 17.5 12 17.5c.43 0 .82-.14 1.67-.42L16.5 18.5V15c1.5-1.22 2.5-3.12 2.5-5.5C19 5.13 15.87 2 12 2z" fill="#12B7F5"/>
-              <circle cx="9.8" cy="9" r="1.3" fill="white"/>
-              <circle cx="14.2" cy="9" r="1.3" fill="white"/>
-              <path d="M7 15.5c-1.5 1.5-1 3.5.5 4.5" stroke="#12B7F5" stroke-width="1.2" stroke-linecap="round"/>
-              <path d="M17 15.5c1.5 1.5 1 3.5-.5 4.5" stroke="#12B7F5" stroke-width="1.2" stroke-linecap="round"/>
-              <ellipse cx="12" cy="14" rx="2.5" ry="1.2" fill="#FFD54F" opacity="0.8"/>
-              <path d="M9.5 21c.83.5 1.5.5 2.5.5s1.67 0 2.5-.5" stroke="#12B7F5" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
-      </div>
 
-      <!-- 底部链接 -->
-      <div class="bottom-links">
-        <span>没有账号？</span>
-        <a class="link" @click="toRegister">立即注册</a>
-      </div>
-    </div>
+        <!-- 底部链接 -->
+        <div class="bottom-links">
+          <span>没有账号？</span>
+          <a class="link" @click="toRegister">立即注册</a>
+        </div>
+      </template>
+    </AppFormContainer>
   </div>
 </template>
 
@@ -172,6 +174,7 @@ import { useUserStore } from '../../store/userStore'
 import { useWindowControl } from '../../composables/useWindowControl'
 import { useLoginTransition } from '../../composables/useLoginTransition'
 import WindowTitleBar from '../../components/WindowTitleBar.vue'
+import AppFormContainer from '../../components/common/AppFormContainer.vue'
 import { resolveAndStorePublicIp } from '../../utils/publicIp'
 import { safeRedirect } from '../../utils/authSession'
 
@@ -499,31 +502,20 @@ const thirdPartyLogin = (type) => {
 </script>
 
 <style scoped lang="less">
-// === 配色：简约暖橙 + 玻璃感 ===
-@accent: #F2784B;
-@accent-light: #FF9A76;
-@accent-gradient: linear-gradient(135deg, #F2784B, #E85D3A);
-@text-dark: #2C3E50;
-@text-muted: #8E9AAF;
-@text-placeholder: #B8C4CE;
-@card-bg: rgba(255, 255, 255, 0.55);
-@card-border: rgba(255, 255, 255, 0.7);
-@input-bg: #FFFFFF;
-@input-border: #E8E4E0;
-
+// 颜色、圆角、间距一律取 tokens.css 的 CSS 变量，页面内不写裸色值（DESIGN-BASELINE §7.1）。
 .login-container {
   width: 100%;
   height: 100vh;
-  background: #FFF7F2;
+  background: var(--canvas);
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
   overflow: hidden;
-  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-family: var(--font-sans);
 }
 
-// === 柔和装饰光球 ===
+// === 柔和装饰光球：保留暖橙渐变基调（§2），色调走 --brand-*，透明度交给 opacity ===
 .orb {
   position: absolute;
   border-radius: 50%;
@@ -534,7 +526,8 @@ const thirdPartyLogin = (type) => {
 .orb-1 {
   width: 280px;
   height: 280px;
-  background: radial-gradient(circle, rgba(242, 120, 75, 0.2) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--brand-500) 0%, transparent 70%);
+  opacity: 0.2;
   top: -80px;
   right: -60px;
 }
@@ -542,7 +535,8 @@ const thirdPartyLogin = (type) => {
 .orb-2 {
   width: 200px;
   height: 200px;
-  background: radial-gradient(circle, rgba(255, 154, 118, 0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--brand-300) 0%, transparent 70%);
+  opacity: 0.18;
   bottom: 40px;
   left: -60px;
 }
@@ -550,20 +544,24 @@ const thirdPartyLogin = (type) => {
 .orb-3 {
   width: 150px;
   height: 150px;
-  background: radial-gradient(circle, rgba(242, 120, 75, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--brand-500) 0%, transparent 70%);
+  opacity: 0.12;
   top: 40%;
   left: 60%;
 }
 
-// === 品牌区域 ===
+// === 品牌区域：与表单共用同一 400px 中轴（§4.4） ===
 .brand-area {
+  width: var(--form-width-auth);
+  max-width: calc(100% - var(--space-10));
+  margin-block: auto var(--space-8);
   text-align: center;
-  margin-top: 8px;
   position: relative;
   z-index: 2;
 }
 
 .brand-logo {
+  color: var(--brand-400);
   animation: breathe 4s ease-in-out infinite;
 }
 
@@ -573,90 +571,86 @@ const thirdPartyLogin = (type) => {
 }
 
 .brand-name {
-  font-size: 22px;
-  font-weight: 700;
-  color: @text-dark;
-  margin: 6px 0 2px;
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  color: var(--ink-900);
+  margin: var(--space-1) 0 var(--space-1);
   letter-spacing: 3px;
 }
 
 .brand-tagline {
-  font-size: 11px;
-  color: @text-muted;
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
   letter-spacing: 2px;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 
-// === 毛玻璃卡片 ===
-.glass-card {
-  width: calc(100% - 40px);
-  margin: 14px 20px 16px;
-  padding: 22px 24px 16px;
+// === 表单卡片：认证类 400px 窄列居中，动作区紧跟主按钮（§4.4） ===
+.login-form-container {
   position: relative;
   z-index: 2;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  margin-block-end: auto;
 }
 
 // === Element Plus 输入框覆盖 ===
 :deep(.el-form-item) {
-  margin-bottom: 10px;
+  margin-bottom: var(--space-4);
 }
 
 :deep(.el-form-item__error) {
-  color: #E07060;
-  font-size: 11px;
+  color: var(--danger);
+  font-size: var(--text-caption);
   padding-top: 2px;
 }
 
 :deep(.el-input__wrapper),
 :deep(.el-autocomplete .el-input__wrapper) {
-  background: @input-bg;
-  border: 1px solid @input-border;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   padding: 7px 12px;
-  transition: all 0.2s ease;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 
   &:hover {
-    border-color: darken(@input-border, 12%);
+    border-color: var(--line-strong);
   }
 
   &.is-focus {
-    border-color: @accent;
-    box-shadow: 0 0 0 3px rgba(242, 120, 75, 0.1);
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px var(--brand-100);
   }
 }
 
 :deep(.el-input__inner) {
-  color: @text-dark;
-  font-size: 13px;
-  caret-color: @accent;
+  color: var(--ink-900);
+  font-size: var(--text-body-sm);
+  caret-color: var(--brand-500);
 
   &::placeholder {
-    color: @text-placeholder;
-    font-size: 13px;
+    color: var(--ink-400);
+    font-size: var(--text-body-sm);
   }
 }
 
 :deep(.el-input__prefix) {
-  color: @text-muted;
+  color: var(--ink-500);
   margin-right: 6px;
 }
 
 :deep(.el-input__suffix) {
-  color: @text-muted;
+  color: var(--ink-500);
 }
 
 :deep(.el-input__clear) {
-  color: @text-muted;
-  &:hover { color: @text-dark; }
+  color: var(--ink-500);
+  &:hover { color: var(--ink-900); }
 }
 
 :deep(.el-input__password) {
-  color: @text-muted;
-  &:hover { color: @text-dark; }
+  color: var(--ink-500);
+  &:hover { color: var(--ink-900); }
 }
 
 // 下拉菜单项样式
@@ -667,23 +661,23 @@ const thirdPartyLogin = (type) => {
   width: 100%;
 
   .delete-btn {
-    font-size: 11px;
-    color: #E07060;
+    font-size: var(--text-body-sm);
+    color: var(--danger);
     cursor: pointer;
     padding: 2px 8px;
-    border-radius: 4px;
-    transition: all 0.2s;
+    border-radius: var(--radius-sm);
+    transition: background var(--duration-fast) var(--ease-out);
 
     &:hover {
-      background: rgba(224, 112, 96, 0.08);
+      background: var(--danger-bg);
     }
   }
 }
 
-// === 验证码行 ===
+// === 验证码行：输入按内容收窄，与图形验证码、刷新同排（§4.4） ===
 .captcha-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
   width: 100%;
 
@@ -696,17 +690,17 @@ const thirdPartyLogin = (type) => {
 .captcha-img {
   height: 36px;
   width: 90px;
-  border-radius: 8px;
-  border: 1px solid @input-border;
-  background: #FAFAFA;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--canvas-sunken);
   cursor: pointer;
   object-fit: contain;
-  transition: all 0.2s;
+  transition: border-color var(--duration-fast) var(--ease-out);
   flex-shrink: 0;
   padding: 2px;
 
   &:hover {
-    border-color: @accent;
+    border-color: var(--brand-500);
   }
 }
 
@@ -718,13 +712,13 @@ const thirdPartyLogin = (type) => {
   justify-content: center;
   background: none;
   border: none;
-  color: @text-muted;
+  color: var(--ink-500);
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color var(--duration-fast) var(--ease-out);
   flex-shrink: 0;
 
   &:hover {
-    color: @accent;
+    color: var(--brand-500);
   }
 
   &.is-spinning svg {
@@ -742,43 +736,43 @@ const thirdPartyLogin = (type) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-3);
   padding: 0 2px;
 
   :deep(.el-checkbox__label) {
-    color: @text-muted;
-    font-size: 12px;
+    color: var(--ink-500);
+    font-size: var(--text-body-sm);
   }
 
   :deep(.el-checkbox__inner) {
     background: transparent;
-    border-color: #CCC;
+    border-color: var(--line-strong);
     border-radius: 3px;
   }
 
   :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-    background: @accent;
-    border-color: @accent;
+    background: var(--brand-500);
+    border-color: var(--brand-500);
 
     &::after {
-      border-color: white;
+      border-color: var(--surface);
     }
   }
 
   :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-    color: @text-dark;
+    color: var(--ink-900);
   }
 }
 
 .forgot-link {
-  font-size: 12px;
-  color: @text-muted;
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
   cursor: pointer;
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color var(--duration-fast) var(--ease-out);
 
   &:hover {
-    color: @accent;
+    color: var(--brand-500);
   }
 }
 
@@ -787,102 +781,104 @@ const thirdPartyLogin = (type) => {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: var(--space-4);
   padding: 0 2px;
 
   :deep(.el-checkbox__label) {
-    color: @text-muted;
-    font-size: 11px;
+    color: var(--ink-500);
+    font-size: var(--text-body-sm);
   }
 
   :deep(.el-checkbox__inner) {
     background: transparent;
-    border-color: #CCC;
+    border-color: var(--line-strong);
     border-radius: 3px;
   }
 
   :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-    background: @accent;
-    border-color: @accent;
+    background: var(--brand-500);
+    border-color: var(--brand-500);
 
     &::after {
-      border-color: white;
+      border-color: var(--surface);
     }
   }
 
   :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-    color: @text-dark;
+    color: var(--ink-900);
   }
 }
 
 .agreement-text {
-  font-size: 11px;
+  font-size: var(--text-body-sm);
 }
 
 .agreement-link {
-  color: @accent;
+  color: var(--brand-500);
   cursor: pointer;
   text-decoration: none;
-  border-bottom: 1px solid rgba(242, 120, 75, 0.3);
-  transition: border-color 0.2s;
+  border-bottom: 1px solid var(--brand-200);
+  transition: border-color var(--duration-fast) var(--ease-out);
 
   &:hover {
-    border-bottom-color: @accent;
+    border-bottom-color: var(--brand-500);
   }
 }
 
-// === 登录按钮 ===
+// === 登录按钮：唯一实心主按钮，取 --brand-500（§4.1） ===
 .login-btn {
   width: 100%;
   height: 42px;
   border: none;
-  border-radius: 10px;
-  background: @accent-gradient;
-  color: white;
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: var(--radius-md);
+  background: var(--brand-500);
+  color: var(--surface);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
   letter-spacing: 6px;
   cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 4px 14px rgba(242, 120, 75, 0.3);
+  transition:
+    background var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
 
   &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(242, 120, 75, 0.4);
+    background: var(--brand-600);
+    box-shadow: var(--shadow-md);
   }
 
   &:active:not(:disabled) {
-    transform: translateY(0) scale(0.98);
+    background: var(--brand-600);
   }
 
   &:disabled {
-    opacity: 0.5;
+    background: var(--neutral-bg);
+    color: var(--ink-400);
     cursor: not-allowed;
   }
 }
 
-// === 第三方登录 ===
+// === 第三方登录：收进表单列、紧跟主按钮（§4.4） ===
 .third-party {
-  margin-top: auto;
+  margin: 0;
 }
 
 .divider-line {
   display: flex;
   align-items: center;
-  margin: 14px 0 10px;
+  margin: 0 0 var(--space-3);
 
   &::before,
   &::after {
     content: '';
     flex: 1;
     height: 1px;
-    background: rgba(0, 0, 0, 0.06);
+    background: var(--line);
   }
 
   span {
-    padding: 0 12px;
-    font-size: 11px;
-    color: @text-placeholder;
+    padding: 0 var(--space-3);
+    font-size: var(--text-body-sm);
+    color: var(--ink-400);
     white-space: nowrap;
   }
 }
@@ -890,24 +886,27 @@ const thirdPartyLogin = (type) => {
 .social-btns {
   display: flex;
   justify-content: center;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .social-btn {
   width: 42px;
   height: 42px;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--line);
+  background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-md);
   }
 
   &:active {
@@ -918,41 +917,39 @@ const thirdPartyLogin = (type) => {
 // === 底部链接 ===
 .bottom-links {
   text-align: center;
-  margin-top: 14px;
-  font-size: 12px;
-  color: @text-muted;
+  margin-top: 0;
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
 
   .link {
-    color: @accent;
+    color: var(--brand-500);
     cursor: pointer;
     text-decoration: none;
-    font-weight: 500;
-    transition: opacity 0.2s;
+    font-weight: var(--weight-medium);
+    transition: color var(--duration-fast) var(--ease-out);
 
     &:hover {
-      opacity: 0.8;
+      color: var(--brand-600);
     }
   }
 }
 </style>
 
-<!-- 非 scoped 样式：下拉菜单毛玻璃 -->
+<!-- 非 scoped 样式：下拉菜单 -->
 <style lang="less">
 .login-autocomplete-popper {
   &.el-popper {
-    background: rgba(255, 255, 255, 0.85) !important;
-    backdrop-filter: blur(20px) saturate(1.2);
-    -webkit-backdrop-filter: blur(20px) saturate(1.2);
-    border: 1px solid rgba(0, 0, 0, 0.06) !important;
-    border-radius: 10px !important;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08) !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-lg) !important;
   }
 
   .el-autocomplete-suggestion {
     background: transparent !important;
     border: none !important;
-    border-radius: 10px !important;
-    padding: 4px 0 !important;
+    border-radius: var(--radius-md) !important;
+    padding: var(--space-1) 0 !important;
   }
 
   .el-autocomplete-suggestion__wrap {
@@ -961,22 +958,22 @@ const thirdPartyLogin = (type) => {
   }
 
   .el-autocomplete-suggestion li {
-    color: #2C3E50 !important;
-    font-size: 13px;
+    color: var(--ink-900) !important;
+    font-size: var(--text-body-sm);
     line-height: 36px;
     padding: 0 14px;
-    transition: background 0.15s;
-    border-radius: 6px;
-    margin: 0 4px;
+    transition: background var(--duration-fast) var(--ease-out);
+    border-radius: var(--radius-sm);
+    margin: 0 var(--space-1);
 
     &:hover {
-      background: rgba(242, 120, 75, 0.08) !important;
+      background: var(--brand-50) !important;
     }
   }
 
   .el-popper__arrow::before {
-    background: rgba(255, 255, 255, 0.85) !important;
-    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--line) !important;
   }
 }
 </style>
