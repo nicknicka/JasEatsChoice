@@ -1,115 +1,160 @@
 <template>
-  <div class="wallet-security-container">
-    <common-back-button
-      type="default"
-      size="small"
-      @click="goBack"
-      :use-router-back="false"
-      style="margin-bottom: 20px"
-    />
+  <div class="wallet-security-page">
+    <!-- 页头：标准版；「返回」收进右侧动作区（§4.7） -->
+    <AppPageHeader title="钱包安全设置">
+      <template #actions>
+        <CommonBackButton
+          type="default"
+          size="large"
+          :use-router-back="false"
+          @click="goBack"
+        />
+      </template>
+    </AppPageHeader>
 
-    <h2 class="page-title">钱包安全设置</h2>
-
-    <!-- 安全等级卡片 -->
-    <el-card class="security-level-card" shadow="hover">
+    <!-- 安全等级：数值、首要风险和直达动作放在同一张卡内（P0，§4.1、§4.2） -->
+    <AppCard class="security-level-card" padding="lg">
       <div class="security-level-content">
         <div class="level-info">
-          <div class="level-title">安全等级</div>
+          <div class="level-label">安全等级</div>
           <div class="level-value">
             <el-rate
               v-model="securityLevel"
               disabled
               show-score
-              text-color="#ff9900"
+              :colors="rateColors"
               score-template="{value}"
             />
           </div>
           <div class="level-desc">{{ getSecurityLevelText() }}</div>
         </div>
-        <div class="security-tips">
-          <h4>安全建议</h4>
-          <ul>
-            <li v-for="tip in securityTips" :key="tip">{{ tip }}</li>
-          </ul>
+
+        <div class="risk-panel" :class="`risk-panel--${primaryRisk.tone}`">
+          <StatusTag
+            class="risk-status"
+            :status="primaryRisk.status"
+            :text="primaryRisk.statusText"
+            size="sm"
+          />
+          <div class="risk-text">{{ primaryRisk.text }}</div>
+        </div>
+
+        <div class="risk-action">
+          <el-button
+            size="large"
+            :type="primaryRisk.actionType"
+            @click="handlePrimaryRiskAction"
+          >
+            {{ primaryRisk.actionText }}
+          </el-button>
         </div>
       </div>
-    </el-card>
+    </AppCard>
 
     <!-- 密码管理 -->
-    <el-card class="security-section-card" shadow="hover">
-      <h3 class="section-title">密码管理</h3>
+    <AppCard class="security-section-card" padding="md">
+      <h2 class="section-title">密码管理</h2>
       <div class="security-items">
         <div class="security-item">
           <div class="item-info">
             <div class="item-icon">🔒</div>
             <div class="item-content">
               <div class="item-name">支付密码</div>
-              <div class="item-status" :class="hasPaymentPassword ? 'status-set' : 'status-unset'">
-                {{ hasPaymentPassword ? '已设置' : '未设置' }}
-              </div>
+              <StatusTag
+                class="item-status"
+                :status="hasPaymentPassword ? 'success' : 'failed'"
+                :text="hasPaymentPassword ? '已设置' : '未设置'"
+                size="sm"
+              />
             </div>
           </div>
-          <el-button type="primary" @click="setupPaymentPassword">
-            {{ hasPaymentPassword ? '修改' : '设置' }}
-          </el-button>
+          <div class="item-action">
+            <el-button type="default" size="default" @click="setupPaymentPassword">
+              {{ hasPaymentPassword ? '修改' : '设置' }}
+            </el-button>
+          </div>
         </div>
       </div>
-    </el-card>
+    </AppCard>
 
     <!-- 钱包状态 -->
-    <el-card class="security-section-card" shadow="hover">
-      <h3 class="section-title">钱包状态</h3>
+    <AppCard class="security-section-card" padding="md">
+      <h2 class="section-title">钱包状态</h2>
       <div class="security-items">
         <div class="security-item">
           <div class="item-info">
             <div class="item-icon">🔐</div>
             <div class="item-content">
               <div class="item-name">钱包锁定</div>
+              <StatusTag
+                class="item-state"
+                :status="walletLocked ? 'locked' : 'normal'"
+                :text="walletLocked ? '已锁定' : '正常'"
+                size="sm"
+              />
               <div class="item-desc">锁定后无法进行支付、提现等操作</div>
             </div>
           </div>
-          <el-switch
-            v-model="walletLocked"
-            active-text="已锁定"
-            inactive-text="正常"
-            @change="handleWalletLockChange"
-          />
+          <div class="item-action">
+            <el-switch
+              v-model="walletLocked"
+              aria-label="钱包锁定"
+              @change="handleWalletLockChange"
+            />
+          </div>
         </div>
       </div>
-    </el-card>
+    </AppCard>
 
     <!-- 交易设置 -->
-    <el-card class="security-section-card" shadow="hover">
-      <h3 class="section-title">交易设置</h3>
+    <AppCard class="security-section-card" padding="md">
+      <h2 class="section-title">交易设置</h2>
       <div class="security-items">
         <div class="security-item">
           <div class="item-info">
             <div class="item-icon">💰</div>
             <div class="item-content">
               <div class="item-name">单笔交易限额</div>
-              <div class="item-desc">当前限额：{{ dailyLimit }} 平台币</div>
+              <StatusTag
+                class="item-state"
+                status="neutral"
+                :text="`当前限额：${dailyLimit} 平台币`"
+                size="sm"
+              />
             </div>
           </div>
-          <el-button type="primary" link @click="showLimitDialog = true"> 修改 </el-button>
+          <div class="item-action">
+            <el-button type="default" size="default" @click="showLimitDialog = true">
+              修改
+            </el-button>
+          </div>
         </div>
         <div class="security-item">
           <div class="item-info">
             <div class="item-icon">📱</div>
             <div class="item-content">
               <div class="item-name">支付验证</div>
+              <StatusTag
+                class="item-state"
+                :status="needVerify ? 'enabled' : 'neutral'"
+                :text="needVerify ? '已开启' : '已关闭'"
+                size="sm"
+              />
               <div class="item-desc">超过{{ verifyAmount }}平台币需要输入支付密码</div>
             </div>
           </div>
-          <el-switch v-model="needVerify" @change="handleVerifyChange" />
+          <div class="item-action">
+            <el-switch v-model="needVerify" aria-label="支付验证" @change="handleVerifyChange" />
+          </div>
         </div>
       </div>
-    </el-card>
+    </AppCard>
 
     <!-- 安全日志 -->
-    <el-card class="security-section-card" shadow="hover">
+    <AppCard class="security-section-card" padding="md">
       <div class="section-header">
-        <h3 class="section-title">安全日志</h3>
-        <el-button type="primary" link @click="viewAllLogs">
+        <h2 class="section-title">安全日志</h2>
+        <el-button link size="small" @click="viewAllLogs">
           查看全部 <el-icon><ArrowRight /></el-icon>
         </el-button>
       </div>
@@ -122,13 +167,16 @@
             <div class="log-action">{{ log.action }}</div>
             <div class="log-time">{{ formatTime(log.time) }}</div>
           </div>
-          <div class="log-result" :class="log.success ? 'success' : 'failed'">
-            {{ log.success ? '成功' : '失败' }}
-          </div>
+          <StatusTag
+            class="log-result"
+            :status="log.success ? 'success' : 'failed'"
+            :text="log.success ? '成功' : '失败'"
+            size="sm"
+          />
         </div>
       </div>
-      <el-empty v-else description="暂无安全日志" />
-    </el-card>
+      <AppEmptyState v-else description="暂无安全日志" />
+    </AppCard>
 
     <!-- 限额设置对话框 -->
     <el-dialog v-model="showLimitDialog" title="设置交易限额" width="400px" center>
@@ -153,8 +201,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showLimitDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveLimit">确认</el-button>
+        <el-button size="large" @click="showLimitDialog = false">取消</el-button>
+        <el-button type="primary" size="large" @click="saveLimit">确认</el-button>
       </template>
     </el-dialog>
   </div>
@@ -165,7 +213,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import StatusTag from '../../components/common/StatusTag.vue'
 import walletApi from '../../api/wallet'
 import paymentApi from '../../api/payment'
 import { useAuthStore } from '../../store/authStore'
@@ -180,23 +232,52 @@ const walletLocked = ref(false)
 const dailyLimit = ref(5000)
 const verifyAmount = ref(500)
 const needVerify = ref(true)
+const rateColors = ['var(--danger)', 'var(--warning)', 'var(--success)']
 
-// 安全建议
-const securityTips = computed(() => {
-  const tips = []
+// 当前最需要处理的风险项：先密码，再验证，再限额；全部完成时回到正向提示（P0）
+const primaryRisk = computed(() => {
   if (!hasPaymentPassword.value) {
-    tips.push('建议设置支付密码以提高账户安全性')
+    return {
+      key: 'payment',
+      tone: 'danger',
+      status: 'failed',
+      statusText: '未设置',
+      text: '建议设置支付密码以提高账户安全性',
+      actionText: '设置',
+      actionType: 'primary'
+    }
   }
   if (!needVerify.value) {
-    tips.push('建议开启大额支付验证功能')
+    return {
+      key: 'verify',
+      tone: 'warning',
+      status: 'warning',
+      statusText: '未开启',
+      text: '建议开启大额支付验证功能',
+      actionText: '开启',
+      actionType: 'primary'
+    }
   }
   if (dailyLimit.value > 10000) {
-    tips.push('建议设置合理的交易限额')
+    return {
+      key: 'limit',
+      tone: 'warning',
+      status: 'warning',
+      statusText: '待调整',
+      text: '建议设置合理的交易限额',
+      actionText: '修改',
+      actionType: 'primary'
+    }
   }
-  if (tips.length === 0) {
-    tips.push('您的钱包安全设置完善，请继续保持良好的安全习惯')
+  return {
+    key: 'none',
+    tone: 'success',
+    status: 'success',
+    statusText: '良好',
+    text: '您的钱包安全设置完善，请继续保持良好的安全习惯',
+    actionText: '查看全部',
+    actionType: 'default'
   }
-  return tips
 })
 
 // 最近日志
@@ -341,6 +422,24 @@ const viewAllLogs = () => {
   router.push('/user/home/wallet')
 }
 
+// 从安全等级卡直达当前风险项对应的现有动作
+const handlePrimaryRiskAction = () => {
+  if (primaryRisk.value.key === 'payment') {
+    setupPaymentPassword()
+    return
+  }
+  if (primaryRisk.value.key === 'verify') {
+    needVerify.value = true
+    handleVerifyChange(true)
+    return
+  }
+  if (primaryRisk.value.key === 'limit') {
+    showLimitDialog.value = true
+    return
+  }
+  viewAllLogs()
+}
+
 // 返回
 const goBack = () => {
   router.back()
@@ -383,241 +482,282 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
-.wallet-security-container {
-  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-  min-height: 100vh;
-  background: @nordic-bg;
+/* 页面：单列居中 1200px；颜色、间距、圆角、字阶与动效全部取自 tokens.css（§3、§7.1）。 */
+.wallet-security-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-12);
+  background: var(--canvas);
 }
 
-.page-title {
-  font-size: @nordic-text-xl;
-  margin: 0 0 25px 0;
-  color: @nordic-text;
-  font-weight: 700;
-}
-
+/* 安全等级卡：等级、风险与动作形成一条明确的修复路径（P0，§4.1、§4.2）。 */
 .security-level-card {
-  border-radius: @nordic-radius-lg;
-  margin-bottom: @nordic-space-lg;
-  border: none;
-  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-  color: @nordic-surface;
+  margin-bottom: var(--card-gap);
 }
 
 .security-level-content {
-  padding: @nordic-space-lg;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(320px, 1.5fr) auto;
   align-items: center;
-  flex-wrap: wrap;
-  gap: @nordic-space-lg;
+  gap: var(--space-6);
 }
 
-.level-info {
-  flex: 1;
-}
-
-.level-title {
-  font-size: @nordic-text-md;
-  margin-bottom: @nordic-space-sm;
-  opacity: 0.9;
+.level-label {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
 }
 
 .level-value {
-  margin-bottom: @nordic-space-sm;
+  margin-top: var(--space-2);
+}
+
+.level-value :deep(.el-rate__text) {
+  color: var(--ink-700);
+  font-family: var(--font-num);
+  font-weight: var(--weight-semibold);
 }
 
 .level-desc {
-  font-size: @nordic-text-base;
-  opacity: 0.8;
+  margin-top: var(--space-2);
+  color: var(--ink-700);
+  font-size: var(--text-body);
+  line-height: 22px;
 }
 
-.security-tips {
-  flex: 1;
+/* 风险区只使用语义浅底，不让整张卡铺彩色渐变（§3.1、§3.4）。 */
+.risk-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
 }
 
-.security-tips h4 {
-  margin: 0 0 @nordic-space-sm 0;
-  font-size: @nordic-text-base;
-  opacity: 0.9;
+.risk-panel--danger {
+  background: var(--danger-bg);
 }
 
-.security-tips ul {
-  margin: 0;
-  padding-left: @nordic-space-lg;
+.risk-panel--warning {
+  background: var(--warning-bg);
 }
 
-.security-tips li {
-  font-size: @nordic-text-sm;
-  line-height: 1.8;
-  opacity: 0.85;
+.risk-panel--success {
+  background: var(--success-bg);
 }
 
+.risk-text {
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 22px;
+}
+
+.risk-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.risk-action :deep(.el-button) {
+  min-width: 96px;
+}
+
+/* 设置分组：每组一张 L1 卡，组内统一“状态 + 一个动作”（P0，§3.4、§4.2）。 */
 .security-section-card {
-  border-radius: @nordic-radius-lg;
-  margin-bottom: @nordic-space-lg;
-  border: none;
+  margin-bottom: var(--card-gap);
 }
 
 .section-title {
-  font-size: @nordic-text-md + 2px;
-  margin: 0 0 @nordic-space-lg 0;
-  font-weight: 700;
-  color: @nordic-text;
+  margin: 0 0 var(--space-5);
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 24px;
 }
 
 .section-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: @nordic-space-lg;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.section-header .section-title {
+  margin-bottom: 0;
 }
 
 .security-items {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: var(--space-3);
 }
 
 .security-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: @nordic-space-md;
-  background: @nordic-divider;
-  border-radius: @nordic-radius-md;
-  transition: all @nordic-transition-fast ease;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--canvas-sunken);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 1px transparent;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
-.security-item:hover {
-  background: @nordic-border;
+.security-item:hover,
+.security-item:focus-within {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .item-info {
   display: flex;
-  align-items: center;
-  gap: 15px;
   flex: 1;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .item-icon {
-  font-size: 2.286rem;
-  width: 50px;
-  height: 50px;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  background: @nordic-surface;
-  border-radius: @nordic-radius-sm;
+  width: var(--space-10);
+  height: var(--space-10);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  font-size: var(--text-h2);
 }
 
 .item-content {
   flex: 1;
+  min-width: 0;
 }
 
 .item-name {
-  font-size: 1.071rem;
-  font-weight: 600;
-  color: @nordic-text;
-  margin-bottom: 5px;
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 24px;
 }
 
-.item-status {
-  font-size: @nordic-text-sm;
-  display: inline-block;
-  padding: 2px @nordic-space-sm;
-  border-radius: @nordic-radius-xs;
-}
-
-.status-set {
-  color: @nordic-green;
-  background: @nordic-green-light;
-}
-
-.status-unset {
-  color: @nordic-red;
-  background: @nordic-red-light;
+.item-status,
+.item-state {
+  margin-top: var(--space-1);
 }
 
 .item-desc {
-  font-size: @nordic-text-sm;
-  color: @nordic-text-secondary;
+  margin-top: var(--space-1);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
 }
 
+.item-action {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 88px;
+}
+
+/* “查看全部”属于文字动作，统一为品牌色，不再出现蓝色链接（P1，§4.1、§7.1）。 */
+.section-header :deep(.el-button.is-link) {
+  color: var(--brand-600);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+}
+
+.section-header :deep(.el-button.is-link:hover) {
+  color: var(--brand-700);
+}
+
+/* 安全日志：状态、时间和结果统一成一条紧凑记录（§4.3）。 */
 .logs-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .log-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: @nordic-divider;
-  border-radius: @nordic-radius-sm;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--canvas-sunken);
+  border-radius: var(--radius-md);
 }
 
 .log-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: @nordic-radius-sm;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  font-size: 1.429rem;
-  background: @nordic-surface;
+  width: var(--space-10);
+  height: var(--space-10);
+  background: var(--neutral-bg);
+  border-radius: var(--radius-md);
+  color: var(--neutral);
+  font-size: var(--text-h3);
 }
 
 .icon-login {
-  background: linear-gradient(135deg, @nordic-blue-light 0%, darken(@nordic-blue-light, 5%) 100%);
+  background: var(--info-bg);
+  color: var(--info);
 }
 
 .icon-payment {
-  background: linear-gradient(135deg, @nordic-green-light 0%, darken(@nordic-green-light, 5%) 100%);
+  background: var(--success-bg);
+  color: var(--success);
 }
 
 .icon-password {
-  background: linear-gradient(135deg, @nordic-yellow-light 0%, darken(@nordic-yellow-light, 5%) 100%);
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 
 .icon-withdraw {
-  background: linear-gradient(135deg, @nordic-red-light 0%, darken(@nordic-red-light, 5%) 100%);
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .log-info {
   flex: 1;
+  min-width: 0;
 }
 
 .log-action {
-  font-size: @nordic-text-base;
-  font-weight: 500;
-  color: @nordic-text;
-  margin-bottom: 4px;
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 22px;
 }
 
 .log-time {
-  font-size: @nordic-text-xs;
-  color: @nordic-text-muted;
+  margin-top: var(--space-1);
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+  line-height: 18px;
 }
 
-.log-result {
-  font-size: @nordic-text-sm;
-  padding: 4px 10px;
-  border-radius: @nordic-radius-xs;
-  font-weight: 500;
-}
+@media (max-width: 768px) {
+  .wallet-security-page {
+    padding-inline: var(--space-4);
+  }
 
-.log-result.success {
-  color: @nordic-green;
-  background: @nordic-green-light;
-}
+  .security-level-content {
+    grid-template-columns: 1fr;
+  }
 
-.log-result.failed {
-  color: @nordic-red;
-  background: @nordic-red-light;
+  .risk-action {
+    justify-content: flex-start;
+  }
 }
 </style>
