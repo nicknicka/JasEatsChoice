@@ -36,7 +36,7 @@
       </div>
 
       <!-- 表单卡片 -->
-      <div class="glass-card">
+      <AppFormContainer variant="auth">
         <el-form ref="formRef" :model="formData" :rules="formRules" @submit.prevent>
           <transition name="slide" mode="out-in">
             <!-- 步骤1：验证手机号 -->
@@ -141,7 +141,7 @@
           <span>想起密码了？</span>
           <a class="link" @click="toLogin">返回登录</a>
         </div>
-      </div>
+      </AppFormContainer>
     </main>
   </div>
 </template>
@@ -153,6 +153,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
 import { useWindowControl } from '../../composables/useWindowControl'
+import AppFormContainer from '../../components/common/AppFormContainer.vue'
 import WindowTitleBar from '../../components/WindowTitleBar.vue'
 
 const router = useRouter()
@@ -311,8 +312,6 @@ onUnmounted(() => {
 @text-dark: #2C3E50;
 @text-muted: #8E9AAF;
 @text-placeholder: #B8C4CE;
-@card-bg: rgba(255, 255, 255, 0.55);
-@card-border: rgba(255, 255, 255, 0.7);
 @input-bg: #FFFFFF;
 @input-border: #E8E4E0;
 
@@ -362,7 +361,6 @@ onUnmounted(() => {
 }
 
 .forgot-header {
-  width: min(100% - 40px, var(--form-width-auth, 400px));
   text-align: center;
   margin-top: 8px;
   position: relative;
@@ -432,22 +430,6 @@ onUnmounted(() => {
   &.filled {
     background: @accent;
   }
-}
-
-.glass-card {
-  width: min(100% - 40px, var(--form-width-auth, 400px));
-  margin: 14px 20px 16px;
-  padding: 22px 24px 16px;
-  background: @card-bg;
-  backdrop-filter: blur(24px) saturate(1.3);
-  -webkit-backdrop-filter: blur(24px) saturate(1.3);
-  border: 1px solid @card-border;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
 }
 
 .slide-enter-active {
