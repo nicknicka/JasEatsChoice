@@ -414,7 +414,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     try {
       await stubShanghaiCascader(page)
       await page.goto('/user/home/address')
-      await page.locator('.address-container > button', { hasText: '新增地址' }).click()
+      await page.locator('.app-page-header__actions button', { hasText: '新增地址' }).click()
       const dialog = page.locator('.el-dialog', { hasText: '新增地址' })
       const suffix = Date.now().toString().slice(-8)
       createdName = `E2E 新增${suffix}`
@@ -444,7 +444,7 @@ test.describe('模块八：AI助手与地址管理', () => {
     try {
       await stubShanghaiCascader(page)
       await page.goto('/user/home/address')
-      await page.locator('.address-container > button', { hasText: '新增地址' }).click()
+      await page.locator('.app-page-header__actions button', { hasText: '新增地址' }).click()
       const addDialog = page.locator('.el-dialog', { hasText: '新增地址' })
       const suffix = Date.now().toString().slice(-8)
       originalName = `E2E 编辑${suffix}`

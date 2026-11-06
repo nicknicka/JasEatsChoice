@@ -1,14 +1,15 @@
 <template>
   <div class="address-container">
-    <div class="header fade-in-up">
-      <common-back-button />
-      <h2>管理地址</h2>
-    </div>
-
-    <el-button type="primary" class="scale-in" style="margin-bottom: 20px" @click="showAddDialog = true">
-      <el-icon><Plus /></el-icon>
-      新增地址
-    </el-button>
+    <!-- 页头：标准版，标题 --text-h1 + 上下 --space-6；返回与主操作统一收进右侧动作区（§4.7） -->
+    <AppPageHeader title="管理地址" class="address-header">
+      <template #actions>
+        <CommonBackButton type="default" size="default" />
+        <el-button type="primary" @click="showAddDialog = true">
+          <el-icon><Plus /></el-icon>
+          新增地址
+        </el-button>
+      </template>
+    </AppPageHeader>
 
     <div class="address-list">
       <el-card
@@ -16,44 +17,47 @@
         :key="address.id"
         class="address-card stagger-item"
         :class="{ 'default-address': address.isDefault }"
+        shadow="never"
       >
-        <div class="address-header">
-          <div class="address-name">{{ address.name }}</div>
-          <div class="address-phone">{{ address.phone }}</div>
-        </div>
-
-        <div class="address-details">
-          <div class="address-full">
-            {{ address.province }} {{ address.city }} {{ address.district }} {{ address.street }}
+        <div class="address-card__head">
+          <div class="address-card__identity">
+            <span class="address-name">{{ address.name }}</span>
+            <span class="address-phone">{{ address.phone }}</span>
+            <!-- 默认用明确的文字标签表达，取代绿/蓝边框（评审 P0） -->
+            <span v-if="address.isDefault" class="address-default-tag">默认</span>
           </div>
-          <div class="address-tag" v-if="address.tag">{{ address.tag }}</div>
+
+          <div class="address-actions">
+            <el-button type="text" @click="editAddress(address)">
+              <el-icon><Edit /></el-icon>
+              编辑
+            </el-button>
+            <el-button type="text" danger @click="deleteAddress(address)">
+              <el-icon><Delete /></el-icon>
+              删除
+            </el-button>
+            <el-button v-if="!address.isDefault" type="text" @click="setDefault(address)">
+              设置默认
+            </el-button>
+          </div>
         </div>
 
-        <div class="address-actions">
-          <el-button type="text" size="small" @click="editAddress(address)">
-            <el-icon><Edit /></el-icon>
-            编辑
-          </el-button>
-          <el-button type="text" size="small" danger @click="deleteAddress(address)">
-            <el-icon><Delete /></el-icon>
-            删除
-          </el-button>
-          <el-button
-            v-if="!address.isDefault"
-            type="text"
-            size="small"
-            @click="setDefault(address)"
-          >
-            设置默认
-          </el-button>
+        <div class="address-full">
+          {{ address.province }} {{ address.city }} {{ address.district }} {{ address.street }}
         </div>
+
+        <div v-if="address.tag" class="address-tag">{{ address.tag }}</div>
       </el-card>
 
-      <!-- 无数据显示 -->
-      <div v-if="addresses.length === 0" class="empty-state">
-        <el-icon class="empty-icon"><Location /></el-icon>
-        <p>您还没有添加任何地址</p>
-      </div>
+      <!-- 无数据：图标 + 中文说明 + 替代动作（§4.5） -->
+      <AppEmptyState
+        v-if="addresses.length === 0"
+        class="empty-state"
+        :icon="Location"
+        description="您还没有添加任何地址"
+        action-text="新增地址"
+        @action="showAddDialog = true"
+      />
     </div>
 
     <!-- 新增地址对话框 -->
@@ -178,9 +182,11 @@ const authStore = useAuthStore(pinia)
 
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Edit, Delete, Plus } from '@element-plus/icons-vue'
+import { Edit, Delete, Plus, Location } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
 import axios from 'axios'
 import { API_CONFIG } from '../../config/index.js'
 
@@ -536,141 +542,130 @@ const setDefault = async (address) => {
 </script>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
+/* 页面颜色、间距、圆角、字阶与动效全部取自 tokens.css（§3、§7.1），无裸色值。 */
 .address-container {
-  padding: @nordic-space-lg @nordic-space-xl;
-  background-color: @nordic-bg;
-  min-height: 100vh;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-12);
+  background: var(--canvas);
+}
 
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 28px;
+/* 页头动作区控件统一 40px（§3.4、§4.7）。 */
+.address-header :deep(.el-button) {
+  height: var(--control-height-md);
+}
 
-    /* 移除自定义返回按钮样式，使用组件默认样式 */
+/* 地址卡栅格：单列 1200px 内两列，首屏至少露出两张完整卡片（§3.3、§4.2）。 */
+.address-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: var(--card-gap);
 
-    h2 {
-      font-size: @nordic-text-xl;
-      font-weight: 600;
-      color: @nordic-text;
-      margin: 0;
-    }
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 地址卡统一 L1 微质感（§3.4）：--surface 底 + 1px --line 描边 + 顶部内高光，
+   不再用彩色左边框表达状态（评审 P0、§4.2）。 */
+.address-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+  transition:
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+
+  :deep(.el-card__body) {
+    padding: var(--card-padding);
   }
 
-  .address-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-    gap: @nordic-space-lg;
-    margin-bottom: 30px;
-
-    @media (max-width: @nordic-breakpoint-md) {
-      grid-template-columns: 1fr;
-    }
+  &:hover {
+    box-shadow: inset 0 1px 0 var(--surface-highlight), var(--shadow-sm);
+    transform: translateY(-1px);
   }
+}
 
-  .address-card {
-    position: relative;
-    padding: @nordic-space-lg;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 2px 12px @nordic-shadow;
-    transition: all @nordic-transition-slow ease;
-    border: 1px solid @nordic-border;
-    border-left: 4px solid @nordic-blue; /* 默认蓝色左侧边框 */
+.address-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
 
-    &:hover {
-      box-shadow: 0 4px 20px @nordic-shadow-hover;
-      transform: translateY(-2px);
-    }
+.address-card__identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+}
 
-    &.default-address {
-      border-left: 4px solid @nordic-green;
-      border-color: @nordic-green;
+.address-name {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
+}
 
-      &::before {
-        content: '默认地址';
-        position: absolute;
-        top: 24px;
-        right: 24px;
-        color: @nordic-green;
-        font-size: @nordic-text-base;
-        font-weight: 500;
-        padding: 2px 12px;
-        background-color: @nordic-green-light;
-        border-radius: @nordic-radius-xs;
-      }
-    }
+.address-phone {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
+}
 
-    .address-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
+/* 「默认」用明确的文字标签表达（评审 P0、§3.1），品牌浅底不抢占状态色。 */
+.address-default-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: var(--text-caption);
+  line-height: 18px;
+  font-weight: var(--weight-semibold);
+}
 
-      .address-name {
-        font-size: @nordic-text-lg;
-        font-weight: 600;
-        color: @nordic-text;
-      }
+.address-full {
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+  color: var(--ink-700);
+}
 
-      .address-phone {
-        color: @nordic-text;
-        font-size: @nordic-text-md;
-        font-weight: 500;
-      }
-    }
+/* 分类标签（家/公司/其他）用中性胶囊，不与品牌主色与状态色争语义（§3.1）。 */
+.address-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--space-2);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--neutral-bg);
+  color: var(--neutral);
+  font-size: var(--text-caption);
+  line-height: 18px;
+}
 
-    .address-details {
-      margin-bottom: 18px;
-      line-height: 1.6;
+/* 行内次级动作统一 32px（§3.4）。 */
+.address-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-1);
 
-      .address-full {
-        font-size: @nordic-text-md;
-        color: @nordic-text-secondary;
-        margin-bottom: @nordic-space-sm;
-        white-space: pre-line;
-      }
-
-      .address-tag {
-        display: inline-block;
-        color: @nordic-blue;
-        background-color: @nordic-blue-light;
-        padding: @nordic-space-xs 12px;
-        border-radius: @nordic-radius-xs;
-        font-size: @nordic-text-sm;
-        font-weight: 500;
-      }
-    }
-
-    .address-actions {
-      text-align: right;
-
-      .el-button {
-        margin-left: @nordic-space-sm;
-      }
-    }
+  :deep(.el-button) {
+    height: var(--control-height-sm);
+    margin-left: 0;
+    font-size: var(--text-body-sm);
   }
+}
 
-  .empty-state {
-    text-align: center;
-    padding: 120px 20px;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 2px 12px @nordic-shadow;
-
-    .empty-icon {
-      font-size: 80px;
-      color: @nordic-border;
-      margin-bottom: @nordic-space-lg;
-    }
-
-    p {
-      font-size: @nordic-text-lg;
-      color: @nordic-text-muted;
-      margin-bottom: 36px;
-    }
-  }
+.empty-state {
+  grid-column: 1 / -1;
 }
 </style>
