@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { VideoCamera, Document, Search, Plus, User, Grid, Refresh, Shop, MagicStick, CircleCheck, View, Star, ArrowLeft } from '@element-plus/icons-vue'
+import { VideoCamera, Document, Search, Plus, User, Grid, Refresh, Shop, MagicStick, CircleCheck, Star } from '@element-plus/icons-vue'
 import { useRouter, useRoute } from 'vue-router'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 import { ElMessage } from 'element-plus'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,11 +17,6 @@ const fromSidebar = computed(() => route.query.fromSidebar === 'true')
 // 是否显示返回按钮
 const showBackButton = computed(() => !fromSidebar.value)
 
-// 返回上一页
-const goBack = () => {
-  router.back()
-}
-
 // 教程数据
 const tutorials = ref([])
 const loading = ref(false)
@@ -27,12 +24,7 @@ const loading = ref(false)
 const normalizeTutorial = (tutorial = {}) => {
   return {
     ...tutorial,
-    sourceType: tutorial.sourceType || tutorial.source_type || '',
-    reviewStatus: tutorial.reviewStatus || tutorial.review_status || '',
-    coverImage: tutorial.coverImage || tutorial.cover_image || '',
-    viewCount: tutorial.viewCount ?? tutorial.view_count ?? tutorial.views ?? 0,
-    ratingCount: tutorial.ratingCount ?? tutorial.rating_count ?? 0,
-    isOfficial: tutorial.isOfficial ?? tutorial.is_official ?? tutorial.official ?? false
+    sourceType: tutorial.sourceType || tutorial.source_type || ''
   }
 }
 
@@ -48,11 +40,7 @@ const stats = computed(() => {
   return {
     total: all.length,
     video: all.filter(t => t.type === 'video').length,
-    article: all.filter(t => t.type === 'article').length,
-    admin: all.filter(t => t.sourceType === 'ADMIN').length,
-    merchant: all.filter(t => t.sourceType === 'MERCHANT').length,
-    user: all.filter(t => t.sourceType === 'USER').length,
-    ai: all.filter(t => t.sourceType === 'AI_GENERATED').length
+    article: all.filter(t => t.type === 'article').length
   }
 })
 
@@ -106,37 +94,6 @@ const fetchTutorials = async () => {
   }
 }
 
-// 获取来源类型标签信息
-const getSourceTag = (tutorial) => {
-  const sourceMap = {
-    ADMIN: {
-      type: 'danger',
-      effect: 'dark',
-      icon: '✓',
-      text: tutorial.isOfficial ? '官方认证' : '管理员'
-    },
-    MERCHANT: {
-      type: 'warning',
-      effect: 'plain',
-      icon: '🏪',
-      text: tutorial.merchantName || '商家'
-    },
-    USER: {
-      type: 'primary',
-      effect: 'plain',
-      icon: '👤',
-      text: '用户贡献'
-    },
-    AI_GENERATED: {
-      type: tutorial.reviewStatus === 'APPROVED' ? 'success' : 'info',
-      effect: 'plain',
-      icon: '✨',
-      text: `AI生成${tutorial.reviewStatus === 'APPROVED' ? ' ✓ 人工审核' : ''}`
-    }
-  }
-  return sourceMap[tutorial.sourceType] || { type: 'info', text: tutorial.sourceType }
-}
-
 // 获取难度名称
 const getDifficultyName = (difficulty) => {
   const map = {
@@ -163,88 +120,40 @@ onMounted(() => {
 
 <template>
   <div class="tutorials-plaza-container">
-    <!-- 页面头部 -->
-    <div class="page-header fade-in-up">
-      <div class="header-left">
-        <div class="title-section">
-          <h2>教程广场</h2>
-          <p class="subtitle">探索美食制作技巧，分享你的独家秘方</p>
-        </div>
-      </div>
-      <div class="header-right">
-        <!-- 返回按钮：只在非侧边栏跳转时显示 -->
-        <el-button
-          v-if="showBackButton"
-          @click="goBack"
-          class="back-btn"
-          :icon="ArrowLeft"
-        >
-          返回
+    <AppPageHeader title="教程广场" subtitle="探索美食制作技巧，分享你的独家秘方">
+      <template #actions>
+        <CommonBackButton v-if="showBackButton" type="default" />
+        <el-button @click="router.push('/user/home/tutorials/my')">
+          <el-icon><User /></el-icon>
+          我的教程
         </el-button>
-        <el-button @click="router.push('/user/home/tutorials/my')" class="action-btn">
-          <el-icon><User /></el-icon> 我的教程
+        <el-button type="primary" @click="router.push('/user/home/tutorials/publish')">
+          <el-icon><Plus /></el-icon>
+          发布教程
         </el-button>
-        <el-button type="primary" @click="router.push('/user/home/tutorials/publish')" class="publish-btn">
-          <el-icon><Plus /></el-icon> 发布教程
-        </el-button>
-      </div>
-    </div>
+      </template>
+    </AppPageHeader>
 
-    <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <div class="stat-card total">
-        <div class="stat-icon">
-          <el-icon :size="32"><Grid /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.total }}</div>
-          <div class="stat-label">全部教程</div>
-        </div>
-      </div>
-
-      <div class="stat-card admin">
-        <div class="stat-icon">
-          <el-icon :size="32"><CircleCheck /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.admin }}</div>
-          <div class="stat-label">官方认证</div>
-        </div>
-      </div>
-
-      <div class="stat-card merchant">
-        <div class="stat-icon">
-          <el-icon :size="32"><Shop /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.merchant }}</div>
-          <div class="stat-label">商家贡献</div>
-        </div>
-      </div>
-
-      <div class="stat-card user">
-        <div class="stat-icon">
-          <el-icon :size="32"><User /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.user }}</div>
-          <div class="stat-label">用户贡献</div>
-        </div>
-      </div>
-
-      <div class="stat-card ai">
-        <div class="stat-icon">
-          <el-icon :size="32"><MagicStick /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.ai }}</div>
-          <div class="stat-label">AI生成</div>
-        </div>
-      </div>
+    <!-- 统计摘要：保留总览，不占用首屏的卡片空间 -->
+    <div class="tutorials-summary">
+      <span class="summary-item">
+        <strong class="summary-value">{{ stats.total }}</strong>
+        全部教程
+      </span>
+      <span class="summary-divider" aria-hidden="true"></span>
+      <span class="summary-item">
+        <strong class="summary-value">{{ stats.video }}</strong>
+        视频教程
+      </span>
+      <span class="summary-divider" aria-hidden="true"></span>
+      <span class="summary-item">
+        <strong class="summary-value">{{ stats.article }}</strong>
+        图文指南
+      </span>
     </div>
 
     <!-- 搜索和筛选栏 -->
-    <div class="filter-bar fade-in-up">
+    <div class="filter-bar">
       <div class="filter-left">
         <el-input
           v-model="searchKeyword"
@@ -255,7 +164,7 @@ onMounted(() => {
         />
       </div>
 
-      <div class="filter-right slide-in-left delay-100">
+      <div class="filter-right">
         <el-select v-model="selectedType" placeholder="教程类型" class="filter-select">
           <template #prefix>
             <el-icon><Grid /></el-icon>
@@ -380,7 +289,7 @@ onMounted(() => {
       <el-empty description="没有找到符合条件的教程" :image-size="180">
         <template #image>
           <div class="empty-icon">
-            <el-icon :size="100" color="#ddd"><Document /></el-icon>
+            <el-icon :size="100"><Document /></el-icon>
           </div>
         </template>
         <el-button type="primary" @click="resetFilters" :icon="Refresh">清除筛选条件</el-button>
@@ -392,682 +301,391 @@ onMounted(() => {
       <el-card
         v-for="tutorial in filteredTutorials"
         :key="tutorial.id"
-        class="tutorial-card stagger-item card-hover-effect"
-        shadow="hover"
+        class="tutorial-card"
+        shadow="never"
         @click="router.push(`/user/home/tutorials/${tutorial.id}`)"
       >
         <div class="tutorial-header">
-          <div class="type-badge" :class="tutorial.type">
-            <el-icon :size="24">
-              <component :is="tutorial.type === 'video' ? VideoCamera : Document" />
-            </el-icon>
-            <span>{{ tutorial.type === 'video' ? '视频' : '图文' }}</span>
+          <div class="tutorial-attributes">
+            <span class="type-badge" :class="tutorial.type">
+              <el-icon :size="16">
+                <component :is="tutorial.type === 'video' ? VideoCamera : Document" />
+              </el-icon>
+              <span>{{ tutorial.type === 'video' ? '视频' : '图文' }}</span>
+            </span>
+            <el-tag
+              v-if="tutorial.difficulty"
+              type="info"
+              size="small"
+              effect="plain"
+              class="difficulty-tag"
+            >
+              {{ getDifficultyName(tutorial.difficulty) }}
+            </el-tag>
           </div>
-          <div class="rating-badge" v-if="tutorial.rating">
-            <span class="star">⭐</span>
+          <div v-if="tutorial.rating" class="rating-badge">
+            <el-icon><Star /></el-icon>
             <span>{{ tutorial.rating }}</span>
           </div>
         </div>
 
         <div class="tutorial-content">
-          <!-- 来源标签 -->
-          <div class="source-tags">
-            <el-tag
-              :type="getSourceTag(tutorial).type"
-              :effect="getSourceTag(tutorial).effect"
-              size="small"
-              class="source-tag"
-            >
-              <span class="tag-icon">{{ getSourceTag(tutorial).icon }}</span>
-              {{ getSourceTag(tutorial).text }}
-            </el-tag>
-            <el-tag v-if="tutorial.difficulty" type="info" size="small" effect="plain" class="difficulty-tag">
-              {{ getDifficultyName(tutorial.difficulty) }}
-            </el-tag>
-          </div>
-
           <h3 class="tutorial-title">{{ tutorial.title }}</h3>
-
-          <div class="tutorial-meta">
-            <div class="meta-left">
-              <span class="duration">
-                <el-icon><VideoCamera /></el-icon>
-                {{ tutorial.duration }}
-              </span>
-              <span class="views">
-                <el-icon><View /></el-icon>
-                {{ tutorial.viewCount?.toLocaleString() || 0 }}
-              </span>
-            </div>
-          </div>
         </div>
-
-        <!-- 卡片装饰 -->
-        <div class="card-decoration" :class="getSourceTag(tutorial).type"></div>
       </el-card>
     </transition-group>
   </div>
 </template>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
+/* 页面颜色、间距、圆角与字阶全部来自 tokens.css（§3、§7.1）。 */
 .tutorials-plaza-container {
-  padding: @nordic-space-lg;
-  background: linear-gradient(180deg, @nordic-bg 0%, @nordic-white 100%);
-  min-height: calc(100vh - 60px);
-
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding: 24px;
-    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 8px 24px rgba(212, 132, 90, 0.25);
-    color: white;
-
-    .header-left {
-      .title-section {
-        h2 {
-          margin: 0 0 4px 0;
-          font-size: 2rem /* 原值: 28px */;
-          font-weight: bold;
-          color: white;
-        }
-
-        .subtitle {
-          margin: 0;
-          font-size: 1rem /* 原值: 14px */;
-          opacity: 0.9;
-          color: rgba(255, 255, 255, 0.85);
-        }
-      }
-    }
-
-    .header-right {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      align-items: flex-end;
-
-      .back-btn {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.25);
-        color: white;
-        backdrop-filter: blur(10px);
-        transition: all 0.3s;
-        padding: 8px 20px;
-        font-size: 1rem /* 原值: 14px */;
-
-        &:hover {
-          background: rgba(255, 255, 255, 0.25);
-          border-color: rgba(255, 255, 255, 0.4);
-          transform: translateX(-2px);
-        }
-      }
-
-      .action-btn {
-        background: rgba(255, 255, 255, 0.2);
-        border-color: rgba(255, 255, 255, 0.3);
-        color: white;
-        backdrop-filter: blur(10px);
-        transition: all 0.3s;
-
-        &:hover {
-          background: rgba(255, 255, 255, 0.3);
-          border-color: rgba(255, 255, 255, 0.5);
-          transform: translateY(-2px);
-        }
-      }
-
-      .publish-btn {
-        background: white;
-        border-color: white;
-        color: @nordic-accent;
-        font-weight: 600;
-        transition: all 0.3s;
-
-        &:hover {
-          background: @nordic-accent-light;
-          border-color: @nordic-accent-light;
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        }
-      }
-    }
-  }
-
-  .stats-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-
-    .stat-card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s;
-      position: relative;
-      overflow: hidden;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-      }
-
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-      }
-
-      &.total::before {
-        background: linear-gradient(180deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-      }
-
-      &.admin::before {
-        background: linear-gradient(180deg, @nordic-red 0%, @nordic-red-light 100%);
-      }
-
-      &.merchant::before {
-        background: linear-gradient(180deg, @nordic-yellow-light 0%, @nordic-accent-light 100%);
-      }
-
-      &.user::before {
-        background: linear-gradient(180deg, @nordic-green-light 0%, @nordic-blue-light 100%);
-      }
-
-      &.ai::before {
-        background: linear-gradient(180deg, @nordic-blue-light 0%, @nordic-yellow-light 100%);
-      }
-
-      .stat-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-
-        .total & {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-        }
-
-        .admin & {
-          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-          color: white;
-        }
-
-        .merchant & {
-          background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-          color: #ff6b6b;
-        }
-
-        .user & {
-          background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-          color: #4ecdc4;
-        }
-
-        .ai & {
-          background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);
-          color: #9b59b6;
-        }
-      }
-
-      .stat-info {
-        .stat-value {
-          font-size: 2rem /* 原值: 28px */;
-          font-weight: bold;
-          color: #303133;
-          margin-bottom: 4px;
-          line-height: 1;
-        }
-
-        .stat-label {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #909399;
-        }
-      }
-    }
-  }
-
-  .filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 16px;
-    padding: 20px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-
-    .filter-left {
-      flex: 1;
-      min-width: 280px;
-
-      .search-input {
-        width: 100%;
-
-        :deep(.el-input__wrapper) {
-          border-radius: 20px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-          transition: all 0.3s;
-
-          &:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-          }
-
-          &.is-focus {
-            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
-          }
-        }
-      }
-    }
-
-    .filter-right {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-
-      .filter-select {
-        width: 140px;
-
-        :deep(.el-input__wrapper) {
-          border-radius: 20px;
-        }
-
-        .option-label {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-
-          .difficulty-icon {
-            font-size: 1.143rem /* 原值: 16px */;
-          }
-        }
-      }
-
-      .reset-btn {
-        border-radius: 20px;
-        transition: all 0.3s;
-
-        &:hover {
-          transform: translateY(-2px);
-        }
-      }
-    }
-  }
-
-  .filter-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    margin-bottom: 16px;
-    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-    border-radius: 8px;
-    animation: slideDown 0.3s ease;
-
-    .filter-info-text {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      font-size: 1rem /* 原值: 14px */;
-      color: #333;
-
-      .filter-tag {
-        margin-left: 4px;
-        animation: scaleIn 0.3s ease;
-      }
-    }
-  }
-
-  .loading-container {
-    padding: 40px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  }
-
-  .empty-container {
-    padding: 80px 20px;
-    background: white;
-    border-radius: 12px;
-    text-align: center;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-
-    .empty-icon {
-      margin-bottom: 20px;
-      animation: float 3s ease-in-out infinite;
-    }
-  }
-
-  .tutorial-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-
-    .tutorial-card {
-      cursor: pointer;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      border: none;
-      border-radius: 16px;
-      overflow: visible;
-      position: relative;
-
-      &:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-      }
-
-      :deep(.el-card__body) {
-        padding: 24px;
-      }
-
-      .tutorial-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 2px solid #f5f5f5;
-
-        .type-badge {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-size: 0.929rem /* 原值: 13px */;
-          font-weight: 600;
-
-          &.video {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
-            color: white;
-          }
-
-          &.article {
-            background: linear-gradient(135deg, #f7b267 0%, #ffcc80 100%);
-            color: white;
-          }
-        }
-
-        .rating-badge {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          padding: 6px 12px;
-          background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-          border-radius: 20px;
-          font-size: 1rem /* 原值: 14px */;
-          font-weight: 600;
-          color: #ff6b6b;
-
-          .star {
-            font-size: 1.143rem /* 原值: 16px */;
-          }
-        }
-      }
-
-      .tutorial-content {
-        .source-tags {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 12px;
-          flex-wrap: wrap;
-
-          .source-tag {
-            border-radius: 20px;
-            font-weight: 500;
-            animation: scaleIn 0.3s ease;
-
-            .tag-icon {
-              margin-right: 4px;
-            }
-          }
-
-          .difficulty-tag {
-            border-radius: 20px;
-            font-weight: 500;
-          }
-        }
-
-        .tutorial-title {
-          font-size: 1.286rem /* 原值: 18px */;
-          font-weight: 700;
-          color: #303133;
-          margin: 0 0 16px 0;
-          line-height: 1.5;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          line-clamp: 2;
-          -webkit-box-orient: vertical;
-          min-height: 54px;
-        }
-
-        .tutorial-meta {
-          .meta-left {
-            display: flex;
-            gap: 16px;
-            font-size: 0.929rem /* 原值: 13px */;
-            color: #909399;
-
-            .duration,
-            .views {
-              display: flex;
-              align-items: center;
-              gap: 4px;
-            }
-          }
-        }
-      }
-
-      .card-decoration {
-        position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.3s;
-
-        &.danger {
-          background: radial-gradient(circle, rgba(245, 87, 108, 0.1) 0%, transparent 70%);
-        }
-
-        &.warning {
-          background: radial-gradient(circle, rgba(252, 182, 159, 0.1) 0%, transparent 70%);
-        }
-
-        &.primary {
-          background: radial-gradient(circle, rgba(78, 205, 196, 0.1) 0%, transparent 70%);
-        }
-
-        &.success {
-          background: radial-gradient(circle, rgba(155, 89, 182, 0.1) 0%, transparent 70%);
-        }
-      }
-
-      &:hover .card-decoration {
-        opacity: 1;
-      }
-    }
-  }
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 }
 
-// 动画
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* 页头动作区控件高度取 --control-height-md（§3.4、§4.7）。 */
+.tutorials-plaza-container :deep(.app-page-header__actions .el-button) {
+  height: var(--control-height-md);
+  min-height: var(--control-height-md);
 }
 
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+.tutorials-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+  transition: border-color var(--duration-fast) var(--ease-standard);
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+.summary-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
 }
 
-.tutorial-fade-enter-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+.summary-value {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h3);
+  font-variant-numeric: tabular-nums;
+  line-height: 24px;
 }
 
+.summary-divider {
+  width: 1px;
+  height: var(--space-5);
+  background: var(--line);
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.filter-bar:focus-within {
+  border-color: var(--brand-300);
+  box-shadow:
+    inset 0 1px 0 var(--surface-highlight),
+    var(--shadow-sm);
+}
+
+.filter-left {
+  flex: 1 1 320px;
+  min-width: 240px;
+}
+
+.search-input {
+  width: 100%;
+}
+
+.filter-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.filter-select {
+  width: 140px;
+}
+
+.filter-bar :deep(.el-input__wrapper),
+.filter-bar :deep(.el-select__wrapper) {
+  box-sizing: border-box;
+  height: var(--control-height-sm);
+  min-height: var(--control-height-sm);
+  border-radius: var(--radius-md);
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.filter-select .option-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reset-btn {
+  height: var(--control-height-sm);
+  min-height: var(--control-height-sm);
+  border-radius: var(--radius-md);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.reset-btn:hover {
+  transform: translateY(-1px);
+}
+
+.reset-btn:active {
+  transform: translateY(0);
+}
+
+.filter-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--canvas-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.filter-info-text {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+}
+
+.filter-info :deep(.el-button) {
+  height: var(--control-height-sm);
+  min-height: var(--control-height-sm);
+}
+
+.loading-container {
+  padding: var(--space-10);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.empty-container {
+  padding: var(--space-8) var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.empty-icon {
+  margin-bottom: var(--space-5);
+}
+
+.empty-icon .el-icon {
+  color: var(--ink-400);
+}
+
+.tutorial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--card-gap);
+}
+
+.tutorial-card {
+  cursor: pointer;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.tutorial-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow:
+    inset 0 1px 0 var(--surface-highlight),
+    var(--shadow-md);
+}
+
+.tutorial-card:active {
+  transform: translateY(0);
+}
+
+.tutorial-card :deep(.el-card__body) {
+  padding: var(--card-padding);
+}
+
+.tutorial-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.tutorial-attributes {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--neutral-bg);
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  line-height: 20px;
+}
+
+.type-badge .el-icon {
+  color: var(--brand-500);
+  font-size: 16px;
+}
+
+.difficulty-tag {
+  border-radius: var(--radius-full);
+  font-weight: var(--weight-medium);
+}
+
+.rating-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: var(--text-body-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-semibold);
+  line-height: 20px;
+}
+
+.rating-badge .el-icon {
+  font-size: 14px;
+}
+
+.tutorial-title {
+  display: -webkit-box;
+  min-height: 48px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 24px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+}
+
+.tutorial-fade-enter-active,
 .tutorial-fade-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard);
 }
 
 .tutorial-fade-enter-from {
   opacity: 0;
-  transform: translateY(20px) scale(0.9);
+  transform: translateY(var(--space-3));
 }
 
 .tutorial-fade-leave-to {
   opacity: 0;
-  transform: translateY(-20px) scale(0.9);
+  transform: translateY(calc(-1 * var(--space-3)));
 }
 
-// 响应式
 @media (max-width: 1200px) {
-  .tutorials-plaza-container {
-    .stats-cards {
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    }
-
-    .tutorial-grid {
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    }
+  .tutorial-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .tutorials-plaza-container {
-    padding: 16px;
+    padding: 0 var(--space-4) var(--space-8);
+  }
 
-    .page-header {
-      flex-direction: column;
-      gap: 16px;
-      padding: 20px;
+  .tutorials-summary {
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
 
-      .header-left {
-        .title-section {
-          h2 {
-            font-size: 22px;
-          }
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-          .subtitle {
-            font-size: 0.929rem /* 原值: 13px */;
-          }
-        }
-      }
+  .filter-left {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
 
-      .header-right {
-        width: 100%;
-        align-items: stretch;
-        flex-direction: row;
-        flex-wrap: wrap;
+  .filter-right {
+    justify-content: space-between;
+  }
 
-        .back-btn,
-        .action-btn,
-        .publish-btn {
-          flex: 1;
-          min-width: 100px;
-        }
-      }
-    }
+  .filter-select {
+    flex: 1 1 120px;
+    width: auto;
+  }
 
-    .stats-cards {
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
+  .filter-info {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-      .stat-card {
-        padding: 16px;
-
-        .stat-icon {
-          width: 48px;
-          height: 48px;
-        }
-
-        .stat-info {
-          .stat-value {
-            font-size: 1.714rem /* 原值: 24px */;
-          }
-
-          .stat-label {
-            font-size: 0.857rem /* 原值: 12px */;
-          }
-        }
-      }
-    }
-
-    .filter-bar {
-      flex-direction: column;
-      gap: 12px;
-      padding: 16px;
-
-      .filter-left {
-        min-width: 100%;
-      }
-
-      .filter-right {
-        justify-content: center;
-
-        .filter-select {
-          flex: 1;
-          min-width: 120px;
-        }
-      }
-    }
-
-    .filter-info {
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-
-      .filter-info-text {
-        justify-content: center;
-      }
-    }
-
-    .tutorial-grid {
-      grid-template-columns: 1fr;
-    }
+  .tutorial-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
