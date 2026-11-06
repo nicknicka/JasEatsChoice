@@ -88,80 +88,82 @@ const formatOptionalIngredients = (ingredients) => {
 .order-item-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 
   .order-item {
-    padding: 16px;
-    background: #fafafa;
-    border-radius: 8px;
-    border: 1px solid #f0f0f0;
-    transition: all 0.3s;
-
-    &:hover {
-      background: #f5f7fa;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
+    padding: var(--space-4);
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
 
     .item-main {
-      margin-bottom: 12px;
+      margin-bottom: var(--space-3);
 
       .item-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
+        align-items: baseline;
+        gap: var(--space-4);
+        margin-bottom: var(--space-2);
 
         .item-name {
-          font-size: 1.071rem /* 原值: 15px */;
-          font-weight: 600;
-          color: #2c3e50;
+          font-size: var(--text-body);
+          font-weight: var(--weight-semibold);
+          color: var(--ink-900);
         }
 
         .item-price {
-          font-size: 1rem /* 原值: 14px */;
-          color: #7f8c8d;
+          font-family: var(--font-num);
+          font-variant-numeric: tabular-nums;
+          font-size: var(--text-body-sm);
+          color: var(--ink-500);
+          white-space: nowrap;
         }
       }
 
       .item-specs {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 8px;
+        gap: var(--space-1);
+        margin-bottom: var(--space-2);
 
         .ingredient-tag {
-          font-size: 0.857rem /* 原值: 12px */;
+          font-size: var(--text-caption);
         }
       }
 
       .item-note {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 8px 12px;
-        background: #fff9e6;
-        border-radius: 4px;
-        font-size: 0.929rem /* 原值: 13px */;
-        color: #856404;
+        gap: var(--space-1);
+        padding: var(--space-2) var(--space-3);
+        background: var(--warning-bg);
+        border-radius: var(--radius-sm);
+        font-size: var(--text-body-sm);
+        color: var(--ink-700);
       }
     }
 
     .item-footer {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding-top: 12px;
-      border-top: 1px dashed #e4e7ed;
+      align-items: baseline;
+      gap: var(--space-4);
+      padding-top: var(--space-3);
+      border-top: 1px dashed var(--line);
 
       .item-quantity {
-        font-size: 1rem /* 原值: 14px */;
-        color: #7f8c8d;
+        font-size: var(--text-body-sm);
+        color: var(--ink-500);
       }
 
       .item-total {
-        font-size: 1.286rem /* 原值: 18px */;
-        font-weight: 700;
-        color: #e6a23c;
+        font-family: var(--font-num);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-h3);
+        font-weight: var(--weight-bold);
+        color: var(--ink-900);
+        white-space: nowrap;
       }
     }
 
@@ -169,17 +171,17 @@ const formatOptionalIngredients = (ingredients) => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-top: 12px;
-      margin-top: 12px;
-      border-top: 1px dashed #e4e7ed;
+      padding-top: var(--space-3);
+      margin-top: var(--space-3);
+      border-top: 1px dashed var(--line);
 
       .payment-detail {
         display: flex;
         align-items: center;
-        gap: 6px;
-        font-size: 0.929rem /* 原值: 13px */;
-        color: #67c23a;
-        font-weight: 500;
+        gap: var(--space-1);
+        font-size: var(--text-body-sm);
+        color: var(--success);
+        font-weight: var(--weight-medium);
       }
     }
   }
