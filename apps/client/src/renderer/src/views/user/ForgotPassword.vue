@@ -11,16 +11,26 @@
     <div class="forgot-header">
       <h1 class="forgot-title">重置密码</h1>
       <div class="steps-indicator">
-        <div class="step-dot" :class="{ active: currentStep >= 1, done: currentStep > 1 }">
-          <span v-if="currentStep > 1">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </span>
-          <span v-else>1</span>
+        <div class="step" :class="{ active: currentStep >= 1, done: currentStep > 1 }">
+          <div class="step-dot">
+            <span v-if="currentStep > 1">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <span v-else>1</span>
+          </div>
+          <span class="step-label">验证手机号</span>
         </div>
         <div class="step-line" :class="{ filled: currentStep > 1 }"></div>
-        <div class="step-dot" :class="{ active: currentStep >= 2 }">2</div>
+        <div class="step" :class="{ active: currentStep >= 2, done: currentStep > 2 }">
+          <div class="step-dot">
+            <span v-if="currentStep > 2">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <span v-else>2</span>
+          </div>
+          <span class="step-label">设置新密码</span>
+        </div>
       </div>
-      <p class="step-desc">{{ currentStep === 1 ? '验证手机号' : '设置新密码' }}</p>
     </div>
 
     <!-- 表单卡片 -->
@@ -124,7 +134,7 @@
         </transition>
       </el-form>
 
-      <!-- 底部链接 -->
+      <!-- 底部链接：收进同一列并紧跟表单 -->
       <div class="bottom-links">
         <span>想起密码了？</span>
         <a class="link" @click="toLogin">返回登录</a>
@@ -310,6 +320,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   position: relative;
   overflow: hidden;
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -339,6 +350,7 @@ onUnmounted(() => {
 }
 
 .forgot-header {
+  width: min(100% - 40px, var(--form-width-auth, 400px));
   text-align: center;
   margin-top: 8px;
   position: relative;
@@ -359,6 +371,13 @@ onUnmounted(() => {
   justify-content: center;
 }
 
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
 .step-dot {
   width: 28px;
   height: 28px;
@@ -369,20 +388,27 @@ onUnmounted(() => {
   justify-content: center;
   font-size: 12px;
   color: @text-muted;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--duration-slow, 240ms) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
   background: white;
+}
 
-  &.active {
-    border-color: @accent;
-    background: @accent;
-    color: white;
-  }
+.step.active .step-dot,
+.step.done .step-dot {
+  border-color: @accent;
+  background: @accent;
+  color: white;
+}
 
-  &.done {
-    border-color: @accent;
-    background: @accent;
-    color: white;
-  }
+.step-label {
+  font-size: 12px;
+  color: @text-muted;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.step.active .step-label {
+  color: @text-dark;
+  font-weight: 500;
 }
 
 .step-line {
@@ -396,15 +422,8 @@ onUnmounted(() => {
   }
 }
 
-.step-desc {
-  font-size: 11px;
-  color: @text-muted;
-  margin-top: 10px;
-  letter-spacing: 1px;
-}
-
 .glass-card {
-  width: calc(100% - 40px);
+  width: min(100% - 40px, var(--form-width-auth, 400px));
   margin: 14px 20px 16px;
   padding: 22px 24px 16px;
   background: @card-bg;
@@ -415,10 +434,8 @@ onUnmounted(() => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
   position: relative;
   z-index: 2;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
 }
 
 .slide-enter-active {
@@ -605,7 +622,7 @@ onUnmounted(() => {
 
 .bottom-links {
   text-align: center;
-  margin-top: auto;
+  margin-top: 14px;
   padding-top: 14px;
   font-size: 12px;
   color: @text-muted;
