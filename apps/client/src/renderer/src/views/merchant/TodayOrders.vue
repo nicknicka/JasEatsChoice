@@ -14,12 +14,21 @@ import {
   Delete,
   Search,
   Refresh,
-  Filter,
-  List
+  List,
+  Money,
+  Clock,
+  KnifeFork,
+  Location,
+  EditPen
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import api from '../../utils/api.js'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppStatCard from '../../components/common/AppStatCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
+import StatusTag from '../../components/common/StatusTag.vue'
 import { useAuthStore } from '../../store/authStore'
 import { normalizeOrderStatusCode } from '../../utils/orderStatus'
 
@@ -88,21 +97,15 @@ const getRelativeTime = (timeStr) => {
   return timeStr.split(' ')[1] // 显示具体时间
 }
 
-// 获取订单卡片样式类
-const getOrderCardClass = (order) => {
-  const classes = []
-  classes.push(`status-${order.status}`)
-  return classes.join(' ')
-}
-
 // 订单状态映射（对应后端状态码）
 // 0-待支付、1-待接单、2-制作中、3-已完成、4-已取消
+// tagKey 交给 StatusTag 按 §3.1 状态表统一取色
 const orderStatusMap = {
-  0: { text: '待支付', type: 'info', color: '#909399' },
-  1: { text: '待接单', type: 'danger', color: '#f56c6c' },
-  2: { text: '制作中', type: 'warning', color: '#e6a23c' },
-  3: { text: '已完成', type: 'success', color: '#67c23a' },
-  4: { text: '已取消', type: 'info', color: '#c0c4cc' }
+  0: { text: '待支付', tagKey: 'pendingpayment' },
+  1: { text: '待接单', tagKey: 'pendingaccept' },
+  2: { text: '制作中', tagKey: 'processing' },
+  3: { text: '已完成', tagKey: 'completed' },
+  4: { text: '已取消', tagKey: 'cancelled' }
 }
 
 // 全部订单数据
@@ -113,6 +116,9 @@ const activeStatusFilter = ref('all')
 
 // 搜索关键词
 const searchKeyword = ref('')
+
+// 是否当天真的没有订单：0 单时收起统计与筛选（DESIGN-BASELINE §4.5）
+const hasOrders = computed(() => orders.value.length > 0)
 
 // 筛选后的订单（改为computed自动计算）
 const filteredOrders = computed(() => {
@@ -170,10 +176,12 @@ const orderOverview = computed(() => {
   }
 })
 
-// 监听订单概览变化，触发动画
+// 监听统计值变化，触发数字动画
 watch(
-  orderOverview,
-  (newVal) => {
+  () => orderOverview.value,
+  (newVal, oldVal) => {
+    if (!oldVal) return
+
     animateValue('total', newVal.total)
     animateValue('totalAmount', newVal.totalAmount)
     animateValue('pendingCount', newVal.pendingCount)
@@ -406,6 +414,18 @@ const getEmptyDescription = () => {
   return '今日暂无订单'
 }
 
+// 空状态替代动作：0 单时给"查看全部订单"入口，筛不出结果时给"清除筛选"（§4.5）
+const emptyActionText = computed(() => (hasOrders.value ? '清除筛选' : '查看全部订单'))
+
+const handleEmptyAction = () => {
+  if (hasOrders.value) {
+    searchKeyword.value = ''
+    activeStatusFilter.value = 'all'
+    return
+  }
+  router.push('/merchant/home/orders')
+}
+
 // 页面加载时初始化
 onMounted(() => {
   fetchOrders()
@@ -413,1835 +433,613 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="merchant-orders-container">
-    <!-- 头部 -->
-    <div class="orders-header">
-      <div class="header-left">
-        <h3 class="page-title">今日订单</h3>
-        <span class="current-date">{{ today }}</span>
-      </div>
-      <div class="header-right">
-        <el-button size="small" :loading="loading" @click="refreshOrders"> 刷新 </el-button>
-        <common-back-button type="default" />
-      </div>
-    </div>
-
-    <!-- 订单统计卡片 -->
-    <div class="overview-section">
-      <div class="stat-card total">
-        <div class="stat-icon">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M912 160H128c-35.3 0-64 28.7-64 64v576c0 35.3 28.7 64 64 64h784c35.3 0 64-28.7 64-64V224c0-35.3-28.7-64-64-64z m-56 464H472c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8z m0-192H472c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8z m0-192H472c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h384c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8z M168 624h200c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H168c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8z m0-192h200c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H168c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8z m0-192h200c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H168c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8z"
-              fill="currentColor"
-            />
-          </svg>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value animated-number">{{ animatedValues.total }}</div>
-          <div class="stat-label">总订单</div>
-        </div>
-      </div>
-
-      <div class="stat-card amount highlight">
-        <div class="stat-icon">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z m151.2-500.2L534.6 536.2c-3.1 3.1-8.2 3.1-11.3 0l-109-109c-3.1-3.1-3.1-8.2 0-11.3l36.4-36.4c3.1-3.1 8.2-3.1 11.3 0l82 82 214.6-214.6c3.1-3.1 8.2-3.1 11.3 0l36.4 36.4c3.1 3.1 3.1 8.2 0 11.3z"
-              fill="currentColor"
-            />
-          </svg>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value animated-number">¥{{ animatedValues.totalAmount.toFixed(0) }}</div>
-          <div class="stat-label">总金额</div>
-        </div>
-      </div>
-
-      <div class="stat-card pending">
-        <div class="stat-icon">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"
-              fill="currentColor"
-            />
-          </svg>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value animated-number">{{ animatedValues.pendingCount }}</div>
-          <div class="stat-label">待处理</div>
-        </div>
-      </div>
-
-      <div class="stat-card preparing">
-        <div class="stat-icon">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m193.5 301.7l-210.6 292c-12.7 17.7-39 17.7-51.7 0L318.5 484.9c-3.8-5.3 0-12.7 6.5-12.7h46.9c10.2 0 19.9 4.9 25.9 13.3l71.2 98.8 157.2-218c6-8.3 15.6-13.3 25.9-13.3H699c6.5 0 10.3 7.4 6.5 12.7z"
-              fill="currentColor"
-            />
-          </svg>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value animated-number">{{ animatedValues.preparingCount }}</div>
-          <div class="stat-label">准备中</div>
-        </div>
-      </div>
-
-      <div class="stat-card completed">
-        <div class="stat-icon">
-          <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m193.5 301.7l-210.6 292c-12.7 17.7-39 17.7-51.7 0L318.5 484.9c-3.8-5.3 0-12.7 6.5-12.7h46.9c10.2 0 19.9 4.9 25.9 13.3l71.2 98.8 157.2-218c6-8.3 15.6-13.3 25.9-13.3H699c6.5 0 10.3 7.4 6.5 12.7z"
-              fill="currentColor"
-            />
-          </svg>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value animated-number">{{ animatedValues.completedCount }}</div>
-          <div class="stat-label">已完成</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 筛选和搜索 -->
-    <div class="filter-section">
-      <div class="filter-left">
-        <div class="filter-header">
-          <el-icon class="filter-icon"><Filter /></el-icon>
-          <span class="filter-label">状态筛选</span>
-        </div>
-        <div class="status-filter-group">
-          <div
-            v-for="status in ['all', 0, 1, 2, 3, 4]"
-            :key="status"
-            :class="[
-              'custom-status-tag',
-              `status-tag-${status}`,
-              { active: activeStatusFilter === status }
-            ]"
-            @click="activeStatusFilter = status"
-          >
-            <el-icon v-if="status === 'all'" class="tag-icon"><List /></el-icon>
-            <el-icon v-else-if="status === 0" class="tag-icon"><CircleClose /></el-icon>
-            <el-icon v-else-if="status === 1" class="tag-icon"><CircleClose /></el-icon>
-            <el-icon v-else-if="status === 2" class="tag-icon"><Goods /></el-icon>
-            <el-icon v-else-if="status === 3" class="tag-icon"><CircleCheckFilled /></el-icon>
-            <el-icon v-else-if="status === 4" class="tag-icon"><CircleClose /></el-icon>
-
-            <span class="tag-text">
-              {{ status === 'all' ? '全部'
-                : status === 0 ? '待支付'
-                : orderStatusMap[status].text }}
-              <template v-if="status !== 'all'">({{ getStatusCount(status) }})</template>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div class="filter-right">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索订单号/用户/电话"
-          class="search-input"
-          clearable
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-      </div>
-    </div>
-
-    <!-- 快捷操作栏 -->
-    <div class="quick-actions">
-      <div class="quick-actions-left">
-        <el-button size="small" @click="refreshOrders" :loading="loading" class="quick-action-btn">
+  <div class="today-orders-page">
+    <!-- 页头：compact 版，标题 --text-h2 + 上下 --space-4，返回在右侧动作区（§4.7） -->
+    <AppPageHeader title="今日订单" :compact="true">
+      <template #extra>
+        <span class="today-orders-page__date">{{ today }}</span>
+      </template>
+      <template #actions>
+        <el-button type="default" size="large" :loading="loading" @click="refreshOrders">
           <el-icon><Refresh /></el-icon>
           <span>刷新</span>
         </el-button>
-      </div>
-      <div class="quick-actions-right">
-        <span class="order-count-info">
-          共 <strong>{{ filteredOrders.length }}</strong> 个订单
-        </span>
-      </div>
-    </div>
+        <CommonBackButton type="default" />
+      </template>
+    </AppPageHeader>
 
-    <!-- 订单列表 -->
-    <div v-loading="loading" class="orders-list-section">
-      <transition-group name="list" tag="div">
-        <div
-          v-for="(order, index) in filteredOrders"
-          :key="order.id"
-          :class="['order-item', getOrderCardClass(order)]"
-          :style="{ animationDelay: `${index * 0.05}s` }"
-        >
-          <div class="order-main">
-            <div class="order-content">
-              <div class="order-left">
-                <div class="order-basic-info">
-                  <div class="order-no">
-                    <span class="no-label">订单号</span>
-                    <span class="no-value">{{ order.id }}</span>
-                  </div>
-                  <div class="order-amount">
-                    <span class="amount-label">金额</span>
-                    <span class="amount-value">¥{{ (order.totalAmount || 0).toFixed(2) }}</span>
-                  </div>
-                  <div class="order-time" :title="order.createdAt">
-                    <span class="time-label">时间</span>
-                    <span class="time-value">{{ getRelativeTime(order.createdAt) }}</span>
-                  </div>
-                </div>
-
-                <!-- 配送地址（始终显示） -->
-                <div
-                  v-if="order.address"
-                  class="order-user-info"
-                  style="margin-top: 10px; margin-bottom: 10px"
-                >
-                  <div class="user-address" style="grid-column: 1 / -1">
-                    <span class="info-label">📍 配送地址</span>
-                    <span class="info-value">{{ order.address }}</span>
-                  </div>
-                </div>
-
-                <!-- 用户详细信息（可展开/收起） -->
-                <div
-                  v-if="expandedUserInfo.has(order.id)"
-                  class="order-user-info user-detail-expanded"
-                >
-                  <div class="user-detail-item" style="grid-column: 1 / -1">
-                    <span class="info-label">👤 用户ID</span>
-                    <span class="info-value">{{ order.userId || '未知' }}</span>
-                  </div>
-                  <div v-if="order.paymentTime" class="user-detail-item">
-                    <span class="info-label">💳 支付时间</span>
-                    <span class="info-value">{{ order.paymentTime || '未支付' }}</span>
-                  </div>
-                  <div v-if="order.paidAmount" class="user-detail-item">
-                    <span class="info-label">💰 已付金额</span>
-                    <span class="info-value"
-                      >¥{{ order.paidAmount ? order.paidAmount.toFixed(2) : '0.00' }}</span
-                    >
-                  </div>
-                  <div v-if="order.addressId" class="user-detail-item">
-                    <span class="info-label">📍 地址ID</span>
-                    <span class="info-value">{{ order.addressId }}</span>
-                  </div>
-                </div>
-
-                <!-- 订单备注（始终显示） -->
-                <div v-if="order.remark" class="order-remark">
-                  <div class="remark-icon">📝</div>
-                  <div class="remark-content">
-                    <span class="remark-label">备注：</span>
-                    <span class="remark-text">{{ order.remark }}</span>
-                  </div>
-                </div>
-
-                <!-- 菜品列表 -->
-                <div
-                  v-if="order.orderDishes && order.orderDishes.length > 0"
-                  class="order-dishes-list"
-                >
-                  <div class="dishes-header">
-                    <span class="dishes-title">🍽️ 菜品清单</span>
-                    <span class="dishes-count">共{{ order.orderDishes.length }}件</span>
-                  </div>
-                  <div class="dishes-items">
-                    <div v-for="dish in order.orderDishes" :key="dish.id" class="dish-item">
-                      <div class="dish-info">
-                        <span class="dish-name">{{ dish.dishName || '未知菜品' }}</span>
-                        <span class="dish-quantity">× {{ dish.quantity || 0 }}</span>
-                        <span v-if="dish.customization" class="dish-customization"
-                          >({{ dish.customization }})</span
-                        >
-                      </div>
-                      <div class="dish-price">
-                        ¥{{ ((dish.price || 0) * (dish.quantity || 0)).toFixed(2) }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="order-right">
-                <div class="order-status">
-                  <el-tag :type="orderStatusMap[order.status].type" size="large">
-                    {{ orderStatusMap[order.status].text }}
-                  </el-tag>
-                </div>
-              </div>
+    <!-- 概览：1 主指标 + 4 次级条，替代 4+1 空网格（§4.8） -->
+    <div v-if="hasOrders" class="overview">
+      <AppStatCard
+        class="overview__primary"
+        label="今日总订单"
+        :value="animatedValues.total"
+        :icon="List"
+      />
+      <AppCard class="overview__secondary" padding="md">
+        <div class="overview__stats">
+          <div class="overview-stat">
+            <el-icon class="overview-stat__icon"><Money /></el-icon>
+            <div class="overview-stat__body">
+              <span class="overview-stat__value">¥{{ animatedValues.totalAmount.toFixed(0) }}</span>
+              <span class="overview-stat__label">总金额</span>
             </div>
-
-            <div class="order-divider"></div>
-
-            <div class="order-actions">
-              <!-- 主要操作按钮组 -->
-              <div class="primary-actions">
-                <el-button
-                  type="primary"
-                  size="small"
-                  @click="viewOrderDetails(order)"
-                  class="detail-btn"
-                >
-                  <el-icon><View /></el-icon>
-                  <span>详情</span>
-                </el-button>
-
-                <!-- 状态转换按钮 -->
-                <el-button
-                  v-if="order.status === 1"
-                  type="success"
-                  size="small"
-                  @click="updateOrderStatus(order, 2)"
-                  class="action-btn"
-                >
-                  <el-icon><CircleCheck /></el-icon>
-                  <span>接单</span>
-                </el-button>
-
-                <el-button
-                  v-if="order.status === 1"
-                  type="danger"
-                  size="small"
-                  @click="rejectOrder(order)"
-                  class="action-btn"
-                >
-                  <el-icon><CircleClose /></el-icon>
-                  <span>拒绝</span>
-                </el-button>
-
-                <el-button
-                  v-if="order.status === 2"
-                  type="success"
-                  size="small"
-                  @click="updateOrderStatus(order, 3)"
-                  class="action-btn"
-                >
-                  <el-icon><CircleCheckFilled /></el-icon>
-                  <span>完成订单</span>
-                </el-button>
-
-                <el-button
-                  v-if="order.status === 3"
-                  type="info"
-                  size="small"
-                  disabled
-                  class="action-btn"
-                >
-                  <span>已完成</span>
-                </el-button>
-              </div>
-
-              <!-- 更多操作下拉菜单 -->
-              <el-dropdown trigger="click" class="more-dropdown">
-                <el-button type="info" size="small" plain class="more-btn">
-                  <el-icon><MoreFilled /></el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item @click="toggleUserInfoExpand(order.id)">
-                      <el-icon><User /></el-icon>
-                      <span>{{ expandedUserInfo.has(order.id) ? '隐藏' : '显示' }}用户信息</span>
-                    </el-dropdown-item>
-                    <el-dropdown-item v-if="order.status < 3" divided @click="cancelOrder(order)">
-                      <el-icon><CircleClose /></el-icon>
-                      <span class="dropdown-text-warning">取消订单</span>
-                    </el-dropdown-item>
-                    <el-dropdown-item divided @click="deleteOrder(order)">
-                      <el-icon><Delete /></el-icon>
-                      <span class="dropdown-text-danger">删除订单</span>
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
+          </div>
+          <div class="overview-stat">
+            <el-icon class="overview-stat__icon"><Clock /></el-icon>
+            <div class="overview-stat__body">
+              <span class="overview-stat__value">{{ animatedValues.pendingCount }}</span>
+              <span class="overview-stat__label">待处理</span>
+            </div>
+          </div>
+          <div class="overview-stat">
+            <el-icon class="overview-stat__icon"><KnifeFork /></el-icon>
+            <div class="overview-stat__body">
+              <span class="overview-stat__value">{{ animatedValues.preparingCount }}</span>
+              <span class="overview-stat__label">准备中</span>
+            </div>
+          </div>
+          <div class="overview-stat">
+            <el-icon class="overview-stat__icon"><CircleCheckFilled /></el-icon>
+            <div class="overview-stat__body">
+              <span class="overview-stat__value">{{ animatedValues.completedCount }}</span>
+              <span class="overview-stat__label">已完成</span>
             </div>
           </div>
         </div>
+      </AppCard>
+    </div>
 
-        <!-- 空数据提示 -->
-        <div v-if="filteredOrders.length === 0" key="empty" class="empty-orders">
-          <el-empty :description="getEmptyDescription()"></el-empty>
+    <!-- 状态筛选 + 搜索：控件统一 --control-height-sm（§3.4），0 单时收起（§4.5） -->
+    <AppCard v-if="hasOrders" class="filter-card" padding="md">
+      <div class="filter-bar">
+        <div class="filter-bar__chips">
+          <span class="filter-bar__label">状态筛选</span>
+          <div class="status-filter-group">
+            <button
+              v-for="status in ['all', 0, 1, 2, 3, 4]"
+              :key="status"
+              type="button"
+              class="status-chip"
+              :class="{ 'status-chip--active': activeStatusFilter === status }"
+              @click="activeStatusFilter = status"
+            >
+              <el-icon class="status-chip__icon">
+                <List v-if="status === 'all'" />
+                <CircleClose v-else-if="status === 0 || status === 1 || status === 4" />
+                <Goods v-else-if="status === 2" />
+                <CircleCheckFilled v-else />
+              </el-icon>
+              <span>
+                {{
+                  status === 'all' ? '全部' : status === 0 ? '待支付' : orderStatusMap[status].text
+                }}
+                <template v-if="status !== 'all'">({{ getStatusCount(status) }})</template>
+              </span>
+            </button>
+          </div>
         </div>
-      </transition-group>
+
+        <div class="filter-bar__search">
+          <el-input
+            v-model="searchKeyword"
+            size="default"
+            placeholder="搜索订单号/用户/电话"
+            class="search-input"
+            clearable
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
+      </div>
+    </AppCard>
+
+    <!-- 订单列表 -->
+    <div v-loading="loading" class="orders-list">
+      <div v-if="hasOrders" class="orders-count">
+        共 <strong>{{ filteredOrders.length }}</strong> 个订单
+      </div>
+
+      <div v-if="filteredOrders.length > 0" class="orders-list__rows">
+        <article v-for="order in filteredOrders" :key="order.id" class="order-item">
+          <header class="order-item__head">
+            <div class="order-item__id">
+              <span class="order-item__id-label">订单号</span>
+              <span class="order-item__id-value">{{ order.id }}</span>
+            </div>
+            <StatusTag
+              size="sm"
+              :status="orderStatusMap[order.status].tagKey"
+              :text="orderStatusMap[order.status].text"
+            />
+          </header>
+
+          <div class="order-item__meta">
+            <span class="order-item__amount">¥{{ (order.totalAmount || 0).toFixed(2) }}</span>
+            <span class="order-item__time" :title="order.createdAt">
+              {{ getRelativeTime(order.createdAt) }}
+            </span>
+          </div>
+
+          <div v-if="order.address" class="order-item__field">
+            <el-icon class="order-item__field-icon"><Location /></el-icon>
+            <span class="order-item__field-label">配送地址</span>
+            <span class="order-item__field-value">{{ order.address }}</span>
+          </div>
+
+          <div v-if="expandedUserInfo.has(order.id)" class="order-item__details">
+            <div class="order-item__field">
+              <span class="order-item__field-label">用户ID</span>
+              <span class="order-item__field-value">{{ order.userId || '未知' }}</span>
+            </div>
+            <div v-if="order.paymentTime" class="order-item__field">
+              <span class="order-item__field-label">支付时间</span>
+              <span class="order-item__field-value">{{ order.paymentTime }}</span>
+            </div>
+            <div v-if="order.paidAmount" class="order-item__field">
+              <span class="order-item__field-label">已付金额</span>
+              <span class="order-item__field-value">
+                ¥{{ order.paidAmount ? order.paidAmount.toFixed(2) : '0.00' }}
+              </span>
+            </div>
+            <div v-if="order.addressId" class="order-item__field">
+              <span class="order-item__field-label">地址ID</span>
+              <span class="order-item__field-value">{{ order.addressId }}</span>
+            </div>
+          </div>
+
+          <div v-if="order.remark" class="order-item__field">
+            <el-icon class="order-item__field-icon"><EditPen /></el-icon>
+            <span class="order-item__field-label">备注</span>
+            <span class="order-item__field-value">{{ order.remark }}</span>
+          </div>
+
+          <div v-if="order.orderDishes && order.orderDishes.length > 0" class="order-item__dishes">
+            <div class="order-item__dishes-head">
+              <span class="order-item__dishes-title">菜品清单</span>
+              <span>共 {{ order.orderDishes.length }} 件</span>
+            </div>
+            <div v-for="dish in order.orderDishes" :key="dish.id" class="order-item__dish">
+              <span class="order-item__dish-name">{{ dish.dishName || '未知菜品' }}</span>
+              <span class="order-item__dish-qty">× {{ dish.quantity || 0 }}</span>
+              <span v-if="dish.customization" class="order-item__dish-custom">
+                ({{ dish.customization }})
+              </span>
+              <span class="order-item__dish-price">
+                ¥{{ ((dish.price || 0) * (dish.quantity || 0)).toFixed(2) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 行操作：可见动作 ≤2，危险动作进「更多」下拉（§4.3） -->
+          <div class="order-item__actions">
+            <el-button type="default" size="default" @click="viewOrderDetails(order)">
+              <el-icon><View /></el-icon>
+              <span>详情</span>
+            </el-button>
+
+            <el-button
+              v-if="order.status === 1"
+              type="primary"
+              size="default"
+              @click="updateOrderStatus(order, 2)"
+            >
+              <el-icon><CircleCheck /></el-icon>
+              <span>接单</span>
+            </el-button>
+
+            <el-button
+              v-if="order.status === 2"
+              type="primary"
+              size="default"
+              @click="updateOrderStatus(order, 3)"
+            >
+              <el-icon><CircleCheckFilled /></el-icon>
+              <span>完成订单</span>
+            </el-button>
+
+            <el-button v-if="order.status === 3" type="info" size="default" disabled>
+              <span>已完成</span>
+            </el-button>
+
+            <el-dropdown trigger="click" class="order-item__more">
+              <el-button type="default" size="default" plain>
+                <el-icon><MoreFilled /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item
+                    v-if="order.status === 1"
+                    @click="rejectOrder(order)"
+                  >
+                    <el-icon><CircleClose /></el-icon>
+                    <span class="dropdown-text-danger">拒绝</span>
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="toggleUserInfoExpand(order.id)">
+                    <el-icon><User /></el-icon>
+                    <span>{{ expandedUserInfo.has(order.id) ? '隐藏' : '显示' }}用户信息</span>
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    v-if="order.status < 3"
+                    divided
+                    @click="cancelOrder(order)"
+                  >
+                    <el-icon><CircleClose /></el-icon>
+                    <span class="dropdown-text-warning">取消订单</span>
+                  </el-dropdown-item>
+                  <el-dropdown-item divided @click="deleteOrder(order)">
+                    <el-icon><Delete /></el-icon>
+                    <span class="dropdown-text-danger">删除订单</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </article>
+      </div>
+
+      <!-- 空状态：图标 + 说明 + 替代动作，整页不超 360px（§4.5） -->
+      <AppEmptyState
+        v-if="filteredOrders.length === 0 && !loading"
+        class="orders-empty"
+        :icon="List"
+        :description="getEmptyDescription()"
+        :action-text="emptyActionText"
+        @action="handleEmptyAction"
+      />
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
-.merchant-orders-container {
-  padding: 0 20px 20px 20px;
-
-  .orders-header {
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-    border-radius: 16px;
-    box-shadow: 0 4px 16px rgba(74, 122, 77, 0.3);
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-
-      .page-title {
-        font-size: 1.714rem /* 原值: 24px */;
-        font-weight: 700;
-        margin: 0;
-        color: @merchant-surface;
-        letter-spacing: 0.5px;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-
-      .current-date {
-        font-size: 1rem /* 原值: 14px */;
-        color: @merchant-surface;
-        background: rgba(255, 255, 255, 0.25);
-        padding: 6px 16px;
-        border-radius: 20px;
-        font-weight: 500;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      }
-    }
-
-    .header-right {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-
-      :deep(.el-button) {
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-      }
-    }
-  }
-
-  .overview-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 24px;
-    background: @merchant-primary-light;
-    border: 1px solid @merchant-primary;
-    border-radius: 16px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 16px;
-    box-shadow: 0 4px 12px @merchant-shadow;
-
-    .stat-card {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 20px 24px;
-      background: @merchant-surface;
-      border-radius: 16px;
-      box-shadow: 0 2px 12px @merchant-shadow;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-      flex: 1;
-      min-width: 160px;
-      border: 1px solid @merchant-border;
-      position: relative;
-      overflow: hidden;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0) 0%,
-          rgba(255, 255, 255, 0.5) 100%
-        );
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-
-      &:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 12px 28px rgba(74, 122, 77, 0.25);
-        border-color: @merchant-primary-light;
-
-        &::before {
-          opacity: 1;
-        }
-
-        .stat-icon {
-          transform: rotate(10deg) scale(1.1);
-        }
-      }
-
-      &:active {
-        transform: translateY(-6px) scale(1.01);
-      }
-
-      .stat-icon {
-        width: 52px;
-        height: 52px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        border-radius: 14px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        z-index: 1;
-
-        svg {
-          width: 28px;
-          height: 28px;
-        }
-      }
-
-      .stat-content {
-        flex: 1;
-        position: relative;
-        z-index: 1;
-
-        .stat-value {
-          font-size: 26px;
-          font-weight: 700;
-          color: @merchant-primary-dark;
-          line-height: 1.2;
-          letter-spacing: -0.5px;
-          transition: all 0.3s ease;
-
-          &.animated-number {
-            display: inline-block;
-            animation: countUp 0.6s ease-out;
-          }
-        }
-
-        .stat-label {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: @merchant-info;
-          margin-top: 6px;
-          font-weight: 500;
-          letter-spacing: 0.3px;
-        }
-      }
-
-      &.total {
-        border-left: 4px solid @merchant-info;
-
-        .stat-icon {
-          background: linear-gradient(
-            135deg,
-            rgba(91, 139, 210, 0.15) 0%,
-            rgba(91, 139, 210, 0.08) 100%
-          );
-          color: @merchant-info;
-        }
-
-        .stat-value {
-          color: @merchant-info;
-        }
-      }
-
-      &.amount {
-        border-left: 4px solid @merchant-secondary;
-
-        .stat-icon {
-          background: linear-gradient(
-            135deg,
-            rgba(181, 106, 74, 0.15) 0%,
-            rgba(181, 106, 74, 0.08) 100%
-          );
-          color: @merchant-secondary;
-        }
-
-        .stat-value {
-          color: @merchant-secondary;
-        }
-
-        &.highlight {
-          background: linear-gradient(135deg, @merchant-secondary-light 0%, @merchant-surface 100%);
-          border-width: 2px;
-
-          .stat-value {
-            font-size: 2rem /* 原值: 28px */;
-          }
-        }
-      }
-
-      &.pending {
-        border-left: 4px solid @merchant-warning;
-
-        .stat-icon {
-          background: linear-gradient(
-            135deg,
-            rgba(212, 168, 85, 0.15) 0%,
-            rgba(212, 168, 85, 0.08) 100%
-          );
-          color: @merchant-warning;
-        }
-
-        .stat-value {
-          color: @merchant-warning;
-        }
-      }
-
-      &.preparing {
-        border-left: 4px solid @merchant-warning;
-
-        .stat-icon {
-          background: linear-gradient(
-            135deg,
-            rgba(212, 168, 85, 0.15) 0%,
-            rgba(212, 168, 85, 0.08) 100%
-          );
-          color: @merchant-warning;
-        }
-
-        .stat-value {
-          color: @merchant-warning;
-        }
-      }
-
-      &.completed {
-        border-left: 4px solid @merchant-success;
-
-        .stat-icon {
-          background: linear-gradient(
-            135deg,
-            rgba(90, 143, 94, 0.15) 0%,
-            rgba(90, 143, 94, 0.08) 100%
-          );
-          color: @merchant-success;
-        }
-
-        .stat-value {
-          color: @merchant-success;
-        }
-      }
-    }
-  }
-
-  .filter-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
-    border-radius: 12px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 12px @merchant-shadow;
-    border: 1px solid @merchant-border;
-    transition: all 0.3s ease;
-
-    &:hover {
-      box-shadow: 0 4px 16px @merchant-shadow-hover;
-    }
-
-    .filter-left {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      flex: 1;
-
-      .filter-header {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-
-        .filter-icon {
-          font-size: 1.143rem /* 原值: 16px */;
-          color: @merchant-primary;
-        }
-
-        .filter-label {
-          font-size: 0.929rem /* 原值: 13px */;
-          font-weight: 600;
-          color: @merchant-text;
-        }
-      }
-
-      .status-filter-group {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-
-        .custom-status-tag {
-          cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          padding: 6px 12px;
-          font-size: 0.857rem;
-          font-weight: 500;
-          border-radius: 8px;
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          user-select: none;
-          white-space: nowrap;
-          position: relative;
-
-          // 默认未选中状态：透明/灰色
-          background: transparent;
-          color: @merchant-text-muted;
-          border: 1px solid @merchant-border;
-
-          .tag-icon {
-            font-size: 0.857rem;
-            opacity: 0.6;
-          }
-
-          .tag-text {
-            font-size: 0.857rem;
-          }
-
-          .close-icon {
-            font-size: 10px;
-            margin-left: 2px;
-            opacity: 0.8;
-            transition: all 0.2s ease;
-
-            &:hover {
-              opacity: 1;
-              transform: scale(1.1);
-            }
-          }
-
-          // hover 状态：轻微提示可点击
-          &:hover {
-            background: @merchant-surface-alt;
-            border-color: @merchant-primary;
-            color: @merchant-primary;
-
-            .tag-icon {
-              opacity: 0.8;
-            }
-
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-          }
-
-          &:active {
-            transform: translateY(0);
-          }
-
-          // ==================== 选中状态样式 ====================
-
-          // 全部标签选中
-          &.status-tag-all.active {
-            background: linear-gradient(135deg, @merchant-primary 0%, lighten(@merchant-primary, 8%) 100%);
-            color: @merchant-surface;
-            border-color: @merchant-primary;
-            box-shadow: 0 2px 8px rgba(74, 122, 77, 0.4);
-
-            .tag-icon {
-              opacity: 1;
-            }
-
-            &:hover {
-              background: linear-gradient(135deg, lighten(@merchant-primary, 8%) 0%, lighten(@merchant-primary, 14%) 100%);
-              transform: translateY(-1px);
-              box-shadow: 0 4px 12px rgba(74, 122, 77, 0.5);
-            }
-          }
-
-          // 待支付选中 - 灰色
-          &.status-tag-0.active {
-            background: linear-gradient(135deg, @merchant-text-muted 0%, lighten(@merchant-text-muted, 8%) 100%);
-            color: @merchant-surface;
-            border-color: @merchant-text-muted;
-            box-shadow: 0 2px 8px rgba(158, 152, 147, 0.3);
-
-            .tag-icon {
-              opacity: 1;
-            }
-
-            &:hover {
-              background: linear-gradient(135deg, lighten(@merchant-text-muted, 8%) 0%, lighten(@merchant-text-muted, 14%) 100%);
-            }
-          }
-
-          // 待接单选中 - 红色
-          &.status-tag-1.active {
-            background: linear-gradient(135deg, @merchant-error 0%, lighten(@merchant-error, 8%) 100%);
-            color: @merchant-surface;
-            border-color: @merchant-error;
-            box-shadow: 0 2px 8px rgba(196, 91, 91, 0.4);
-
-            .tag-icon {
-              opacity: 1;
-            }
-
-            &:hover {
-              background: linear-gradient(135deg, lighten(@merchant-error, 8%) 0%, lighten(@merchant-error, 14%) 100%);
-            }
-          }
-
-          // 制作中选中
-          &.status-tag-2.active {
-            background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 8%) 100%);
-            color: @merchant-surface;
-            border-color: @merchant-warning;
-            box-shadow: 0 2px 8px rgba(212, 168, 85, 0.4);
-
-            .tag-icon {
-              opacity: 1;
-            }
-          }
-
-          // 已完成选中 - 绿色
-          &.status-tag-3.active {
-            background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 8%) 100%);
-            color: @merchant-surface;
-            border-color: @merchant-success;
-            box-shadow: 0 2px 8px rgba(90, 143, 94, 0.4);
-
-            .tag-icon {
-              opacity: 1;
-            }
-
-            &:hover {
-              background: linear-gradient(135deg, lighten(@merchant-success, 8%) 0%, lighten(@merchant-success, 14%) 100%);
-            }
-          }
-
-          // 已取消选中
-          &.status-tag-4.active {
-            background: linear-gradient(135deg, @merchant-text-muted 0%, lighten(@merchant-text-muted, 8%) 100%);
-            color: @merchant-surface;
-            border-color: @merchant-text-muted;
-            box-shadow: 0 2px 8px rgba(158, 152, 147, 0.3);
-
-            .tag-icon {
-              opacity: 1;
-            }
-
-            &:hover {
-              background: linear-gradient(135deg, lighten(@merchant-text-muted, 8%) 0%, lighten(@merchant-text-muted, 14%) 100%);
-            }
-          }
-        }
-      }
-    }
-
-    .filter-right {
-      flex-shrink: 0;
-
-      :deep(.search-input) {
-        width: 320px;
-
-        .el-input__wrapper {
-          border-radius: 10px;
-          padding: 8px 12px;
-          box-shadow: 0 1px 3px @merchant-shadow;
-          transition: all 0.3s ease;
-
-          &:hover {
-            box-shadow: 0 2px 8px @merchant-shadow-hover;
-          }
-
-          &.is-focus {
-            box-shadow:
-              0 0 0 2px rgba(74, 122, 77, 0.2),
-              0 2px 8px rgba(74, 122, 77, 0.3);
-          }
-        }
-
-        .el-input__prefix {
-          color: @merchant-text-muted;
-        }
-      }
-    }
-  }
-
-  .quick-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    background: @merchant-surface;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px @merchant-shadow;
-    border: 1px solid @merchant-border;
-
-    .quick-actions-left {
-      display: flex;
-      gap: 10px;
-
-      .quick-action-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 1px 3px @merchant-shadow;
-
-        .el-icon {
-          font-size: 1rem /* 原值: 14px */;
-        }
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        &:active {
-          transform: translateY(0);
-        }
-      }
-    }
-
-    .quick-actions-right {
-      .order-count-info {
-        font-size: 1rem /* 原值: 14px */;
-        color: @merchant-text-sec;
-        padding: 8px 16px;
-        background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-surface 100%);
-        border-radius: 8px;
-        border: 1px solid @merchant-primary;
-
-        strong {
-          color: @merchant-primary;
-          font-size: 1.143rem /* 原值: 16px */;
-          font-weight: 700;
-        }
-      }
-    }
-  }
-
-  .orders-list-section {
-    min-height: 400px;
-
-    .order-item {
-      margin-bottom: 16px;
-      margin-top: 16px;
-      background-color: @merchant-surface;
-      position: relative;
-      overflow: visible;
-      border-radius: 12px;
-      /* 卡片入场动画 */
-      animation: card-slide-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-      opacity: 0;
-
-      .order-main {
-        display: flex;
-        flex-direction: column;
-        padding: 18px 20px;
-        border: 2px solid @merchant-border;
-        border-radius: 12px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 2px 8px @merchant-shadow;
-        position: relative;
-        overflow: visible;
-        gap: 16px;
-
-        .order-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 20px;
-        }
-
-        .order-divider {
-          height: 1px;
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            @merchant-border 10%,
-            @merchant-border 90%,
-            transparent 100%
-          );
-          margin: 0;
-        }
-
-        &::before {
-          content: '';
-          position: absolute;
-          left: 0;
-          top: 0;
-          bottom: 0;
-          width: 4px;
-          background: @merchant-border;
-          transition: all 0.3s ease;
-          border-radius: 12px 0 0 12px;
-        }
-
-        &:hover {
-          transform: translateY(-4px) scale(1.01);
-          box-shadow: 0 12px 32px @merchant-shadow-hover;
-          border-color: @merchant-text-muted;
-        }
-
-        &:active {
-          transform: translateY(-2px) scale(0.998);
-        }
-      }
-
-      // 状态边框颜色（使用数字状态码）
-      &.status-1 .order-main::before {
-        background: linear-gradient(180deg, @merchant-error 0%, lighten(@merchant-error, 8%) 100%);
-        box-shadow: 0 0 8px rgba(196, 91, 91, 0.3);
-      }
-
-      &.status-2 .order-main::before {
-        background: linear-gradient(180deg, @merchant-warning 0%, lighten(@merchant-warning, 8%) 100%);
-        box-shadow: 0 0 8px rgba(212, 168, 85, 0.3);
-      }
-
-      &.status-3 .order-main::before {
-        background: linear-gradient(180deg, @merchant-warning 0%, lighten(@merchant-warning, 8%) 100%);
-        box-shadow: 0 0 8px rgba(212, 168, 85, 0.3);
-      }
-
-      &.status-4 .order-main::before {
-        background: linear-gradient(180deg, @merchant-info 0%, lighten(@merchant-info, 8%) 100%);
-        box-shadow: 0 0 8px rgba(91, 139, 210, 0.3);
-      }
-
-      &.status-3 .order-main::before {
-        background: linear-gradient(180deg, @merchant-success 0%, lighten(@merchant-success, 8%) 100%);
-        box-shadow: 0 0 8px rgba(90, 143, 94, 0.3);
-      }
-
-      &.status-4 .order-main::before {
-        background: linear-gradient(180deg, @merchant-text-muted 0%, lighten(@merchant-text-muted, 8%) 100%);
-      }
-
-      // 未读订单样式
-      &.unread-order .order-main {
-        background: linear-gradient(to right, @merchant-error-light 0%, @merchant-surface 40%);
-        border-color: @merchant-error-light;
-
-        &::after {
-          content: '新订单';
-          position: absolute;
-          top: -10px;
-          left: 20px;
-          background: linear-gradient(135deg, @merchant-error 0%, lighten(@merchant-error, 8%) 100%);
-          color: @merchant-surface;
-          font-size: 0.75rem /* 原值: 11px */;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-weight: 600;
-          animation: newOrderPulse 2s ease-in-out infinite;
-          box-shadow: 0 2px 8px rgba(196, 91, 91, 0.4);
-          z-index: 10;
-        }
-      }
-
-      // 加急订单样式
-      &.urgent-order .order-main {
-        border-width: 2px;
-        border-style: solid;
-
-        &:not(.status-cancelled) {
-          border-color: @merchant-error;
-          background: linear-gradient(to right, @merchant-error-light 0%, @merchant-surface 20%);
-
-          &::before {
-            width: 5px;
-            background: linear-gradient(180deg, @merchant-error 0%, lighten(@merchant-error, 8%) 100%);
-            box-shadow: 0 0 12px rgba(196, 91, 91, 0.5);
-          }
-        }
-      }
-
-      .order-left {
-        flex: 1;
-        min-width: 0;
-
-        .order-basic-info {
-          display: grid;
-          grid-template-columns: auto auto 1fr;
-          gap: 12px 20px;
-          margin-bottom: 12px;
-          font-size: 1rem /* 原值: 14px */;
-          align-items: center;
-
-          .order-no {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            font-size: 1.071rem /* 原值: 15px */;
-            white-space: nowrap;
-
-            .no-label {
-              color: @merchant-text-muted;
-              font-size: 0.857rem /* 原值: 12px */;
-              font-weight: 500;
-              margin-right: 4px;
-            }
-
-            .no-value {
-              color: @merchant-text;
-              font-family: 'Consolas', 'Monaco', monospace;
-              font-weight: 600;
-            }
-
-            .priority-tag {
-              animation: urgentPulse 1.5s ease-in-out infinite;
-              font-weight: 600;
-              flex-shrink: 0;
-              margin-left: 8px;
-            }
-          }
-
-          .order-amount {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 700;
-            font-size: 17px;
-            color: @merchant-error;
-            white-space: nowrap;
-
-            .amount-label {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: @merchant-text-muted;
-              font-weight: 500;
-            }
-
-            .amount-value {
-              font-family: 'Consolas', 'Monaco', monospace;
-            }
-          }
-
-          .order-time {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: @merchant-text-sec;
-            font-size: 0.929rem /* 原值: 13px */;
-            justify-self: end;
-            white-space: nowrap;
-
-            .time-label {
-              color: @merchant-text-muted;
-              font-size: 0.857rem /* 原值: 12px */;
-              font-weight: 500;
-            }
-
-            .time-value {
-              font-weight: 500;
-            }
-          }
-        }
-
-        .order-user-info {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-          gap: 10px 20px;
-          font-size: 1rem /* 原值: 14px */;
-          color: @merchant-text-sec;
-          margin-bottom: 8px;
-
-          > div {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 0;
-
-            .info-label {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: @merchant-text-muted;
-              font-weight: 500;
-              flex-shrink: 0;
-              min-width: 36px;
-            }
-
-            .info-value {
-              font-weight: 500;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-
-              &.remark-text {
-                color: @merchant-warning;
-                font-style: italic;
-              }
-            }
-          }
-
-          .user-remark {
-            grid-column: 1 / -1;
-            background: linear-gradient(135deg, @merchant-warning-light 0%, lighten(@merchant-warning-light, 3%) 100%);
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid @merchant-warning;
-
-            .info-value {
-              color: @merchant-warning;
-            }
-          }
-        }
-
-        .order-remark {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 10px 14px;
-          background: linear-gradient(135deg, @merchant-warning-light 0%, lighten(@merchant-warning-light, 3%) 100%);
-          border-radius: 10px;
-          border: 1px solid @merchant-warning;
-          margin-bottom: 10px;
-          box-shadow: 0 1px 4px rgba(212, 168, 85, 0.2);
-
-          .remark-icon {
-            font-size: 1.143rem /* 原值: 16px */;
-            flex-shrink: 0;
-            animation: noteBounce 2s ease-in-out infinite;
-          }
-
-          .remark-content {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.929rem /* 原值: 13px */;
-
-            .remark-label {
-              font-weight: 600;
-              color: @merchant-warning;
-              flex-shrink: 0;
-            }
-
-            .remark-text {
-              color: @merchant-primary-dark;
-              font-weight: 500;
-              word-break: break-word;
-            }
-          }
-        }
-
-        // 菜品列表样式
-        .order-dishes-list {
-          margin-top: 12px;
-          padding: 12px 16px;
-          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
-          border-radius: 10px;
-          border: 1px solid @merchant-border;
-          box-shadow: 0 1px 4px @merchant-shadow;
-
-          .dishes-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px dashed @merchant-border;
-
-            .dishes-title {
-              font-size: 0.929rem /* 原值: 13px */;
-              font-weight: 600;
-              color: @merchant-text;
-            }
-
-            .dishes-count {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: @merchant-text-muted;
-              background: @merchant-surface-alt;
-              padding: 2px 8px;
-              border-radius: 10px;
-            }
-          }
-
-          .dishes-items {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-
-            .dish-item {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              padding: 8px 12px;
-              background: @merchant-surface;
-              border-radius: 8px;
-              border: 1px solid @merchant-border;
-              transition: all 0.2s ease;
-
-              &:hover {
-                border-color: @merchant-primary;
-                box-shadow: 0 2px 8px rgba(74, 122, 77, 0.1);
-                transform: translateX(4px);
-              }
-
-              .dish-info {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                flex: 1;
-                min-width: 0;
-
-                .dish-name {
-                  font-size: 1rem /* 原值: 14px */;
-                  font-weight: 500;
-                  color: @merchant-text;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                }
-
-                .dish-quantity {
-                  font-size: 0.929rem /* 原值: 13px */;
-                  color: @merchant-primary;
-                  font-weight: 600;
-                  flex-shrink: 0;
-                  background: linear-gradient(
-                    135deg,
-                    rgba(74, 122, 77, 0.1) 0%,
-                    rgba(74, 122, 77, 0.05) 100%
-                  );
-                  padding: 2px 8px;
-                  border-radius: 12px;
-                }
-
-                .dish-customization {
-                  font-size: 0.857rem /* 原值: 12px */;
-                  color: @merchant-warning;
-                  font-weight: 500;
-                  font-style: italic;
-                }
-              }
-
-              .dish-price {
-                font-size: 1rem /* 原值: 14px */;
-                font-weight: 600;
-                color: @merchant-error;
-                font-family: 'Consolas', 'Monaco', monospace;
-                flex-shrink: 0;
-              }
-            }
-          }
-        }
-      }
-
-      .order-right {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 12px;
-        flex-shrink: 0;
-        align-self: flex-start;
-
-        .order-status {
-          position: relative;
-
-          .unread-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-          }
-        }
-      }
-
-      .order-actions {
-        display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-        align-items: center;
-        width: 100%;
-        padding-top: 4px;
-
-        .primary-actions {
-          display: flex;
-          gap: 6px;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-        }
-
-        :deep(.el-button) {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          height: 32px;
-          padding: 6px 14px;
-          font-size: 0.929rem /* 原值: 13px */;
-          font-weight: 500;
-          white-space: nowrap;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          border-radius: 8px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-
-          .el-icon {
-            font-size: 1rem /* 原值: 14px */;
-          }
-
-          &:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-          }
-
-          &:active {
-            transform: translateY(0);
-          }
-
-          &.detail-btn {
-            background: linear-gradient(135deg, @merchant-primary 0%, @merchant-secondary 100%);
-            border: none;
-            color: @merchant-surface;
-
-            &:hover {
-              background: linear-gradient(135deg, @merchant-primary-dark 0%, darken(@merchant-secondary, 5%) 100%);
-              box-shadow: 0 4px 10px rgba(74, 122, 77, 0.35);
-            }
-          }
-
-          &.action-btn {
-            min-width: 70px;
-            font-weight: 600;
-          }
-
-          &.complete-btn {
-            background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 15%) 100%);
-            border: none;
-            color: @merchant-surface;
-
-            &:hover {
-              background: linear-gradient(135deg, @merchant-primary-dark 0%, @merchant-success 100%);
-              box-shadow: 0 4px 10px rgba(90, 143, 94, 0.35);
-            }
-          }
-
-          &:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            background: @merchant-surface-alt;
-            border-color: @merchant-border;
-            color: @merchant-text-muted;
-
-            &:hover {
-              transform: none;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            }
-          }
-        }
-
-        .more-dropdown {
-          :deep(.el-button) {
-            &.more-btn {
-              width: 32px;
-              height: 32px;
-              padding: 0;
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-              border-radius: 50%;
-            }
-          }
-        }
-
-        :deep(.el-dropdown-menu) {
-          .el-dropdown-menu__item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-
-            .el-icon {
-              font-size: 1.143rem /* 原值: 16px */;
-            }
-
-            &:hover {
-              background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-border 100%);
-            }
-          }
-        }
-      }
-    }
-
-    .empty-orders {
-      text-align: center;
-      margin-top: 50px;
-    }
-  }
+/* 页面颜色、间距、圆角、字阶、动效均取自 tokens.css（§3、§7.1），无裸色值。 */
+.today-orders-page {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 }
 
-// 动画关键帧
-@keyframes newOrderPulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scale(1.08);
-  }
+/* 页头日期：贴近标题行的可读日期（§4.7 extra 槽） */
+.today-orders-page__date {
+  color: var(--ink-500);
+  font-family: var(--font-num);
+  font-size: var(--text-body-sm);
+  font-variant-numeric: tabular-nums;
+  line-height: 20px;
 }
 
-@keyframes noteBounce {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(-10deg);
-  }
-  75% {
-    transform: rotate(10deg);
-  }
+/* 概览：1 主指标 + 4 次级条，替代 4+1 空网格（§4.8） */
+.overview {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  gap: var(--card-gap-compact);
+  margin-bottom: var(--space-6);
 }
 
-@keyframes urgentPulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(196, 91, 91, 0.4);
-  }
-  50% {
-    opacity: 0.9;
-    transform: scale(1.05);
-    box-shadow: 0 0 0 6px rgba(196, 91, 91, 0);
-  }
+.overview__secondary {
+  display: flex;
+  align-items: center;
 }
 
-@keyframes countUp {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.overview__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  width: 100%;
 }
 
-// 卡片进入动画
-@keyframes card-slide-in {
-  0% {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+.overview-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
-// 列表进入动画
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+.overview-stat__icon {
+  flex-shrink: 0;
+  color: var(--ink-400);
+  font-size: var(--text-h3);
 }
 
-.list-enter-from {
-  opacity: 0;
-  transform: translateY(20px) scale(0.95);
+.overview-stat__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
-.list-leave-to {
-  opacity: 0;
-  transform: translateX(-30px);
+.overview-stat__value {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 24px;
 }
 
-.list-move {
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+.overview-stat__label {
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+  line-height: 18px;
 }
 
-// 折叠动画
-.slide-fade-enter-active {
-  transition: all 0.3s ease-out;
+/* 筛选条：控件统一 --control-height-sm、同间距（§3.4） */
+.filter-card {
+  margin-bottom: var(--space-4);
 }
 
-.slide-fade-leave-active {
-  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-  transform: translateY(-10px);
-  opacity: 0;
+.filter-bar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-@media (max-width: 1200px) {
-  .merchant-orders-container {
-    .orders-list-section {
-      .order-item {
-        .order-main {
-          .order-content {
-            .order-left {
-              .order-basic-info {
-                grid-template-columns: auto auto 1fr;
-                gap: 10px 14px;
-              }
-
-              .order-user-info {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px 14px;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    .overview-section {
-      .stat-card {
-        min-width: 140px;
-        padding: 16px 18px;
-
-        .stat-value {
-          font-size: 22px !important;
-        }
-      }
-    }
-  }
+.filter-bar__label {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 32px;
 }
 
-@media (max-width: 768px) {
-  .merchant-orders-container {
-    padding: 12px;
-
-    .orders-header {
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-    }
-
-    .overview-section {
-      gap: 10px;
-
-      .stat-card {
-        min-width: calc(50% - 5px);
-        padding: 16px;
-
-        .stat-value {
-          font-size: 1.429rem /* 原值: 20px */ !important;
-        }
-
-        .stat-icon {
-          width: 44px;
-          height: 44px;
-
-          svg {
-            width: 24px;
-            height: 24px;
-          }
-        }
-      }
-    }
-
-    .filter-section {
-      flex-direction: column;
-      gap: 16px;
-      padding: 16px;
-
-      .filter-left {
-        width: 100%;
-
-        .filter-header {
-          .filter-label {
-            font-size: 1rem /* 原值: 14px */;
-          }
-        }
-
-        .status-filter-group {
-          gap: 4px;
-
-          .custom-status-tag {
-            padding: 3px 8px;
-            font-size: 0.75rem /* 原值: 11px */;
-
-            .tag-icon {
-              font-size: 0.75rem /* 原值: 11px */;
-            }
-
-            .tag-text {
-              font-size: 0.75rem /* 原值: 11px */;
-            }
-
-            .close-icon {
-              font-size: 9px;
-            }
-          }
-        }
-      }
-
-      .filter-right {
-        width: 100%;
-
-        :deep(.search-input) {
-          width: 100% !important;
-        }
-      }
-    }
-
-    .quick-actions {
-      flex-direction: column;
-      gap: 12px;
-      padding: 14px;
-
-      .quick-actions-left {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .quick-actions-right {
-        width: 100%;
-        text-align: center;
-
-        .order-count-info {
-          display: inline-block;
-        }
-      }
-    }
-
-    .orders-list-section {
-      .order-item {
-        .order-main {
-          flex-direction: column;
-          gap: 12px;
-          padding: 14px;
-
-          .order-content {
-            flex-direction: column;
-            gap: 12px;
-          }
-
-          .order-left {
-            width: 100%;
-
-            .order-basic-info {
-              grid-template-columns: 1fr;
-              gap: 8px;
-
-              .order-no {
-                font-size: 1rem /* 原值: 14px */;
-              }
-
-              .order-amount {
-                font-size: 1.071rem /* 原值: 15px */;
-              }
-
-              .order-time {
-                justify-self: start;
-              }
-            }
-
-            .order-user-info {
-              grid-template-columns: 1fr;
-              gap: 8px;
-
-              > div {
-                font-size: 0.929rem /* 原值: 13px */;
-              }
-            }
-
-            .order-items {
-              flex-direction: column;
-              gap: 8px;
-
-              .items-label {
-                font-size: 0.857rem /* 原值: 12px */;
-              }
-            }
-
-            .order-remark {
-              flex-direction: row;
-              padding: 8px 12px;
-
-              .remark-icon {
-                font-size: 1rem /* 原值: 14px */;
-              }
-
-              .remark-content {
-                font-size: 0.857rem /* 原值: 12px */;
-
-                .remark-label {
-                  font-size: 0.857rem /* 原值: 12px */;
-                }
-              }
-            }
-          }
-
-          .order-right {
-            align-items: flex-start;
-            width: 100%;
-          }
-
-          .order-actions {
-            flex-direction: column;
-            width: 100%;
-            gap: 10px;
-
-            .primary-actions {
-              width: 100%;
-              justify-content: center;
-            }
-
-            :deep(.el-button) {
-              width: 100%;
-              justify-content: center;
-              padding: 8px 12px;
-              font-size: 0.929rem /* 原值: 13px */;
-
-              .el-icon {
-                font-size: 1.143rem /* 原值: 16px */;
-              }
-            }
-
-            .more-dropdown {
-              width: 100%;
-
-              :deep(.el-button) {
-                width: 100%;
-                border-radius: 8px;
-                padding: 8px;
-
-                &.more-btn {
-                  width: 100%;
-                  border-radius: 8px;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+.status-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-// 展开的用户详情面板
-.user-detail-expanded {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  padding: 12px;
-  background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 3%) 100%);
-  border-radius: 10px;
-  border: 1px solid @merchant-info;
+/* 状态 chip：四态可见（§4.6） */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink-700);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
-// 下拉菜单文字颜色
+.status-chip:hover {
+  border-color: var(--line-strong);
+  background: var(--canvas-sunken);
+}
+
+.status-chip:active {
+  transform: translateY(1px);
+}
+
+.status-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--brand-400);
+}
+
+.status-chip--active {
+  border-color: var(--brand-500);
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+
+.status-chip__icon {
+  font-size: var(--text-body-sm);
+}
+
+.filter-bar__search {
+  min-width: 240px;
+}
+
+.search-input {
+  width: 240px;
+}
+
+/* 计数条（§4.3 合计） */
+.orders-count {
+  margin-bottom: var(--space-3);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+}
+
+.orders-count strong {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 订单列表 */
+.orders-list {
+  min-height: 240px;
+}
+
+.orders-list__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap-compact);
+}
+
+/* 订单卡：L1 微质感，卡片内边距取 --card-padding-compact（§3.4） */
+.order-item {
+  box-sizing: border-box;
+  padding: var(--card-padding-compact);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+}
+
+.order-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.order-item__id {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.order-item__id-label {
+  flex-shrink: 0;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+}
+
+.order-item__id-value {
+  overflow: hidden;
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-item__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.order-item__amount {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.order-item__time {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+}
+
+.order-item__field {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+}
+
+.order-item__field-icon {
+  color: var(--ink-400);
+  font-size: var(--text-body-sm);
+}
+
+.order-item__field-label {
+  flex-shrink: 0;
+  color: var(--ink-500);
+}
+
+.order-item__field-value {
+  color: var(--ink-700);
+  word-break: break-all;
+}
+
+.order-item__details {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--canvas-sunken);
+}
+
+.order-item__details .order-item__field:first-child {
+  margin-top: 0;
+}
+
+.order-item__dishes {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--canvas-sunken);
+}
+
+.order-item__dishes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+}
+
+.order-item__dishes-title {
+  color: var(--ink-700);
+  font-weight: var(--weight-medium);
+}
+
+.order-item__dish {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  font-size: var(--text-body-sm);
+}
+
+.order-item__dish-name {
+  color: var(--ink-700);
+}
+
+.order-item__dish-qty,
+.order-item__dish-custom {
+  color: var(--ink-500);
+}
+
+.order-item__dish-price {
+  margin-left: auto;
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.order-item__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+/* 空状态：整页不超 360px，CTA 在视觉中心（§4.5） */
+.orders-empty {
+  min-height: 280px;
+}
+
+/* 危险/警示动作在下拉内（§4.3、§4.6） */
 .dropdown-text-warning {
-  color: @merchant-warning;
+  color: var(--warning);
 }
 
 .dropdown-text-danger {
-  color: @merchant-error;
+  color: var(--danger);
 }
 </style>
