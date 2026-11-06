@@ -404,7 +404,7 @@ const getNutritionBarStyle = (item) => {
 
     <div v-else class="today-empty nordic-card">
       <AppEmptyState description="今天还没有饮食记录" :icon="Bowl" />
-      <el-button type="primary" class="today-empty__action" @click="goRecordMeal">记录第一餐</el-button>
+      <el-button size="default" type="primary" class="today-empty__action" @click="goRecordMeal">记录第一餐</el-button>
     </div>
 
     <!-- 营养摄入 -->
@@ -648,6 +648,26 @@ const getNutritionBarStyle = (item) => {
   align-items: center;
   padding: 0 0 var(--space-6);
   margin-bottom: var(--space-6);
+}
+
+.today-empty__action {
+  height: var(--space-10);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--brand-500);
+  border-color: var(--brand-500);
+  color: var(--surface);
+  font-weight: var(--weight-medium);
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+
+  &:hover,
+  &:focus-visible {
+    background: var(--brand-600);
+    border-color: var(--brand-600);
+    color: var(--surface);
+  }
 }
 
 // --- 分区标题 ---
