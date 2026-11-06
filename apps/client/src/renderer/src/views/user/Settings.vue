@@ -1288,8 +1288,8 @@ const submitFeedbackForm = async () => {
 }
 
 .settings-header :deep(.el-button) {
-  height: var(--control-height-md, 40px);
-  min-height: var(--control-height-md, 40px);
+  height: var(--control-height-md);
+  min-height: var(--control-height-md);
 }
 
 /* 设置主体：限宽到 §3.3 --form-width-settings（720px），居中，避免右侧大面积空白。 */
@@ -1305,7 +1305,7 @@ const submitFeedbackForm = async () => {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
 
   /* 区块标题从 h2 语义起，用 --text-h3 档位；与设置项之间留分组间距（§4.4、§4.7）。 */
   h3 {
