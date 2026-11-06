@@ -117,14 +117,23 @@
 5. 审查 agent 独立看图通过，且不只看制作过程与代码。
 6. 不新增 ESLint error；warning 不强求。
 
-不引入自动视觉 diff——逐页截图基线不入库，跑不通。
+不引入自动视觉 diff——截图基线不入库，跑不通。**所有渲染图一律不入库**（含 L1 组件基准图）：`docs/design/assets/` 不存截图，判据只有 `DESIGN-BASELINE.md` 的文字条款与组件源码本身。
 
-**组件基准图是例外**：`docs/design/assets/l1/` 下的 L1 合规基准图入库，作为 L2 接活 agent 的对照物（不必起 dev server 就知道合规组件长什么样）。逐页 before/after 仍留在 gitignore 的 `output/`。
+## 8.1 图片是临时件，文字才是记录
 
-**证据必须离开 worktree**：`gh pr merge --delete-branch` 会连带删除 worktree，其中 `output/`（gitignore）无法保留。实测已丢过一批验收图。规则：
-1. 组件类验收图 → 上传到对应 issue 评论，或落 `docs/design/assets/`；
-2. 逐页 before/after → PR 创建后立即把图附进 PR 评论；
-3. 任何需要跨轮次引用的图，先落到不随 worktree 消失的位置，再报告路径。
+实测两条硬事实，别再按想象中的机制写流程：
+
+- `gh pr merge --delete-branch` 会连带删除 worktree，其中 `output/`（gitignore）里的图随之消失。**这是预期行为，不要试图抢救。**
+- **`gh` 不会上传本地图片**。`gh issue comment` / `gh pr comment` 的 `--body-file` 里引用 `/Users/.../x.png` 或相对路径 `x.png`，都只被原样写进 markdown，渲染出来是死链。GitHub REST 没有 issue/评论的 assets 端点（`POST /repos/{o}/{r}/issues/{n}/assets` 返回 404），网页编辑器用的是另一套 upload-scoped token；release assets 端点需要先有 release。**结论：私有仓 + PAT 场景下，没有可行的图片远程持久化通道。**
+
+因此验收证据按下面这样留：
+
+1. **持久记录 = 文字 + 可复现步骤**。验收评论写实测数值（列宽 px、色值 rgb、ESLint error 数、spec 结果）与基线条款编号，例如「auth 列宽实测 400px、settings 720px，取自 `--form-width-*`；ESLint error 持平 149」。
+2. **需要复核外观就重拍**，不要留一张过期 PNG 当证据。重拍做法：临时挂载预览页取图（L1 各 issue 均此法），拍完撤除临时挂载。
+3. **图只在两个时刻有意义**：PR 打开时给主 agent 看图，与合并前对比。这两个时刻都用本地路径。
+4. **禁止**把 `/Users/...` 本地路径写进 issue/PR 当作「他人可访问的证据」。自己看可以，别人打不开。
+
+主 agent 看图复核时，图必须由当前流程现场产出（agent 报告的 output 路径 = 其 worktree 内的文件，读取要在合并/清理之前完成）。
 
 ## 9. 收尾清理
 
