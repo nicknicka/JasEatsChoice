@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import CommonLocationPicker from '../../components/CommonLocationPicker.vue'
 import CommonWeatherWidget from '../../components/CommonWeatherWidget.vue'
 import { useRouter } from 'vue-router'
@@ -37,6 +37,9 @@ const {
   hasActiveFilters,
   resetFilters
 } = useRecommendationFilters(recommendations)
+
+// P2：关键字也属于筛选条件，变化时给出结果数量反馈
+const hasQueryFeedback = computed(() => hasActiveFilters.value || searchKeyword.value.trim().length > 0)
 
 // 定位相关
 const locationPicker = ref(null)
@@ -157,15 +160,6 @@ const formatScore = (score) => {
   return Math.round(score * 100)
 }
 
-// 获取分数等级（用于样式）
-const getScoreLevel = (score) => {
-  const percentage = score > 1 ? score : score * 100
-  if (percentage >= 90) return 'excellent'
-  if (percentage >= 80) return 'good'
-  if (percentage >= 70) return 'medium'
-  return 'low'
-}
-
 // 页面加载时获取推荐数据（定位由 CommonLocationPicker 组件自动处理）
 onMounted(async () => {
   await loadAllRecommendations()
@@ -200,12 +194,7 @@ watch(recommendations, () => {
       </button>
     </div>
 
-    <!-- 定位警告提示 -->
-    <div v-if="locationError" class="location-warn">
-      定位服务不可用，推荐准确性可能受影响
-    </div>
-
-    <!-- 搜索与筛选 -->
+    <!-- 搜索与筛选：定位提示降级为工具栏内侧的紧凑警示块 -->
     <div class="toolbar-row">
       <div class="search-box">
         <span class="search-icon">&#128269;</span>
@@ -229,6 +218,10 @@ watch(recommendations, () => {
         <option value="rating_desc">评分最高</option>
         <option value="rating_asc">评分最低</option>
       </select>
+      <div v-if="locationError" class="location-warn" title="定位服务不可用，推荐准确性可能受影响">
+        <el-icon class="location-warn-icon"><Warning /></el-icon>
+        <span>定位服务不可用，推荐准确性可能受影响</span>
+      </div>
     </div>
 
     <!-- 筛选面板 -->
@@ -276,8 +269,8 @@ watch(recommendations, () => {
       </div>
     </transition>
 
-    <!-- 筛选结果提示 -->
-    <div class="filter-info" v-if="hasActiveFilters">
+    <!-- 筛选结果提示（P2：筛选/关键字变化时反馈结果数量） -->
+    <div class="filter-info" v-if="hasQueryFeedback">
       <span>找到 {{ filteredAndSortedRecommendations.length }} 个推荐</span>
       <button class="clear-link" @click="resetFilters">清除</button>
     </div>
@@ -325,11 +318,10 @@ watch(recommendations, () => {
               <div class="match-track">
                 <div
                   class="match-fill"
-                  :class="getScoreLevel(item.score)"
                   :style="{ width: formatScore(item.score) + '%' }"
                 ></div>
               </div>
-              <span class="match-val" :class="getScoreLevel(item.score)">{{ formatScore(item.score) }}%</span>
+              <span class="match-val">匹配度 {{ formatScore(item.score) }}%</span>
             </div>
           </div>
         </div>
@@ -406,19 +398,20 @@ watch(recommendations, () => {
   margin: 0 auto;
 }
 
-// --- 页面标题 ---
+// --- 页面标题（§4.7 标准版：--text-h1 + --space-6） ---
 .nordic-page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: @nordic-space-lg;
+  margin-bottom: var(--space-6);
 
   h2 {
-    font-size: @nordic-text-xl;
-    font-weight: 700;
-    color: @nordic-text;
+    font-size: var(--text-h1);
+    line-height: 32px;
+    font-weight: var(--weight-semibold);
+    color: var(--ink-900);
     margin: 0;
-    letter-spacing: -0.5px;
+    letter-spacing: var(--tracking-tight);
   }
 
   .refresh-btn {
@@ -431,15 +424,16 @@ watch(recommendations, () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: border-color var(--duration-fast) var(--ease-out),
+                color var(--duration-fast) var(--ease-out);
 
     &:hover {
-      border-color: @nordic-accent;
-      color: @nordic-accent;
+      border-color: var(--brand-500);
+      color: var(--brand-500);
     }
 
     &.spinning .refresh-icon {
-      animation: spin 0.8s linear infinite;
+      animation: spin var(--spin-duration) linear infinite;
     }
 
     .refresh-icon {
@@ -452,21 +446,40 @@ watch(recommendations, () => {
   to { transform: rotate(360deg); }
 }
 
-// --- 定位警告 ---
+// --- 定位警告：吸附到工具栏，降级为紧凑警示块（§3.1 语义色小面积使用、§4.5 不与内容抢位） ---
 .location-warn {
-  padding: 10px 16px;
-  background: @nordic-yellow-light;
-  color: #8B6914;
-  border-radius: @nordic-radius-md;
-  font-size: @nordic-text-sm;
-  margin-bottom: @nordic-space-md;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 260px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--warning-bg);
+  color: var(--warning);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-caption);
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .location-warn-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+  }
 }
 
 // --- 工具栏 ---
 .toolbar-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: @nordic-space-md;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
   align-items: center;
 }
 
@@ -479,10 +492,10 @@ watch(recommendations, () => {
   background: @nordic-surface;
   border: 1px solid @nordic-border;
   border-radius: @nordic-radius-md;
-  transition: border-color 0.2s;
+  transition: border-color var(--duration-fast) var(--ease-out);
 
   &:focus-within {
-    border-color: @nordic-accent;
+    border-color: var(--brand-500);
   }
 
   .search-icon {
@@ -512,18 +525,20 @@ watch(recommendations, () => {
   cursor: pointer;
   font-size: @nordic-text-sm;
   color: @nordic-text-secondary;
-  transition: all 0.2s;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
   white-space: nowrap;
 
   &.active {
-    border-color: @nordic-accent;
-    color: @nordic-accent;
-    background: @nordic-accent-light;
+    border-color: var(--brand-500);
+    color: var(--brand-500);
+    background: var(--brand-100);
   }
 
   .filter-arrow {
     font-size: 10px;
-    transition: transform 0.2s;
+    transition: transform var(--duration-fast) var(--ease-in-out);
     display: inline-block;
 
     &.open { transform: rotate(90deg); }
@@ -540,9 +555,10 @@ watch(recommendations, () => {
   cursor: pointer;
   outline: none;
   min-width: 120px;
+  transition: border-color var(--duration-fast) var(--ease-out);
 
   &:focus {
-    border-color: @nordic-accent;
+    border-color: var(--brand-500);
   }
 }
 
@@ -584,18 +600,20 @@ watch(recommendations, () => {
     font-size: @nordic-text-sm;
     color: @nordic-text-secondary;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color var(--duration-fast) var(--ease-out),
+                color var(--duration-fast) var(--ease-out),
+                background-color var(--duration-fast) var(--ease-out);
 
     input { display: none; }
 
     &.selected {
-      background: @nordic-accent-light;
-      border-color: @nordic-accent;
-      color: @nordic-accent;
+      background: var(--brand-100);
+      border-color: var(--brand-500);
+      color: var(--brand-500);
     }
 
     &:hover {
-      border-color: @nordic-accent;
+      border-color: var(--brand-500);
     }
   }
 
@@ -613,11 +631,12 @@ watch(recommendations, () => {
       font-size: @nordic-text-sm;
       color: @nordic-text-secondary;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: border-color var(--duration-fast) var(--ease-out),
+                  color var(--duration-fast) var(--ease-out);
 
       &:hover {
-        border-color: @nordic-accent;
-        color: @nordic-accent;
+        border-color: var(--brand-500);
+        color: var(--brand-500);
       }
     }
   }
@@ -628,22 +647,23 @@ watch(recommendations, () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
-  background: @nordic-blue-light;
-  border-radius: @nordic-radius-md;
-  font-size: @nordic-text-sm;
-  color: @nordic-text-secondary;
-  margin-bottom: @nordic-space-md;
+  padding: var(--space-2) var(--space-4);
+  background: var(--canvas-sunken);
+  border-radius: var(--radius-md);
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
+  margin-bottom: var(--space-4);
 
   .clear-link {
     background: none;
     border: none;
-    color: @nordic-blue;
+    color: var(--brand-600);
     cursor: pointer;
-    font-size: @nordic-text-sm;
-    font-weight: 500;
+    font-size: var(--text-body-sm);
+    font-weight: var(--weight-medium);
+    transition: color var(--duration-fast) var(--ease-out);
 
-    &:hover { text-decoration: underline; }
+    &:hover { color: var(--brand-500); text-decoration: underline; }
   }
 }
 
@@ -703,24 +723,26 @@ watch(recommendations, () => {
   border-radius: @nordic-radius-lg;
   padding: @nordic-space-lg;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
 
   &:hover {
-    border-color: darken(@nordic-border, 10%);
-    box-shadow: 0 4px 16px @nordic-shadow-hover;
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-md);
     transform: translateY(-2px);
   }
 }
 
 .item-top {
   display: flex;
-  gap: @nordic-space-md;
-  margin-bottom: @nordic-space-md;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
 }
 
 .item-image {
-  width: 64px;
-  height: 64px;
+  width: 96px;
+  height: 72px;
   border-radius: @nordic-radius-md;
   overflow: hidden;
   flex-shrink: 0;
@@ -738,7 +760,7 @@ watch(recommendations, () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 28px;
     color: @nordic-text-muted;
     background: @nordic-divider;
   }
@@ -761,7 +783,7 @@ watch(recommendations, () => {
     margin-bottom: 8px;
 
     .meta-tag {
-      .nordic-pill-tag(@nordic-blue-light, @nordic-blue);
+      .nordic-pill-tag(@nordic-bg, @nordic-text-secondary);
     }
 
     .meta-source {
@@ -770,41 +792,32 @@ watch(recommendations, () => {
   }
 }
 
-// 匹配度
+// 匹配度：全列表统一品牌强调色，带"匹配度"文字标签
 .match-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 
   .match-track {
     flex: 1;
     height: 4px;
-    background: @nordic-divider;
-    border-radius: 2px;
+    background: var(--line);
+    border-radius: var(--radius-full);
     overflow: hidden;
   }
 
   .match-fill {
     height: 100%;
-    border-radius: 2px;
-    transition: width 0.6s ease;
-
-    &.excellent { background: @nordic-green; }
-    &.good { background: @nordic-blue; }
-    &.medium { background: @nordic-yellow; }
-    &.low { background: @nordic-red; }
+    border-radius: var(--radius-full);
+    background: var(--brand-500);
+    transition: width var(--duration-slow) var(--ease-out);
   }
 
   .match-val {
-    font-size: @nordic-text-xs;
-    font-weight: 600;
-    min-width: 32px;
-    text-align: right;
-
-    &.excellent { color: @nordic-green; }
-    &.good { color: @nordic-blue; }
-    &.medium { color: @nordic-yellow; }
-    &.low { color: @nordic-red; }
+    font-size: var(--text-caption);
+    font-weight: var(--weight-semibold);
+    color: var(--ink-500);
+    white-space: nowrap;
   }
 }
 
@@ -812,13 +825,13 @@ watch(recommendations, () => {
 .item-calories {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: @nordic-space-sm;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
 
   .cal-val {
-    font-size: @nordic-text-lg;
-    font-weight: 700;
-    color: @nordic-accent;
+    font-size: var(--text-h2);
+    font-weight: var(--weight-bold);
+    color: var(--brand-500);
   }
 
   .cal-unit {
@@ -830,12 +843,13 @@ watch(recommendations, () => {
     margin-left: auto;
     background: none;
     border: none;
-    color: @nordic-blue;
-    font-size: @nordic-text-xs;
+    color: var(--brand-600);
+    font-size: var(--text-body-sm);
     cursor: pointer;
     padding: 2px 8px;
+    transition: color var(--duration-fast) var(--ease-out);
 
-    &:hover { text-decoration: underline; }
+    &:hover { color: var(--brand-500); text-decoration: underline; }
   }
 }
 
@@ -843,8 +857,8 @@ watch(recommendations, () => {
 .item-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: @nordic-space-sm;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 
   .tag-chip {
     padding: 2px 10px;
@@ -857,18 +871,18 @@ watch(recommendations, () => {
 
 // 推荐理由
 .item-reason {
-  font-size: @nordic-text-sm;
-  color: @nordic-text-secondary;
-  line-height: 1.5;
-  margin-bottom: @nordic-space-md;
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
+  line-height: 20px;
+  margin-bottom: var(--space-3);
 }
 
 // 操作按钮
 .item-actions {
   display: flex;
-  gap: 8px;
-  padding-top: @nordic-space-md;
-  border-top: 1px solid @nordic-divider;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
 }
 
 .act-btn {
@@ -879,25 +893,28 @@ watch(recommendations, () => {
   font-size: @nordic-text-sm;
   color: @nordic-text-secondary;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
 
   &:hover {
-    border-color: @nordic-text-secondary;
+    border-color: var(--line-strong);
   }
 
   &.primary {
-    background: @nordic-accent;
-    border-color: @nordic-accent;
-    color: #fff;
+    background: var(--brand-500);
+    border-color: var(--brand-500);
+    color: var(--surface);
 
     &:hover {
-      background: darken(@nordic-accent, 8%);
+      background: var(--brand-600);
+      border-color: var(--brand-600);
     }
   }
 
   &.favorited {
-    color: @nordic-yellow;
-    border-color: @nordic-yellow;
+    color: var(--brand-600);
+    border-color: var(--brand-500);
   }
 
   &.ghost {
@@ -965,30 +982,37 @@ watch(recommendations, () => {
   font-size: @nordic-text-sm;
 }
 
-// --- 卡片过渡 ---
-.card-list-enter-active,
+// --- 卡片过渡（§3.5：进场 200ms + 列表重排 240ms，只动 transform/opacity） ---
+.card-list-enter-active {
+  transition: opacity var(--duration-base) var(--ease-out),
+              transform var(--duration-base) var(--ease-out);
+}
+
 .card-list-leave-active {
-  transition: all 0.3s ease;
+  transition: opacity var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-standard);
 }
 
 .card-list-enter-from {
   opacity: 0;
-  transform: translateY(12px);
+  transform: translateY(4px);
 }
 
 .card-list-leave-to {
   opacity: 0;
-  transform: translateX(-20px);
+  transform: translateY(-4px);
 }
 
 .card-list-move {
-  transition: transform 0.3s ease;
+  transition: transform var(--duration-slow) var(--ease-in-out);
 }
 
 // --- 滑入过渡 ---
 .nordic-slide-enter-active,
 .nordic-slide-leave-active {
-  transition: all 0.3s ease;
+  transition: max-height var(--duration-base) var(--ease-standard),
+              opacity var(--duration-base) var(--ease-standard),
+              margin-bottom var(--duration-base) var(--ease-standard);
   max-height: 400px;
   overflow: hidden;
 }
@@ -1008,6 +1032,7 @@ watch(recommendations, () => {
     .search-box { width: 100%; order: 1; }
     .filter-toggle { order: 2; }
     .sort-select { order: 3; flex: 1; min-width: 0; }
+    .location-warn { order: 4; flex: 1 1 100%; max-width: none; }
   }
 }
 </style>
