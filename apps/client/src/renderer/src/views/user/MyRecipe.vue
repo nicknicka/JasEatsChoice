@@ -29,10 +29,30 @@ let recipeQueryOpened = false
 
 // 批量操作相关变量
 const selectedRecipes = ref([]) // 存储选中的食谱
+const batchMode = ref(false) // 是否有显式的批量操作模式
+
+// 已选数量与全选判定
+const selectedCount = computed(() => selectedRecipes.value.length)
+const allFilteredSelected = computed(
+  () =>
+    filteredRecipes.value.length > 0 &&
+    selectedRecipes.value.length === filteredRecipes.value.length
+)
+
+// 进入批量模式
+const enterBatchMode = () => {
+  batchMode.value = true
+}
+
+// 退出批量模式并清空选择
+const exitBatchMode = () => {
+  batchMode.value = false
+  selectedRecipes.value = []
+}
 
 // 全选/取消全选功能
 const toggleAllRecipes = () => {
-  if (selectedRecipes.value.length === filteredRecipes.value.length) {
+  if (allFilteredSelected.value) {
     selectedRecipes.value = [] // 取消全选
   } else {
     selectedRecipes.value = filteredRecipes.value.map((recipe) => recipe.id) // 全选
@@ -685,8 +705,8 @@ const batchDeleteRecipes = () => {
               myRecipes.value.splice(index, 1)
             }
           })
-          // 清空选中列表
-          selectedRecipes.value = []
+          // 退出批量模式并清空选中列表
+          exitBatchMode()
           ElMessage.success(`成功删除${responses.length}个食谱`)
         })
         .catch((error) => {
@@ -737,8 +757,8 @@ const batchFavoriteRecipes = () => {
         }
       })
 
-      // 清空选中列表
-      selectedRecipes.value = []
+      // 退出批量模式并清空选中列表
+      exitBatchMode()
       ElMessage.success(`成功收藏${updatedRecipes.length}个食谱`)
     })
     .catch((error) => {
@@ -1109,14 +1129,17 @@ const exportToDietRecord = () => {
 <template>
   <div class="my-recipe-wrapper">
   <div ref="scrollContainer" class="nordic-my-recipe">
-    <!-- 页面标题 -->
+    <!-- 页面标题（§4.7 标准版：--text-h1 + --space-6） -->
     <div class="nordic-page-header">
-      <div>
+      <div class="nordic-page-header__main">
         <h2>我的食谱</h2>
         <span class="recipe-count" v-if="filteredRecipes.length > 0">
           共 {{ filteredRecipes.length }} 个食谱
         </span>
       </div>
+      <p v-if="batchMode" class="batch-counter">
+        已选 {{ selectedCount }} / {{ filteredRecipes.length }} 个食谱
+      </p>
     </div>
 
     <!-- 搜索与筛选 -->
@@ -1145,33 +1168,43 @@ const exportToDietRecord = () => {
       </div>
     </div>
 
-    <!-- 操作按钮 -->
+    <!-- 操作按钮：默认只放主/次要动作，批量操作走显式模式 -->
     <div class="action-bar">
       <button class="nordic-btn accent" @click="openAddDialog">+ 添加食谱</button>
       <button class="nordic-btn" @click="importFromOrders">从订单导入</button>
       <div class="action-spacer"></div>
-      <button
-        class="nordic-btn ghost"
-        @click="toggleAllRecipes"
-        :disabled="filteredRecipes.length === 0"
-      >
-        {{ selectedRecipes.length === filteredRecipes.length ? '取消全选' : '全选' }}
-      </button>
-      <button
-        class="nordic-btn ghost"
-        :disabled="selectedRecipes.length === 0"
-        @click="batchDeleteRecipes"
-      >批量删除</button>
-      <button
-        class="nordic-btn ghost"
-        :disabled="selectedRecipes.length === 0"
-        @click="batchFavoriteRecipes"
-      >批量收藏</button>
-      <button
-        class="nordic-btn ghost"
-        :disabled="selectedRecipes.length === 0"
-        @click="exportToDietRecord"
-      >导出到饮食记录</button>
+
+      <template v-if="!batchMode">
+        <button
+          class="nordic-btn ghost"
+          :disabled="filteredRecipes.length === 0"
+          @click="enterBatchMode"
+        >批量选择</button>
+      </template>
+
+      <template v-else>
+        <button
+          class="nordic-btn ghost"
+          :disabled="filteredRecipes.length === 0"
+          @click="toggleAllRecipes"
+        >{{ allFilteredSelected ? '取消全选' : '全选' }}</button>
+        <button
+          class="nordic-btn ghost danger"
+          :disabled="selectedCount === 0"
+          @click="batchDeleteRecipes"
+        >批量删除</button>
+        <button
+          class="nordic-btn ghost"
+          :disabled="selectedCount === 0"
+          @click="batchFavoriteRecipes"
+        >批量收藏</button>
+        <button
+          class="nordic-btn ghost"
+          :disabled="selectedCount === 0"
+          @click="exportToDietRecord"
+        >导出到饮食记录</button>
+        <button class="nordic-btn" @click="exitBatchMode">取消</button>
+      </template>
     </div>
 
     <!-- 食谱列表 -->
@@ -1180,7 +1213,9 @@ const exportToDietRecord = () => {
         v-for="recipe in filteredRecipes"
         :key="recipe.id"
         :recipe="recipe"
-        :selectable="true"
+        class="recipe-list__card"
+        :class="{ 'is-empty-recipe': !recipe.items || recipe.items.length === 0 }"
+        :selectable="batchMode"
         :selected-ids="selectedRecipes"
         :show-nutrition="true"
         :show-time="true"
@@ -1306,37 +1341,52 @@ const exportToDietRecord = () => {
 
 .nordic-my-recipe {
   .nordic-page-container();
-  max-width: 900px;
+  max-width: var(--page-max);
   margin: 0 auto;
 
-  // --- 页面标题 ---
+  // --- 页面标题（§4.7 标准版：--text-h1 + --space-6） ---
   .nordic-page-header {
     display: flex;
-    align-items: baseline;
+    align-items: flex-end;
     justify-content: space-between;
-    margin-bottom: @nordic-space-lg;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+
+    &__main {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-3);
+    }
 
     h2 {
-      font-size: @nordic-text-xl;
-      font-weight: 700;
-      color: @nordic-text;
+      font-size: var(--text-h1);
+      line-height: 32px;
+      font-weight: 600;
+      color: var(--ink-900);
       margin: 0;
-      letter-spacing: -0.5px;
+      letter-spacing: var(--tracking-tight);
     }
 
     .recipe-count {
-      font-size: @nordic-text-sm;
-      color: @nordic-text-muted;
-      margin-left: 8px;
+      font-size: var(--text-body-sm);
+      color: var(--ink-500);
+    }
+
+    .batch-counter {
+      margin: 0;
+      font-size: var(--text-body-sm);
+      font-weight: 500;
+      color: var(--brand-600);
+      font-variant-numeric: tabular-nums;
     }
   }
 
-  // --- 搜索与筛选 ---
+  // --- 搜索与筛选（压缩工具区，给列表让首屏空间） ---
   .toolbar-row {
     display: flex;
-    gap: @nordic-space-md;
+    gap: var(--space-3);
     align-items: center;
-    margin-bottom: @nordic-space-md;
+    margin-bottom: var(--space-3);
     flex-wrap: wrap;
   }
 
@@ -1345,20 +1395,20 @@ const exportToDietRecord = () => {
     min-width: 200px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    background: @nordic-surface;
-    border: 1px solid @nordic-border;
-    border-radius: @nordic-radius-md;
-    transition: border-color 0.2s;
+    gap: var(--space-2);
+    padding: 6px var(--space-3);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    transition: border-color var(--duration-fast) var(--ease-out);
 
     &:focus-within {
-      border-color: @nordic-accent;
+      border-color: var(--brand-400);
     }
 
     .search-icon {
-      color: @nordic-text-muted;
-      font-size: 14px;
+      color: var(--ink-400);
+      font-size: var(--text-body);
     }
 
     .search-input {
@@ -1366,41 +1416,52 @@ const exportToDietRecord = () => {
       border: none;
       outline: none;
       background: transparent;
-      font-size: @nordic-text-base;
-      color: @nordic-text;
+      font-size: var(--text-body);
+      color: var(--ink-900);
 
       &::placeholder {
-        color: @nordic-text-muted;
+        color: var(--ink-400);
       }
     }
   }
 
   .filter-chips {
     display: flex;
-    gap: 6px;
+    gap: var(--space-2);
     flex-wrap: wrap;
   }
 
   .meal-chip {
-    padding: 6px 18px;
-    border: 1px solid @nordic-border;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-pill;
-    font-size: @nordic-text-sm;
-    color: @nordic-text-secondary;
+    padding: 4px var(--space-4);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: var(--radius-full);
+    font-size: var(--text-body-sm);
+    color: var(--ink-500);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out);
     font-weight: 500;
 
     &:hover {
-      border-color: @nordic-accent;
-      color: @nordic-accent;
+      border-color: var(--brand-400);
+      color: var(--brand-600);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brand-400);
+      outline-offset: 2px;
+    }
+
+    &:active {
+      transform: translateY(1px);
     }
 
     &.active {
-      background: @nordic-accent;
-      border-color: @nordic-accent;
-      color: #fff;
+      background: var(--brand-500);
+      border-color: var(--brand-500);
+      color: var(--surface);
     }
   }
 
@@ -1408,8 +1469,8 @@ const exportToDietRecord = () => {
   .action-bar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: @nordic-space-lg;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
     flex-wrap: wrap;
 
     .action-spacer {
@@ -1418,38 +1479,61 @@ const exportToDietRecord = () => {
   }
 
   .nordic-btn {
-    padding: 6px 16px;
-    border: 1px solid @nordic-border;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-md;
-    font-size: @nordic-text-sm;
-    color: @nordic-text-secondary;
+    padding: 6px var(--space-4);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    font-size: var(--text-body-sm);
+    color: var(--ink-700);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out),
+      transform var(--duration-instant) var(--ease-standard);
     font-weight: 500;
     white-space: nowrap;
 
     &:hover:not(:disabled) {
-      border-color: @nordic-text-secondary;
+      border-color: var(--line-strong);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brand-400);
+      outline-offset: 2px;
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(1px);
     }
 
     &.accent {
-      background: @nordic-accent;
-      border-color: @nordic-accent;
-      color: #fff;
+      background: var(--brand-500);
+      border-color: var(--brand-500);
+      color: var(--surface);
 
-      &:hover {
-        background: darken(@nordic-accent, 8%);
+      &:hover:not(:disabled) {
+        background: var(--brand-600);
+        border-color: var(--brand-600);
       }
     }
 
     &.ghost {
       border-color: transparent;
-      color: @nordic-text-muted;
+      color: var(--ink-500);
 
       &:hover:not(:disabled) {
-        color: @nordic-text-secondary;
-        border-color: @nordic-border;
+        color: var(--ink-700);
+        border-color: var(--line);
+      }
+    }
+
+    &.danger {
+      color: var(--danger);
+
+      &:hover:not(:disabled) {
+        color: var(--danger);
+        border-color: var(--danger);
+        background: var(--danger-bg);
       }
     }
 
@@ -1459,111 +1543,215 @@ const exportToDietRecord = () => {
     }
   }
 
-  // --- 食谱列表 ---
+  // --- 食谱列表：统一字段与状态色（§4.2 / §4.6） ---
   .recipe-list {
     display: flex;
     flex-direction: column;
-    gap: @nordic-space-md;
+    gap: var(--card-gap);
   }
 
-  // --- 空状态 ---
+  // 统一卡片描边，去掉按餐型着色的左边框；状态改用语义标签表达
+  .recipe-list :deep(.recipe-card) {
+    border: 1px solid var(--line);
+    border-left: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .recipe-list :deep(.recipe-card > .el-card__body) {
+    padding: 0;
+  }
+
+  .recipe-list :deep(.recipe-card > .el-card__header) {
+    padding: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .recipe-list :deep(.recipe-card.recipe-card-selected) {
+    border: 2px solid var(--brand-500);
+  }
+
+  // [标题 → 状态标签 → 次要信息 → 操作区]，字段顺序固定（§4.2）
+  .recipe-list :deep(.recipe-card .card-header) {
+    min-height: 72px;
+    padding: var(--card-padding) !important;
+    gap: var(--space-3);
+  }
+
+  .recipe-list :deep(.recipe-card .card-header .meal-icon) {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+  }
+
+  .recipe-list :deep(.recipe-card .recipe-name) {
+    font-size: var(--text-h3);
+    font-weight: 600;
+    line-height: 24px;
+    color: var(--ink-900);
+    letter-spacing: var(--tracking-normal);
+  }
+
+  // 状态标签：有菜品 = 已录入（成功），无菜品 = 待添加（警示）
+  .recipe-list :deep(.recipe-card::after) {
+    content: '已录入';
+    position: absolute;
+    top: var(--space-4);
+    right: 56px;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-full);
+    font-size: var(--text-caption);
+    font-weight: 500;
+    line-height: 18px;
+    background: var(--success-bg);
+    color: var(--success);
+    transition: background-color var(--duration-base) var(--ease-standard),
+      color var(--duration-base) var(--ease-standard);
+  }
+
+  .recipe-list :deep(.recipe-card.is-empty-recipe)::after {
+    content: '待添加';
+    background: var(--warning-bg);
+    color: var(--warning);
+  }
+
+  .recipe-list :deep(.recipe-card .recipe-items) {
+    margin: 0 var(--card-padding) var(--space-4);
+    gap: var(--space-2);
+  }
+
+  .recipe-list :deep(.recipe-card .recipe-items .el-tag.el-tag--small) {
+    background: var(--neutral-bg);
+    color: var(--neutral);
+    border: none;
+    font-size: var(--text-caption);
+    font-weight: 500;
+  }
+
+  .recipe-list :deep(.recipe-card .recipe-actions) {
+    margin: 0 var(--card-padding) var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+    gap: var(--space-1);
+  }
+
+  .recipe-list :deep(.recipe-card .recipe-actions .el-button.el-button--text.el-button--small) {
+    font-size: var(--text-body-sm);
+    padding: 6px var(--space-3);
+    border-radius: var(--radius-sm);
+    color: var(--ink-500);
+
+    &:hover {
+      color: var(--brand-600);
+      background: var(--brand-50);
+    }
+  }
+
+  // --- 空状态（§4.5：线性图标 + 中文说明 + 替代动作） ---
   .empty-state {
     text-align: center;
-    padding: 60px 20px;
-    background: @nordic-surface;
-    border: 1px dashed @nordic-border;
-    border-radius: @nordic-radius-lg;
+    padding: var(--space-10) var(--space-5);
+    background: var(--surface);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-lg);
 
     .empty-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
+      font-size: var(--text-display);
+      margin-bottom: var(--space-4);
       opacity: 0.6;
     }
 
     .empty-title {
-      font-size: @nordic-text-lg;
+      font-size: var(--text-h3);
       font-weight: 600;
-      color: @nordic-text;
-      margin-bottom: 8px;
+      color: var(--ink-900);
+      margin-bottom: var(--space-2);
     }
 
     .empty-desc {
-      font-size: @nordic-text-sm;
-      color: @nordic-text-muted;
+      font-size: var(--text-body-sm);
+      color: var(--ink-500);
     }
   }
 
   // --- 回到顶部 ---
   .scroll-top-btn {
     position: fixed;
-    bottom: 30px;
-    right: 30px;
+    bottom: var(--space-8);
+    right: var(--space-8);
     z-index: 1000;
     width: 36px;
     height: 36px;
-    border: 1px solid @nordic-border;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-sm;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
-    color: @nordic-text-secondary;
-    box-shadow: 0 2px 8px @nordic-shadow;
-    transition: all 0.2s;
+    font-size: var(--text-body);
+    color: var(--ink-500);
+    box-shadow: var(--shadow-sm);
+    transition: color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
     opacity: 0.8;
 
     &:hover {
       opacity: 1;
-      border-color: @nordic-accent;
-      color: @nordic-accent;
+      border-color: var(--brand-400);
+      color: var(--brand-600);
       transform: translateY(-2px);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brand-400);
+      outline-offset: 2px;
     }
   }
 
   // --- 导入订单面板 ---
   .import-order-panel {
-    padding: @nordic-space-lg;
-    background: @nordic-bg;
-    border-radius: @nordic-radius-md;
+    padding: var(--space-5);
+    background: var(--canvas);
+    border-radius: var(--radius-md);
 
     .order-preview {
-      margin-top: @nordic-space-md;
-      padding: @nordic-space-md;
-      background: @nordic-surface;
-      border-radius: @nordic-radius-md;
-      border: 1px solid @nordic-border;
+      margin-top: var(--space-4);
+      padding: var(--space-4);
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
 
       .order-meta {
         display: flex;
         justify-content: space-between;
-        font-size: @nordic-text-sm;
-        color: @nordic-text-secondary;
-        margin-bottom: @nordic-space-sm;
+        font-size: var(--text-body-sm);
+        color: var(--ink-500);
+        margin-bottom: var(--space-2);
       }
 
       .order-dishes {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: var(--space-2);
       }
 
       .dish-chip {
-        padding: 4px 12px;
-        background: @nordic-blue-light;
-        color: @nordic-blue;
-        border-radius: @nordic-radius-pill;
-        font-size: @nordic-text-xs;
+        padding: 4px var(--space-3);
+        background: var(--brand-50);
+        color: var(--brand-600);
+        border-radius: var(--radius-full);
+        font-size: var(--text-caption);
         font-weight: 500;
       }
     }
 
     .no-orders {
       text-align: center;
-      padding: 32px;
-      color: @nordic-text-muted;
-      font-size: @nordic-text-sm;
+      padding: var(--space-8);
+      color: var(--ink-500);
+      font-size: var(--text-body-sm);
     }
   }
 
