@@ -29,6 +29,10 @@ import axios from 'axios'
 import { API_CONFIG } from '../../config/index.js'
 // 导入authStore
 import { useAuthStore } from '../../store/authStore'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
+import StatusTag from '../../components/common/StatusTag.vue'
 
 const router = useRouter()
 // 菜单状态映射
@@ -61,8 +65,8 @@ const sortOrder = ref('desc') // 'asc' 或 'desc'
 const updateSorting = () => {
   filteredMenus.value.sort((a, b) => {
     // 获取排序字段的值，兼容 name 和 menuName 两种字段名
-    const aValue = sortField.value === 'menuName' ? (a.menuName || a.name || '') : a[sortField.value]
-    const bValue = sortField.value === 'menuName' ? (b.menuName || b.name || '') : b[sortField.value]
+    const aValue = sortField.value === 'menuName' ? a.menuName || a.name || '' : a[sortField.value]
+    const bValue = sortField.value === 'menuName' ? b.menuName || b.name || '' : b[sortField.value]
 
     if (aValue < bValue) {
       return sortOrder.value === 'asc' ? -1 : 1
@@ -457,297 +461,197 @@ const toggleSelectAll = () => {
 
 <template>
   <div class="menu-management-container">
-    <div class="menu-header">
-      <div class="header-left">
-        <h3 class="page-title">【菜单管理】</h3>
-      </div>
-      <div class="header-right">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="输入菜单名称/关键词搜索..."
-          style="min-width: 200px; max-width: 300px; width: auto; flex: 1; margin-right: 12px"
-          clearable
-          @input="updateFilter"
-        >
-          <template #prefix>
-            <el-icon style="color: #909399"><Search /></el-icon>
-          </template>
-        </el-input>
-        <el-button type="primary" @click="openAddMenuDialog" class="add-button">
+    <!-- 页头：merchant 紧凑版，标题 --text-h2 + 上下 --space-4，返回在右侧动作区（§4.7） -->
+    <AppPageHeader title="菜单管理" :compact="true">
+      <template #actions>
+        <el-button type="primary" @click="openAddMenuDialog">
           <el-icon><CirclePlus /></el-icon>
-          新增菜单
+          <span>新增菜单</span>
         </el-button>
+        <CommonBackButton type="default" />
+      </template>
+    </AppPageHeader>
+
+    <!-- 工具条：搜索 + 状态分段 + 排序压缩成一行（评审 P0；控件高度取 --control-height-sm，§3.4） -->
+    <div class="menu-toolbar">
+      <el-input
+        v-model="searchKeyword"
+        class="menu-toolbar__search"
+        placeholder="输入菜单名称/关键词搜索..."
+        clearable
+        @input="updateFilter"
+      >
+        <template #prefix>
+          <el-icon class="menu-toolbar__search-icon"><Search /></el-icon>
+        </template>
+      </el-input>
+
+      <el-radio-group
+        v-model="activeStatusFilter"
+        class="menu-toolbar__status"
+        @change="updateFilter"
+      >
+        <el-radio-button
+          v-for="status in ['all', 'online', 'draft', 'offline']"
+          :key="status"
+          :value="status"
+        >
+          {{ status === 'all' ? '全部菜单' : menuStatusMap[status].text }}
+        </el-radio-button>
+      </el-radio-group>
+
+      <div class="menu-toolbar__sort">
+        <el-select v-model="sortField" class="menu-toolbar__select" @change="updateFilter">
+          <el-option label="更新时间" value="updatedAt" />
+          <el-option label="菜单名称" value="menuName" />
+        </el-select>
+        <el-select
+          v-model="sortOrder"
+          class="menu-toolbar__select menu-toolbar__select--order"
+          @change="updateFilter"
+        >
+          <el-option label="升序" value="asc" />
+          <el-option label="降序" value="desc" />
+        </el-select>
+        <el-tooltip content="按所选字段升序或降序排列菜单" placement="top">
+          <el-icon class="menu-toolbar__help"><InfoFilled /></el-icon>
+        </el-tooltip>
       </div>
     </div>
 
-    <!-- 筛选面板：整合状态筛选和排序 -->
-    <div class="filter-panel">
-      <div class="menu-filters">
-        <div class="filter-section">
-          <span class="filter-label">状态筛选：</span>
-          <el-tag
-            v-for="status in ['all', 'online', 'draft', 'offline']"
-            :key="status"
-            :type="activeStatusFilter === status ? 'primary' : 'info'"
-            effect="plain"
-            @click="
-              () => {
-                activeStatusFilter = status
-                updateFilter()
-              }
-            "
-            class="status-filter"
-          >
-            <el-icon v-if="status !== 'all' && status === 'online'"><CircleCheck /></el-icon>
-            <el-icon v-if="status !== 'all' && status === 'draft'"><CirclePlus /></el-icon>
-            <el-icon v-if="status !== 'all' && status === 'offline'"><CircleClose /></el-icon>
-            {{ status === 'all' ? '全部菜单' : menuStatusMap[status].text }}
-          </el-tag>
-        </div>
-
-        <div class="filter-section">
-          <span class="filter-label">排序：</span>
-          <el-select
-            v-model="sortField"
-            style="width: 120px; margin-right: 8px"
-            @change="updateFilter"
-          >
-            <el-option label="更新时间" value="updatedAt" />
-            <el-option label="菜单名称" value="menuName" />
-          </el-select>
-
-          <el-select v-model="sortOrder" style="width: 100px" @change="updateFilter">
-            <el-option label="升序" value="asc" />
-            <el-option label="降序" value="desc" />
-          </el-select>
-          <el-tooltip content="按所选字段升序或降序排列菜单" placement="top">
-            <el-icon style="color: #909399; margin-left: 4px; cursor: help"><InfoFilled /></el-icon>
-          </el-tooltip>
-        </div>
-      </div>
-    </div>
-
-    <!-- 将批量操作和分页放在同一个容器中 -->
-    <div class="batch-pagination-container" v-if="filteredMenus.length > 0">
-      <div class="batch-actions">
-        <span class="select-all">
+    <!-- 批量操作条：选中后滑入，控件高度取 --control-height-sm（评审 P0/P2、§3.4） -->
+    <transition name="menu-batch">
+      <div v-if="selectedMenus.length > 0" class="menu-batch-bar">
+        <label class="menu-batch-bar__all">
           <el-checkbox
             :indeterminate="getSelectAllState() === 1"
             :model-value="getSelectAllState() === 2"
             @change="toggleSelectAll"
           />
-          全选
-          <span
-            class="selected-count"
-            :style="{ visibility: selectedMenus.length > 0 ? 'visible' : 'hidden' }"
-          >
-            ({{ selectedMenus.length }}/{{ filteredMenus.length }})
+          <span>全选</span>
+          <span class="menu-batch-bar__count">
+            {{ selectedMenus.length }}/{{ filteredMenus.length }}
           </span>
-        </span>
+        </label>
 
-        <el-button
-          type="success"
-          size="small"
-          @click="batchOperation('online')"
-          :disabled="selectedMenus.length === 0"
-          class="batch-btn"
-        >
-          <el-icon><CircleCheck /></el-icon>
-          批量上架
-        </el-button>
-
-        <el-button
-          type="warning"
-          size="small"
-          @click="batchOperation('offline')"
-          :disabled="selectedMenus.length === 0"
-          class="batch-btn"
-        >
-          <el-icon><CircleClose /></el-icon>
-          批量下架
-        </el-button>
-
-        <el-button
-          type="danger"
-          size="small"
-          @click="batchOperation('delete')"
-          :disabled="selectedMenus.length === 0"
-          class="batch-btn"
-        >
-          <el-icon><Delete /></el-icon>
-          批量删除
-        </el-button>
+        <div class="menu-batch-bar__actions">
+          <el-button @click="batchOperation('online')">
+            <el-icon><CircleCheck /></el-icon>
+            <span>批量上架</span>
+          </el-button>
+          <el-button @click="batchOperation('offline')">
+            <el-icon><CircleClose /></el-icon>
+            <span>批量下架</span>
+          </el-button>
+          <el-button type="danger" plain @click="batchOperation('delete')">
+            <el-icon><Delete /></el-icon>
+            <span>批量删除</span>
+          </el-button>
+          <el-button link @click="selectedMenus = []">取消选择</el-button>
+        </div>
       </div>
+    </transition>
 
-      <!-- 分页 -->
-      <div class="menu-pagination">
+    <!-- 菜单列表：每行一个精简摘要 + 行内动作（评审 P1 缩短菜单卡） -->
+    <div class="menu-list">
+      <transition-group name="list" tag="div" class="menu-list__items">
+        <div
+          v-for="menu in paginatedMenus"
+          :key="menu.id"
+          class="menu-item"
+          :class="{ 'menu-item--selected': selectedMenus.includes(menu) }"
+        >
+          <el-checkbox
+            class="menu-item__check"
+            :model-value="selectedMenus.includes(menu)"
+            @change="toggleMenuSelection(menu)"
+          />
+
+          <div class="menu-item__main">
+            <div class="menu-item__head">
+              <span class="menu-item__name">{{ menu.name || menu.menuName || '未命名菜单' }}</span>
+              <StatusTag :status="menu.status" :text="menuStatusMap[menu.status].text" size="sm" />
+              <span v-if="menu.category" class="menu-item__category">{{ menu.category }}</span>
+            </div>
+            <div class="menu-item__meta">
+              <span class="menu-item__meta-item">
+                <el-icon><Food /></el-icon>
+                {{
+                  Array.isArray(menu.dishes)
+                    ? menu.dishes.length
+                    : typeof menu.dishes === 'number'
+                      ? menu.dishes
+                      : 0
+                }}
+                菜品
+              </span>
+              <span class="menu-item__meta-item">
+                <el-icon><Clock /></el-icon>
+                更新时间：{{ dayjs(menu.updatedAt).format('YYYY-MM-DD HH:mm') }}
+              </span>
+              <span v-if="menu.autoOnline" class="menu-item__meta-item">
+                <el-icon><Clock /></el-icon>
+                自动上架：{{
+                  menu.autoOnline.includes('T') || menu.autoOnline.length > 8
+                    ? dayjs(menu.autoOnline).format('HH:mm')
+                    : dayjs(menu.autoOnline, 'HH:mm:ss').format('HH:mm')
+                }}
+              </span>
+              <span v-if="menu.autoOffline" class="menu-item__meta-item">
+                <el-icon><Clock /></el-icon>
+                自动下架：{{
+                  menu.autoOffline.includes('T') || menu.autoOffline.length > 8
+                    ? dayjs(menu.autoOffline).format('HH:mm')
+                    : dayjs(menu.autoOffline, 'HH:mm:ss').format('HH:mm')
+                }}
+              </span>
+            </div>
+          </div>
+
+          <div class="menu-item__actions">
+            <el-button type="primary" link @click="editMenu(menu)">
+              <el-icon><Edit /></el-icon>
+              <span>编辑</span>
+            </el-button>
+            <el-button link @click="toggleMenuStatus(menu)">
+              <el-icon v-if="menu.status === 'online'"><CircleClose /></el-icon>
+              <el-icon v-else><CircleCheck /></el-icon>
+              <span>{{ menu.status === 'online' ? '下架菜单' : '上架菜单' }}</span>
+            </el-button>
+            <el-button link @click="exportMenu(menu)">
+              <el-icon><Download /></el-icon>
+              <span>导出菜单</span>
+            </el-button>
+            <el-button type="danger" link @click="deleteMenu(menu)">
+              <el-icon><Delete /></el-icon>
+              <span>删除</span>
+            </el-button>
+          </div>
+        </div>
+      </transition-group>
+
+      <!-- 空状态：图标 + 中文说明 + 替代动作（§4.5） -->
+      <AppEmptyState
+        v-if="!loading && filteredMenus.length === 0"
+        class="menu-list__empty"
+        :icon="Food"
+        description="您还没有创建任何菜单~"
+        action-text="新增菜单"
+        @action="openAddMenuDialog"
+      />
+
+      <!-- 分页：全文中文文案，移到列表末尾（评审 P1） -->
+      <div v-if="filteredMenus.length > 0" class="menu-pagination">
+        <span class="menu-pagination__total">共 {{ filteredMenus.length }} 条</span>
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50]"
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="prev, pager, next"
           :total="filteredMenus.length"
-          @size-change="updatePagination"
           @current-change="updatePagination"
         />
       </div>
     </div>
-
-    <div class="menu-list">
-      <div class="menu-list-container">
-        <transition-group name="list">
-          <div class="menu-item" v-for="menu in paginatedMenus" :key="menu.id">
-          <div class="menu-selection">
-            <el-checkbox
-              :model-value="selectedMenus.includes(menu)"
-              @change="toggleMenuSelection(menu)"
-            />
-          </div>
-
-          <div class="menu-content">
-            <div class="menu-info">
-              <div class="menu-name">
-                <span class="name">{{ menu.name || menu.menuName || '未命名菜单' }}</span>
-                <!-- 菜单类型标签，不同类型不同样式 -->
-                <el-tag
-                  :type="
-                    menu.category === '早餐'
-                      ? 'success'
-                      : menu.category === '午餐'
-                        ? 'primary'
-                        : menu.category === '晚餐'
-                          ? 'warning'
-                          : menu.category === '加餐'
-                            ? 'info'
-                            : 'info'
-                  "
-                  size="small"
-                  style="margin-right: 8px"
-                >
-                  {{ menu.category }}
-                </el-tag>
-                <!-- 状态信息，参考状态筛选样式 -->
-                <el-tag
-                  :type="menuStatusMap[menu.status].type"
-                  effect="plain"
-                  class="menu-status-tag"
-                >
-                  <el-icon v-if="menu.status === 'online'"><CircleCheck /></el-icon>
-                  <el-icon v-if="menu.status === 'draft'"><CirclePlus /></el-icon>
-                  <el-icon v-if="menu.status === 'offline'"><CircleClose /></el-icon>
-                  {{ menuStatusMap[menu.status].text }}
-                </el-tag>
-              </div>
-
-              <!-- 菜品列表显示为标签，至多两行，超出省略并提示 -->
-              <div class="menu-dishes">
-                <el-tooltip
-                  v-if="menu.dishes && Array.isArray(menu.dishes) && menu.dishes.length > 0"
-                  :content="menu.dishes.map((dish) => dish.name || dish).join(', ')"
-                  placement="top"
-                >
-                  <div class="dishes-tags-container">
-                    <el-tag v-for="(dish, index) in menu.dishes" :key="index" size="small">
-                      {{ dish.name || dish }}
-                    </el-tag>
-                  </div>
-                </el-tooltip>
-                <el-tooltip
-                  v-else-if="menu.dishes && typeof menu.dishes === 'object' && menu.dishes.name"
-                  :content="menu.dishes.name"
-                  placement="top"
-                >
-                  <div class="dishes-tags-container">
-                    <el-tag size="small">{{ menu.dishes.name }}</el-tag>
-                  </div>
-                </el-tooltip>
-                <!-- 兼容旧数据结构（菜品数量） -->
-                <div
-                  v-else-if="menu.dishes && typeof menu.dishes === 'number'"
-                  class="dishes-count"
-                >
-                  <el-icon><Food /></el-icon> {{ menu.dishes }} 菜品
-                </div>
-                <!-- 当 dishes 是空数组时显示 0 菜品 -->
-                <div
-                  v-else-if="menu.dishes && Array.isArray(menu.dishes) && menu.dishes.length === 0"
-                  class="dishes-count"
-                >
-                  <el-icon><Food /></el-icon> 0 菜品
-                </div>
-                <!-- 无菜品时的显示 -->
-                <div v-else class="dishes-count">
-                  <el-icon><Food /></el-icon> 0 菜品
-                </div>
-              </div>
-
-              <div class="menu-stats">
-                <span class="update-time">
-                  <el-icon><Clock /></el-icon>
-                  更新时间：{{ dayjs(menu.updatedAt).format('YYYY年MM月DD日 HH:mm:ss') }}
-                </span>
-              </div>
-
-              <div class="auto-times">
-                <span v-if="menu.autoOnline" class="auto-online">
-                  <el-icon><Clock /></el-icon>
-                  自动上架：{{
-                    menu.autoOnline.includes('T') || menu.autoOnline.length > 8
-                      ? dayjs(menu.autoOnline).format('HH:mm')
-                      : dayjs(menu.autoOnline, 'HH:mm:ss').format('HH:mm')
-                  }}
-                </span>
-                <span v-if="menu.autoOffline" class="auto-offline">
-                  <el-icon><Clock /></el-icon>
-                  自动下架：{{
-                    menu.autoOffline.includes('T') || menu.autoOffline.length > 8
-                      ? dayjs(menu.autoOffline).format('HH:mm')
-                      : dayjs(menu.autoOffline, 'HH:mm:ss').format('HH:mm')
-                  }}
-                </span>
-              </div>
-            </div>
-
-            <div class="menu-actions">
-              <el-button
-                :type="menu.status === 'online' ? 'warning' : 'success'"
-                size="small"
-                @click="toggleMenuStatus(menu)"
-              >
-                <el-icon v-if="menu.status === 'online'"><CircleClose /></el-icon>
-                <el-icon v-else><CircleCheck /></el-icon>
-                {{ menu.status === 'online' ? '下架菜单' : '上架菜单' }}
-              </el-button>
-
-              <el-button type="primary" size="small" @click="editMenu(menu)">
-                <el-icon><Edit /></el-icon>
-                编辑
-              </el-button>
-
-              <el-button type="danger" size="small" @click="deleteMenu(menu)">
-                <el-icon><Delete /></el-icon>
-                删除
-              </el-button>
-
-              <el-button type="info" size="small" @click="exportMenu(menu)">
-                <el-icon><Download /></el-icon>
-                导出菜单
-              </el-button>
-            </div>
-          </div>
-          </div>
-        </transition-group>
-      </div>
-    </div>
-
-    <!-- 空数据提示 -->
-    <el-empty v-if="filteredMenus.length === 0" description="您还没有创建任何菜单~">
-      <template #bottom>
-        <el-button type="primary" size="small" @click="addMenuDialogVisible = true"
-          >新增菜单</el-button
-        >
-      </template>
-    </el-empty>
 
     <!-- 添加菜单对话框 -->
     <el-dialog v-model="addMenuDialogVisible" title="添加菜单" width="600px" top="10%">
@@ -831,637 +735,324 @@ const toggleSelectAll = () => {
   </div>
 </template>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
+<style scoped>
+/* 本页颜色、间距、圆角、字阶、动效全部取自 tokens.css 的 CSS 变量（§3、§7.1），无裸色值。 */
 .menu-management-container {
-  padding: 24px;
-  background-color: @merchant-bg;
-  min-height: 100vh;
-
-  /* 输入框样式 - 与菜品管理保持一致 */
-  :deep(.el-input__wrapper),
-  :deep(.el-select__wrapper),
-  :deep(.el-textarea__inner) {
-    border-radius: 8px;
-    border: 2px solid @merchant-border;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 2px @merchant-shadow;
-  }
-
-  :deep(.el-input__wrapper:hover),
-  :deep(.el-select__wrapper:hover),
-  :deep(.el-textarea__inner:hover) {
-    border-color: @merchant-primary;
-    box-shadow: 0 0 0 3px rgba(74, 122, 77, 0.1);
-  }
-
-  :deep(.el-input__wrapper.is-focus),
-  :deep(.el-select__wrapper.is-focus),
-  :deep(.el-textarea__inner.is-focus) {
-    border-color: @merchant-primary;
-    box-shadow: 0 0 0 3px rgba(74, 122, 77, 0.15);
-  }
-
-  .menu-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding: 20px;
-    background: @merchant-surface;
-    border-radius: 16px;
-    box-shadow: 0 1px 3px @merchant-shadow-hover;
-
-    .page-title {
-      font-size: 1.429rem /* 原值: 20px */;
-      font-weight: 700;
-      margin: 0;
-      color: @merchant-text;
-    }
-
-    // 固定搜索和新增按钮区域的宽度范围，确保布局稳定
-    .header-right {
-      width: 55%; /* 占父容器55%宽度 */
-      max-width: 550px; /* 最大宽度限制 */
-      min-width: 350px; /* 最小宽度限制 */
-      display: flex;
-      align-items: center;
-      gap: 10px; /* 统一内部元素间距 */
-    }
-
-    /* 小屏幕响应式调整 */
-    @media (max-width: 767px) {
-      flex-direction: column;
-      gap: 16px;
-      align-items: stretch;
-
-      .header-right {
-        width: 100% !important; /* 小屏幕下占满宽度 */
-        min-width: auto !important; /* 取消最小宽度限制 */
-        max-width: none !important; /* 取消最大宽度限制 */
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .el-input {
-        min-width: auto;
-        max-width: none;
-      }
-    }
-  }
-
-  .filter-panel {
-    background-color: @merchant-surface;
-    padding: 20px 24px;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    box-shadow: 0 1px 3px @merchant-shadow-hover;
-    border: 1px solid @merchant-border;
-    transition: all 0.3s ease;
-
-    &:hover {
-      box-shadow: 0 4px 12px @merchant-shadow-hover;
-      transform: translateY(-2px);
-    }
-  }
-
-  .menu-filters {
-    display: flex;
-    flex-direction: column; /* 改为纵向排列，将状态筛选和排序分成两行 */
-    gap: 16px; /* 两行之间的间距 */
-    align-items: flex-start; /* 左对齐 */
-
-    .filter-section {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      white-space: nowrap; /* 防止筛选标签换行 */
-
-      .filter-label {
-        font-weight: 500;
-        white-space: nowrap; /* 确保标签文本不换行 */
-        margin-right: 8px;
-        color: @merchant-text-muted;
-      }
-
-      .status-filter {
-        cursor: pointer;
-        line-height: 28px; /* 增加行高确保图标和文字居中对齐 */
-        white-space: nowrap !important; /* 强制标签内所有内容在同一行显示 */
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-
-        /* 激活状态 */
-        &[type="primary"] {
-          transform: scale(1.05);
-          box-shadow: 0 4px 12px rgba(74, 122, 77, 0.25);
-        }
-
-        &:hover {
-          opacity: 0.85;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px @merchant-shadow-hover;
-        }
-
-        &:active {
-          transform: translateY(0) scale(0.98);
-        }
-
-        // 确保标签内部元素也不换行
-        :deep(.el-tag__content) {
-          white-space: nowrap;
-          display: inline-flex;
-          align-items: center;
-          transition: transform 0.3s ease;
-        }
-
-        /* 图标旋转动画 */
-        :deep(.el-icon) {
-          transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-
-          &:hover {
-            transform: rotate(360deg) scale(1.2);
-          }
-        }
-      }
-    }
-  }
-
-  .menu-list {
-    margin-bottom: 30px;
-
-    /* List transition animations */
-    .list-enter-active,
-    .list-leave-active {
-      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    }
-
-    .list-enter-from {
-      opacity: 0;
-      transform: translateY(20px) scale(0.95);
-    }
-
-    .list-leave-to {
-      opacity: 0;
-      transform: translateX(-30px);
-      position: absolute;
-      width: 100%;
-    }
-
-    /* 列表移动时的动画 */
-    .list-move {
-      transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    }
-
-    .menu-item {
-      display: flex;
-      align-items: flex-start;
-      padding: 20px;
-      border: none;
-      border-radius: 16px;
-      margin-bottom: 16px;
-      background-color: @merchant-surface;
-      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-      box-shadow: 0 2px 8px @merchant-shadow;
-      position: relative;
-      overflow: hidden;
-
-      /* 加载动画 */
-      animation: slideIn 0.4s ease-out;
-
-      @keyframes slideIn {
-        from {
-          opacity: 0;
-          transform: translateY(20px) scale(0.95);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-      }
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(
-          135deg,
-          rgba(74, 122, 77, 0.08) 0%,
-          rgba(74, 122, 77, 0.04) 100%
-        );
-        opacity: 0;
-        transition: opacity 0.4s ease;
-        z-index: -1;
-        pointer-events: none;
-      }
-
-      &:hover {
-        box-shadow: 0 15px 35px @merchant-shadow-hover;
-        transform: translateY(-8px) scale(1.03);
-        cursor: pointer;
-
-        &::before {
-          opacity: 1;
-        }
-
-        .menu-actions .el-button {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-
-      .menu-selection {
-        margin-top: 4px;
-        margin-right: 16px;
-      }
-
-      .menu-content {
-        flex: 1;
-        position: relative;
-        z-index: 1;
-        display: flex;
-        flex-direction: column;
-
-        .menu-info {
-          .menu-name {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-
-            .name {
-              font-size: 1.286rem /* 原值: 18px */;
-              font-weight: 700;
-              color: @merchant-text;
-            }
-          }
-
-          .menu-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 16px;
-            margin-bottom: 20px;
-            font-size: 1rem /* 原值: 14px */;
-
-            .stat-item {
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
-
-              .stat-label {
-                color: @merchant-text-sec;
-                font-size: 0.857rem /* 原值: 12px */;
-                font-weight: 500;
-              }
-
-              .stat-value {
-                color: @merchant-text;
-                font-size: 1rem /* 原值: 14px */;
-                font-weight: 600;
-              }
-            }
-
-            .dishes-count {
-              color: @merchant-text-muted;
-            }
-          }
-
-          /* 状态标签样式，与筛选部分一致 */
-          .menu-status-tag {
-            cursor: pointer;
-            line-height: 28px;
-            white-space: nowrap;
-            display: inline-flex;
-            align-items: center;
-
-            :deep(.el-tag__content) {
-              white-space: nowrap;
-              display: inline-flex;
-              align-items: center;
-            }
-
-            &:hover {
-              opacity: 0.8;
-            }
-          }
-
-          /* 菜品标签容器样式 */
-          .menu-dishes {
-            margin: 12px 0;
-
-            .dishes-tags-container {
-              display: flex;
-              flex-wrap: wrap;
-              gap: 8px;
-              max-height: 56px; /* 两行标签的高度 */
-              overflow: hidden;
-              position: relative;
-              padding-right: 20px;
-
-              /* 超出时显示省略提示 */
-              &::after {
-                content: '...';
-                position: absolute;
-                right: 0;
-                bottom: 8px;
-                background: @merchant-surface;
-                padding-left: 5px;
-                font-size: 1rem /* 原值: 14px */;
-                color: @merchant-text-muted;
-              }
-            }
-          }
-
-          .auto-times {
-            font-size: 0.929rem /* 原值: 13px */;
-            color: @merchant-text-muted;
-            margin-bottom: 12px;
-          }
-        }
-
-        .menu-actions {
-          display: flex;
-          flex-direction: row;
-          gap: 10px;
-          justify-content: flex-start;
-          flex-wrap: wrap;
-          margin-top: 12px;
-
-          button {
-            width: 90px;
-            border-radius: 10px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            border: none;
-            box-shadow: 0 1px 3px @merchant-shadow;
-            transform: translateY(5px);
-            opacity: 0.9;
-
-            &:hover {
-              transform: translateY(-1px);
-              box-shadow: 0 2px 8px @merchant-shadow-hover;
-            }
-
-            &:active {
-              transform: translateY(0);
-            }
-
-            &.btn-active {
-              background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-primary 100%);
-              color: @merchant-surface;
-
-              &:hover {
-                background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  .batch-actions {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px 20px;
-    background: @merchant-surface;
-    border-radius: 16px;
-    box-shadow: 0 1px 3px @merchant-shadow;
-
-    .select-all {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-      color: @merchant-text;
-      white-space: nowrap; /* 防止全选文本换行 */
-      min-width: 100px; /* 设置固定最小宽度，让批量操作按钮位置稳定 */
-
-      .selected-count {
-        font-size: 0.929rem /* 原值: 13px */;
-        font-weight: 400;
-        color: @merchant-text-muted;
-      }
-    }
-  }
-
-  // 分页容器样式
-  .menu-pagination {
-    margin-top: 20px;
-    display: flex;
-    justify-content: flex-end;
-    padding: 16px;
-    background: @merchant-surface;
-    border-radius: 16px;
-    box-shadow: 0 1px 3px @merchant-shadow;
-    text-align: right;
-  }
-
-  // 新增按钮样式
-  .add-button {
-    background: linear-gradient(135deg, @merchant-success-light 0%, @merchant-success 100%);
-    border: none;
-    border-radius: 10px;
-    padding: 10px 20px;
-    font-weight: 600;
-    color: @merchant-surface;
-    box-shadow: 0 2px 8px rgba(90, 143, 94, 0.2);
-    transition: all 0.3s ease;
-
-    &:hover {
-      background: linear-gradient(135deg, @merchant-success 0%, @merchant-primary-dark 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(90, 143, 94, 0.3);
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
-  }
-
-  // 批量操作按钮样式
-  .batch-btn {
-    border-radius: 10px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    border: none;
-    box-shadow: 0 1px 3px @merchant-shadow;
-
-    &:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px @merchant-shadow-hover;
-    }
-
-    &:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-
-  /* 筛选面板小屏幕响应式调整 */
-  @media (max-width: 767px) {
-    .filter-panel {
-      padding: 16px;
-      overflow-x: auto; /* 小屏幕下允许横向滚动 */
-    }
-
-    .menu-filters {
-      gap: 12px;
-    }
-
-    .filter-section {
-      gap: 8px;
-    }
-
-    .filter-label {
-      white-space: nowrap; /* 确保标签在小屏幕也不换行 */
-    }
-  }
-
-  /* 将批量操作和分页分成两行显示 */
-  .batch-pagination-container {
-    margin-bottom: 20px;
-    padding: 16px 20px;
-    background-color: @merchant-surface;
-    border-radius: 12px;
-    border: 1px solid @merchant-border;
-    box-shadow: 0 1px 3px @merchant-shadow-hover;
-
-    .batch-actions {
-      justify-content: flex-start; /* 批量操作左对齐 */
-    }
-
-    .menu-pagination {
-      text-align: center; /* 分页居中对齐 */
-      margin-top: 12px;
-    }
-  }
-
-  /* 对话框按钮样式 - 与添加菜品保持一致 */
-  .dialog-footer {
-    text-align: center;
-    padding: 0 28px 24px;
-  }
-
-  :deep(.dialog-footer .el-button) {
-    padding: 10px 28px;
-    border-radius: 8px;
-    font-weight: 500;
-    font-size: 1rem /* 原值: 14px */;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px @merchant-shadow;
-  }
-
-  :deep(.dialog-footer .el-button--primary) {
-    background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-primary 100%);
-    border: 1px solid @merchant-primary;
-    color: @merchant-surface;
-  }
-
-  :deep(.dialog-footer .el-button--primary:hover) {
-    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(74, 122, 77, 0.3);
-  }
-
-  :deep(.dialog-footer .el-button--default) {
-    border-color: @merchant-border;
-    background-color: @merchant-surface-alt;
-    color: @merchant-text-sec;
-  }
-
-  :deep(.dialog-footer .el-button--default:hover) {
-    border-color: @merchant-border;
-    background-color: @merchant-surface-alt;
-    color: @merchant-text;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px @merchant-shadow;
-  }
-
-  /* 对话框内容区域样式 - 与添加菜品保持一致 */
-  :deep(.el-dialog) {
-    border-radius: 12px;
-    box-shadow: 0 4px 20px @merchant-shadow-hover;
-  }
-
-  :deep(.el-dialog__header) {
-    border-bottom: 2px solid rgba(74, 122, 77, 0.3);
-    background: linear-gradient(135deg, rgba(227, 240, 228, 0.8) 0%, rgba(74, 122, 77, 0.08) 100%);
-    padding: 24px 28px;
-    border-radius: 12px 12px 0 0;
-  }
-
-  :deep(.el-dialog__title) {
-    font-size: 1.429rem /* 原值: 20px */;
-    font-weight: 600;
-    color: @merchant-primary;
-    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  :deep(.el-dialog__body) {
-    padding: 32px 28px;
-    background-color: @merchant-surface-alt;
-  }
-
-  :deep(.el-dialog__footer) {
-    border-top: 1px solid @merchant-border;
-    padding: 0 28px 24px;
-    border-radius: 0 0 12px 12px;
-    background-color: @merchant-surface;
-  }
-
-  /* 添加菜单表单样式 */
-  .add-menu-form {
-    .info-item {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 20px;
-
-      .info-label {
-        color: @merchant-text-sec;
-        width: 130px;
-        font-weight: 500;
-        font-size: 1rem /* 原值: 14px */;
-      }
-
-      /* 输入框、选择框、时间选择器悬浮效果优化 - 与添加菜品保持一致 */
-      :deep(.el-input__wrapper),
-      :deep(.el-select__wrapper),
-      :deep(.el-time-picker .el-input__wrapper) {
-        border-radius: 8px;
-        border: 2px solid @merchant-border;
-        transition: all 0.3s ease;
-        box-shadow: 0 1px 2px @merchant-shadow;
-
-        &:hover {
-          border-color: @merchant-primary;
-          box-shadow: 0 0 0 3px rgba(74, 122, 77, 0.1);
-        }
-
-        &.is-focus,
-        &.is-focused {
-          border-color: @merchant-primary;
-          box-shadow: 0 0 0 3px rgba(74, 122, 77, 0.15);
-        }
-      }
-    }
-  }
+  box-sizing: border-box;
+  padding: 0 var(--space-6) var(--space-6);
 }
 
-.auto-offline {
-  margin-left: 20px;
+/* 页头动作区控件高度取 --control-height-md（§3.4、§4.7） */
+.menu-management-container :deep(.app-page-header__actions .el-button) {
+  height: var(--control-height-md);
+}
+
+/* 工具条：单行承载搜索 + 状态分段 + 排序，L1 微质感（§3.4、§4.3） */
+.menu-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--card-gap-compact);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+}
+
+.menu-toolbar__search {
+  width: 240px;
+  max-width: 100%;
+}
+
+.menu-toolbar__search-icon {
+  color: var(--ink-400);
+}
+
+/* 工具条控件统一 --control-height-sm（§3.4） */
+.menu-toolbar :deep(.el-input__wrapper),
+.menu-toolbar :deep(.el-select__wrapper) {
+  min-height: var(--control-height-sm);
+  border-radius: var(--radius-sm);
+}
+
+.menu-toolbar__status :deep(.el-radio-button__inner) {
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  box-shadow: none;
+}
+
+.menu-toolbar__status :deep(.el-radio-button__inner:hover) {
+  color: var(--brand-600);
+}
+
+.menu-toolbar__status :deep(.el-radio-button.is-active .el-radio-button__inner) {
+  border-color: var(--brand-500);
+  background: var(--brand-500);
+  color: var(--surface);
+  box-shadow: none;
+}
+
+.menu-toolbar__sort {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.menu-toolbar__select {
+  width: 132px;
+}
+
+.menu-toolbar__select--order {
+  width: 104px;
+}
+
+.menu-toolbar__help {
+  color: var(--ink-400);
+  cursor: help;
+}
+
+/* 批量操作条：选中后滑入（§3.5 状态切换 200ms，reduced-motion 由 token 兜底） */
+.menu-batch-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  margin-bottom: var(--card-gap-compact);
+  border: 1px solid var(--brand-200);
+  border-radius: var(--radius-lg);
+  background: var(--brand-50);
+}
+
+.menu-batch-bar__all {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
+}
+
+.menu-batch-bar__count {
+  color: var(--ink-500);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.menu-batch-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.menu-batch-bar__actions :deep(.el-button) {
+  height: var(--control-height-sm);
+}
+
+.menu-batch-enter-active,
+.menu-batch-leave-active {
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+
+.menu-batch-enter-from,
+.menu-batch-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap-compact);
+}
+
+.menu-list__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap-compact);
+}
+
+/* 菜单卡：L1 微质感摘要行，卡片内边距取 --card-padding-compact（§3.4） */
+.menu-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--card-padding-compact);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.menu-item:hover {
+  border-color: var(--line-strong);
+  box-shadow:
+    inset 0 1px 0 var(--surface-highlight),
+    var(--shadow-sm);
+}
+
+/* 选中态由左边界 + 复选框共同表达，不再叠加浅色底（评审：等价值号收敛） */
+.menu-item--selected {
+  border-color: var(--brand-300);
+  box-shadow:
+    inset 3px 0 0 var(--brand-500),
+    inset 0 1px 0 var(--surface-highlight);
+}
+
+.menu-item__check {
+  flex-shrink: 0;
+  margin-top: var(--space-1);
+}
+
+.menu-item__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.menu-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.menu-item__name {
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 24px;
+}
+
+.menu-item__category {
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+  line-height: 18px;
+}
+
+.menu-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+}
+
+.menu-item__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.menu-item__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+
+.menu-item__actions :deep(.el-button) {
+  height: var(--control-height-sm);
+  padding: 0;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+}
+
+.menu-item__actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+.menu-list__empty {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+/* 列表过渡：只动 transform / opacity（§3.5） */
+.list-move,
+.list-enter-active,
+.list-leave-active {
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.list-leave-active {
+  position: absolute;
+  width: 100%;
+}
+
+/* 分页：中文文案，置于列表末尾（评审 P1） */
+.menu-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.menu-pagination__total {
+  color: var(--ink-500);
+  font-family: var(--font-num);
+  font-size: var(--text-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 添加菜单对话框：只保留信息行布局，颜色交给全局 Element Plus 变量（§7.2） */
+.add-menu-form .info-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.add-menu-form .info-item:last-child {
+  margin-bottom: 0;
+}
+
+.add-menu-form .info-label {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-1);
+  width: 130px;
+  color: var(--ink-500);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+}
+
+/* 添加菜单对话框按钮组：保持原有的居中语义（§4.4 提交按钮） */
+.dialog-footer {
+  display: block;
+  text-align: center;
+}
+
+.menu-management-container :deep(.el-dialog) {
+  border-radius: var(--radius-lg);
 }
 </style>

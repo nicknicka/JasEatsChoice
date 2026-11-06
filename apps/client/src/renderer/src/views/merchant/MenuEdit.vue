@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElTimePicker, ElSelect, ElOption, ElInput, ElMessageBox } from 'element-plus'
 import {
+  ArrowDown,
   CircleCheck,
   CirclePlus,
   CircleClose,
@@ -13,6 +14,8 @@ import {
   Edit
 } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppCard from '../../components/common/AppCard.vue'
 import axios from 'axios'
 import { API_CONFIG } from '../../config/index.js'
 import { useAuthStore } from '../../store/authStore'
@@ -33,6 +36,9 @@ const menuStatusMap = {
 
 // 加载状态
 const loading = ref(false)
+
+// 保存中状态（主按钮 loading，防止重复提交，§4.6）
+const saving = ref(false)
 
 // 菜品列表
 const dishesList = ref([])
@@ -171,37 +177,38 @@ const hasUnsavedChanges = () => {
 
 // 保存菜单
 const saveMenu = async (saveType) => {
+  saving.value = true
   loading.value = true
-  // 根据保存类型更新菜单状态
-  switch (saveType) {
-    case 'online':
-      menuInfo.value.status = 'online'
-      break
-    case 'offline':
-      menuInfo.value.status = 'offline'
-      break
-    case 'draft':
-      menuInfo.value.status = 'draft'
-      break
-  }
+  try {
+    // 根据保存类型更新菜单状态
+    switch (saveType) {
+      case 'online':
+        menuInfo.value.status = 'online'
+        break
+      case 'offline':
+        menuInfo.value.status = 'offline'
+        break
+      case 'draft':
+        menuInfo.value.status = 'draft'
+        break
+    }
 
-  // 表单验证
-  if (!menuInfo.value.name.trim()) {
-    ElMessage.warning('请填写菜单名称')
-    return
-  }
-
-  // 验证自动时间
-  if (menuInfo.value.autoOnline && menuInfo.value.autoOffline) {
-    const onlineTime = dayjs(menuInfo.value.autoOnline)
-    const offlineTime = dayjs(menuInfo.value.autoOffline)
-    if (offlineTime.isBefore(onlineTime)) {
-      ElMessage.warning('自动下架时间必须晚于自动上架时间')
+    // 表单验证
+    if (!menuInfo.value.name.trim()) {
+      ElMessage.warning('请填写菜单名称')
       return
     }
-  }
 
-  try {
+    // 验证自动时间
+    if (menuInfo.value.autoOnline && menuInfo.value.autoOffline) {
+      const onlineTime = dayjs(menuInfo.value.autoOnline)
+      const offlineTime = dayjs(menuInfo.value.autoOffline)
+      if (offlineTime.isBefore(onlineTime)) {
+        ElMessage.warning('自动下架时间必须晚于自动上架时间')
+        return
+      }
+    }
+
     // 从authStore获取商家ID
     const authStore = useAuthStore()
     const merchantId = authStore.merchantId
@@ -243,6 +250,7 @@ const saveMenu = async (saveType) => {
     ElMessage.error('保存菜单失败')
   } finally {
     loading.value = false
+    saving.value = false
   }
 }
 
@@ -480,111 +488,116 @@ const batchAssociateDishes = async () => {
 
 <template>
   <div class="menu-edit-container">
-    <div class="menu-edit-header">
-      <div class="header-left">
-        <CommonBackButton
-          type="text"
-          text="取消编辑"
-          :use-router-back="false"
-          class="back-btn"
-          @click="handleCancelEdit"
-        />
-        <h3 class="page-title">编辑菜单</h3>
-      </div>
-    </div>
+    <!-- 页头：merchant 紧凑版，标题 --text-h2 + 上下 --space-4，返回在右侧动作区（§4.7） -->
+    <AppPageHeader title="编辑菜单" :compact="true">
+      <template #actions>
+        <CommonBackButton type="default" :use-router-back="false" @click="handleCancelEdit" />
+      </template>
+    </AppPageHeader>
 
     <div class="menu-edit-content">
-      <!-- 菜单基本信息 -->
-      <div class="menu-info-section">
-        <h4 class="section-title">📝 菜单基本信息</h4>
-        <div class="info-item">
-          <span class="info-label"
-            ><el-icon><Document /></el-icon> 菜单名称</span
-          >
-          <el-input
-            v-model="menuInfo.name"
-            placeholder="请输入菜单名称"
-            style="width: 300px"
-            clearable
-          ></el-input>
-        </div>
+      <!-- 菜单基本信息：两列栅格铺满卡片，收回右侧留白（§4.4） -->
+      <AppCard class="menu-info-section" padding="md">
+        <h2 class="section-title">菜单基本信息</h2>
+        <div class="form-grid">
+          <div class="form-field">
+            <span class="form-label">
+              <el-icon><Document /></el-icon>
+              菜单名称
+              <span class="form-required" aria-hidden="true">*</span>
+            </span>
+            <el-input
+              v-model="menuInfo.name"
+              size="default"
+              placeholder="请输入菜单名称"
+              clearable
+            ></el-input>
+          </div>
 
-        <div class="info-item">
-          <span class="info-label"
-            ><el-icon><Clock /></el-icon> 自动上架时间</span
-          >
-          <el-time-picker
-            v-model="menuInfo.autoOnline"
-            type="fixed-time"
-            format="HH:mm:ss"
-            value-format="HH:mm:ss"
-            placeholder="选择自动上架时间"
-            style="width: 200px"
-          ></el-time-picker>
-        </div>
-        <div class="info-item">
-          <span class="info-label"
-            ><el-icon><Clock /></el-icon> 自动下架时间</span
-          >
-          <el-time-picker
-            v-model="menuInfo.autoOffline"
-            type="fixed-time"
-            format="HH:mm:ss"
-            value-format="HH:mm:ss"
-            placeholder="选择自动下架时间"
-            style="width: 200px"
-          ></el-time-picker>
-        </div>
-        <div class="info-item">
-          <span class="info-label"
-            ><el-icon><Switch /></el-icon> 菜单状态</span
-          >
-          <el-select
-            v-model="menuInfo.status"
-            placeholder="选择菜单状态"
-            style="width: 200px"
-            clearable
-          >
-            <el-option
-              v-for="(status, key) in menuStatusMap"
-              :key="key"
-              :value="key"
-              :label="status.text"
+          <div class="form-field">
+            <span class="form-label">
+              <el-icon><Switch /></el-icon>
+              菜单状态
+            </span>
+            <el-select
+              v-model="menuInfo.status"
+              size="default"
+              placeholder="选择菜单状态"
+              clearable
             >
-              <template #label>
-                <el-icon>
-                  <CircleCheck v-if="key === 'online'" />
-                  <CirclePlus v-else-if="key === 'draft'" />
-                  <CircleClose v-else />
-                </el-icon>
-                {{ status.text }}
-              </template>
-            </el-option>
-          </el-select>
+              <el-option
+                v-for="(status, key) in menuStatusMap"
+                :key="key"
+                :value="key"
+                :label="status.text"
+              >
+                <template #label>
+                  <el-icon>
+                    <CircleCheck v-if="key === 'online'" />
+                    <CirclePlus v-else-if="key === 'draft'" />
+                    <CircleClose v-else />
+                  </el-icon>
+                  {{ status.text }}
+                </template>
+              </el-option>
+            </el-select>
+          </div>
+
+          <div class="form-field">
+            <span class="form-label">
+              <el-icon><Clock /></el-icon>
+              自动上架时间
+            </span>
+            <el-time-picker
+              v-model="menuInfo.autoOnline"
+              size="default"
+              type="fixed-time"
+              format="HH:mm:ss"
+              value-format="HH:mm:ss"
+              placeholder="选择自动上架时间"
+            ></el-time-picker>
+          </div>
+
+          <div class="form-field">
+            <span class="form-label">
+              <el-icon><Clock /></el-icon>
+              自动下架时间
+            </span>
+            <el-time-picker
+              v-model="menuInfo.autoOffline"
+              size="default"
+              type="fixed-time"
+              format="HH:mm:ss"
+              value-format="HH:mm:ss"
+              placeholder="选择自动下架时间"
+            ></el-time-picker>
+          </div>
+
+          <div class="form-field form-field--full">
+            <span class="form-label">
+              <el-icon><Edit /></el-icon>
+              菜单描述
+            </span>
+            <el-input
+              v-model="menuInfo.description"
+              size="default"
+              placeholder="请输入菜单描述"
+              type="textarea"
+              :rows="4"
+              clearable
+            ></el-input>
+          </div>
         </div>
-        <div class="info-item">
-          <span class="info-label"
-            ><el-icon><Edit /></el-icon> 菜单描述</span
-          >
-          <el-input
-            v-model="menuInfo.description"
-            placeholder="请输入菜单描述"
-            style="width: 500px"
-            type="textarea"
-            :rows="4"
-            clearable
-          ></el-input>
-        </div>
-      </div>
+      </AppCard>
 
       <!-- 菜品管理 -->
-      <div class="dishes-section">
-        <h4 class="section-title">🍴 菜品管理</h4>
+      <AppCard class="dishes-section" padding="md">
+        <h2 class="section-title">菜品管理</h2>
         <div class="dishes-header">
-          <el-button type="primary" size="small" @click="showAddDishDialog = true">
+          <el-button type="default" size="default" @click="showAddDishDialog = true">
             添加菜品
           </el-button>
-          <el-button type="info" size="small" @click="showBatchAssociateDialog = true">
+          <el-button type="default" size="default" @click="showBatchAssociateDialog = true">
             批量关联菜品
           </el-button>
         </div>
@@ -603,25 +616,39 @@ const batchAssociateDishes = async () => {
             </span>
             <div class="dish-actions">
               <el-button
-                :type="dish.status === 'online' ? 'warning' : 'success'"
-                size="small"
+                type="default"
+                size="default"
                 class="status-btn"
                 @click="toggleDishStatus(dish)"
                 :disabled="dish.status === 'offline' && !dish.globalStatus"
               >
                 {{ dish.status === 'online' ? '下架' : '上架' }}
               </el-button>
-              <el-button type="danger" size="small" @click="removeDish(dish)"> 移除 </el-button>
+              <el-button type="danger" plain size="default" @click="removeDish(dish)">
+                移除
+              </el-button>
             </div>
           </div>
         </div>
-      </div>
+      </AppCard>
 
-      <!-- 操作按钮 -->
+      <!-- 保存动作：一个实心主按钮 + 次级选择（§4.1） -->
       <div class="action-buttons">
-        <el-button type="success" @click="saveMenu('online')">保存菜单并上架</el-button>
-        <el-button type="warning" @click="saveMenu('offline')">保存菜单并下架</el-button>
-        <el-button type="info" @click="saveMenu('draft')">保存为草稿</el-button>
+        <el-button type="primary" size="large" :loading="saving" @click="saveMenu('online')">
+          保存菜单并上架
+        </el-button>
+        <el-dropdown trigger="click" @command="saveMenu">
+          <el-button size="large">
+            更多保存方式
+            <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="offline">保存菜单并下架</el-dropdown-item>
+              <el-dropdown-item command="draft">保存为草稿</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
 
       <!-- 添加菜品对话框 -->
@@ -697,274 +724,188 @@ const batchAssociateDishes = async () => {
   </div>
 </template>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
-// 时间设置按钮样式
-.time-set-btn {
-  color: @merchant-primary;
-  font-weight: 500;
-
-  &:hover {
-    color: @merchant-primary-light;
-    text-decoration: underline;
-  }
+<style scoped>
+/* 页面容器：暖白页面底 + 内容区自适应（§3.1；侧栏 --sidebar-width 240px） */
+.menu-edit-container {
+  box-sizing: border-box;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 }
 
-// 菜品状态标签样式
-.status-tag {
-  margin-left: 8px;
-  font-size: 0.857rem /* 原值: 12px */;
-  border-radius: 6px;
-  padding: 2px 8px;
+.menu-edit-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap-compact);
 }
 
-// 菜品信息样式
+/* 卡片：L1 微质感由 AppCard 承担，merchant 内边距取 --card-padding-compact（§3.4、§4.2） */
+.menu-info-section,
+.dishes-section {
+  padding: var(--card-padding-compact);
+}
+
+/* 区块标题从 h2 起（页头已占用 h1），字号 --text-h3 / 600（§3.2、§4.7） */
+.section-title {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-h3);
+  line-height: 24px;
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
+}
+
+/* 表单两列栅格：铺满卡片，收回右侧留白（§4.4） */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-6);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.form-field--full {
+  grid-column: 1 / -1;
+}
+
+/* 字段标签：统一线性图标 + 文字（§4.4、§4.9） */
+.form-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  color: var(--ink-700);
+}
+
+.form-label .el-icon {
+  color: var(--ink-400);
+}
+
+/* 必填星号取 --danger（§4.4） */
+.form-required {
+  color: var(--danger);
+}
+
+/* 控件铺满栅格列；焦点环统一 --brand-400（§4.6、§7.1） */
+.form-field :deep(.el-input),
+.form-field :deep(.el-select),
+.form-field :deep(.el-time-picker),
+.form-field :deep(.el-textarea) {
+  width: 100%;
+}
+
+.form-field :deep(.el-input__wrapper),
+.form-field :deep(.el-textarea__inner) {
+  border-radius: var(--radius-sm);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.form-field :deep(.el-input__wrapper:hover),
+.form-field :deep(.el-textarea__inner:hover) {
+  border-color: var(--brand-400);
+}
+
+.form-field :deep(.el-input__wrapper.is-focus),
+.form-field :deep(.el-textarea__inner:focus) {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 2px var(--brand-400);
+}
+
+/* 卡片头动作：次级 + 文字层级，避免第二个实心主按钮（§4.1） */
+.dishes-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.dishes-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 菜品行：L0 平面嵌在卡片内，用分割线表达，不加阴影（§3.4） */
+.dish-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.dish-item:last-child {
+  border-bottom: 0;
+}
+
 .dish-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-
-  .dish-name {
-    font-weight: 600;
-    color: @merchant-text;
-    font-size: 1rem /* 原值: 14px */;
-  }
-
-  .dish-price {
-    color: @merchant-warning;
-    font-weight: 600;
-    font-size: 1rem /* 原值: 14px */;
-  }
+  gap: var(--space-3);
+  min-width: 0;
 }
 
-.menu-edit-container {
-  padding: 0 20px 20px 20px;
-
-  .menu-edit-header {
-    background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-primary 100%);
-    padding: 20px;
-    margin: -20px -20px 20px -20px;
-    border-radius: 0 0 12px 12px;
-    box-shadow: 0 2px 8px @merchant-shadow-hover;
-
-    .page-title {
-      font-size: 1.714rem /* 原值: 24px */;
-      font-weight: 700;
-      margin: 0;
-      margin-left: 17px;
-      color: @merchant-surface;
-    }
-  }
-
-  .menu-edit-content {
-    .menu-info-section,
-    .dishes-section {
-      background-color: @merchant-surface;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 16px @merchant-shadow-hover;
-    }
-
-    .section-title {
-      font-size: 1.286rem /* 原值: 18px */;
-      font-weight: 600;
-      margin-bottom: 20px;
-      color: @merchant-text;
-      padding-bottom: 10px;
-      border-bottom: 2px solid @merchant-border;
-    }
-
-    .info-item {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 20px;
-
-      .info-label {
-        color: @merchant-text-sec;
-        width: 130px;
-        font-weight: 500;
-        font-size: 1rem /* 原值: 14px */;
-      }
-
-      /* 输入框悬浮效果优化 */
-      :deep(.el-input) {
-        .el-input__wrapper {
-          transition: all 0.3s ease;
-          border-radius: 6px;
-
-          &:hover {
-            border-color: @merchant-primary;
-            box-shadow: 0 0 0 2px @merchant-primary-light;
-          }
-
-          &.is-focus {
-            border-color: @merchant-primary;
-            box-shadow: 0 0 0 2px fade(@merchant-primary, 20%);
-          }
-        }
-      }
-
-      /* 选择框悬浮效果优化 */
-      :deep(.el-select) {
-        .el-input {
-          .el-input__wrapper {
-            transition: all 0.3s ease;
-            border-radius: 6px;
-
-            &:hover {
-              border-color: @merchant-primary;
-              box-shadow: 0 0 0 2px @merchant-primary-light;
-            }
-
-            &.is-focus {
-              border-color: @merchant-primary;
-              box-shadow: 0 0 0 2px fade(@merchant-primary, 20%);
-            }
-          }
-        }
-      }
-
-      /* 时间选择器悬浮效果优化 */
-      :deep(.el-time-picker) {
-        .el-input {
-          .el-input__wrapper {
-            transition: all 0.3s ease;
-            border-radius: 6px;
-
-            &:hover {
-              border-color: @merchant-primary;
-              box-shadow: 0 0 0 2px @merchant-primary-light;
-            }
-
-            &.is-focus {
-              border-color: @merchant-primary;
-              box-shadow: 0 0 0 2px fade(@merchant-primary, 20%);
-            }
-          }
-        }
-      }
-    }
-
-    .dishes-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-
-      .dishes-search {
-        margin-right: auto;
-
-        /* 搜索输入框悬浮效果优化 */
-        :deep(.el-input) {
-          .el-input__wrapper {
-            transition: all 0.3s ease;
-            border-radius: 6px;
-
-            &:hover {
-              border-color: @merchant-primary;
-              box-shadow: 0 0 0 2px @merchant-primary-light;
-            }
-
-            &.is-focus {
-              border-color: @merchant-primary;
-              box-shadow: 0 0 0 2px fade(@merchant-primary, 20%);
-            }
-          }
-        }
-      }
-    }
-
-    .dishes-list {
-      .dish-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 16px;
-        border: none;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        background-color: @merchant-surface;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 12px 0 @merchant-shadow;
-
-        &:hover {
-          box-shadow: 0 4px 16px @merchant-shadow-hover;
-        }
-
-        .dish-actions {
-          display: flex;
-          gap: 8px;
-
-          .status-btn {
-            width: 60px;
-          }
-        }
-      }
-    }
-
-    .action-buttons {
-      display: flex;
-      gap: 16px;
-    }
-  }
+.dish-name {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
 }
 
-// 对话框样式
-:deep(.el-dialog) {
-  border-radius: 12px;
-  box-shadow: 0 4px 20px @merchant-shadow-hover;
+.dish-price {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-700);
 }
 
-:deep(.el-dialog__header) {
-  border-bottom: 1px solid @merchant-divider;
-  padding: 20px 24px;
-  border-radius: 12px 12px 0 0;
+.status-tag {
+  margin-left: var(--space-1);
 }
 
-:deep(.el-dialog__title) {
-  color: @merchant-text;
-  font-weight: 600;
+.dish-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
 }
 
-:deep(.el-dialog__body) {
-  padding: 24px;
-  background-color: @merchant-surface-alt;
+.status-btn {
+  min-width: 60px;
 }
 
-:deep(.el-dialog__footer) {
-  border-top: 1px solid @merchant-divider;
-  padding: 16px 24px;
-  border-radius: 0 0 12px 12px;
-  background-color: @merchant-surface;
+/* 保存动作区：主按钮在前，次级选择在后（§4.1） */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .dialog-footer {
   text-align: right;
 }
 
-/* 隐藏右侧可能出现的额外下拉框 */
-:deep(.el-popper) {
-  display: none !important;
+/* 弹层：统一圆角与描边（§3.4） */
+:deep(.el-dialog) {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
-/* 确保页面内容不被其他元素遮挡 */
-.menu-edit-container {
-  position: relative;
-  z-index: 1;
+:deep(.el-dialog__header) {
+  border-bottom: 1px solid var(--line);
 }
 
-/* 隐藏浏览器开发者工具中可能出现的额外元素 */
-:deep(.el-select__popper) {
-  z-index: 1000 !important;
+:deep(.el-dialog__title) {
+  color: var(--ink-900);
+  font-weight: var(--weight-semibold);
 }
 
-.header-left {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
+:deep(.el-dialog__footer) {
+  border-top: 1px solid var(--line);
 }
 </style>
