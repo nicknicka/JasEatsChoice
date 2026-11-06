@@ -1,135 +1,136 @@
 <template>
   <div class="wallet-management-container">
-    <common-back-button
-      type="default"
-      size="small"
-      @click="goBack"
-      :use-router-back="false"
-      style="margin-bottom: 20px"
-    />
+    <!-- 页头：标准版；「返回」收进右侧动作区（§4.7） -->
+    <AppPageHeader title="钱包管理">
+      <template #actions>
+        <CommonBackButton type="default" :use-router-back="false" @click="goBack" />
+      </template>
+    </AppPageHeader>
 
-    <h2 class="page-title">钱包管理</h2>
-
-    <!-- 钱包概览卡片 -->
-    <el-card class="wallet-overview-card scale-in" shadow="hover">
+    <!-- 钱包主区：余额、累计数据、入口统一在一张 L1 卡内（§4.2、§4.8） -->
+    <AppCard class="wallet-overview-card" padding="lg">
       <div class="wallet-overview-content">
-        <div class="balance-section">
-          <div class="balance-label">平台币余额</div>
-          <div class="balance-value">
-            <span class="balance-number number-scroll">{{ formatNumber(walletInfo.balance) }}</span>
-            <span class="balance-unit">个</span>
+        <!-- 余额 + 两个主操作：充值取唯一实心主按钮，提现为同高次按钮（§4.1、§5.7） -->
+        <div class="balance-row">
+          <div class="balance-section">
+            <div class="balance-label">平台币余额</div>
+            <div class="balance-value">
+              <span class="balance-number">{{ formatNumber(walletInfo.balance) }}</span>
+              <span class="balance-unit">个</span>
+            </div>
+            <div class="balance-tips">
+              <el-icon><InfoFilled /></el-icon>
+              <span>1平台币 = 1元人民币</span>
+            </div>
           </div>
-          <div class="balance-tips">
-            <el-icon><InfoFilled /></el-icon>
-            <span>1平台币 = 1元人民币</span>
+
+          <div class="wallet-actions">
+            <el-button type="primary" size="large" @click="showRechargeDialog">
+              <el-icon class="btn-icon"><WalletFilled /></el-icon>
+              充值
+            </el-button>
+            <el-button type="default" size="large" @click="showWithdrawDialog">
+              <el-icon class="btn-icon"><Money /></el-icon>
+              提现
+            </el-button>
           </div>
         </div>
 
+        <!-- 累计数据：金额不染色，数值统一 --font-num + tabular-nums（§4.8、§5.2） -->
         <div class="wallet-stats">
           <div class="stat-item">
-            <div class="stat-icon">💰</div>
+            <el-icon class="stat-icon"><Top /></el-icon>
             <div class="stat-content">
               <div class="stat-label">累计充值</div>
-              <div class="stat-value recharge-color">
-                {{ formatNumber(walletInfo.totalRecharge) }}个
-              </div>
+              <div class="stat-value">{{ formatNumber(walletInfo.totalRecharge) }}个</div>
             </div>
           </div>
           <div class="stat-item">
-            <div class="stat-icon">🛒</div>
+            <el-icon class="stat-icon"><ShoppingCart /></el-icon>
             <div class="stat-content">
               <div class="stat-label">累计消费</div>
-              <div class="stat-value consume-color">
-                {{ formatNumber(walletInfo.totalConsume) }}个
-              </div>
+              <div class="stat-value">{{ formatNumber(walletInfo.totalConsume) }}个</div>
             </div>
           </div>
           <div class="stat-item">
-            <div class="stat-icon">🏦</div>
+            <el-icon class="stat-icon"><CreditCard /></el-icon>
             <div class="stat-content">
               <div class="stat-label">累计提现</div>
-              <div class="stat-value withdraw-color">
-                {{ formatNumber(walletInfo.totalWithdraw) }}个
-              </div>
+              <div class="stat-value">{{ formatNumber(walletInfo.totalWithdraw) }}个</div>
             </div>
           </div>
         </div>
 
-        <div class="wallet-actions">
-          <el-button type="primary" size="large" @click="showRechargeDialog">
-            <el-icon class="btn-icon"><WalletFilled /></el-icon>
-            充值
-          </el-button>
-          <el-button type="success" size="large" @click="showWithdrawDialog">
-            <el-icon class="btn-icon"><Money /></el-icon>
-            提现
-          </el-button>
-          <el-button type="info" size="large" @click="viewTransactionHistory">
-            <el-icon class="btn-icon"><List /></el-icon>
-            交易记录
-          </el-button>
+        <!-- 其他入口降为文字动作，一组不超过 3 个（§4.1） -->
+        <div class="wallet-entries">
+          <el-button type="primary" link @click="setupPaymentPassword">支付密码</el-button>
+          <el-button type="primary" link @click="viewWalletSecurity">安全设置</el-button>
+          <el-button type="primary" link @click="contactSupport">联系客服</el-button>
         </div>
       </div>
-    </el-card>
+    </AppCard>
 
-    <!-- 快捷功能 -->
-    <el-card class="quick-actions-card stagger-item" shadow="hover">
-      <h3 class="card-title">快捷功能</h3>
-      <div class="quick-actions-grid">
-        <div class="quick-action-item" @click="viewTransactionHistory">
-          <div class="action-icon">📋</div>
-          <div class="action-text">交易记录</div>
-          <div class="action-desc">查看所有交易明细</div>
-        </div>
-        <div class="quick-action-item" @click="setupPaymentPassword">
-          <div class="action-icon">🔒</div>
-          <div class="action-text">支付密码</div>
-          <div class="action-desc">设置或修改支付密码</div>
-        </div>
-        <div class="quick-action-item" @click="viewWalletSecurity">
-          <div class="action-icon">🛡️</div>
-          <div class="action-text">安全设置</div>
-          <div class="action-desc">管理账户安全</div>
-        </div>
-        <div class="quick-action-item" @click="contactSupport">
-          <div class="action-icon">💬</div>
-          <div class="action-text">联系客服</div>
-          <div class="action-desc">遇到问题请联系我们</div>
-        </div>
-      </div>
-    </el-card>
-
-    <!-- 最近交易 -->
-    <el-card class="recent-transactions-card stagger-item" shadow="hover">
+    <!-- 最近交易：交易入口降为列表 + 文字链接（P0，§4.3、§5.2） -->
+    <AppCard class="recent-transactions-card" padding="md">
       <div class="card-header">
-        <h3 class="card-title">最近交易</h3>
+        <h2 class="card-title">最近交易</h2>
         <el-button type="primary" link @click="viewTransactionHistory">
           查看全部 <el-icon><ArrowRight /></el-icon>
         </el-button>
       </div>
+
       <div v-if="recentTransactions.length > 0" class="transaction-list">
         <div
           v-for="transaction in recentTransactions"
           :key="transaction.id"
           class="transaction-item"
         >
-          <div class="transaction-icon" :class="getTransactionIconClass(transaction.type)">
-            {{ getTransactionIcon(transaction.type) }}
+          <div class="transaction-icon">
+            <el-icon><component :is="getTransactionIcon(transaction.type)" /></el-icon>
           </div>
           <div class="transaction-info">
             <div class="transaction-type">{{ getTransactionTypeText(transaction.type) }}</div>
             <div class="transaction-time">{{ formatTime(transaction.createdAt) }}</div>
           </div>
-          <div class="transaction-amount" :class="getAmountClass(transaction.type)">
-            {{ transaction.type === 'recharge' ? '+' : '-' }}{{ formatNumber(transaction.amount) }}
+          <div class="transaction-amount">
+            <span class="transaction-amount-value">
+              {{ getAmountSign(transaction.type) }}{{ formatNumber(transaction.amount) }}
+            </span>
+            <span class="transaction-amount-role">
+              {{ getAmountRole(transaction.type) }}
+            </span>
           </div>
         </div>
       </div>
-      <el-empty v-else description="暂无交易记录" />
-    </el-card>
+
+      <AppEmptyState
+        v-else
+        icon="Money"
+        description="暂无交易记录"
+        action-text="去充值"
+        @action="showRechargeDialog"
+      />
+    </AppCard>
 
     <!-- 充值对话框 -->
-    <el-dialog v-model="rechargeDialogVisible" title="充值" width="400px" center>
+    <el-dialog v-model="rechargeDialogVisible" title="充值" width="450px" center>
+      <el-alert
+        title="充值说明"
+        type="success"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 20px"
+      >
+        <template #default>
+          <ul style="margin: 5px 0; padding-left: 20px">
+            <li>充值即时到账，无手续费</li>
+            <li>1平台币 = 1元人民币</li>
+            <li>当前仅支持平台币余额充值</li>
+            <li>充值遇到问题请联系客服</li>
+          </ul>
+        </template>
+      </el-alert>
+
       <el-form :model="rechargeForm" label-width="100px">
         <el-form-item label="充值金额">
           <el-input
@@ -141,12 +142,15 @@
             <template #append>平台币</template>
           </el-input>
         </el-form-item>
+        <el-form-item label="充值方式">
+          <el-tag type="info">平台币充值</el-tag>
+          <span class="method-tip">微信支付、支付宝暂未开放</span>
+        </el-form-item>
         <el-form-item label="快捷金额">
           <div class="quick-amount-buttons">
             <el-button
               v-for="amount in quickAmounts"
               :key="amount"
-              size="small"
               @click="setRechargeAmount(amount)"
             >
               {{ amount }}币
@@ -157,7 +161,7 @@
       <template #footer>
         <el-button @click="rechargeDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="confirmRecharge" :loading="recharging">
-          确认充值
+          立即充值
         </el-button>
       </template>
     </el-dialog>
@@ -212,68 +216,13 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button size="small" @click="withdrawAll">全部提现</el-button>
+          <el-button @click="withdrawAll">全部提现</el-button>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="withdrawDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="confirmWithdraw" :loading="withdrawing">
           确认提现
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 充值对话框 -->
-    <el-dialog v-model="rechargeDialogVisible" title="充值" width="450px" center>
-      <el-alert
-        title="充值说明"
-        type="success"
-        :closable="false"
-        show-icon
-        style="margin-bottom: 20px"
-      >
-        <template #default>
-          <ul style="margin: 5px 0; padding-left: 20px">
-            <li>充值即时到账，无手续费</li>
-            <li>1平台币 = 1元人民币</li>
-            <li>当前仅支持平台币余额充值</li>
-            <li>充值遇到问题请联系客服</li>
-          </ul>
-        </template>
-      </el-alert>
-
-      <el-form :model="rechargeForm" label-width="100px">
-        <el-form-item label="充值金额">
-          <el-input
-            v-model.number="rechargeForm.amount"
-            type="number"
-            placeholder="请输入充值金额"
-            :min="1"
-          >
-            <template #append>平台币</template>
-          </el-input>
-        </el-form-item>
-        <el-form-item label="充值方式">
-          <el-tag type="info">平台币充值</el-tag>
-          <span class="method-tip">微信支付、支付宝暂未开放</span>
-        </el-form-item>
-        <el-form-item label="快捷金额">
-          <div class="quick-amount-buttons">
-            <el-button
-              v-for="amount in quickAmounts"
-              :key="amount"
-              size="small"
-              @click="setRechargeAmount(amount)"
-            >
-              {{ amount }}币
-            </el-button>
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="rechargeDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmRecharge" :loading="recharging">
-          立即充值
         </el-button>
       </template>
     </el-dialog>
@@ -284,7 +233,18 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { InfoFilled, WalletFilled, List, ArrowRight } from '@element-plus/icons-vue'
+import {
+  InfoFilled,
+  WalletFilled,
+  Money,
+  ArrowRight,
+  Top,
+  ShoppingCart,
+  CreditCard
+} from '@element-plus/icons-vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import walletApi from '../../api/wallet'
 import { useAuthStore } from '../../store/authStore'
@@ -368,24 +328,14 @@ const formatTime = (time) => {
   }
 }
 
-// 获取交易类型图标
+// 交易类型图标：结构性图标统一用 Element Plus 线性图标（§4.9）
 const getTransactionIcon = (type) => {
   const icons = {
-    recharge: '💰',
-    consume: '🛒',
-    withdraw: '🏦'
+    recharge: WalletFilled,
+    consume: ShoppingCart,
+    withdraw: CreditCard
   }
-  return icons[type] || '📄'
-}
-
-// 获取交易图标样式类
-const getTransactionIconClass = (type) => {
-  const classes = {
-    recharge: 'icon-recharge',
-    consume: 'icon-consume',
-    withdraw: 'icon-withdraw'
-  }
-  return classes[type] || ''
+  return icons[type] || Money
 }
 
 // 获取交易类型文本
@@ -398,10 +348,11 @@ const getTransactionTypeText = (type) => {
   return texts[type] || '其他'
 }
 
-// 获取金额样式类
-const getAmountClass = (type) => {
-  return type === 'recharge' ? 'amount-income' : 'amount-expense'
-}
+// 金额方向：充值入账为正，消费/提现出账为负（§5.2 符号先于颜色）
+const getAmountSign = (type) => (type === 'recharge' ? '+' : '-')
+
+// 金额角色：用文字把收支含义说清，色盲友好（§5.2）
+const getAmountRole = (type) => (type === 'recharge' ? '收入' : '支出')
 
 // 获取钱包信息
 const fetchWalletInfo = async () => {
@@ -563,23 +514,9 @@ const confirmWithdraw = async () => {
     if (response.code === '200') {
       const fee = calculateWithdrawFee(withdrawForm.value.amount)
       const actualAmount = calculateActualAmount(withdrawForm.value.amount)
-
-      ElMessage.success({
-        dangerouslyUseHTMLString: true,
-        duration: 5000,
-        message: `
-          <div style="font-weight: 600; margin-bottom: 8px;">✅ 提现申请已提交！</div>
-          <div style="font-size: 0.929rem; color: #666; line-height: 1.8;">
-            提现金额：${withdrawForm.value.amount}平台币<br>
-            手续费：${fee}平台币<br>
-            预计到账：${actualAmount}平台币<br>
-            <div style="color: #ff6b6b; margin-top: 8px; padding: 8px; background: #fff5f5; border-radius: 6px;">
-              ⏳ 提现申请已提交，等待管理员审核<br>
-              📅 审核通过后1-3个工作日到账
-            </div>
-          </div>
-        `
-      })
+      ElMessage.success(
+        `提现申请已提交：提现 ${withdrawForm.value.amount}平台币，手续费 ${fee}平台币，预计到账 ${actualAmount}平台币，等待管理员审核`
+      )
       withdrawDialogVisible.value = false
       // 注意：提现只是申请，余额还未扣除，所以不需要刷新钱包信息
       // await fetchWalletInfo()
@@ -631,321 +568,264 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
-.method-tip {
-  margin-left: 12px;
-  color: #909399;
-  font-size: 13px;
-}
-
+/* 页面颜色、间距、圆角、字阶与动效均取自 tokens.css（§3、§7.1），无裸色值。 */
 .wallet-management-container {
-  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-  min-height: 100vh;
-  background: @nordic-bg;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 }
 
-.page-title {
-  font-size: @nordic-text-xl;
-  margin: 0 0 25px 0;
-  color: @nordic-text;
-  font-weight: 700;
-}
-
+/* 钱包主区：默认 L1 微质感，不加彩色渐变与重阴影（§3.4、§4.2） */
 .wallet-overview-card {
-  background: linear-gradient(135deg, @nordic-accent-light 0%, darken(@nordic-accent-light, 5%) 100%);
-  border-radius: @nordic-radius-lg;
-  box-shadow: 0 4px 16px fade(@nordic-accent, 15%);
-  margin-bottom: @nordic-space-lg;
-  border: none;
-  transition: all @nordic-transition-slow ease;
-}
-
-.wallet-overview-card:hover {
-  box-shadow: 0 6px 24px fade(@nordic-accent, 25%);
+  margin-bottom: var(--card-gap);
 }
 
 .wallet-overview-content {
-  padding: 30px;
+  min-width: 0;
+}
+
+/* 余额在左、动作在右，窄屏折行（§4.7） */
+.balance-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
 }
 
 .balance-section {
-  text-align: center;
-  margin-bottom: 30px;
+  min-width: 0;
 }
 
 .balance-label {
-  font-size: @nordic-text-md;
-  color: @nordic-text-secondary;
-  font-weight: 500;
-  margin-bottom: @nordic-space-sm;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
 }
 
 .balance-value {
   display: flex;
   align-items: baseline;
-  justify-content: center;
-  gap: @nordic-space-sm;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
+/* 余额是页面数值主轴：--font-num + tabular-nums，中性深色不染色（§3.2、§5.2） */
 .balance-number {
-  font-size: 56px;
-  font-weight: 700;
-  color: @nordic-yellow;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, @nordic-yellow 0%, lighten(@nordic-yellow, 10%) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-display);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+  line-height: 40px;
 }
 
 .balance-unit {
-  font-size: @nordic-text-lg;
-  color: @nordic-yellow;
-  font-weight: 500;
+  color: var(--ink-500);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
 }
 
 .balance-tips {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  margin-top: @nordic-space-sm;
-  font-size: @nordic-text-sm;
-  color: @nordic-text-muted;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  color: var(--ink-400);
+  font-size: var(--text-caption);
 }
 
-.wallet-stats {
+/* 两个主操作同高并排；高度只用 size="large"（--control-height-md），页面不写死高度（§3.4、§4.1） */
+.wallet-actions {
   display: flex;
-  justify-content: space-around;
-  margin-bottom: 30px;
-  padding: @nordic-space-lg 0;
-  border-top: 1px solid fade(@nordic-yellow, 20%);
-  border-bottom: 1px solid fade(@nordic-yellow, 20%);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.wallet-actions .el-button {
+  min-width: 128px;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+}
+
+.btn-icon {
+  margin-right: var(--space-1);
+}
+
+/* 累计数据：与余额同卡统一，三项等分，金额中性（§4.8、§5.2） */
+.wallet-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--card-gap);
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 .stat-icon {
-  font-size: 2.571rem;
-  line-height: 1;
+  flex-shrink: 0;
+  color: var(--ink-400);
+  font-size: var(--text-h2);
 }
 
 .stat-content {
-  text-align: left;
+  min-width: 0;
 }
 
 .stat-label {
-  font-size: @nordic-text-base;
-  color: @nordic-text-secondary;
-  margin-bottom: 5px;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
 }
 
+/* 累计值统一 --font-num + tabular-nums，中性深色，不给数字染红绿蓝（§3.2、§5.2） */
 .stat-value {
-  font-size: @nordic-text-lg;
-  font-weight: 600;
+  margin-top: var(--space-1);
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 24px;
 }
 
-.recharge-color {
-  color: @nordic-green;
-}
-
-.consume-color {
-  color: @nordic-red;
-}
-
-.withdraw-color {
-  color: @nordic-blue;
-}
-
-.wallet-actions {
+/* 其他入口的文字动作行（§4.1 文字按钮） */
+.wallet-entries {
   display: flex;
-  justify-content: center;
-  gap: 15px;
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
 }
 
-.wallet-actions .el-button {
-  min-width: 120px;
-  font-size: @nordic-text-md;
-  padding: 12px @nordic-space-lg;
-  border-radius: @nordic-radius-sm;
-  font-weight: 500;
-}
-
-.wallet-actions .btn-icon {
-  margin-right: 5px;
-  font-size: @nordic-text-lg;
-}
-
-.quick-actions-card {
-  border-radius: @nordic-radius-lg;
-  box-shadow: 0 2px 12px @nordic-shadow;
-  margin-bottom: @nordic-space-lg;
-  border: none;
-}
-
-.card-title {
-  font-size: @nordic-text-md + 2px;
-  margin: 0 0 @nordic-space-lg 0;
-  font-weight: 700;
-  color: @nordic-text;
+.recent-transactions-card {
+  /* AppCard 默认 L1 微质感，列表卡片不加大阴影（§3.4） */
 }
 
 .card-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: @nordic-space-lg;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
-.quick-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 15px;
-}
-
-.quick-action-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: @nordic-space-lg;
-  background: linear-gradient(135deg, @nordic-blue-light 0%, darken(@nordic-blue-light, 5%) 100%);
-  border-radius: @nordic-radius-md;
-  cursor: pointer;
-  transition: all @nordic-transition-slow ease;
-  border: 2px solid transparent;
-}
-
-.quick-action-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 16px fade(@nordic-blue, 30%);
-  border-color: @nordic-blue;
-}
-
-.action-icon {
-  font-size: 2.286rem;
-  margin-bottom: @nordic-space-sm;
-}
-
-.action-text {
-  font-size: @nordic-text-base;
-  font-weight: 600;
-  color: @nordic-blue;
-  margin-bottom: 4px;
-}
-
-.action-desc {
-  font-size: @nordic-text-xs;
-  color: @nordic-text-secondary;
-  text-align: center;
-  line-height: 1.4;
-}
-
-.recent-transactions-card {
-  border-radius: @nordic-radius-lg;
-  box-shadow: 0 2px 12px @nordic-shadow;
-  border: none;
+/* 区块标题从 h2 起，字阶 --text-h2（§4.7） */
+.card-title {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+  line-height: 28px;
 }
 
 .transaction-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
 .transaction-item {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: @nordic-space-md;
-  background: @nordic-divider;
-  border-radius: @nordic-radius-md;
-  transition: all @nordic-transition-fast ease;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
 }
 
-.transaction-item:hover {
-  background: @nordic-border;
-  transform: translateX(4px);
+.transaction-item:last-child {
+  /* 保留占位，保证所有交易行等高（§4.3） */
+  border-bottom-color: transparent;
 }
 
 .transaction-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: @nordic-radius-md;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.714rem;
-  background: @nordic-surface;
-}
-
-.icon-recharge {
-  background: linear-gradient(135deg, @nordic-green-light 0%, darken(@nordic-green-light, 5%) 100%);
-}
-
-.icon-consume {
-  background: linear-gradient(135deg, @nordic-red-light 0%, darken(@nordic-red-light, 5%) 100%);
-}
-
-.icon-withdraw {
-  background: linear-gradient(135deg, @nordic-blue-light 0%, darken(@nordic-blue-light, 5%) 100%);
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--canvas-sunken);
+  color: var(--ink-500);
+  font-size: var(--text-h3);
 }
 
 .transaction-info {
   flex: 1;
+  min-width: 0;
 }
 
 .transaction-type {
-  font-size: 1.071rem;
-  font-weight: 600;
-  color: @nordic-text;
-  margin-bottom: 4px;
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 22px;
 }
 
 .transaction-time {
-  font-size: @nordic-text-sm;
-  color: @nordic-text-muted;
+  margin-top: var(--space-1);
+  color: var(--ink-400);
+  font-size: var(--text-caption);
+  line-height: 18px;
 }
 
+/* 金额右对齐、中性深色、tabular-nums；正负靠符号 + 文字角色表达（§5.2） */
 .transaction-amount {
-  font-size: 1.286rem;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: var(--space-1);
+  text-align: right;
 }
 
-.amount-income {
-  color: @nordic-green;
+.transaction-amount-value {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.amount-expense {
-  color: @nordic-red;
+.transaction-amount-role {
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+  line-height: 18px;
+}
+
+/* 弹层内金额一律中性 + --font-num，不给数字染红绿（§5.2） */
+.balance-highlight,
+.fee-text,
+.actual-amount {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.method-tip {
+  margin-left: var(--space-3);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
 }
 
 .quick-amount-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: @nordic-space-sm;
-}
-
-.balance-highlight {
-  color: @nordic-yellow;
-  font-weight: 600;
-  font-size: @nordic-text-md;
-}
-
-.fee-text {
-  color: @nordic-red;
-  font-weight: 500;
-  font-size: 1.071rem;
-}
-
-.actual-amount {
-  color: @nordic-green;
-  font-weight: 600;
-  font-size: @nordic-text-md;
+  gap: var(--space-2);
 }
 </style>
