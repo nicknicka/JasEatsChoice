@@ -1,11 +1,14 @@
 <script setup>
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../store/authStore'
 import api, { decodeJwt } from '../../utils/api.js'
 import { WS_CONFIG } from '../../config/index.js'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppStatCard from '../../components/common/AppStatCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
 import {
   Bell,
   ChatDotRound,
@@ -13,7 +16,6 @@ import {
   ChatLineSquare,
   Refresh,
   Check,
-  Filter,
   Search,
   Delete,
   Download,
@@ -83,35 +85,6 @@ const normalizeMessage = (message) => {
   }
 }
 
-// 数字动画
-const animatedValues = ref({
-  total: 0,
-  system: 0,
-  order: 0,
-  comment: 0
-})
-
-// 动画数字
-const animateValue = (key, endValue, duration = 1000) => {
-  const startValue = animatedValues.value[key]
-  const startTime = performance.now()
-
-  const animate = (currentTime) => {
-    const elapsed = currentTime - startTime
-    const progress = Math.min(elapsed / duration, 1)
-    const easeOutQuart = 1 - Math.pow(1 - progress, 4)
-    animatedValues.value[key] = Math.floor(startValue + (endValue - startValue) * easeOutQuart)
-
-    if (progress < 1) {
-      requestAnimationFrame(animate)
-    } else {
-      animatedValues.value[key] = endValue
-    }
-  }
-
-  requestAnimationFrame(animate)
-}
-
 // ==================== WebSocket 实时推送 ====================
 
 // 初始化 WebSocket 连接
@@ -149,7 +122,10 @@ const initWebSocket = () => {
             title: data.content || data.title,
             content: data.content || '',
             sender: data.senderName || data.fromId || '系统',
-            time: data.createdAt || data.time || new Date().toISOString().slice(0, 19).replace('T', ' '),
+            time:
+              data.createdAt ||
+              data.time ||
+              new Date().toISOString().slice(0, 19).replace('T', ' '),
             isRead: data.readStatus || false,
             type: data.type || 'system'
           }
@@ -500,17 +476,18 @@ const totalStats = computed(() => {
   }
 })
 
-// 监听未读消息变化，触发动画
-watch(
-  unreadCounts,
-  (newVal) => {
-    animateValue('total', newVal.total)
-    animateValue('system', newVal.system)
-    animateValue('order', newVal.order)
-    animateValue('comment', newVal.comment)
-  },
-  { deep: true }
-)
+// 0 条时收起统计与批量操作（评审 P0）：只在有消息时渲染
+const hasMessages = computed(() => filteredMessages.value.length > 0)
+
+const hasUnreadMessage = computed(() => filteredMessages.value.some((message) => !message.isRead))
+
+// 次级统计条：品牌色主指标之外的 4 个中性指标（§4.8）
+const secondaryStats = computed(() => [
+  { label: '未读消息', value: unreadCounts.value.total },
+  { label: '系统通知', value: unreadCounts.value.system },
+  { label: '订单消息', value: unreadCounts.value.order },
+  { label: '评价消息', value: unreadCounts.value.comment }
+])
 
 const calculateUnreadCounts = () => {
   const nextCounts = {
@@ -532,6 +509,12 @@ const calculateUnreadCounts = () => {
   })
 
   unreadCounts.value = nextCounts
+}
+
+// 切换消息分类
+const selectCategory = (category) => {
+  activeCategory.value = category
+  updateFilter()
 }
 
 // 更新筛选
@@ -630,102 +613,34 @@ const refreshMessages = async () => {
 
 <template>
   <div class="messages-management-container">
-    <!-- 头部 -->
-    <div class="messages-header">
-      <div class="header-left">
-        <h3 class="page-title">消息中心</h3>
-        <p class="page-subtitle">管理您的所有通知和消息</p>
-      </div>
-      <div class="header-right" v-if="!selectedMessage">
-        <!-- 搜索框 -->
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索消息内容..."
-          :prefix-icon="Search"
-          clearable
-          class="search-input"
-        />
-        <CommonBackButton />
-      </div>
-    </div>
-
-    <!-- 统计卡片 -->
-    <div class="stats-section" v-if="!selectedMessage">
-      <div class="stat-card total">
-        <div class="stat-icon">
-          <el-icon :size="28"><ChatDotRound /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value animated-number">{{ totalStats.total }}</div>
-          <div class="stat-label">总消息</div>
-        </div>
-      </div>
-
-      <div class="stat-card unread">
-        <div class="stat-icon">
-          <el-icon :size="28"><Bell /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value animated-number">{{ animatedValues.total }}</div>
-          <div class="stat-label">未读消息</div>
-        </div>
-      </div>
-
-      <div class="stat-card system">
-        <div class="stat-icon">
-          <el-icon :size="28"><Notification /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value animated-number">{{ animatedValues.system }}</div>
-          <div class="stat-label">系统通知</div>
-        </div>
-      </div>
-
-      <div class="stat-card order">
-        <div class="stat-icon">
-          <el-icon :size="28"><Bell /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value animated-number">{{ animatedValues.order }}</div>
-          <div class="stat-label">订单消息</div>
-        </div>
-      </div>
-
-      <div class="stat-card comment">
-        <div class="stat-icon">
-          <el-icon :size="28"><ChatLineSquare /></el-icon>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value animated-number">{{ animatedValues.comment }}</div>
-          <div class="stat-label">评价消息</div>
-        </div>
-      </div>
-    </div>
+    <AppPageHeader title="消息中心" subtitle="管理您的所有通知和消息" compact>
+      <template #actions>
+        <CommonBackButton type="default" />
+      </template>
+    </AppPageHeader>
 
     <div class="messages-content">
-      <!-- 消息分类与列表 -->
+      <!-- 消息列表 -->
       <div class="messages-list-container" v-if="!selectedMessage">
-        <!-- 分类筛选 -->
-        <div class="category-section">
-          <div class="filter-header">
-            <el-icon class="filter-icon"><Filter /></el-icon>
-            <span class="filter-label">消息分类</span>
+        <!-- 概览：有数据时才显示（§4.8；0 条收起统计，评审 P0） -->
+        <section v-if="hasMessages" class="stats-section">
+          <AppStatCard class="stats-overview__primary" label="总消息" :value="totalStats.total" />
+          <div class="stats-overview__secondary">
+            <div v-for="stat in secondaryStats" :key="stat.label" class="stats-secondary">
+              <span class="stats-secondary__value">{{ stat.value }}</span>
+              <span class="stats-secondary__label">{{ stat.label }}</span>
+            </div>
           </div>
+        </section>
+
+        <!-- 分类筛选 + 列表工具条（有数据时才显示批量操作） -->
+        <div v-if="hasMessages" class="category-section">
           <div class="category-tags">
             <div
               v-for="category in ['all', 'system', 'order', 'comment']"
               :key="category"
-              :class="[
-                'category-tag',
-                `category-tag-${category}`,
-                { active: activeCategory === category }
-              ]"
-              @click="
-                () => {
-                  activeCategory = category
-                  updateFilter()
-                }
-              "
+              :class="['category-tag', { active: activeCategory === category }]"
+              @click="selectCategory(category)"
             >
               <el-icon class="tag-icon">
                 <component :is="messageCategories[category].icon" />
@@ -740,70 +655,66 @@ const refreshMessages = async () => {
             </div>
           </div>
 
-          <!-- 操作按钮组 -->
-          <div class="action-buttons">
-            <!-- 批量操作按钮 -->
-            <el-button
-              v-if="!selectMode"
-              type="primary"
-              @click="toggleSelectMode"
-              :icon="Select"
-              size="default"
-            >
-              批量管理
-            </el-button>
-            <template v-else>
-              <el-button @click="toggleSelectAll" size="default">
-                {{ selectedMessages.length === searchMessages.length ? '取消全选' : '全选' }}
-              </el-button>
-              <el-button
-                type="success"
-                @click="batchMarkAsRead"
-                :icon="CircleCheck"
-                :disabled="selectedMessages.length === 0"
-                size="default"
-              >
-                批量已读
-              </el-button>
-              <el-button
-                type="danger"
-                @click="batchDeleteMessages"
-                :icon="Delete"
-                :disabled="selectedMessages.length === 0"
-                size="default"
-              >
-                批量删除
-              </el-button>
-              <el-button @click="toggleSelectMode" size="default">退出</el-button>
-            </template>
+          <div class="category-toolbar">
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索消息内容..."
+              :prefix-icon="Search"
+              clearable
+              size="small"
+              class="search-input"
+            />
 
-            <el-button
-              type="success"
-              @click="markAllAsRead"
-              :icon="Check"
-              :disabled="selectMode"
-              size="default"
-            >
-              全部标记为已读
-            </el-button>
-            <el-button
-              type="default"
-              @click="refreshMessages"
-              :loading="loading"
-              :icon="Refresh"
-              size="default"
-            >
-              刷新
-            </el-button>
-            <el-button
-              type="default"
-              @click="exportMessages"
-              :icon="Download"
-              :disabled="selectMode"
-              size="default"
-            >
-              导出
-            </el-button>
+            <div class="action-buttons">
+              <template v-if="selectMode">
+                <span class="selected-count">已选 {{ selectedMessages.length }} 条</span>
+                <el-button size="small" @click="toggleSelectAll">
+                  {{ selectedMessages.length === searchMessages.length ? '取消全选' : '全选' }}
+                </el-button>
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click="batchMarkAsRead"
+                  :icon="CircleCheck"
+                  :disabled="selectedMessages.length === 0"
+                >
+                  批量已读
+                </el-button>
+                <el-button
+                  type="danger"
+                  size="small"
+                  @click="batchDeleteMessages"
+                  :icon="Delete"
+                  :disabled="selectedMessages.length === 0"
+                >
+                  批量删除
+                </el-button>
+                <el-button size="small" @click="toggleSelectMode">退出</el-button>
+              </template>
+
+              <template v-else>
+                <el-button
+                  size="small"
+                  @click="toggleSelectMode"
+                  :icon="Select"
+                  :disabled="!hasMessages"
+                >
+                  批量管理
+                </el-button>
+                <el-button
+                  size="small"
+                  @click="markAllAsRead"
+                  :icon="Check"
+                  :disabled="!hasUnreadMessage"
+                >
+                  全部标记为已读
+                </el-button>
+                <el-button size="small" @click="refreshMessages" :loading="loading" :icon="Refresh">
+                  刷新
+                </el-button>
+                <el-button size="small" @click="exportMessages" :icon="Download">导出</el-button>
+              </template>
+            </div>
           </div>
         </div>
 
@@ -812,7 +723,13 @@ const refreshMessages = async () => {
           <div
             v-for="message in searchMessages"
             :key="message.id"
-            :class="['message-item', { 'unread-message': !message.isRead, 'selected': selectMode && selectedMessages.includes(message) }]"
+            :class="[
+              'message-item',
+              {
+                'unread-message': !message.isRead,
+                selected: selectMode && selectedMessages.includes(message)
+              }
+            ]"
             @click="selectMode ? toggleMessageSelection(message) : viewMessageDetail(message)"
           >
             <!-- 批量选择复选框 -->
@@ -840,7 +757,7 @@ const refreshMessages = async () => {
               </div>
               <div class="message-meta">
                 <span class="message-time">{{ message.time }}</span>
-                <el-tag :type="message.isRead ? 'success' : 'warning'" size="small">
+                <el-tag :type="message.isRead ? 'info' : 'warning'" size="small">
                   {{ message.isRead ? '已读' : '未读' }}
                 </el-tag>
                 <!-- 删除按钮（仅在非选择模式时显示） -->
@@ -858,10 +775,15 @@ const refreshMessages = async () => {
           </div>
         </div>
 
-        <!-- 空数据提示 -->
-        <div v-if="filteredMessages.length === 0 && !loading" class="empty-messages">
-          <el-empty description="暂无消息"></el-empty>
-        </div>
+        <!-- 空数据提示：0 条时上移到筛选区位置，并收起统计与批量操作（评审 P0） -->
+        <AppEmptyState
+          v-if="filteredMessages.length === 0 && !loading"
+          class="empty-messages"
+          description="暂无消息"
+          action-text="刷新"
+          compact
+          @action="refreshMessages"
+        />
       </div>
 
       <!-- 消息详情 -->
@@ -874,7 +796,7 @@ const refreshMessages = async () => {
               </el-icon>
             </div>
             <h3>{{ selectedMessage.title }}</h3>
-            <el-tag :type="selectedMessage.isRead ? 'success' : 'warning'">
+            <el-tag :type="selectedMessage.isRead ? 'info' : 'warning'">
               {{ selectedMessage.isRead ? '已读' : '未读' }}
             </el-tag>
           </div>
@@ -896,7 +818,7 @@ const refreshMessages = async () => {
           <CommonBackButton @click="backToList" :useRouterBack="false" text="返回列表" />
           <el-button
             v-if="!selectedMessage.isRead"
-            type="success"
+            type="primary"
             @click="markAsRead(selectedMessage)"
           >
             标记为已读
@@ -912,417 +834,164 @@ const refreshMessages = async () => {
 @import '../../assets/css/merchant-theme.less';
 
 .messages-management-container {
-  padding: 0 20px 20px 20px;
+  --card-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 
-  .messages-header {
+  box-sizing: border-box;
+  padding: 0 var(--space-6) var(--space-6);
+
+  // 概览：主指标 + 4 个次级条（§4.8），无彩色渐变（§6.2）
+  .stats-section {
+    margin-bottom: var(--space-4);
+  }
+
+  .stats-overview__primary {
+    max-width: 320px;
+  }
+
+  .stats-overview__primary :deep(.app-stat-card__value) {
+    font-size: var(--text-h1);
+  }
+
+  .stats-overview__secondary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--card-gap-compact);
+    margin-top: var(--card-gap-compact);
+  }
+
+  .stats-secondary {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--card-padding-compact);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-highlight);
+  }
+
+  .stats-secondary__value {
+    color: var(--ink-900);
+    font-family: var(--font-num);
+    font-size: var(--text-h2);
+    font-weight: var(--weight-semibold);
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stats-secondary__label {
+    color: var(--ink-500);
+    font-size: var(--text-body-sm);
+  }
+
+  // 分类与列表工具条：紧凑卡片（§4.2 L1）
+  .category-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--card-padding-compact);
+    margin-bottom: var(--card-gap-compact);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-highlight);
+  }
+
+  .category-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .category-tag {
+    display: inline-flex;
     align-items: center;
-    padding: 24px 28px;
-    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-    border-radius: 20px;
-    box-shadow: 0 8px 24px @merchant-shadow-hover;
-    margin-bottom: 24px;
-    position: relative;
-    overflow: hidden;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    color: var(--ink-700);
+    font-size: var(--text-body-sm);
+    font-weight: var(--weight-medium);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    user-select: none;
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard);
 
-    &::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -10%;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-      border-radius: 50%;
+    .tag-icon {
+      font-size: var(--text-body);
     }
 
-    .header-left {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      position: relative;
-      z-index: 1;
-
-      .page-title {
-        font-size: 26px;
-        font-weight: 700;
-        margin: 0;
-        color: @merchant-surface;
-        letter-spacing: 0.8px;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      }
-
-      .page-subtitle {
-        font-size: 1rem /* 原值: 14px */;
-        color: rgba(255, 255, 255, 0.9);
-        margin: 0;
-        font-weight: 400;
-      }
+    .tag-badge {
+      margin-left: var(--space-1);
     }
 
-    .header-right {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      position: relative;
-      z-index: 1;
-      flex-wrap: wrap;
+    &:hover {
+      color: var(--brand-500);
+      border-color: var(--brand-300);
+    }
 
-      .search-input {
-        width: 260px;
-
-        :deep(.el-input__wrapper) {
-          background: rgba(255, 255, 255, 0.9);
-          border-radius: 8px;
-          box-shadow: 0 2px 8px @merchant-shadow;
-        }
-      }
-
-      :deep(.el-button) {
-        backdrop-filter: blur(12px);
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.35);
-        color: @merchant-surface;
-        box-shadow: 0 4px 12px @merchant-shadow;
-        font-weight: 500;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-        &:hover {
-          transform: translateY(-2px);
-          background: rgba(255, 255, 255, 0.25);
-          box-shadow: 0 6px 16px @merchant-shadow-hover;
-        }
-
-        &:active {
-          transform: translateY(0);
-        }
-
-        &:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-      }
+    &.active {
+      color: var(--brand-600);
+      background: var(--brand-50);
+      border-color: var(--brand-500);
+      font-weight: var(--weight-semibold);
     }
   }
 
-  // 统计卡片
-  .stats-section {
+  .category-toolbar {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: stretch;
-    padding: 20px;
-    background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-bg 100%);
-    border: 1px solid @merchant-border;
-    border-radius: 20px;
-    margin-bottom: 24px;
     flex-wrap: wrap;
-    gap: 16px;
-    box-shadow: 0 2px 16px @merchant-shadow;
+    gap: var(--space-3);
 
-    .stat-card {
+    .search-input {
+      width: 240px;
+    }
+
+    .search-input :deep(.el-input__wrapper) {
+      border-radius: var(--radius-sm);
+    }
+
+    .action-buttons {
       display: flex;
       align-items: center;
-      gap: 18px;
-      padding: 22px 24px;
-      background: @merchant-surface;
-      border-radius: 18px;
-      box-shadow: 0 4px 16px @merchant-shadow;
-      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-      flex: 1;
-      min-width: 160px;
-      border: 1px solid @merchant-border;
-      position: relative;
-      overflow: hidden;
-
-      &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 5px;
-        transition: width 0.3s ease;
-      }
-
-      &:hover {
-        transform: translateY(-6px) scale(1.01);
-        box-shadow: 0 12px 32px @merchant-shadow-hover;
-
-        &::before {
-          width: 6px;
-        }
-
-        .stat-icon {
-          transform: scale(1.1) rotate(5deg);
-        }
-      }
-
-      &:active {
-        transform: translateY(-3px) scale(1.005);
-      }
-
-      .stat-icon {
-        width: 56px;
-        height: 56px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        border-radius: 16px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-        .el-icon {
-          color: inherit;
-        }
-      }
-
-      .stat-content {
-        flex: 1;
-
-        .stat-value {
-          font-size: 2rem /* 原值: 28px */;
-          font-weight: 700;
-          color: @merchant-text;
-          line-height: 1.1;
-          margin-bottom: 4px;
-        }
-
-        .stat-label {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: @merchant-text-muted;
-          font-weight: 500;
-          letter-spacing: 0.3px;
-        }
-      }
-
-      &.total {
-        &::before {
-          background: linear-gradient(180deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-        }
-        .stat-icon {
-          background: @merchant-primary-light;
-          color: @merchant-primary;
-          box-shadow: 0 4px 12px rgba(74, 122, 77, 0.15);
-        }
-        .stat-value {
-          background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-      }
-
-      &.unread {
-        &::before {
-          background: linear-gradient(180deg, @merchant-error 0%, darken(@merchant-error, 8%) 100%);
-        }
-        .stat-icon {
-          background: @merchant-error-light;
-          color: @merchant-error;
-          box-shadow: 0 4px 12px rgba(196, 91, 91, 0.15);
-        }
-        .stat-value {
-          color: @merchant-error;
-        }
-      }
-
-      &.system {
-        &::before {
-          background: linear-gradient(180deg, @merchant-warning 0%, darken(@merchant-warning, 5%) 100%);
-        }
-        .stat-icon {
-          background: @merchant-warning-light;
-          color: @merchant-warning;
-          box-shadow: 0 4px 12px rgba(212, 168, 85, 0.15);
-        }
-        .stat-value {
-          color: @merchant-warning;
-        }
-      }
-
-      &.order {
-        &::before {
-          background: linear-gradient(180deg, @merchant-info 0%, darken(@merchant-info, 8%) 100%);
-        }
-        .stat-icon {
-          background: @merchant-info-light;
-          color: @merchant-info;
-          box-shadow: 0 4px 12px rgba(91, 139, 210, 0.15);
-        }
-        .stat-value {
-          color: @merchant-info;
-        }
-      }
-
-      &.comment {
-        &::before {
-          background: linear-gradient(180deg, @merchant-success 0%, darken(@merchant-success, 8%) 100%);
-        }
-        .stat-icon {
-          background: @merchant-success-light;
-          color: @merchant-success;
-          box-shadow: 0 4px 12px rgba(90, 143, 94, 0.15);
-        }
-        .stat-value {
-          color: @merchant-success;
-        }
-      }
+      flex-wrap: wrap;
+      gap: var(--space-2);
     }
+
+    .selected-count {
+      color: var(--ink-500);
+      font-size: var(--text-body-sm);
+    }
+  }
+
+  // 0 条空状态：居中在筛选区位置（§4.5）
+  .empty-messages {
+    max-width: 480px;
+    margin: var(--space-8) auto 0;
   }
 
   .messages-content {
     .messages-list-container {
-      .category-section {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        padding: 16px 20px;
-        background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
-        border-radius: 12px;
-        margin-bottom: 16px;
-        box-shadow: 0 2px 12px @merchant-shadow;
-        border: 1px solid @merchant-border;
-
-        .filter-header {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-
-          .filter-icon {
-            font-size: 1.143rem /* 原值: 16px */;
-            color: @merchant-primary;
-          }
-
-          .filter-label {
-            font-size: 0.929rem /* 原值: 13px */;
-            font-weight: 600;
-            color: @merchant-text;
-          }
-        }
-
-        .category-tags {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-
-          .category-tag {
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 6px 12px;
-            font-size: 0.929rem /* 原值: 13px */;
-            font-weight: 500;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            user-select: none;
-            position: relative;
-
-            .tag-icon {
-              font-size: 1rem /* 原值: 14px */;
-            }
-
-            .tag-text {
-              font-size: 0.929rem /* 原值: 13px */;
-            }
-
-            .tag-badge {
-              margin-left: 4px;
-            }
-
-            &:hover {
-              transform: translateY(-1px);
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-            }
-
-            &.category-tag-all {
-              background: @merchant-surface-alt;
-              color: @merchant-text-sec;
-              border: 1px solid @merchant-border;
-              &.active {
-                background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-                color: @merchant-surface;
-                border-color: @merchant-primary;
-                box-shadow: 0 2px 6px rgba(74, 122, 77, 0.3);
-              }
-            }
-
-            &.category-tag-system {
-              background: @merchant-warning-light;
-              color: @merchant-warning;
-              border: 1px solid @merchant-warning-light;
-              &.active {
-                background: linear-gradient(135deg, @merchant-warning 0%, darken(@merchant-warning, 5%) 100%);
-                color: @merchant-surface;
-              }
-            }
-
-            &.category-tag-order {
-              background: @merchant-info-light;
-              color: @merchant-info;
-              border: 1px solid @merchant-info-light;
-              &.active {
-                background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 8%) 100%);
-                color: @merchant-surface;
-              }
-            }
-
-            &.category-tag-comment {
-              background: @merchant-success-light;
-              color: @merchant-success;
-              border: 1px solid @merchant-success-light;
-              &.active {
-                background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 8%) 100%);
-                color: @merchant-surface;
-              }
-            }
-          }
-        }
-
-        .action-buttons {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          align-items: center;
-          margin-top: 12px;
-          padding-top: 12px;
-          border-top: 1px solid @merchant-divider;
-
-          :deep(.el-button) {
-            height: 32px;
-            padding: 0 16px;
-            font-size: 0.929rem;
-
-            &:hover {
-              transform: translateY(-1px);
-            }
-
-            &:active {
-              transform: translateY(0);
-            }
-
-            &:disabled {
-              opacity: 0.5;
-              cursor: not-allowed;
-            }
-          }
-        }
-      }
-
       .messages-list {
         .message-item {
           display: flex;
           align-items: flex-start;
-          padding: 18px 22px;
-          border: 2px solid @merchant-border;
-          border-radius: 14px;
-          margin-bottom: 12px;
-          background-color: @merchant-surface;
+          padding: var(--space-4);
+          border: 1px solid var(--line);
+          border-radius: var(--radius-lg);
+          margin-bottom: var(--card-gap-compact);
+          background: var(--surface);
+          box-shadow: var(--card-highlight);
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+          transition:
+            border-color var(--duration-fast) var(--ease-standard),
+            background-color var(--duration-fast) var(--ease-standard);
           position: relative;
           overflow: hidden;
 
@@ -1332,52 +1001,41 @@ const refreshMessages = async () => {
             left: 0;
             top: 0;
             bottom: 0;
-            width: 4px;
-            background: @merchant-border;
-            transition: all 0.3s ease;
-            border-radius: 14px 0 0 14px;
+            width: 3px;
+            background: var(--line);
+            transition: background-color var(--duration-fast) var(--ease-standard);
+            border-radius: var(--radius-lg) 0 0 var(--radius-lg);
           }
 
-          &:hover {
-            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
-            border-color: @merchant-border;
-            transform: translateY(-3px);
-
-            .message-icon {
-              transform: scale(1.08);
-            }
+          &:hover:hover {
+            border-color: var(--brand-300);
 
             .message-title {
-              color: @merchant-primary;
+              color: var(--brand-500);
             }
-          }
-
-          &:active {
-            transform: translateY(-1px);
           }
 
           &.unread-message {
-            background: linear-gradient(to right, @merchant-error-light 0%, @merchant-surface 35%);
-            border-color: @merchant-error-light;
+            background: var(--surface);
+            border-color: var(--line);
 
             &::before {
-              background: linear-gradient(180deg, @merchant-error 0%, lighten(@merchant-error, 10%) 100%);
-              box-shadow: 0 0 12px rgba(245, 108, 108, 0.4);
+              background: var(--danger);
             }
 
             .message-title {
-              color: @merchant-text;
+              color: var(--ink-900);
               font-weight: 700;
             }
 
             .message-preview {
-              color: @merchant-text-sec;
+              color: var(--ink-500);
             }
           }
 
           &.selected {
-            background: linear-gradient(to right, @merchant-info-light 0%, @merchant-surface 35%);
-            border-color: @merchant-info-light;
+            background: var(--info-bg);
+            border-color: var(--info);
           }
 
           .message-checkbox {
@@ -1386,7 +1044,7 @@ const refreshMessages = async () => {
             align-items: center;
 
             :deep(.el-checkbox__inner) {
-              border-radius: 6px;
+              border-radius: var(--radius-sm);
             }
           }
 
@@ -1395,42 +1053,26 @@ const refreshMessages = async () => {
             margin-right: 18px;
 
             .message-icon {
-              width: 48px;
-              height: 48px;
+              width: 40px;
+              height: 40px;
               display: flex;
               align-items: center;
               justify-content: center;
-              border-radius: 14px;
-              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              border-radius: var(--radius-md);
 
               &.icon-system {
-                background: linear-gradient(
-                  135deg,
-                  rgba(230, 162, 60, 0.12) 0%,
-                  rgba(230, 162, 60, 0.06) 100%
-                );
-                color: @merchant-warning;
-                box-shadow: 0 4px 12px rgba(230, 162, 60, 0.12);
+                background: var(--warning-bg);
+                color: var(--warning);
               }
 
               &.icon-order {
-                background: linear-gradient(
-                  135deg,
-                  rgba(91, 139, 210, 0.12) 0%,
-                  rgba(91, 139, 210, 0.06) 100%
-                );
-                color: @merchant-info;
-                box-shadow: 0 4px 12px rgba(91, 139, 210, 0.12);
+                background: var(--info-bg);
+                color: var(--info);
               }
 
               &.icon-comment {
-                background: linear-gradient(
-                  135deg,
-                  rgba(90, 143, 94, 0.12) 0%,
-                  rgba(90, 143, 94, 0.06) 100%
-                );
-                color: @merchant-success;
-                box-shadow: 0 4px 12px rgba(90, 143, 94, 0.12);
+                background: var(--success-bg);
+                color: var(--success);
               }
             }
 
@@ -1440,11 +1082,9 @@ const refreshMessages = async () => {
               right: -3px;
               width: 12px;
               height: 12px;
-              background: linear-gradient(135deg, @merchant-error 0%, lighten(@merchant-error, 10%) 100%);
-              border: 2.5px solid @merchant-surface;
-              border-radius: 50%;
-              box-shadow: 0 2px 8px rgba(245, 108, 108, 0.4);
-              animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+              background: var(--danger);
+              border: 2px solid var(--surface);
+              border-radius: var(--radius-full);
             }
           }
 
@@ -1452,17 +1092,17 @@ const refreshMessages = async () => {
             flex: 1;
 
             .message-title {
-              font-size: 1.071rem /* 原值: 15px */;
-              font-weight: 600;
-              margin-bottom: 7px;
-              color: @merchant-text;
-              transition: color 0.2s ease;
+              font-size: var(--text-body);
+              font-weight: var(--weight-semibold);
+              margin-bottom: var(--space-2);
+              color: var(--ink-900);
+              transition: color var(--duration-fast) var(--ease-standard);
             }
 
             .message-preview {
-              font-size: 0.929rem /* 原值: 13px */;
-              color: @merchant-text-sec;
-              margin-bottom: 10px;
+              font-size: var(--text-body-sm);
+              color: var(--ink-500);
+              margin-bottom: var(--space-2);
               line-height: 1.6;
             }
 
@@ -1470,13 +1110,13 @@ const refreshMessages = async () => {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 0.857rem /* 原值: 12px */;
-              color: @merchant-text-muted;
-              gap: 8px;
+              font-size: var(--text-caption);
+              color: var(--ink-400);
+              gap: var(--space-2);
 
               .delete-btn {
                 opacity: 0;
-                transition: opacity 0.2s ease;
+                transition: opacity var(--duration-fast) var(--ease-standard);
 
                 &:hover {
                   transform: scale(1.1);
@@ -1490,22 +1130,17 @@ const refreshMessages = async () => {
           }
         }
       }
-
-      .empty-messages {
-        text-align: center;
-        margin-top: 50px;
-      }
     }
 
     .message-detail-container {
       padding: 0;
 
       .detail-header {
-        margin-bottom: 20px;
-        padding: 20px;
-        background: @merchant-surface;
-        border-radius: 12px;
-        border: 1px solid @merchant-border;
+        margin-bottom: var(--card-gap);
+        padding: var(--card-padding-compact);
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--line);
 
         .detail-title {
           display: flex;
@@ -1519,38 +1154,26 @@ const refreshMessages = async () => {
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 10px;
+            border-radius: var(--radius-md);
 
             &.icon-system {
-              background: linear-gradient(
-                135deg,
-                rgba(230, 162, 60, 0.15) 0%,
-                rgba(230, 162, 60, 0.08) 100%
-              );
-              color: @merchant-warning;
+              background: var(--warning-bg);
+              color: var(--warning);
             }
 
             &.icon-order {
-              background: linear-gradient(
-                135deg,
-                rgba(91, 139, 210, 0.15) 0%,
-                rgba(91, 139, 210, 0.08) 100%
-              );
-              color: @merchant-info;
+              background: var(--info-bg);
+              color: var(--info);
             }
 
             &.icon-comment {
-              background: linear-gradient(
-                135deg,
-                rgba(90, 143, 94, 0.15) 0%,
-                rgba(90, 143, 94, 0.08) 100%
-              );
-              color: @merchant-success;
+              background: var(--success-bg);
+              color: var(--success);
             }
           }
 
           h3 {
-            font-size: 1.429rem /* 原值: 20px */;
+            font-size: var(--text-h2);
             margin: 0;
             flex: 1;
           }
@@ -1559,8 +1182,8 @@ const refreshMessages = async () => {
         .detail-meta {
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          font-size: 1rem /* 原值: 14px */;
+          gap: var(--space-2);
+          font-size: var(--text-body);
 
           .meta-item {
             display: flex;
@@ -1568,112 +1191,64 @@ const refreshMessages = async () => {
             gap: 8px;
 
             .meta-label {
-              color: @merchant-text-muted;
+              color: var(--ink-400);
               font-weight: 500;
               min-width: 60px;
             }
 
             .meta-value {
-              color: @merchant-text;
+              color: var(--ink-900);
             }
           }
         }
       }
 
       .detail-content {
-        font-size: 1.143rem /* 原值: 16px */;
+        font-size: var(--text-body);
         line-height: 1.8;
-        margin-bottom: 30px;
-        padding: 24px;
-        background: @merchant-surface;
-        border-radius: 12px;
-        border: 1px solid @merchant-border;
-        color: @merchant-text;
+        margin-bottom: var(--space-6);
+        padding: var(--card-padding-compact);
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--line);
+        color: var(--ink-900);
       }
 
       .detail-actions {
         display: flex;
         justify-content: flex-end;
-        gap: 12px;
+        gap: var(--space-3);
       }
     }
   }
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
 
 // 响应式设计
 @media (max-width: 768px) {
   .messages-management-container {
-    padding: 12px;
+    padding: 0 var(--space-4) var(--space-4);
 
-    .messages-header {
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
+    .stats-overview__primary {
+      max-width: none;
     }
 
-    .stats-section {
-      gap: 10px;
+    .stats-overview__secondary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 
-      .stat-card {
-        min-width: calc(50% - 5px);
-        padding: 16px;
+    .category-toolbar {
+      flex-direction: column;
+      align-items: stretch;
 
-        .stat-value {
-          font-size: 1.429rem /* 原值: 20px */ !important;
-        }
+      .search-input {
+        width: 100%;
       }
     }
 
-    .messages-content {
-      .messages-list-container {
-        .category-section {
-          padding: 12px;
-
-          .category-tags {
-            .category-tag {
-              padding: 4px 10px;
-              font-size: 0.857rem /* 原值: 12px */;
-            }
-          }
-        }
-
-        .messages-list {
-          .message-item {
-            padding: 14px;
-
-            .message-left {
-              .message-icon {
-                width: 38px;
-                height: 38px;
-              }
-            }
-
-            .message-content {
-              .message-title {
-                font-size: 1rem /* 原值: 14px */;
-              }
-
-              .message-preview {
-                font-size: 0.857rem /* 原值: 12px */;
-              }
-            }
-          }
-        }
+    .messages-list {
+      .message-item {
+        padding: 14px;
       }
     }
   }
