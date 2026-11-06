@@ -333,8 +333,8 @@ onMounted(() => {
 <template>
   <div class="evaluate-order-page">
     <AppPageHeader :title="pageTitle" subtitle="确认菜品后完成评分与评价">
-      <template #extra>
-        <CommonBackButton />
+      <template #actions>
+        <CommonBackButton type="default" />
       </template>
     </AppPageHeader>
 
@@ -521,11 +521,6 @@ onMounted(() => {
 /* 页头标准版：标题 --text-h1 + --space-6，返回为次级动作（§4.1、§4.7）。 */
 :deep(.app-page-header) {
   background: var(--canvas);
-}
-
-:deep(.app-page-header__extra .el-button) {
-  border-color: var(--line-strong);
-  color: var(--ink-700);
 }
 
 .content-container {
