@@ -1,13 +1,8 @@
 <template>
   <div class="diet-record-container">
-    <!-- 顶部日历选择区域 -->
-    <div class="calendar-section fade-in-up">
-      <div class="section-header">
-        <div class="section-title">
-          <el-icon class="title-icon"><CalendarIcon /></el-icon>
-          <span>饮食记录</span>
-        </div>
-        <div class="calendar-control">
+    <AppPageHeader title="饮食记录">
+      <template #actions>
+        <div class="page-actions">
           <el-date-picker
             v-model="selectedDate"
             type="date"
@@ -15,7 +10,6 @@
             format="YYYY年MM月DD日"
             value-format="YYYY-MM-DD"
             @change="handleDateChange"
-            size="large"
             class="calendar-picker"
             popper-class="custom-date-picker"
             :clearable="false"
@@ -24,17 +18,19 @@
               <el-icon class="calendar-suffix-icon"><CalendarIcon /></el-icon>
             </template>
           </el-date-picker>
-          <el-button type="primary" size="small" class="add-btn" @click="openAddRecordDialog">
+          <el-button type="primary" class="add-btn" @click="openAddRecordDialog">
             <el-icon><Plus /></el-icon>
             添加记录
           </el-button>
         </div>
-      </div>
-    </div>
+      </template>
+    </AppPageHeader>
 
-    <!-- 优化后的统计卡片 -->
-    <div class="stats-card">
-      <div class="stat-item scale-in">
+    <!-- 有记录时才显示统计摘要，空状态不再重复展示无效数据（§4.5、§4.8） -->
+    <div v-if="dietRecords.length > 0" class="stats-card">
+      <div class="stats-period">所选日期：{{ selectedDate }}</div>
+
+      <div class="stat-item stat-item--primary scale-in">
         <div class="stat-number number-scroll">{{ totalCalories }}<span class="stat-unit">kcal</span></div>
         <div class="stat-label">总卡路里</div>
         <el-progress
@@ -51,7 +47,7 @@
       <div class="stat-divider"></div>
 
       <div class="stat-item scale-in">
-        <div class="stat-number number-scroll">{{ dietRecords.length }}</div>
+        <div class="stat-number number-scroll">{{ dietRecords.length }}<span class="stat-unit">条</span></div>
         <div class="stat-label">记录条数</div>
       </div>
 
@@ -79,12 +75,12 @@
     </div>
 
     <!-- 饮食记录显示区域 -->
-    <div class="records-section">
+    <div class="records-section" :class="{ 'is-empty': !loading && dietRecords.length === 0 }">
       <!-- 骨架屏加载 -->
       <div v-if="loading" class="skeleton-container">
         <el-skeleton :rows="3" animated />
-        <el-skeleton :rows="3" animated style="margin-top: 20px" />
-        <el-skeleton :rows="3" animated style="margin-top: 20px" />
+        <el-skeleton :rows="3" animated class="skeleton-block" />
+        <el-skeleton :rows="3" animated class="skeleton-block" />
       </div>
 
       <!-- 饮食记录内容 -->
@@ -206,19 +202,15 @@
         </div>
       </div>
 
-      <!-- 优化后的空数据提示 -->
+      <!-- 空状态复用 L1，紧凑尺寸 + CTA 上方结果说明（§4.5） -->
       <div v-if="!loading && dietRecords.length === 0" class="empty-records">
-        <div class="empty-content">
-          <div class="empty-icon-wrapper">
-            <el-icon class="empty-icon"><Document /></el-icon>
-          </div>
-          <p class="empty-description">暂无饮食记录</p>
-          <el-button type="primary" class="add-empty-btn" @click="openAddRecordDialog">
-            <el-icon><Plus /></el-icon>
-            开始记录第一餐
-          </el-button>
-          <div class="empty-tips">💡 小提示：记录饮食可以帮助你更好地管理健康</div>
-        </div>
+        <AppEmptyState
+          compact
+          :icon="Document"
+          description="暂无饮食记录；记录后会在这里汇总每日卡路里和营养摄入"
+          action-text="开始记录第一餐"
+          @action="openAddRecordDialog"
+        />
       </div>
     </div>
 
@@ -271,6 +263,8 @@ import {
 import { ElMessage } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
 import DietRecordCard from '../../components/DietRecordCard.vue'
 import DietRecordForm from '../../components/DietRecordForm.vue'
 import { mealTypeToChinese, mealTypeToEnglish } from '../../utils/mealTypeUtils.js'
@@ -327,13 +321,13 @@ const calorieProgress = computed(() => {
   return Math.min(Math.round(progress), 100)
 })
 
-// 进度条颜色
+// 进度条颜色：JS 颜色从 tokens.css 读取，不复制色值（§7.1）
 const progressColor = computed(() => {
+  const styles = getComputedStyle(document.documentElement)
   const progress = calorieProgress.value
-  if (progress < 50) return '#67c23a'
-  if (progress < 80) return '#e6a23c'
-  if (progress <= 100) return '#f56c6c'
-  return '#f56c6c'
+  if (progress < 50) return styles.getPropertyValue('--success').trim()
+  if (progress < 80) return styles.getPropertyValue('--warning').trim()
+  return styles.getPropertyValue('--danger').trim()
 })
 
 // 是否显示营养素统计
@@ -568,404 +562,323 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
+/* 页面颜色、间距、圆角、字阶与动效均取自 tokens.css。 */
 .diet-record-container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: @nordic-space-lg;
-  padding: 0 @nordic-space-xl;
   box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 }
 
-/* 顶部日历区域 */
-.calendar-section {
-  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-  padding: @nordic-space-xl;
-  border-radius: @nordic-radius-lg;
-  box-shadow: 0 8px 32px @nordic-shadow;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: @nordic-space-md;
-}
-
-.section-title {
+.page-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: @nordic-text-xl;
-  font-weight: 700;
-  color: @nordic-surface;
-}
-
-.title-icon {
-  font-size: 2.286rem;
-  color: @nordic-surface;
-}
-
-.calendar-control {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .calendar-picker {
-  background-color: @nordic-surface;
-  border-radius: @nordic-radius-sm;
-  padding: @nordic-space-xs;
+  width: 190px;
 }
 
 .calendar-suffix-icon {
-  color: @nordic-accent;
+  color: var(--ink-400);
 }
 
 .add-btn {
-  border-radius: @nordic-radius-pill !important;
-  padding: 10px 24px !important;
-  font-weight: 600 !important;
-  background: @nordic-surface;
-  color: @nordic-accent;
-  border: 2px solid @nordic-surface;
-  transition: all @nordic-transition-slow ease;
-  box-shadow: 0 2px 8px @nordic-shadow;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
 }
 
-.add-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3);
-  background: @nordic-surface;
-  color: @nordic-accent;
-}
-
-/* 统计卡片 */
+/* 统计摘要：数值、单位、周期统一表达（§4.8） */
 .stats-card {
-  .nordic-card();
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-around;
-  gap: @nordic-space-lg;
-  padding: @nordic-space-lg;
-  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.stats-period {
+  flex: 0 0 100%;
+  margin-bottom: var(--space-1);
+  color: var(--ink-400);
+  font-size: var(--text-caption);
+  line-height: 18px;
+  text-align: right;
 }
 
 .stat-item {
-  text-align: center;
   min-width: 100px;
+  text-align: center;
 }
 
-.stat-number {
-  font-size: 2.286rem;
-  font-weight: 700;
-  color: @nordic-text;
-  margin-bottom: @nordic-space-xs;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: @nordic-space-xs;
+.stat-item--primary {
+  min-width: 160px;
 }
 
-.stat-unit {
-  font-size: @nordic-text-base;
-  color: @nordic-text-muted;
-  font-weight: 500;
-}
-
-.stat-label {
-  font-size: @nordic-text-base;
-  color: @nordic-text-muted;
-  font-weight: 500;
-}
-
-.stat-progress {
-  margin-top: @nordic-space-sm;
-  width: 100%;
-}
-
-.stat-detail {
-  font-size: @nordic-text-xs;
-  color: @nordic-text-muted;
-  margin-top: @nordic-space-xs;
-}
-
-/* 营养素统计样式 */
 .nutrient-stat {
   min-width: 60px;
 }
 
+.stat-number,
 .nutrient-value {
-  font-size: @nordic-text-lg;
-  font-weight: 600;
-  color: @nordic-accent;
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 2px;
+  gap: var(--space-1);
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-semibold);
 }
 
+.stat-number {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-h1);
+  line-height: 32px;
+}
+
+.nutrient-value {
+  font-size: var(--text-h2);
+  line-height: 28px;
+}
+
+.stat-unit,
 .nutrient-unit {
-  font-size: @nordic-text-xs;
-  color: @nordic-text-muted;
+  color: var(--ink-500);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-medium);
+  line-height: 18px;
 }
 
+.stat-label,
 .nutrient-label {
-  font-size: @nordic-text-xs;
-  color: @nordic-text-muted;
-  margin-top: 2px;
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-medium);
+  line-height: 18px;
+}
+
+.stat-progress {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.stat-detail {
+  margin-top: var(--space-1);
+  color: var(--ink-400);
+  font-size: var(--text-caption);
+  line-height: 18px;
 }
 
 .stat-divider {
-  width: 2px;
+  width: 1px;
   height: 48px;
-  background-color: @nordic-border;
+  background-color: var(--line);
 }
 
-/* 记录区域 */
+/* 记录区域：非交互卡片使用 L1 微质感，不做悬停位移（§3.4） */
 .records-section {
-  .nordic-card();
   flex: 1;
-  padding: @nordic-space-lg;
-  overflow-y: auto;
   min-height: 400px;
+  padding: var(--space-6);
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
-/* 骨架屏样式 */
+/* 列表空状态高度上限 240px（§4.5） */
+.records-section.is-empty {
+  flex: 0 0 auto;
+  min-height: 240px;
+  padding: 0;
+  overflow: hidden;
+}
+
 .skeleton-container {
-  padding: @nordic-space-lg;
+  padding: var(--space-2);
+}
+
+.skeleton-block {
+  margin-top: var(--space-5);
 }
 
 .meal-sections {
   display: flex;
   flex-direction: column;
-  gap: @nordic-space-lg;
+  gap: var(--space-6);
 }
 
-/* 餐食分类标题 */
+/* 餐次标题改为中性表面 + 语义色线性图标（§3.4、§4.9） */
 .meal-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .meal-section-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px @nordic-space-md;
-  border-radius: @nordic-radius-sm;
-  font-size: 1.286rem;
-  font-weight: 600;
-  color: @nordic-surface;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--ink-900);
+  cursor: pointer;
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
   user-select: none;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
 }
 
-.meal-section-header.breakfast {
-  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+.meal-section-header:hover {
+  background: var(--canvas);
+  border-color: var(--line-strong);
 }
 
-.meal-section-header.lunch {
-  background: linear-gradient(135deg, @nordic-red 0%, @nordic-yellow 100%);
-}
-
-.meal-section-header.dinner {
-  background: linear-gradient(135deg, @nordic-blue 0%, lighten(@nordic-blue, 20%) 100%);
-}
-
-.meal-section-header.snack {
-  background: linear-gradient(135deg, @nordic-green 0%, lighten(@nordic-green, 20%) 100%);
+.meal-section-header:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
 }
 
 .meal-icon {
-  font-size: 1.714rem;
-  color: @nordic-surface;
+  color: var(--ink-400);
+  font-size: 20px;
 }
 
 .meal-section-header.breakfast .meal-icon {
-  color: @nordic-accent-light;
+  color: var(--brand-500);
 }
 
 .meal-section-header.lunch .meal-icon {
-  color: @nordic-yellow-light;
+  color: var(--warning);
 }
 
 .meal-section-header.dinner .meal-icon {
-  color: @nordic-blue-light;
+  color: var(--info);
 }
 
 .meal-section-header.snack .meal-icon {
-  color: @nordic-green-light;
+  color: var(--success);
 }
 
 .meal-count {
   margin-left: auto;
 }
 
-/* 箭头图标样式 */
 .arrow-icon {
-  transition: transform @nordic-transition-slow ease;
-  font-size: 1.143rem;
-  margin-left: @nordic-space-sm;
+  margin-left: var(--space-2);
+  font-size: 18px;
+  transition: transform var(--duration-base) var(--ease-out);
 }
 
 .rotate-180 {
   transform: rotate(180deg);
 }
 
-/* 折叠动画样式 */
 .collapse-enter-active,
 .collapse-leave-active {
-  transition: all @nordic-transition-slow ease;
   overflow: hidden;
+  transition: all var(--duration-base) var(--ease-out);
 }
 
 .collapse-enter-from,
 .collapse-leave-to {
   max-height: 0;
-  opacity: 0;
   margin: 0;
+  opacity: 0;
 }
 
-/* 记录卡片 */
 .meal-records {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 0 @nordic-space-sm;
+  gap: var(--space-3);
+  padding: 0 var(--space-2);
 }
 
-/* 删除确认弹窗样式 */
-.delete-confirm-content {
-  text-align: center;
-  padding: @nordic-space-lg 0;
-}
-
-.delete-icon {
-  font-size: 3.429rem;
-  color: @nordic-red;
-  margin-bottom: @nordic-space-md;
-}
-
-.delete-record-info {
-  font-size: @nordic-text-base;
-  color: @nordic-text-secondary;
-  margin-top: @nordic-space-sm;
-}
-
-/* 空数据 */
 .empty-records {
-  margin: 60px 0;
-  text-align: center;
-}
-
-.empty-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: @nordic-space-md;
-}
-
-.empty-icon-wrapper {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-bg 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: @nordic-space-sm;
+  min-height: 240px;
 }
 
-.empty-icon {
-  font-size: 3.429rem;
-  color: @nordic-accent;
+.empty-records :deep(.app-empty-state) {
+  width: 100%;
 }
 
-.empty-description {
-  font-size: @nordic-text-lg;
-  color: @nordic-text-secondary;
-  margin: 0;
-  font-weight: 500;
+/* 删除确认弹窗 */
+.delete-confirm-content {
+  padding: var(--space-6) 0;
+  text-align: center;
 }
 
-.add-empty-btn {
-  margin-top: @nordic-space-sm;
-  border-radius: @nordic-radius-pill;
-  font-weight: 600;
-  padding: 12px 28px;
-  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-  border: none;
-  box-shadow: 0 4px 12px rgba(212, 132, 90, 0.3);
-  transition: all @nordic-transition-base ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(212, 132, 90, 0.4);
-  }
+.delete-icon {
+  margin-bottom: var(--space-4);
+  color: var(--danger);
+  font-size: 48px;
 }
 
-.empty-tips {
-  margin-top: @nordic-space-sm;
-  font-size: @nordic-text-base;
-  color: @nordic-text-muted;
-  padding: 12px @nordic-space-lg;
-  background-color: @nordic-bg;
-  border-radius: @nordic-radius-md;
-  display: inline-block;
-  border: 1px solid @nordic-border;
+.delete-record-info {
+  margin-top: var(--space-2);
+  color: var(--ink-500);
+  font-size: var(--text-body);
 }
 
-/* 响应式设计 */
-@media (max-width: @nordic-breakpoint-md) {
+@media (max-width: 768px) {
   .diet-record-container {
-    padding: 0 @nordic-space-lg;
+    padding: 0 var(--page-gutter) var(--space-8);
   }
 
-  .calendar-section {
-    padding: @nordic-space-lg;
+  :deep(.app-page-header__main) {
+    flex-wrap: wrap;
   }
 
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
+  .page-actions {
+    width: 100%;
+    flex-wrap: wrap;
   }
 
-  .section-title {
-    font-size: 1.714rem;
+  .calendar-picker {
+    flex: 1;
+    min-width: 180px;
   }
 
   .stats-card {
-    gap: @nordic-space-md;
-    padding: @nordic-space-md;
+    gap: var(--space-4);
+    padding: var(--space-4);
   }
 
-  .stat-number {
-    font-size: 1.714rem;
-  }
-
-  .nutrient-value {
-    font-size: 1.286rem;
+  .stat-divider {
+    height: 1px;
+    width: 100%;
   }
 }
 
 @media (max-width: 480px) {
-  .diet-record-container {
-    padding: 0 @nordic-space-md;
-  }
-
   .stats-card {
     flex-direction: column;
-    gap: @nordic-space-lg;
   }
 
-  .stat-divider {
+  .stat-item,
+  .stat-item--primary,
+  .nutrient-stat {
     width: 100%;
-    height: 2px;
   }
 }
 </style>
