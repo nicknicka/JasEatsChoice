@@ -82,6 +82,7 @@ const handleItemClick = async (item) => {
       confirmButtonText: '确认执行',
       cancelButtonText: '取消',
       type: 'warning',
+      confirmButtonClass: 'row-actions__confirm-button',
       distinguishCancelAndClose: true
     })
       .then(() => true)
@@ -151,5 +152,16 @@ const handleItemClick = async (item) => {
 :global(.row-actions__popper .row-actions__item--danger:focus) {
   color: var(--danger);
   background-color: var(--danger-bg);
+}
+
+:global(.row-actions__confirm-button.el-button--primary) {
+  --el-button-bg-color: var(--danger);
+  --el-button-border-color: var(--danger);
+  --el-button-hover-bg-color: color-mix(in srgb, var(--danger) 88%, var(--surface));
+  --el-button-hover-border-color: color-mix(in srgb, var(--danger) 88%, var(--surface));
+  --el-button-hover-text-color: var(--surface);
+  --el-button-active-bg-color: var(--danger);
+  --el-button-active-border-color: var(--danger);
+  --el-button-outline-color: var(--danger-bg);
 }
 </style>
