@@ -2,32 +2,32 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, Share } from '@element-plus/icons-vue'
+import { Share } from '@element-plus/icons-vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 
 const route = useRoute()
 const router = useRouter()
 
-// 热点数据
+// 热点数据：字段与后端 HotTopicResponse 对齐（content/sourceType/createdAt/redirectUrl/clickable）
 const hotTopic = ref({
   content: '',
   sourceType: '',
-  sourceId: '',
   redirectUrl: '',
   clickable: false,
-  publishTime: '',
-  author: ''
+  createdAt: ''
 })
 
-// 加载状态
 const loading = ref(true)
 
 // 获取热点详情
 const fetchHotTopicDetail = async () => {
   loading.value = true
   try {
-    // 从路由参数或localStorage获取热点数据
+    // 从路由参数或 localStorage 获取热点数据
     const topicData = route.params.data
       ? JSON.parse(decodeURIComponent(route.params.data))
       : JSON.parse(localStorage.getItem('currentHotTopic') || '{}')
@@ -83,21 +83,32 @@ const shareHotTopic = async () => {
   }
 }
 
-// 获取来源类型的中文名称
-const getSourceTypeName = (sourceType) => {
-  const typeMap = {
-    'TUTORIAL': '教程',
-    'MERCHANT': '商家',
-    'ADMIN': '官方',
-    'AI_GENERATED': 'AI生成'
+// 打开热点关联链接：http 走外部浏览器，站内路径走路由（契约同旧实现）
+const openRedirect = () => {
+  if (!hotTopic.value.redirectUrl) return
+  if (hotTopic.value.redirectUrl.startsWith('http')) {
+    window.api?.openExternal(hotTopic.value.redirectUrl)
+  } else {
+    router.push(hotTopic.value.redirectUrl)
   }
-  return typeMap[sourceType] || '未知来源'
 }
 
-// 格式化时间
+// 来源类型中文名：与后端 HotTopicResponse 的取值对齐
+const getSourceTypeName = (sourceType) => {
+  const typeMap = {
+    MANUAL: '手动配置',
+    TUTORIAL: '教程',
+    AI: 'AI生成',
+    API: '第三方来源'
+  }
+  return typeMap[sourceType] || ''
+}
+
+// 格式化时间：只展示接口返回的 createdAt
 const formatTime = (timeStr) => {
-  if (!timeStr) return '未知时间'
+  if (!timeStr) return ''
   const date = new Date(timeStr)
+  if (Number.isNaN(date.getTime())) return ''
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
@@ -114,231 +125,192 @@ onMounted(() => {
 
 <template>
   <div class="hot-topic-detail-page">
-    <!-- 顶部导航栏 -->
-    <div class="top-nav-bar">
-      <el-button circle @click="goBack" class="back-btn">
-        <el-icon><ArrowLeft /></el-icon>
-      </el-button>
-      <h2 class="page-title">今日热点</h2>
-      <el-button circle @click="shareHotTopic" class="share-btn">
-        <el-icon><Share /></el-icon>
-      </el-button>
-    </div>
+    <AppPageHeader title="今日热点">
+      <template #actions>
+        <el-button v-if="!loading && hotTopic.content" class="share-btn" @click="shareHotTopic">
+          <el-icon><Share /></el-icon>
+          <span>分享</span>
+        </el-button>
+        <CommonBackButton type="default" @click="goBack" />
+      </template>
+    </AppPageHeader>
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
       <el-skeleton animated>
         <template #template>
-          <el-skeleton-item variant="text" style="width: 80%; height: 40px; margin-bottom: 20px" />
-          <el-skeleton-item variant="p" style="width: 100%; height: 200px" />
-          <el-skeleton-item variant="text" style="width: 60%; margin-top: 20px" />
+          <el-skeleton-item variant="text" class="skeleton-meta" />
+          <el-skeleton-item variant="h1" class="skeleton-title" />
+          <el-skeleton-item variant="text" class="skeleton-line" />
+          <el-skeleton-item variant="text" class="skeleton-line skeleton-line--short" />
         </template>
       </el-skeleton>
     </div>
 
-    <!-- 热点详情内容 -->
-    <div v-else class="hot-topic-content">
-      <!-- 来源信息 -->
+    <!-- 热点详情：来源、时间、正文（P0） -->
+    <article v-else-if="hotTopic.content" class="hot-topic-article">
       <div class="meta-info">
-        <el-tag v-if="hotTopic.sourceType" type="danger" effect="dark" size="large">
+        <span v-if="getSourceTypeName(hotTopic.sourceType)" class="source-tag">
           {{ getSourceTypeName(hotTopic.sourceType) }}
-        </el-tag>
-        <span v-if="hotTopic.publishTime" class="publish-time">
-          {{ formatTime(hotTopic.publishTime) }}
         </span>
+        <span v-if="formatTime(hotTopic.createdAt)" class="publish-time">
+          {{ formatTime(hotTopic.createdAt) }}
+        </span>
+        <el-button
+          v-if="hotTopic.clickable && hotTopic.redirectUrl"
+          class="redirect-btn"
+          type="primary"
+          link
+          @click="openRedirect"
+        >
+          查看详情
+        </el-button>
       </div>
 
-      <!-- 热点内容 -->
-      <div class="topic-content">
-        <h1 class="topic-title">{{ hotTopic.content || '暂无热点内容' }}</h1>
-      </div>
+      <h2 class="topic-title">{{ hotTopic.content }}</h2>
+    </article>
 
-      <!-- 扩展信息 -->
-      <div class="extended-info">
-        <div v-if="hotTopic.author" class="info-item">
-          <span class="info-label">发布者：</span>
-          <span class="info-value">{{ hotTopic.author }}</span>
-        </div>
-
-        <div v-if="hotTopic.sourceType === 'TUTORIAL' && hotTopic.sourceId" class="info-item">
-          <span class="info-label">关联教程：</span>
-          <el-button
-            type="primary"
-            text
-            @click="router.push(`/user/home/tutorials/${hotTopic.sourceId}`)"
-          >
-            查看教程详情
-          </el-button>
-        </div>
-
-        <div v-if="hotTopic.redirectUrl" class="info-item">
-          <span class="info-label">相关链接：</span>
-          <el-button
-            type="primary"
-            text
-            @click="
-              hotTopic.redirectUrl.startsWith('http')
-                ? window.api?.openExternal(hotTopic.redirectUrl)
-                : router.push(hotTopic.redirectUrl)
-            "
-          >
-            点击访问
-          </el-button>
-        </div>
-      </div>
-
-      <!-- 空状态提示 -->
-      <el-empty
-        v-if="!hotTopic.content"
-        description="暂无热点内容"
-        :image-size="200"
-      >
-        <el-button type="primary" @click="goBack">返回首页</el-button>
-      </el-empty>
-    </div>
+    <!-- 无内容：明确空状态，不再渲染空白卡（P0） -->
+    <AppEmptyState
+      v-else
+      class="hot-topic-empty"
+      description="暂无热点内容"
+      action-text="返回首页"
+      @action="goBack"
+    />
   </div>
 </template>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
+/* 本页颜色、间距、圆角、字阶与动效全部取自 tokens.css（§3、§7.1），无裸色值。 */
 .hot-topic-detail-page {
+  box-sizing: border-box;
   width: 100%;
-  min-height: 100vh;
-  background: linear-gradient(135deg, @nordic-red-light 0%, @nordic-white 50%, @nordic-bg 100%);
-  padding-bottom: 40px;
-}
-
-// 顶部导航栏
-.top-nav-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: @nordic-space-md 20px;
-  background: @nordic-surface;
-  box-shadow: 0 2px 12px @nordic-shadow-hover;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: blur(10px);
-  background-color: fade(@nordic-white, 95%);
-
-  .back-btn,
-  .share-btn {
-    width: 40px;
-    height: 40px;
-    border: none;
-    background: linear-gradient(135deg, @nordic-red 0%, @nordic-accent 100%);
-    color: @nordic-white;
-    transition: all @nordic-transition-slow ease;
-
-    &:hover {
-      transform: scale(1.1);
-      box-shadow: 0 4px 12px fade(@nordic-red, 40%);
-    }
-  }
-
-  .page-title {
-    margin: 0;
-    font-size: @nordic-text-lg;
-    font-weight: 700;
-    color: @nordic-text;
-    text-align: center;
-    flex: 1;
-  }
-}
-
-// 加载容器
-.loading-container {
-  padding: 40px 20px;
-}
-
-// 热点内容
-.hot-topic-content {
-  max-width: 800px;
+  max-width: var(--page-max);
+  min-height: 100%;
   margin: 0 auto;
-  padding: 20px;
+  padding: 0 var(--page-gutter) var(--space-12);
+  background: var(--canvas);
 }
 
-// 元信息
+/* 页头动作区控件高度取 --control-height-md（§3.4、§4.7）。 */
+.hot-topic-detail-page :deep(.app-page-header__actions .el-button) {
+  height: var(--control-height-md);
+  min-height: var(--control-height-md);
+}
+
+.loading-container {
+  padding: var(--space-10) 0;
+}
+
+.skeleton-meta {
+  width: 160px;
+  margin-bottom: var(--space-6);
+}
+
+.skeleton-title {
+  width: 60%;
+  margin-bottom: var(--space-5);
+}
+
+.skeleton-line {
+  width: 80%;
+}
+
+.skeleton-line--short {
+  width: 70%;
+}
+
+/* 正文卡：L1 微质感（§3.4），静态阅读卡不带 hover 位移。 */
+.hot-topic-article {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-8);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+  animation: topic-enter var(--duration-base) var(--ease-out);
+}
+
 .meta-info {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: @nordic-space-lg;
   flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
 
-  .publish-time {
-    font-size: @nordic-text-base;
-    color: @nordic-text-muted;
-    padding: 6px 12px;
-    background: @nordic-divider;
-    border-radius: @nordic-radius-lg;
+/* 来源标签：品牌暖色胶囊（§3.1、§3.4）。 */
+.source-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  line-height: 18px;
+}
+
+.publish-time {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+}
+
+/* 跳转动作取次级文字按钮层级，不与页头动作争主（§4.9）。 */
+.redirect-btn {
+  height: var(--control-height-sm);
+  min-height: var(--control-height-sm);
+  padding: 0 var(--space-2);
+  font-size: var(--text-body-sm);
+}
+
+/* 正文：页面主视觉，字阶取 --text-display、字重取 bold（§3.2）。 */
+.topic-title {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: var(--text-display);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 44px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.hot-topic-empty {
+  padding: var(--space-12) var(--space-6);
+}
+
+@keyframes topic-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-// 热点标题
-.topic-content {
-  margin-bottom: @nordic-space-xl;
+@media (prefers-reduced-motion: reduce) {
+  .hot-topic-article {
+    animation: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .hot-topic-article {
+    padding: var(--space-5);
+  }
 
   .topic-title {
-    font-size: @nordic-text-xl;
-    font-weight: 700;
-    color: @nordic-text;
-    line-height: 1.6;
-    margin: 0;
-    padding: @nordic-space-lg;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 4px 16px @nordic-shadow-hover;
-  }
-}
-
-// 扩展信息
-.extended-info {
-  background: @nordic-surface;
-  border-radius: @nordic-radius-lg;
-  padding: @nordic-space-lg;
-  box-shadow: 0 4px 16px @nordic-shadow-hover;
-
-  .info-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid @nordic-divider;
-
-    &:last-child {
-      border-bottom: none;
-    }
-
-    .info-label {
-      font-size: @nordic-text-base;
-      color: @nordic-text-secondary;
-      font-weight: 600;
-      min-width: 80px;
-    }
-
-    .info-value {
-      font-size: @nordic-text-base;
-      color: @nordic-text;
-    }
-  }
-}
-
-// 响应式适配
-@media (max-width: @nordic-breakpoint-md) {
-  .topic-content .topic-title {
-    font-size: @nordic-text-md;
-    padding: 20px;
-  }
-
-  .extended-info {
-    padding: 20px;
-  }
-
-  .meta-info .publish-time {
-    font-size: @nordic-text-xs;
+    font-size: var(--text-h1);
+    line-height: 34px;
   }
 }
 </style>
