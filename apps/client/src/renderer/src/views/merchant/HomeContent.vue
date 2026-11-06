@@ -1,10 +1,26 @@
 <script setup>
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import {
+  Wallet,
+  List,
+  Star,
+  Bell,
+  Plus,
+  PriceTag,
+  Service,
+  ArrowRight,
+  CircleCheck
+} from '@element-plus/icons-vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppStatCard from '../../components/common/AppStatCard.vue'
 import { useAuthStore } from '../../store/authStore'
-// 导入拆分后的组件
+import api from '../../utils/api.js'
+import { normalizeOrderStatusCode } from '../../utils/orderStatus'
+// 下半屏经营区块沿用既有实现，本页只重排首屏层级
 import MerchantInfo from '../../components/merchant/MerchantInfo.vue'
-import BusinessOverview from '../../components/merchant/BusinessOverview.vue'
 import OrderCenter from '../../components/merchant/OrderCenter.vue'
 import TodayMenu from '../../components/merchant/TodayMenu.vue'
 import ShopAlbum from '../../components/merchant/ShopAlbum.vue'
@@ -30,6 +46,69 @@ if (!merchantId) {
   }
 }
 
+// 今日待处理：首屏主角（§4.7、§4.8）
+const pendingOrders = ref(0)
+const overview = ref({
+  sales: 0,
+  orders: 0,
+  newComments: 0,
+  unreadMessages: 0
+})
+const ready = ref(false)
+
+const salesText = computed(() => Number(overview.value.sales || 0).toFixed(0))
+
+// 商家后台货架只有「待接单 / 制作中」需要商家处理，二者构成今天的工作量
+const PENDING_STATUS_CODES = [1, 2]
+
+const fetchPendingOrders = () => {
+  if (!merchantId) {
+    return Promise.resolve()
+  }
+  return api
+    .get(`/v1/orders/merchant/${merchantId}?today=true`)
+    .then((response) => {
+      if (response.success && Array.isArray(response.data)) {
+        pendingOrders.value = response.data.filter((order) =>
+          PENDING_STATUS_CODES.includes(normalizeOrderStatusCode(order.status))
+        ).length
+      }
+    })
+    .catch((error) => {
+      console.error('获取今日待处理订单失败:', error)
+    })
+}
+
+const fetchOverview = () => {
+  if (!merchantId) {
+    return Promise.resolve()
+  }
+  return api
+    .get(`/v1/merchant/${merchantId}/business-overview`)
+    .then((response) => {
+      if (response.code === '200' && response.data) {
+        overview.value = response.data
+      }
+    })
+    .catch((error) => {
+      console.error('获取营业概览数据失败:', error)
+    })
+}
+
+onMounted(() => {
+  Promise.allSettled([fetchOverview(), fetchPendingOrders()]).finally(() => {
+    ready.value = true
+  })
+})
+
+const goPendingOrders = () => {
+  router.push('/merchant/home/orders?status=1')
+}
+
+const goMessages = () => {
+  router.push('/merchant/home/messages')
+}
+
 const navigateToMenu = () => {
   router.push('/merchant/home/menu')
 }
@@ -44,690 +123,318 @@ const contactCustomerService = () => {
   ElMessage.info('联系客服功能已触发')
   // 可以在此处添加具体的实现逻辑
 }
-
 </script>
 
 <template>
-  <div class="merchant-home-container">
-    <div class="merchant-content">
-      <!-- 商家信息 -->
-      <MerchantInfo />
+  <div class="merchant-home">
+    <!-- 页头：merchant 用紧凑版，标题降一档（§4.7） -->
+    <AppPageHeader :compact="true" title="商家首页" />
 
-      <!-- 今日营业概览 -->
-      <BusinessOverview />
-
-      <!-- 订单中心 -->
-      <OrderCenter />
-
-      <!-- 今日菜单 -->
-      <TodayMenu />
-
-      <!-- 优惠管理 -->
-      <DiscountManagement :merchant-id="String(merchantId)" />
-
-      <!-- 公告栏配置 -->
-      <AnnouncementManagement :merchant-id="String(merchantId)" />
-
-      <!-- 店铺相册 -->
-      <ShopAlbum :merchant-id="String(merchantId)" />
-
-      <!-- 快捷操作 -->
-      <div class="quick-actions-card">
-        <h3 class="card-title">🎯 快捷操作</h3>
-        <div class="actions-grid">
-          <div class="action-item" @click="navigateToMenu">
-            <div class="action-icon">➕</div>
-            <div class="action-label">新增菜单</div>
-          </div>
-          <div class="action-item" @click="setDiscount">
-            <div class="action-icon">💰</div>
-            <div class="action-label">设置优惠</div>
-          </div>
-          <div class="action-item" @click="contactCustomerService">
-            <div class="action-icon">📞</div>
-            <div class="action-label">联系客服</div>
-          </div>
-        </div>
+    <!-- 首屏主角：今日待处理订单与未读消息（§4.7、§4.8） -->
+    <AppCard class="todo-card" padding="none">
+      <div v-if="ready && pendingOrders === 0 && overview.unreadMessages === 0" class="todo-empty">
+        <el-icon class="todo-empty__icon" aria-hidden="true"><CircleCheck /></el-icon>
+        <p class="todo-empty__text">今天没有待处理的订单和未读消息</p>
       </div>
-    </div>
+      <div v-else class="todo-grid">
+        <button type="button" class="todo-tile" @click="goPendingOrders">
+          <span class="todo-tile__icon todo-tile__icon--orders">
+            <el-icon aria-hidden="true"><List /></el-icon>
+          </span>
+          <span class="todo-tile__body">
+            <span class="todo-tile__value">{{ pendingOrders }}</span>
+            <span class="todo-tile__label">待处理订单</span>
+          </span>
+          <span class="todo-tile__cta">
+            去处理<el-icon aria-hidden="true"><ArrowRight /></el-icon>
+          </span>
+        </button>
+        <button type="button" class="todo-tile" @click="goMessages">
+          <span class="todo-tile__icon todo-tile__icon--messages">
+            <el-icon aria-hidden="true"><Bell /></el-icon>
+          </span>
+          <span class="todo-tile__body">
+            <span class="todo-tile__value">{{ overview.unreadMessages }}</span>
+            <span class="todo-tile__label">未读消息</span>
+          </span>
+          <span class="todo-tile__cta">
+            去查看<el-icon aria-hidden="true"><ArrowRight /></el-icon>
+          </span>
+        </button>
+      </div>
+    </AppCard>
+
+    <!-- 今日数据：线性图标 + 数值 + 标签（§4.8） -->
+    <section class="stat-grid" aria-label="今日经营数据">
+      <AppStatCard label="营业额" :value="`¥${salesText}`" :icon="Wallet" />
+      <AppStatCard label="订单数" :value="overview.orders" :icon="List" />
+      <AppStatCard label="新增评价" :value="overview.newComments" :icon="Star" />
+    </section>
+
+    <!-- 店铺资料 -->
+    <section aria-label="店铺资料">
+      <MerchantInfo />
+    </section>
+
+    <!-- 订单中心：首屏即可露出列表或空状态 -->
+    <section aria-label="订单中心">
+      <OrderCenter />
+    </section>
+
+    <!-- 今日菜单 -->
+    <section aria-label="今日菜单">
+      <TodayMenu />
+    </section>
+
+    <!-- 优惠管理 -->
+    <section aria-label="优惠管理">
+      <DiscountManagement :merchant-id="String(merchantId)" />
+    </section>
+
+    <!-- 公告栏配置 -->
+    <section aria-label="公告栏配置">
+      <AnnouncementManagement :merchant-id="String(merchantId)" />
+    </section>
+
+    <!-- 店铺相册 -->
+    <section aria-label="店铺相册">
+      <ShopAlbum :merchant-id="String(merchantId)" />
+    </section>
+
+    <!-- 快捷操作 -->
+    <AppCard class="quick-card" padding="none">
+      <h2 class="section-title">快捷操作</h2>
+      <div class="quick-grid">
+        <button type="button" class="quick-item" @click="navigateToMenu">
+          <el-icon class="quick-item__icon" aria-hidden="true"><Plus /></el-icon>
+          <span class="quick-item__label">新增菜单</span>
+        </button>
+        <button type="button" class="quick-item" @click="setDiscount">
+          <el-icon class="quick-item__icon" aria-hidden="true"><PriceTag /></el-icon>
+          <span class="quick-item__label">设置优惠</span>
+        </button>
+        <button type="button" class="quick-item" @click="contactCustomerService">
+          <el-icon class="quick-item__icon" aria-hidden="true"><Service /></el-icon>
+          <span class="quick-item__label">联系客服</span>
+        </button>
+      </div>
+    </AppCard>
   </div>
 </template>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
-// ===== Nordic Pro 商家端设计系统 =====
-.merchant-home-container {
-  width: 100%;
-  min-height: 100%;
-  background: @merchant-bg;
-  padding: @nordic-space-lg @nordic-space-xl @nordic-space-2xl;
+/* 页面颜色、间距、圆角、字阶、动效全部取自 tokens.css（§3、§7.1），无裸色值。 */
+.merchant-home {
   box-sizing: border-box;
-
-  .merchant-content {
-    max-width: 1400px;
-    margin: 0 auto;
-  }
-
-  // ===== 商家信息卡片 =====
-  .merchant-info-card {
-    .merchant-stat-card();
-    margin-bottom: @nordic-space-lg;
-    border-left-color: @merchant-secondary;
-
-    .info-header {
-      display: flex;
-      align-items: center;
-      gap: @nordic-space-lg;
-
-      .avatar-section {
-        .avatar {
-          font-size: 64px;
-        }
-        .edit-btn {
-          margin-top: @nordic-space-sm;
-        }
-      }
-
-      .detail-section {
-        flex: 1;
-
-        .merchant-name {
-          font-size: @nordic-text-lg;
-          font-weight: 600;
-          margin-bottom: @nordic-space-sm;
-          color: @merchant-text;
-        }
-
-        .merchant-rating {
-          margin-bottom: @nordic-space-sm;
-        }
-
-        .contact-info {
-          display: flex;
-          flex-wrap: wrap;
-          gap: @nordic-space-lg;
-          font-size: @nordic-text-base;
-          color: @merchant-text-sec;
-        }
-      }
-    }
-  }
-
-  // ===== 营业概览卡片 =====
-  .overview-card {
-    .merchant-stat-card();
-    margin-bottom: @nordic-space-lg;
-    padding: @nordic-space-lg;
-
-    .card-title {
-      .merchant-section-title();
-      display: flex;
-      align-items: center;
-      gap: @nordic-space-sm;
-      margin-bottom: @nordic-space-lg;
-
-      &::before {
-        content: '📊';
-        font-size: @nordic-text-lg;
-      }
-
-      &::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: linear-gradient(to right, @merchant-border, transparent);
-        margin-left: @nordic-space-md;
-      }
-    }
-
-    .overview-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: @nordic-space-md;
-
-      .overview-item {
-        display: flex;
-        align-items: center;
-        gap: @nordic-space-md;
-        padding: @nordic-space-lg;
-        border-radius: @nordic-radius-lg;
-        background: @merchant-surface;
-        border: 1px solid @merchant-border;
-        transition: all @nordic-transition-base ease;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-
-        // 左侧强调边框
-        &::before {
-          content: '';
-          position: absolute;
-          left: 0;
-          top: 0;
-          bottom: 0;
-          width: 4px;
-          border-radius: @nordic-radius-lg 0 0 @nordic-radius-lg;
-        }
-
-        &.sales::before { background: @merchant-success; }
-        &.orders::before { background: @merchant-info; }
-        &.comments::before { background: @merchant-warning; }
-        &.messages::before { background: @merchant-error; }
-
-        &:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 8px 24px @merchant-shadow-hover;
-          border-color: @merchant-primary;
-        }
-
-        .item-icon {
-          font-size: 32px;
-          width: 56px;
-          height: 56px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: @nordic-radius-md;
-          background: @merchant-primary-light;
-        }
-
-        .item-content {
-          flex: 1;
-
-          .overview-label {
-            font-size: @nordic-text-sm;
-            color: @merchant-text-muted;
-            margin-bottom: 4px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: @nordic-letter-wide;
-          }
-
-          .overview-value {
-            font-size: @nordic-text-xl;
-            font-weight: 700;
-            color: @merchant-text;
-            letter-spacing: @nordic-letter-tighter;
-            margin-bottom: 4px;
-          }
-
-          .item-trend {
-            font-size: @nordic-text-xs;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: @nordic-radius-pill;
-
-            &.trend-up {
-              color: @merchant-success;
-              background: @merchant-success-light;
-            }
-
-            &.trend-down {
-              color: @merchant-error;
-              background: @merchant-error-light;
-            }
-
-            &.trend-neutral {
-              color: @merchant-text-muted;
-              background: @merchant-divider;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // ===== 订单中心卡片 =====
-  .orders-card {
-    .merchant-stat-card();
-    margin-bottom: @nordic-space-lg;
-    border-left-color: @merchant-info;
-
-    .orders-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: @nordic-space-lg;
-
-      .card-title {
-        .merchant-section-title();
-        margin: 0;
-
-        &::before {
-          content: '📋';
-          margin-right: @nordic-space-sm;
-        }
-      }
-
-      .filter-section {
-        .order-filter-tag {
-          margin-right: @nordic-space-sm;
-          cursor: pointer;
-          transition: all @nordic-transition-base ease;
-          border-radius: @nordic-radius-pill;
-
-          &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px @merchant-shadow;
-          }
-
-          &.active {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px @merchant-shadow;
-          }
-        }
-      }
-    }
-
-    .orders-list {
-      overflow-y: auto;
-      max-height: 400px;
-
-      .no-orders {
-        text-align: center;
-        padding: 80px 0;
-        color: @merchant-text-muted;
-        font-size: @nordic-text-md;
-      }
-
-      .order-item {
-        .merchant-order-card();
-
-        .order-info {
-          .order-no {
-            font-weight: 600;
-            margin-bottom: @nordic-space-sm;
-            color: @merchant-text;
-          }
-
-          .order-details {
-            display: flex;
-            flex-wrap: wrap;
-            gap: @nordic-space-lg;
-            font-size: @nordic-text-base;
-            color: @merchant-text-sec;
-
-            .amount {
-              font-weight: 600;
-              color: @merchant-secondary;
-            }
-          }
-        }
-
-        .order-actions {
-          display: flex;
-          gap: @nordic-space-sm;
-          flex-wrap: wrap;
-        }
-      }
-    }
-
-    .view-all {
-      text-align: right;
-      margin-top: @nordic-space-md;
-    }
-  }
-
-  // ===== 今日菜单卡片 =====
-  .today-menu-card {
-    .merchant-stat-card();
-    margin-bottom: @nordic-space-lg;
-    border-left-color: @merchant-success;
-
-    .menu-header {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      margin-bottom: @nordic-space-lg;
-      flex-wrap: wrap;
-      gap: @nordic-space-lg;
-
-      .card-title {
-        .merchant-section-title();
-        margin: 0;
-
-        &::before {
-          content: '🍽️';
-          margin-right: @nordic-space-sm;
-        }
-      }
-
-      .filter-section {
-        display: flex;
-        align-items: center;
-        gap: @nordic-space-md;
-        flex-wrap: wrap;
-
-        .menu-filter-tag,
-        .menu-status-tag {
-          cursor: pointer;
-          transition: all @nordic-transition-base ease;
-          border-radius: @nordic-radius-pill;
-
-          &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px @merchant-shadow;
-          }
-
-          &.active {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px @merchant-shadow-hover;
-          }
-        }
-      }
-    }
-
-    .menu-list {
-      margin-bottom: @nordic-space-lg;
-
-      .menu-item,
-      .menu-card {
-        padding: @nordic-space-lg;
-        border: 1px solid @merchant-border;
-        border-radius: @nordic-radius-md;
-        margin-bottom: @nordic-space-md;
-        background: @merchant-surface;
-        transition: all @nordic-transition-base ease;
-        cursor: pointer;
-
-        &:hover {
-          box-shadow: 0 4px 16px @merchant-shadow-hover;
-          border-color: @merchant-primary;
-          transform: translateY(-3px);
-        }
-
-        &.active {
-          border-color: @merchant-primary;
-          background: @merchant-primary-light;
-        }
-
-        .menu-info {
-          .menu-name {
-            display: flex;
-            align-items: center;
-            gap: @nordic-space-md;
-            margin-bottom: @nordic-space-md;
-
-            .name {
-              font-size: @nordic-text-md;
-              font-weight: 600;
-              color: @merchant-text;
-            }
-          }
-
-          .menu-stats,
-          .auto-times {
-            display: flex;
-            flex-wrap: wrap;
-            gap: @nordic-space-lg;
-            margin-bottom: @nordic-space-sm;
-            font-size: @nordic-text-base;
-            color: @merchant-text-sec;
-
-            .dishes-count {
-              color: @merchant-success;
-              font-weight: 500;
-            }
-          }
-
-          .auto-times {
-            font-size: @nordic-text-sm;
-            color: @merchant-text-muted;
-          }
-        }
-      }
-
-      .empty-menu {
-        text-align: center;
-        padding: 80px @nordic-space-lg;
-        color: @merchant-text-muted;
-        font-size: @nordic-text-md;
-        background: @merchant-primary-light;
-        border: 2px dashed @merchant-primary;
-        border-radius: @nordic-radius-lg;
-        margin-bottom: @nordic-space-lg;
-
-        &:hover {
-          background: @merchant-surface-alt;
-        }
-
-        span {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: @nordic-space-sm;
-        }
-      }
-    }
-
-    .view-all {
-      text-align: right;
-      margin-top: @nordic-space-lg;
-
-      .el-button {
-        color: @merchant-primary;
-        border-color: @merchant-primary;
-        transition: all @nordic-transition-base ease;
-
-        &:hover {
-          background: @merchant-primary;
-          color: @merchant-surface;
-          transform: scale(1.05);
-        }
-      }
-    }
-  }
-
-  // ===== 快捷操作卡片 =====
-  .quick-actions-card {
-    .merchant-stat-card();
-    margin-bottom: @nordic-space-lg;
-    border-left-color: @merchant-warning;
-    background: linear-gradient(135deg, @merchant-surface 0%, @merchant-surface-alt 100%);
-
-    .card-title {
-      .merchant-section-title();
-      display: flex;
-      align-items: center;
-      gap: @nordic-space-sm;
-      margin-bottom: @nordic-space-lg;
-      padding-bottom: @nordic-space-md;
-      border-bottom: 2px solid @merchant-divider;
-
-      &::before {
-        content: '🎯';
-        font-size: @nordic-text-lg;
-      }
-    }
-
-    .actions-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: @nordic-space-md;
-
-      .action-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: @nordic-space-lg @nordic-space-md;
-        border: 2px solid @merchant-border;
-        border-radius: @nordic-radius-lg;
-        cursor: pointer;
-        transition: all @nordic-transition-base ease;
-        background: @merchant-surface;
-        position: relative;
-        overflow: hidden;
-
-        &::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-surface 100%);
-          opacity: 0;
-          transition: opacity @nordic-transition-base ease;
-        }
-
-        &:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 8px 24px @merchant-shadow-hover;
-          border-color: @merchant-primary;
-
-          &::before {
-            opacity: 1;
-          }
-        }
-
-        .action-icon {
-          font-size: 48px;
-          margin-bottom: @nordic-space-md;
-          transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-          position: relative;
-          z-index: 1;
-        }
-
-        &:hover .action-icon {
-          transform: scale(1.15) rotate(5deg);
-        }
-
-        .action-label {
-          font-size: @nordic-text-sm;
-          font-weight: 600;
-          color: @merchant-text;
-          position: relative;
-          z-index: 1;
-        }
-      }
-    }
-  }
+  width: 100%;
+  max-width: 1400px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-12);
+  background: var(--canvas);
 }
 
-// ===== 菜品列表样式 =====
-.dishes-card {
-  .merchant-stat-card();
-  margin-bottom: @nordic-space-lg;
-  border-left-color: @merchant-success;
-  border-top: none;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+/* ===== 今日待处理 ===== */
+.todo-card {
+  margin-bottom: var(--space-5);
+}
 
-  .dish-list {
-    margin-bottom: @nordic-space-lg;
+.todo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--card-gap-compact);
+  padding: var(--card-padding-compact);
+}
 
-    .dish-item {
-      padding: @nordic-space-lg;
-      border: 1px solid @merchant-border;
-      border-radius: @nordic-radius-md;
-      margin-bottom: @nordic-space-md;
-      background: @merchant-surface;
-      transition: all @nordic-transition-base ease;
-      display: flex;
-      align-items: flex-start;
-      gap: @nordic-space-md;
-      overflow: hidden;
+.todo-tile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink-900);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
 
-      &:hover {
-        box-shadow: 0 4px 16px @merchant-shadow-hover;
-        border-color: @merchant-primary;
-        transform: translateY(-3px);
-      }
+.todo-tile:hover {
+  border-color: var(--brand-400);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
 
-      .dish-cover {
-        font-size: 48px;
-        width: 90px;
-        height: 90px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, @merchant-primary, @merchant-primary-light);
-        border-radius: @nordic-radius-md;
-        flex-shrink: 0;
-        color: #fff;
-        box-shadow: 0 2px 8px @merchant-shadow;
-        transition: all @nordic-transition-base ease;
-      }
+.todo-tile:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
 
-      &:hover .dish-cover {
-        transform: scale(1.1);
-      }
+.todo-tile:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+}
 
-      .dish-info {
-        flex: 1;
+.todo-tile__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--control-height-md);
+  height: var(--control-height-md);
+  border-radius: var(--radius-md);
+  font-size: var(--text-h3);
+}
 
-        .dish-name {
-          display: flex;
-          align-items: center;
-          gap: @nordic-space-md;
-          margin-bottom: @nordic-space-sm;
+.todo-tile__icon--orders {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
 
-          .name {
-            font-size: @nordic-text-md;
-            font-weight: 600;
-            color: @merchant-text;
-          }
-        }
+.todo-tile__icon--messages {
+  background: var(--info-bg);
+  color: var(--info);
+}
 
-        .dish-desc {
-          font-size: @nordic-text-base;
-          color: @merchant-text-sec;
-          margin-bottom: @nordic-space-md;
-          line-height: 1.6;
-        }
+.todo-tile__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
 
-        .dish-stats {
-          display: flex;
-          flex-wrap: wrap;
-          gap: @nordic-space-lg;
-          font-size: @nordic-text-base;
-          color: @merchant-text-sec;
+.todo-tile__value {
+  font-family: var(--font-num);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ink-900);
+}
 
-          .dish-category {
-            background: @merchant-primary-light;
-            color: @merchant-primary;
-            padding: 4px 12px;
-            border-radius: @nordic-radius-sm;
-            font-size: @nordic-text-xs;
-            font-weight: 500;
-          }
+.todo-tile__label {
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-500);
+}
 
-          .dish-price {
-            color: @merchant-secondary;
-            font-weight: 600;
-            font-size: @nordic-text-md;
-          }
+.todo-tile__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  color: var(--brand-600);
+}
 
-          .dish-stock {
-            font-size: @nordic-text-sm;
-            font-weight: 500;
+.todo-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--card-padding-compact);
+}
 
-            &.stock-almost {
-              color: @merchant-warning;
-            }
+.todo-empty__icon {
+  color: var(--success);
+  font-size: var(--text-h2);
+}
 
-            &.stock-off {
-              color: @merchant-error;
-            }
-          }
-        }
-      }
+.todo-empty__text {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--ink-500);
+}
 
-      .dish-actions {
-        display: flex;
-        flex-direction: column;
-        gap: @nordic-space-sm;
-        flex-shrink: 0;
+/* ===== 今日数据 ===== */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--card-gap);
+  margin-bottom: var(--space-5);
+}
 
-        .el-button {
-          width: 90px;
-          transition: all @nordic-transition-base ease;
+/* merchant 密度：卡片内边距取 --card-padding-compact（§4.2） */
+.stat-grid :deep(.app-stat-card) {
+  padding: var(--card-padding-compact);
+}
 
-          &:hover {
-            transform: translateY(-2px);
-          }
-        }
-      }
-    }
+/* ===== 快捷操作 ===== */
+.quick-card {
+  padding: var(--card-padding-compact);
+}
+
+.section-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--card-gap-compact);
+}
+
+.quick-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height-md);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink-700);
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+.quick-item:hover {
+  border-color: var(--brand-400);
+  color: var(--brand-600);
+  background: var(--brand-50);
+}
+
+.quick-item:active {
+  background: var(--brand-100);
+}
+
+.quick-item:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+}
+
+.quick-item__icon {
+  font-size: var(--text-h3);
+}
+
+/* ===== 响应式：窄屏堆叠（§3.3） ===== */
+@media (max-width: 768px) {
+  .merchant-home {
+    padding: var(--space-4) var(--space-4) var(--space-8);
+  }
+
+  .todo-grid,
+  .stat-grid,
+  .quick-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>
