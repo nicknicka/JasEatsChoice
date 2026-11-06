@@ -7,6 +7,8 @@ import { useAuthStore } from '../../store/authStore'
 import ConversationList from '../../components/merchant/chat/ConversationList.vue'
 import ChatMessageList from '../../components/merchant/chat/ChatMessageList.vue'
 import MessageInput from '../../components/merchant/chat/MessageInput.vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import {
   getCurrentMerchantId,
   getChatSessions,
@@ -286,11 +288,6 @@ const handleSearch = (keyword) => {
   searchKeyword.value = keyword
 }
 
-// 切换仅显示未读
-const toggleUnreadOnly = () => {
-  showUnreadOnly.value = !showUnreadOnly.value
-}
-
 // 上传文件
 const handleUploadFile = (file) => {
   ElMessage.info('文件上传功能开发中...')
@@ -340,34 +337,40 @@ const stopResize = () => {
 
 <template>
   <div class="chat-optimized-container">
-    <!-- 头部 -->
-    <div class="chat-header">
-      <h3 class="page-title">【商家消息】</h3>
-    </div>
+    <!-- 页头：merchant 紧凑版；标题与侧栏菜单「商家聊天」一致，返回在右侧动作区（§4.7） -->
+    <AppPageHeader title="商家聊天" :compact="true">
+      <template #actions>
+        <CommonBackButton type="default" />
+      </template>
+    </AppPageHeader>
 
-    <!-- 搜索和筛选栏 -->
-    <div class="search-filter-bar">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索会话..."
-        :prefix-icon="Search"
-        clearable
-        class="search-input"
-      />
-      <el-checkbox v-model="showUnreadOnly" @change="toggleUnreadOnly"> 仅显示未读 </el-checkbox>
-    </div>
-
-    <!-- 聊天内容 -->
+    <!-- 聊天内容：左栏会话列表 + 右侧当前会话 -->
     <div class="chat-content">
-      <!-- 会话列表 -->
+      <!-- 会话列表：搜索与未读筛选并入左栏顶部，与列表同宽（评审 P0；§4.3） -->
       <div class="conversation-list-container" :style="{ width: conversationListWidth + 'px' }">
-        <ConversationList
-          :conversations="filteredConversations"
-          :selected-conversation="selectedConversation"
-          :search-keyword="searchKeyword"
-          :show-unread-only="showUnreadOnly"
-          @select="selectConversation"
-        />
+        <div class="conversation-toolbar">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索会话..."
+            :prefix-icon="Search"
+            clearable
+            class="conversation-toolbar__search"
+          />
+          <el-checkbox v-model="showUnreadOnly" class="conversation-toolbar__unread">
+            仅显示未读
+          </el-checkbox>
+        </div>
+
+        <!-- 会话列表 -->
+        <div class="conversation-list-body">
+          <ConversationList
+            :conversations="filteredConversations"
+            :selected-conversation="selectedConversation"
+            :search-keyword="searchKeyword"
+            :show-unread-only="showUnreadOnly"
+            @select="selectConversation"
+          />
+        </div>
       </div>
 
       <!-- 拖拽条 -->
@@ -419,146 +422,178 @@ const stopResize = () => {
   </div>
 </template>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
+<style scoped>
+/* 本页颜色、间距、圆角、字阶、动效全部取自 tokens.css 的 CSS 变量（§3、§7.1），无裸色值。 */
 .chat-optimized-container {
-  padding: 0 20px 20px 20px;
-  height: calc(100vh - 60px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 var(--space-6) var(--space-6);
+}
 
-  .chat-header {
-    margin-bottom: 16px;
+/* 左右分栏：占满页头以下的剩余高度，内容各自滚动（§4.6） */
+.chat-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
 
-    .page-title {
-      font-size: 1.286rem /* 原值: 18px */;
-      font-weight: 600;
-      margin: 0;
-      color: @merchant-text;
-    }
-  }
+/* 左栏：搜索与未读筛选并入列表列，与列表同宽，不再横跨整页（评审 P0；§4.3） */
+.conversation-list-container {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-right: none;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  transition: width var(--duration-fast) var(--ease-standard);
+}
 
-  .search-filter-bar {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 16px;
-    padding: 12px 16px;
-    background: @merchant-surface;
-    border-radius: 12px;
-    border: 1px solid @merchant-border;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+.conversation-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
 
-    .search-input {
-      flex: 1;
-      max-width: 400px;
+/* 工具条控件取 --control-height-sm（§3.4） */
+.conversation-toolbar :deep(.el-input__wrapper) {
+  min-height: var(--control-height-sm);
+  border-radius: var(--radius-sm);
+}
 
-      :deep(.el-input__wrapper) {
-        border-radius: 8px;
-      }
-    }
-  }
+.conversation-toolbar__unread :deep(.el-checkbox__label) {
+  padding-left: var(--space-2);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+}
 
-  .chat-content {
-    display: flex;
-    gap: 0;
-    height: calc(100vh - 180px);
+/* 列表占满工具条以下的剩余高度，内部自行滚动 */
+.conversation-list-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
 
-    .conversation-list-container {
-      flex-shrink: 0;
-      transition: width 0.1s ease;
-      border: 1px solid @merchant-border;
-      border-right: none;
-      border-radius: 16px 0 0 16px;
-      overflow: hidden;
-      background: @merchant-surface;
-      height: 100%;
-    }
+/* 拖拽条：hover 与拖拽中升为品牌色（§3.5 状态切换 150ms） */
+.resize-handle {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 6px;
+  cursor: col-resize;
+  background: var(--line);
+  user-select: none;
+  transition:
+    width var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard);
+}
 
-    .resize-handle {
-      width: 6px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: col-resize;
-      background: @merchant-border;
-      transition: all 0.2s ease;
-      position: relative;
-      user-select: none;
+.resize-handle:hover,
+.resize-handle.is-resizing {
+  width: 8px;
+  background: var(--brand-500);
+}
 
-      &:hover {
-        background: @merchant-primary;
-        width: 8px;
+.resize-handle-bar {
+  width: 3px;
+  height: 40px;
+  background: var(--line);
+  border-radius: var(--radius-full);
+  transition: background var(--duration-fast) var(--ease-standard);
+}
 
-        .resize-handle-bar {
-          background: @merchant-surface;
-        }
-      }
+.resize-handle:hover .resize-handle-bar,
+.resize-handle.is-resizing .resize-handle-bar {
+  background: var(--surface);
+}
 
-      &.is-resizing {
-        background: @merchant-primary;
-        width: 8px;
+/* 右侧当前会话面板：与左栏合成一块 L1 卡片（§3.4） */
+.chat-area {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: none;
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  box-shadow: var(--shadow-sm);
+}
 
-        .resize-handle-bar {
-          background: @merchant-surface;
-        }
-      }
+.chat-area-header {
+  flex-shrink: 0;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
 
-      .resize-handle-bar {
-        width: 3px;
-        height: 40px;
-        background: @merchant-border;
-        border-radius: 2px;
-        transition: all 0.2s ease;
-      }
-    }
+.chat-area-header .conversation-info {
+  display: flex;
+  align-items: center;
+}
 
-    .chat-area {
-      flex: 1;
-      border: 1px solid @merchant-border;
-      border-left: none;
-      border-radius: 0 16px 16px 0;
-      display: flex;
-      flex-direction: column;
-      background: @merchant-surface;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-      overflow: hidden;
+.chat-area-header .name {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
+}
 
-      .chat-area-header {
-        padding: 16px 20px;
-        border-bottom: 1px solid @merchant-border;
-        background: @merchant-surface;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        flex-shrink: 0;
+.chat-area-header .member-count {
+  margin-left: var(--space-2);
+  font-size: var(--text-caption);
+  color: var(--ink-400);
+}
 
-        .conversation-info {
-          display: flex;
-          align-items: center;
+.chat-area-empty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
 
-          .name-info {
-            .name {
-              font-size: 1.143rem /* 原值: 16px */;
-              font-weight: 600;
-              color: @merchant-text;
-            }
+/* 对话区与消息气泡（评审 P1；§3.4、§7.1）：
+   气泡与对话底由子组件 ChatMessageList.vue 渲染，这里用 :deep() 做页面级覆盖，
+   让改动只落回本页；己方=品牌强调，对方=中性，并约束阅读行宽。 */
+.chat-content :deep(.chat-area .chat-message-list) {
+  background: var(--canvas);
+}
 
-            .member-count {
-              font-size: 0.857rem /* 原值: 12px */;
-              color: @merchant-text-muted;
-              margin-left: 8px;
-            }
-          }
-        }
-      }
+/* 消息从面板底部贴底排列，减少内容悬空（评审 P1；§4.6） */
+.chat-content :deep(.chat-area .chat-message-list .messages-wrapper) {
+  justify-content: flex-end;
+  min-height: 100%;
+}
 
-      .chat-area-empty {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-    }
-  }
+.chat-content :deep(.chat-area .message-item) {
+  max-width: 65%;
+}
+
+.chat-content :deep(.chat-area .message-item.my-message .message-content) {
+  background: var(--brand-100);
+  border: 1px solid var(--brand-300);
+  color: var(--ink-900);
+}
+
+.chat-content :deep(.chat-area .message-item.my-message .message-content .message-time) {
+  color: var(--brand-700);
+}
+
+.chat-content :deep(.chat-area .message-item:not(.my-message) .message-content) {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-700);
+}
+
+.chat-content :deep(.chat-area .message-item:not(.my-message) .message-content .message-time) {
+  color: var(--ink-400);
 }
 </style>
