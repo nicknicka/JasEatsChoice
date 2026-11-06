@@ -6,6 +6,10 @@ import { Search, RefreshLeft, Location, ShoppingCart, Shop } from '@element-plus
 
 // 引入API配置
 import { API_CONFIG } from '../../config/index.js'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
+import StatusTag from '../../components/common/StatusTag.vue'
 
 const router = useRouter()
 
@@ -14,6 +18,9 @@ const merchants = ref([])
 
 // 加载状态
 const isLoading = ref(false)
+
+// 图片加载失败状态，按商家维度记录
+const imageErrors = ref({})
 
 // 筛选条件
 const filters = ref({
@@ -61,6 +68,7 @@ watch([searchKeyword, () => filters.value.type, () => filters.value.sort], () =>
 // 从后端加载商家列表
 const loadMerchants = () => {
   isLoading.value = true
+  imageErrors.value = {}
 
   // 调用后端API获取商家列表，包含所有筛选参数
   axios
@@ -193,14 +201,30 @@ const goToMerchantDetail = (merchant) => {
     }
   })
 }
+
+// 头像加载失败后使用中性占位，避免碎图或白块
+const getMerchantKey = (merchant) =>
+  String(merchant?.merchantId || merchant?.id || merchant?.name || '')
+
+const shouldShowMerchantImage = (merchant) => {
+  const image = String(merchant?.image || '').trim()
+  return Boolean(image && image !== '未知' && !imageErrors.value[getMerchantKey(merchant)])
+}
+
+const handleMerchantImageError = (merchant) => {
+  imageErrors.value = {
+    ...imageErrors.value,
+    [getMerchantKey(merchant)]: true
+  }
+}
 </script>
 
 <template>
   <div class="merchant-list-container">
-    <h2 class="fade-in-up">商家查找</h2>
+    <AppPageHeader title="商家查找" />
 
     <!-- 搜索和筛选区 -->
-    <div class="search-filter-section fade-in-up delay-100">
+    <AppCard class="search-filter-section" :level="1" padding="md">
       <div class="search-row">
         <el-input
           v-model="searchKeyword"
@@ -214,62 +238,97 @@ const goToMerchantDetail = (merchant) => {
           </template>
         </el-input>
 
-        <el-button @click="resetFilters" class="reset-btn" :icon="RefreshLeft">重置</el-button>
+        <el-button class="reset-btn" :icon="RefreshLeft" @click="resetFilters">重置</el-button>
       </div>
 
-      <div class="filter-tags slide-in-left delay-200">
-        <div
-          v-for="option in typeOptions"
-          :key="option.value"
-          :class="['filter-tag', { active: filters.type === option.value }]"
-          @click="filters.type = option.value"
-        >
-          {{ option.label }}
+      <div class="filter-row">
+        <div class="filter-tags" role="group" aria-label="商家类型筛选">
+          <button
+            v-for="option in typeOptions"
+            :key="option.value"
+            type="button"
+            :class="['filter-tag', { active: filters.type === option.value }]"
+            @click="filters.type = option.value"
+          >
+            {{ option.label }}
+          </button>
         </div>
-      </div>
 
-      <div class="sort-options slide-in-left delay-200">
-        <span class="sort-label">排序方式：</span>
-        <div
-          v-for="option in sortOptions"
-          :key="option.value"
-          :class="['sort-tag', { active: filters.sort === option.value }]"
-          @click="filters.sort = option.value"
-        >
-          {{ option.label }}
+        <div class="sort-options" role="group" aria-label="排序方式">
+          <span class="sort-label">排序方式：</span>
+          <button
+            v-for="option in sortOptions"
+            :key="option.value"
+            type="button"
+            :class="['sort-tag', { active: filters.sort === option.value }]"
+            @click="filters.sort = option.value"
+          >
+            {{ option.label }}
+          </button>
         </div>
       </div>
+    </AppCard>
+
+    <div class="result-summary" aria-live="polite">
+      <span v-if="isLoading">正在加载商家…</span>
+      <span v-else>找到 {{ filteredMerchants.length }} 家商家</span>
     </div>
 
     <!-- 商家列表 -->
-    <div class="merchant-grid">
-      <!-- 加载中状态 -->
-      <el-skeleton :rows="6" v-if="isLoading" class="loading-skeleton" />
+    <div class="merchant-grid" :aria-busy="isLoading">
+      <template v-if="isLoading">
+        <AppCard
+          v-for="index in 3"
+          :key="`skeleton-${index}`"
+          class="merchant-card skeleton-card"
+          :level="2"
+          padding="md"
+        >
+          <el-skeleton :rows="4" animated />
+        </AppCard>
+      </template>
 
-      <el-card
-        v-for="merchant in filteredMerchants"
-        :key="merchant.id"
-        :class="['merchant-card stagger-item card-hover-effect', merchant.isOpen ? 'merchant-card-open' : 'merchant-card-closed']"
-        v-else-if="filteredMerchants.length > 0"
-        @click="goToMerchantDetail(merchant)"
-      >
-        <div class="card-header">
-          <div class="merchant-image">
-            <img
-              v-if="merchant.image && merchant.image !== '未知'"
-              :src="merchant.image"
-              :alt="merchant.name"
-              class="merchant-img"
-            />
-            <div v-else class="default-icon">
-              <el-icon :size="40"><Shop /></el-icon>
+      <template v-else-if="filteredMerchants.length > 0">
+        <AppCard
+          v-for="merchant in filteredMerchants"
+          :key="merchant.id"
+          class="merchant-card"
+          :level="2"
+          interactive
+          padding="md"
+          role="button"
+          tabindex="0"
+          @click="goToMerchantDetail(merchant)"
+          @keydown.enter="goToMerchantDetail(merchant)"
+          @keydown.space.prevent="goToMerchantDetail(merchant)"
+        >
+          <div class="card-header">
+            <div class="merchant-image">
+              <img
+                v-if="shouldShowMerchantImage(merchant)"
+                :src="merchant.image"
+                :alt="merchant.name"
+                loading="lazy"
+                class="merchant-img"
+                @error="handleMerchantImageError(merchant)"
+              />
+              <div v-else class="default-icon" aria-hidden="true">
+                <el-icon :size="40"><Shop /></el-icon>
+              </div>
             </div>
-          </div>
-          <div class="merchant-info">
-            <div class="merchant-name">{{ merchant.name }}</div>
-            <div class="merchant-meta">
-              <div class="merchant-rating">
-                <div class="rating-wrapper">
+
+            <div class="merchant-info">
+              <div class="merchant-name-row">
+                <h2 class="merchant-name">{{ merchant.name }}</h2>
+                <StatusTag
+                  :status="merchant.isOpen ? 'open' : 'closed'"
+                  :text="merchant.normalizedStatus"
+                  size="sm"
+                />
+              </div>
+
+              <div class="merchant-meta">
+                <div class="merchant-rating">
                   <el-rate v-model="merchant.rating" :disabled="true" size="small" />
                   <span class="rating-number">{{ formatRating(merchant.rating) }}</span>
                 </div>
@@ -278,601 +337,436 @@ const goToMerchantDetail = (merchant) => {
                   {{ merchant.distance || '未知距离' }}
                 </span>
               </div>
-              <div class="merchant-status">
-                <el-tag :type="merchant.isOpen ? 'success' : 'danger'" size="small">
-                  {{ merchant.normalizedStatus }}
-                </el-tag>
-              </div>
             </div>
           </div>
-        </div>
 
-        <!-- 商家信息行 -->
-        <div class="merchant-details">
-          <!-- 商家类型 - 只在有数据时显示 -->
-          <div class="merchant-type" v-if="merchant.type">
-            <el-tag type="primary" size="small">{{ merchant.type }}</el-tag>
+          <!-- 商家信息行 -->
+          <div
+            v-if="
+              merchant.type ||
+              merchant.isNew ||
+              merchant.discount ||
+              (merchant.tags && merchant.tags.length > 0)
+            "
+            class="merchant-details"
+          >
+            <div v-if="merchant.type" class="merchant-type">
+              <el-tag type="primary" size="small">{{ merchant.type }}</el-tag>
+            </div>
+
+            <div class="merchant-features">
+              <el-tag v-if="merchant.isNew" type="warning" size="small">新店</el-tag>
+              <el-tag v-if="merchant.discount" type="success" size="small">{{
+                merchant.discount
+              }}</el-tag>
+            </div>
+
+            <div v-if="merchant.tags && merchant.tags.length > 0" class="merchant-tags">
+              <el-tag v-for="tag in merchant.tags.slice(0, 2)" :key="tag" size="small" type="info">
+                {{ tag }}
+              </el-tag>
+              <el-tag v-if="merchant.tags.length > 2" size="small" type="info">
+                +{{ merchant.tags.length - 2 }}
+              </el-tag>
+            </div>
           </div>
 
-          <!-- 商家特色/优惠信息 -->
-          <div class="merchant-features">
-            <el-tag v-if="merchant.isNew" type="warning" size="small">新店</el-tag>
-            <el-tag v-if="merchant.discount" type="success" size="small">{{
-              merchant.discount
-            }}</el-tag>
+          <div class="card-actions">
+            <el-button
+              class="order-btn"
+              type="primary"
+              size="small"
+              @click.stop="orderNow(merchant)"
+            >
+              <el-icon class="btn-icon"><ShoppingCart /></el-icon>
+              立即下单
+            </el-button>
           </div>
+        </AppCard>
+      </template>
 
-          <!-- 商家标签 - 只在有数据时显示 -->
-          <div class="merchant-tags" v-if="merchant.tags && merchant.tags.length > 0">
-            <el-tag v-for="tag in merchant.tags.slice(0, 2)" :key="tag" size="small" type="info">
-              {{ tag }}
-            </el-tag>
-            <el-tag v-if="merchant.tags.length > 2" size="small" type="info">
-              +{{ merchant.tags.length - 2 }}
-            </el-tag>
-          </div>
-        </div>
-
-        <div class="card-actions">
-          <el-button type="primary" size="small" @click.stop="orderNow(merchant)">
-            <el-icon class="btn-icon"><ShoppingCart /></el-icon>
-            立即下单
-          </el-button>
-        </div>
-      </el-card>
-
-      <!-- 空数据提示 -->
-      <div class="empty-data" v-else>
-        <div class="empty-icon">🍴</div>
-        <div class="empty-text">
-          <h3>暂无商家数据</h3>
-          <p>当前条件下没有找到任何商家</p>
-        </div>
-        <div class="empty-actions">
-          <el-button type="primary" @click="resetFilters">重置筛选条件</el-button>
-        </div>
-      </div>
+      <AppEmptyState
+        v-else
+        class="empty-data"
+        :icon="Shop"
+        description="暂无商家数据，当前条件下没有找到任何商家"
+        action-text="重置筛选条件"
+        @action="resetFilters"
+      />
     </div>
   </div>
 </template>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
+<style scoped>
 .merchant-list-container {
   width: 100%;
-  box-sizing: border-box;
-  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-  background: @nordic-bg;
+  max-width: var(--page-max);
   min-height: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
+}
 
-  h2 {
-    font-size: @nordic-text-xl;
-    margin: 0 0 @nordic-space-lg @nordic-space-lg;
-    color: @nordic-text;
-    font-weight: 800;
-    letter-spacing: @nordic-letter-tight;
+.search-filter-section {
+  margin-bottom: var(--space-3);
+}
 
-    &::after {
-      content: '';
-      display: block;
-      width: 60px;
-      height: 4px;
-      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-blue 100%);
-      border-radius: @nordic-radius-xs;
-      margin-top: 12px;
-    }
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-input :deep(.el-input__wrapper) {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  box-shadow: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    outline-color var(--duration-fast) var(--ease-out);
+}
+
+.search-input :deep(.el-input__wrapper:hover) {
+  border-color: var(--line-strong);
+}
+
+.search-input :deep(.el-input__wrapper.is-focus) {
+  border-color: var(--brand-500);
+  box-shadow: none;
+  outline: 2px solid var(--brand-200);
+  outline-offset: 1px;
+}
+
+.search-input :deep(.el-input__inner) {
+  color: var(--ink-900);
+  font-size: var(--text-body);
+}
+
+.search-input :deep(.el-input__prefix) {
+  color: var(--ink-400);
+  font-size: var(--text-body);
+}
+
+.search-input :deep(.el-input__suffix .el-icon) {
+  color: var(--ink-400);
+  font-size: var(--text-body);
+}
+
+.reset-btn {
+  flex-shrink: 0;
+  min-height: 36px;
+  border-color: var(--line-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.reset-btn:hover,
+.reset-btn:focus-visible {
+  border-color: var(--brand-300);
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.filter-tags,
+.sort-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.filter-tag,
+.sort-tag {
+  appearance: none;
+  min-height: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  color: var(--ink-700);
+  font: inherit;
+  font-size: var(--text-body-sm);
+  line-height: 26px;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.filter-tag:hover,
+.sort-tag:hover {
+  border-color: var(--brand-300);
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+
+.filter-tag:focus-visible,
+.sort-tag:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+}
+
+.filter-tag.active,
+.sort-tag.active {
+  border-color: var(--brand-500);
+  background: var(--brand-500);
+  color: var(--surface);
+}
+
+.sort-label {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.result-summary {
+  min-height: 20px;
+  margin-bottom: var(--space-3);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  text-align: right;
+}
+
+.merchant-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--card-gap);
+  align-items: stretch;
+}
+
+.merchant-card {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.merchant-card :deep(.app-card__body) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.merchant-card:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.merchant-image {
+  flex: 0 0 80px;
+  width: 80px;
+  height: 80px;
+}
+
+.merchant-img,
+.default-icon {
+  width: 80px;
+  height: 80px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+}
+
+.merchant-img {
+  display: block;
+  object-fit: cover;
+  background: var(--canvas-sunken);
+}
+
+.default-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--canvas-sunken);
+  color: var(--ink-400);
+}
+
+.merchant-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.merchant-name-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.merchant-name {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.merchant-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+}
+
+.merchant-rating {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.merchant-rating :deep(.el-rate) {
+  height: 20px;
+}
+
+.merchant-rating :deep(.el-rate__icon) {
+  margin-right: 0;
+  font-size: var(--text-body);
+}
+
+.rating-number,
+.distance {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.rating-number {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-semibold);
+}
+
+.distance {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.distance-icon {
+  color: var(--ink-400);
+}
+
+.merchant-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.merchant-type,
+.merchant-features,
+.merchant-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.card-actions {
+  display: flex;
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.order-btn {
+  width: 100%;
+  min-height: 36px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.btn-icon {
+  font-size: var(--text-body);
+}
+
+.skeleton-card {
+  cursor: default;
+}
+
+.empty-data {
+  grid-column: 1 / -1;
+  max-height: 240px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 1024px) {
+  .merchant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  .search-filter-section {
-    display: flex;
-    flex-direction: column;
-    gap: @nordic-space-md - @nordic-space-xs;
-    margin-bottom: @nordic-space-lg;
-    padding: @nordic-space-lg;
-    background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-blue-light 100%);
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 6px 24px fade(@nordic-accent, 12%);
-    border: 1px solid fade(@nordic-accent, 10%);
-    width: 100%;
-    box-sizing: border-box;
-
-    .search-row {
-      display: flex;
-      gap: @nordic-space-md - @nordic-space-xs;
-      align-items: center;
-    }
-
-    .search-input {
-      flex: 1;
-
-      :deep(.el-input__wrapper) {
-        border-radius: @nordic-radius-md;
-        border: 2px solid fade(@nordic-accent, 15%);
-        padding: @nordic-space-sm @nordic-space-md;
-        transition: all @nordic-transition-slow ease;
-        background-color: @nordic-surface;
-        box-shadow: none;
-
-        &:hover {
-          border-color: fade(@nordic-accent, 30%);
-        }
-
-        &.is-focus {
-          border-color: @nordic-accent;
-          box-shadow: 0 0 0 3px fade(@nordic-accent, 10%);
-        }
-      }
-
-      :deep(.el-input__inner) {
-        font-size: @nordic-text-md - 1px;
-        color: @nordic-text;
-      }
-
-      :deep(.el-input__prefix) {
-        color: @nordic-accent;
-        font-size: @nordic-text-lg - 2px;
-      }
-
-      :deep(.el-input__suffix) {
-        .el-icon {
-          font-size: @nordic-text-base + 2px;
-          color: @nordic-text-muted;
-
-          &:hover {
-            color: @nordic-accent;
-          }
-        }
-      }
-    }
-
-    .reset-btn {
-      flex-shrink: 0;
-      border-radius: @nordic-radius-md;
-      height: 48px;
-      padding: 0 @nordic-space-lg;
-      font-size: @nordic-text-md - 1px;
-      transition: all @nordic-transition-slow ease;
-      background: linear-gradient(135deg, @nordic-bg 0%, @nordic-border 100%);
-      border: 1px solid @nordic-border;
-      color: @nordic-text-secondary;
-
-      &:hover {
-        background: linear-gradient(135deg, @nordic-border 0%, darken(@nordic-border, 5%) 100%);
-        border-color: @nordic-text-muted;
-        color: @nordic-text;
-      }
-    }
-
-    .filter-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: @nordic-space-2sm;
-      align-items: center;
-      padding-bottom: @nordic-space-xs;
-
-      .filter-tag {
-        padding: @nordic-space-sm 18px;
-        border-radius: @nordic-radius-pill;
-        font-size: @nordic-text-base;
-        color: @nordic-text-secondary;
-        background: @nordic-surface;
-        border: 1px solid fade(@nordic-accent, 10%);
-        cursor: pointer;
-        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-        user-select: none;
-        position: relative;
-
-        &:hover {
-          color: @nordic-accent;
-          border-color: fade(@nordic-accent, 30%);
-          background: fade(@nordic-accent, 5%);
-          transform: translateY(-1px);
-        }
-
-        &:active {
-          transform: translateY(0) scale(0.98);
-        }
-
-        &.active {
-          color: @nordic-surface;
-          background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-          border-color: transparent;
-          font-weight: 500;
-          box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
-
-          &:hover {
-            box-shadow: 0 6px 16px fade(@nordic-accent, 40%);
-            transform: translateY(-2px);
-          }
-
-          &:active {
-            transform: translateY(0) scale(0.98);
-          }
-        }
-      }
-    }
-
-    .sort-options {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: @nordic-space-2sm;
-      padding-top: @nordic-space-sm;
-      border-top: 1px dashed fade(@nordic-accent, 15%);
-
-      .sort-label {
-        font-size: @nordic-text-sm;
-        color: @nordic-text-secondary;
-        font-weight: 500;
-        margin-right: @nordic-space-xs;
-      }
-
-      .sort-tag {
-        padding: 6px @nordic-space-md;
-        border-radius: @nordic-radius-pill - 10px;
-        font-size: @nordic-text-sm;
-        color: @nordic-text-secondary;
-        background: @nordic-surface;
-        border: 1px solid fade(@nordic-accent, 10%);
-        cursor: pointer;
-        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-        user-select: none;
-
-        &:hover {
-          color: @nordic-accent;
-          border-color: fade(@nordic-accent, 30%);
-          background: fade(@nordic-accent, 5%);
-          transform: translateY(-1px);
-        }
-
-        &:active {
-          transform: translateY(0) scale(0.98);
-        }
-
-        &.active {
-          color: @nordic-surface;
-          background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-          border-color: transparent;
-          font-weight: 500;
-          box-shadow: 0 2px 8px fade(@nordic-accent, 25%);
-
-          &:hover {
-            box-shadow: 0 4px 12px fade(@nordic-accent, 35%);
-            transform: translateY(-1px);
-          }
-
-          &:active {
-            transform: translateY(0) scale(0.98);
-          }
-        }
-      }
-    }
+@media (max-width: 768px) {
+  .merchant-list-container {
+    padding: 0 var(--space-4) var(--space-8);
   }
 
   .merchant-grid {
-    display: flex;
-    flex-direction: row;
+    grid-template-columns: 1fr;
+  }
+
+  .filter-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .search-row {
     flex-wrap: wrap;
-    gap: @nordic-space-lg;
-    padding: 0 @nordic-space-lg;
-    justify-content: center;
   }
 
-  .merchant-card {
-    flex: 1 1 320px;
-    max-width: 480px;
-    box-sizing: border-box;
-    .nordic-card();
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, @nordic-accent 0%, @nordic-blue 100%);
-      opacity: 0;
-      transition: opacity @nordic-transition-slow ease;
-    }
-
-    &:hover {
-      box-shadow: 0 12px 40px fade(@nordic-accent, 18%);
-      transform: translateY(-6px);
-      border-color: fade(@nordic-accent, 25%);
-
-      &::before {
-        opacity: 1;
-      }
-    }
-
-    &:active {
-      transform: translateY(-2px);
-    }
-  }
-
-  // 营业中商家卡片
-  .merchant-card-open {
-    box-shadow: 0 2px 15px fade(@nordic-accent, 8%);
-
-    &:hover {
-      box-shadow: 0 12px 40px fade(@nordic-accent, 22%);
-
-      .merchant-status .el-tag--success {
-        box-shadow: 0 0 20px fade(@nordic-green, 60%);
-        transform: scale(1.05);
-      }
-    }
-  }
-
-  // 已停业商家卡片
-  .merchant-card-closed {
-    opacity: 0.85;
-
-    &:hover {
-      opacity: 1;
-    }
-  }
-
-  // 所有商家卡片通用样式
-  .merchant-card {
-    .card-header {
-      display: flex;
-      gap: @nordic-space-lg;
-      margin-bottom: @nordic-space-lg;
-      align-items: center;
-      padding: @nordic-space-xs;
-
-      .merchant-image {
-        font-size: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-
-        .merchant-img {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          object-fit: cover;
-          border: 3px solid fade(@nordic-accent, 10%);
-          transition: all @nordic-transition-slow ease;
-        }
-
-        .default-icon {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: @nordic-surface;
-          filter: drop-shadow(0 2px 8px fade(@nordic-accent, 15%));
-        }
-      }
-
-      .merchant-info {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: @nordic-space-2sm;
-        flex: 1;
-        min-width: 0;
-
-        .merchant-name {
-          font-size: @nordic-text-lg;
-          font-weight: 700;
-          margin-bottom: 2px;
-          color: @nordic-accent-dark;
-          letter-spacing: -0.3px;
-          line-height: 1.3;
-        }
-
-        .merchant-meta {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          width: 100%;
-          gap: @nordic-space-md - @nordic-space-xs;
-        }
-
-        .merchant-rating {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          flex: 1;
-          min-width: 0;
-
-          .rating-wrapper {
-            display: flex;
-            align-items: center;
-            gap: @nordic-space-sm;
-
-            :deep(.el-rate) {
-              .el-rate__icon {
-                font-size: @nordic-text-base + 2px;
-              }
-            }
-
-            .rating-number {
-              font-size: @nordic-text-md - 1px;
-              font-weight: 600;
-              color: @nordic-yellow;
-            }
-          }
-
-          .distance {
-            font-size: @nordic-text-sm;
-            color: @nordic-text-secondary;
-            display: flex;
-            align-items: center;
-            gap: @nordic-space-xs;
-            font-weight: 500;
-
-            .distance-icon {
-              font-size: @nordic-text-base;
-              color: @nordic-text-muted;
-            }
-          }
-        }
-
-        .merchant-status {
-          flex-shrink: 0;
-
-          .el-tag {
-            transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-          }
-
-          // 营业中标签样式
-          .el-tag--success {
-            background: linear-gradient(135deg, @nordic-green 0%, @nordic-green-dark 100%);
-            border: none;
-            color: @nordic-surface;
-            font-weight: 500;
-            padding: @nordic-space-xs @nordic-space-md - @nordic-space-xs;
-
-            &:hover {
-              background: linear-gradient(135deg, @nordic-green-dark 0%, darken(@nordic-green-dark, 8%) 100%);
-              transform: scale(1.05);
-            }
-          }
-
-          // 非营业中标签样式
-          .el-tag--danger {
-            background: linear-gradient(135deg, @nordic-text-muted 0%, @nordic-text-secondary 100%);
-            border: none;
-            color: @nordic-surface;
-            font-weight: 500;
-            padding: @nordic-space-xs @nordic-space-md - @nordic-space-xs;
-          }
-        }
-      }
-    }
-
-    .merchant-details {
-      margin-bottom: @nordic-space-md;
-      padding: @nordic-space-md - @nordic-space-xs;
-      display: flex;
-      flex-wrap: wrap;
-      gap: @nordic-space-sm;
-      align-items: center;
-      background: fade(@nordic-accent, 3%);
-      border-radius: @nordic-radius-md;
-    }
-
-    .merchant-type {
-      margin: 0;
-    }
-
-    .merchant-features {
-      display: flex;
-      gap: @nordic-space-sm;
-    }
-
-    .merchant-tags {
-      margin: 0;
-      display: flex;
-      gap: @nordic-space-sm;
-      flex-wrap: wrap;
-    }
-
-    .card-actions {
-      display: flex;
-      justify-content: center;
-      padding-top: @nordic-space-md;
-      border-top: 1px solid fade(@nordic-accent, 10%);
-
-      .el-button {
-        width: 100%;
-        border-radius: @nordic-radius-md;
-        font-weight: 600;
-        height: 46px;
-        font-size: @nordic-text-md - 1px;
-        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-        border: none;
-        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: @nordic-space-sm;
-
-        .btn-icon {
-          font-size: @nordic-text-lg - 2px;
-        }
-
-        &:hover {
-          background: linear-gradient(135deg, @nordic-accent-dark 0%, darken(@nordic-accent-dark, 8%) 100%);
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px fade(@nordic-accent, 45%);
-        }
-
-        &:active {
-          transform: translateY(0);
-        }
-      }
-    }
-  }
-
-  // 加载中样式
-  .loading-skeleton {
+  .reset-btn {
     width: 100%;
-    flex-shrink: 0;
-  }
-
-  // 空数据样式
-  .empty-data {
-    width: 100%;
-    flex-shrink: 0;
-    text-align: center;
-    padding: 80px @nordic-space-lg;
-    background: linear-gradient(135deg, @nordic-accent-light 0%, @nordic-blue-light 100%);
-    border-radius: @nordic-radius-lg;
-    border: 2px dashed fade(@nordic-accent, 20%);
-
-    .empty-icon {
-      font-size: 80px;
-      margin-bottom: @nordic-space-lg;
-      opacity: 0.7;
-    }
-
-    .empty-text {
-      color: @nordic-text-secondary;
-
-      h3 {
-        font-size: @nordic-text-lg;
-        margin: 0 0 @nordic-space-2sm 0;
-        color: @nordic-accent-dark;
-        font-weight: 600;
-      }
-
-      p {
-        font-size: @nordic-text-base;
-        margin: 0;
-        color: @nordic-text-secondary;
-      }
-    }
-
-    .empty-actions {
-      margin-top: 30px;
-
-      .el-button {
-        padding: @nordic-space-sm 28px;
-        font-size: @nordic-text-base;
-        border-radius: @nordic-radius-md;
-        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-        border: none;
-
-        &:hover {
-          background: linear-gradient(135deg, @nordic-accent-dark 0%, darken(@nordic-accent-dark, 8%) 100%);
-          box-shadow: 0 4px 12px fade(@nordic-accent, 40%);
-        }
-      }
-    }
   }
 }
 </style>
