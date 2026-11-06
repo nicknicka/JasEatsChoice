@@ -1,18 +1,26 @@
 <script setup>
+import { ref, computed, onMounted, inject } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  Bell,
+  ChatDotRound,
+  Delete,
+  Message,
+  Notification,
+  Promotion,
+  ShoppingCart
+} from '@element-plus/icons-vue'
 import pinia from '../../store'
 import { useAuthStore } from '../../store/authStore'
-import { inject } from 'vue'
+import api from '../../utils/api.js'
+import { API_CONFIG } from '../../config/index.js'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
 
 const authStore = useAuthStore(pinia)
 
 // 注入父组件提供的刷新方法
 const refreshUnreadCount = inject('refreshUnreadCount', null)
-
-import { ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
-import api from '../../utils/api.js'
-import { API_CONFIG } from '../../config/index.js'
 
 // 用户ID
 const userId = ref(parseInt(String(authStore.userId || 1) || '1', 10))
@@ -65,6 +73,48 @@ const loadMessages = async () => {
   }
 }
 
+/**
+ * 消息类型 → 标签 / 图标 / 颜色。
+ * 后端 usr_notification.type 存的是 NotificationTypeEnum 的 code（例如
+ * order_payment_success / review_submitted / system），不是 order/system 这类短值，
+ * 这里按前缀归到「订单 / 优惠 / 互动 / 系统」四类，标签与图标随之区分。
+ * 颜色只取 tokens.css 的 CSS 变量（DESIGN-BASELINE §3.1、§7.1）。
+ */
+const MESSAGE_TYPES = {
+  order: { key: 'order', label: '订单消息', tagType: 'info', tagClass: '', icon: ShoppingCart },
+  promotion: { key: 'promotion', label: '优惠活动', tagType: 'success', tagClass: '', icon: Promotion },
+  review: { key: 'review', label: '互动消息', tagType: 'warning', tagClass: '', icon: ChatDotRound },
+  system: { key: 'system', label: '系统通知', tagType: 'info', tagClass: 'is-system', icon: Notification }
+}
+
+const resolveMessageType = (type) => {
+  const code = String(type || '').toLowerCase()
+  if (code.startsWith('order') || code.startsWith('group_order')) return MESSAGE_TYPES.order
+  if (code.startsWith('review')) return MESSAGE_TYPES.review
+  if (code.startsWith('promotion') || code.startsWith('discount') || code.startsWith('coupon')) {
+    return MESSAGE_TYPES.promotion
+  }
+  return MESSAGE_TYPES.system
+}
+
+// 本地时间格式化：YYYY-MM-DD HH:mm（DESIGN-BASELINE §8 检查清单：时间不带 ISO 的 T）
+const formatTime = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+// 消息分类标签页（顺序对齐评审 P0：订单 / 优惠 / 互动 / 系统）
+const tabs = [
+  { name: 'all', label: '全部消息' },
+  { name: 'order', label: '订单消息' },
+  { name: 'promotion', label: '优惠活动' },
+  { name: 'review', label: '互动消息' },
+  { name: 'system', label: '系统通知' }
+]
+
 // 切换消息分类
 const activeTab = ref('all')
 
@@ -72,24 +122,21 @@ const activeTab = ref('all')
 const filteredMessages = computed(() => {
   console.log('🔄 filteredMessages computed被调用，activeTab=', activeTab.value, '消息总数=', messages.value.length)
 
-  let result
   if (activeTab.value === 'all') {
-    result = messages.value
-  } else {
-    result = messages.value.filter((msg) => {
-      const match = msg.type === activeTab.value
-      console.log(`  检查消息: type=${msg.type}, tab=${activeTab.value}, 匹配=${match}`)
-      return match
-    })
+    return messages.value
   }
 
-  console.log('  ✅ 筛选完成，结果数量:', result.length)
-  return result
+  return messages.value.filter((msg) => resolveMessageType(msg.type).key === activeTab.value)
 })
 
 // 消息详情模态框
 const messageDetail = ref(null)
 const showDetailModal = ref(false)
+
+// 详情弹窗的类型标签与图标
+const messageDetailType = computed(() =>
+  messageDetail.value ? resolveMessageType(messageDetail.value.type) : MESSAGE_TYPES.system
+)
 
 // 查看消息详情
 const viewMessage = async (message) => {
@@ -288,36 +335,11 @@ const getEmptyDescription = () => {
   const descriptions = {
     all: '暂无消息',
     order: '暂无订单消息',
+    review: '暂无互动消息',
     system: '暂无系统通知',
     promotion: '暂无优惠活动'
   }
   return descriptions[activeTab.value] || '暂无消息'
-}
-
-/**
- * 获取空状态图标
- */
-const getEmptyIcon = () => {
-  const icons = {
-    all: '📭',
-    order: '📦',
-    system: '📢',
-    promotion: '🎉'
-  }
-  return icons[activeTab.value] || '📭'
-}
-
-/**
- * 获取消息类型图标
- */
-const getMessageIcon = (type) => {
-  const icons = {
-    order: '📦',
-    system: '📢',
-    promotion: '🎉',
-    all: '📭'
-  }
-  return icons[type] || '📭'
 }
 
 /**
@@ -331,70 +353,51 @@ const handleDeleteFromDetail = async (messageId) => {
 
 <template>
   <div class="message-center-container">
-    <h2 class="fade-in-up">消息中心</h2>
+    <!-- 页头：标准版标题容器（§4.7） -->
+    <AppPageHeader class="page-header" title="消息中心" />
 
-    <!-- 消息中心汇总卡片 -->
-    <transition name="summary-fade">
-      <div v-if="unreadCount > 0" class="message-summary-card">
-        <div class="summary-content">
-          <div class="summary-icon">🔔</div>
-          <div class="summary-text">
-            <div class="summary-title">您有 {{ unreadCount }} 条未读通知</div>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <!-- 未读摘要：中性浅底一条，替代原来的橙色渐变卡（§3.4、§4.8） -->
+    <div v-if="unreadCount > 0" class="unread-summary">
+      <el-icon class="unread-summary__icon" aria-hidden="true"><Bell /></el-icon>
+      <span class="unread-summary__text">
+        您有 <strong class="unread-summary__count">{{ unreadCount }}</strong> 条未读通知
+      </span>
+      <el-button class="unread-summary__action" type="primary" link @click="markAllAsRead">
+        全部标记为已读
+      </el-button>
+    </div>
 
-    <!-- 消息分类标签页 -->
-    <el-tabs v-model="activeTab" class="message-tabs slide-in-left delay-100">
-      <el-tab-pane label="全部消息" name="all">
+    <!-- 消息分类标签页：独立的浅表面块，与下方列表拉出层级（P1） -->
+    <el-tabs v-model="activeTab" class="message-tabs">
+      <el-tab-pane v-for="tab in tabs" :key="tab.name" :name="tab.name">
         <template #label>
           <span class="tab-label">
-            <span>全部消息</span>
-            <el-badge v-if="unreadCount > 0" :value="unreadCount" class="tab-badge" />
-          </span>
-        </template>
-      </el-tab-pane>
-      <el-tab-pane label="订单消息" name="order">
-        <template #label>
-          <span class="tab-label">
-            <span>订单消息</span>
-          </span>
-        </template>
-      </el-tab-pane>
-      <el-tab-pane label="系统通知" name="system">
-        <template #label>
-          <span class="tab-label">
-            <span>系统通知</span>
-          </span>
-        </template>
-      </el-tab-pane>
-      <el-tab-pane label="优惠活动" name="promotion">
-        <template #label>
-          <span class="tab-label">
-            <span>优惠活动</span>
+            <span>{{ tab.label }}</span>
+            <el-badge
+              v-if="tab.name === 'all' && unreadCount > 0"
+              :value="unreadCount"
+              :max="99"
+              class="tab-badge"
+            />
           </span>
         </template>
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 消息列表 - 移除外层transition避免与transition-group冲突 -->
     <div class="message-list-container">
-      <!-- 操作工具栏 - 只在有选中消息或全部标记已读可用时显示 -->
+      <!-- 操作工具栏：有选中项或未读消息时出现 -->
       <transition name="toolbar-slide">
         <div v-if="selectedMessages.length > 0 || unreadCount > 0" class="message-toolbar">
           <el-checkbox v-model="selectAll" @change="handleSelectAll">全选</el-checkbox>
           <div class="toolbar-actions">
             <el-button
               type="danger"
+              plain
               :disabled="selectedMessages.length === 0"
-              @click="deleteSelected"
               :icon="Delete"
+              @click="deleteSelected"
             >
               批量删除 ({{ selectedMessages.length }})
-            </el-button>
-            <el-button type="primary" @click="markAllAsRead" :disabled="unreadCount === 0">
-              全部标记为已读
             </el-button>
           </div>
         </div>
@@ -402,73 +405,66 @@ const handleDeleteFromDetail = async (messageId) => {
 
       <!-- 消息列表 -->
       <div class="message-list">
-        <transition-group name="list" tag="div">
+        <transition-group v-if="filteredMessages.length > 0" name="list" tag="div" class="message-list-items">
           <el-card
             v-for="message in filteredMessages"
             :key="message.id"
             class="message-card"
             :class="{ unread: !message.read, selected: isMessageSelected(message.id) }"
           >
-          <div class="message-card-content">
-            <el-checkbox
-              :model-value="isMessageSelected(message.id)"
-              @change="handleMessageSelect(message, $event)"
-              class="message-checkbox"
-            ></el-checkbox>
+            <div class="message-card-content">
+              <el-checkbox
+                :model-value="isMessageSelected(message.id)"
+                class="message-checkbox"
+                @change="handleMessageSelect(message, $event)"
+              ></el-checkbox>
 
-            <div class="message-body" @click="viewMessage(message)">
-              <div class="message-header">
-                <div class="message-type">
+              <div class="message-body" @click="viewMessage(message)">
+                <div class="message-header">
                   <el-tag
-                    :type="
-                      message.type === 'order'
-                        ? 'primary'
-                        : message.type === 'system'
-                          ? 'warning'
-                          : 'success'
-                    "
+                    :type="resolveMessageType(message.type).tagType"
                     size="small"
+                    effect="plain"
+                    round
+                    class="message-type-tag"
+                    :class="resolveMessageType(message.type).tagClass"
                   >
-                    {{
-                      message.type === 'order'
-                        ? '订单消息'
-                        : message.type === 'system'
-                          ? '系统通知'
-                          : '优惠活动'
-                    }}
+                    <el-icon class="message-type-tag__icon" aria-hidden="true">
+                      <component :is="resolveMessageType(message.type).icon" />
+                    </el-icon>
+                    {{ resolveMessageType(message.type).label }}
                   </el-tag>
+                  <span class="message-time">{{ formatTime(message.time) }}</span>
                 </div>
-                <div class="message-time">{{ message.time }}</div>
+
+                <div class="message-content">
+                  <h3 class="message-title">
+                    <span v-if="!message.read" class="message-unread-dot" aria-hidden="true"></span>
+                    {{ message.title }}
+                  </h3>
+                  <p class="message-text">{{ message.content }}</p>
+                </div>
               </div>
 
-              <div class="message-content">
-                <h3 class="message-title">{{ message.title }}</h3>
-                <p class="message-text">{{ message.content }}</p>
+              <div class="message-actions">
+                <el-button text size="small" @click.stop="viewMessage(message)">查看详情</el-button>
+                <el-button text size="small" type="danger" @click.stop="deleteMessage(message.id)">
+                  删除
+                </el-button>
               </div>
             </div>
-
-            <div class="message-actions">
-              <el-button type="text" size="small" @click.stop="viewMessage(message)"> 查看详情 </el-button>
-              <el-button type="text" size="small" danger @click.stop="deleteMessage(message.id)">
-                删除
-              </el-button>
-            </div>
-          </div>
-        </el-card>
+          </el-card>
         </transition-group>
 
-        <!-- 空数据提示 -->
-        <transition name="empty-fade" mode="out-in">
-          <div v-if="filteredMessages.length === 0" class="empty-state-wrapper" key="empty">
-            <el-empty :description="getEmptyDescription()">
-              <template #image>
-                <div class="empty-icon-animated">
-                  <div class="empty-icon-circle">{{ getEmptyIcon() }}</div>
-                </div>
-              </template>
-            </el-empty>
-          </div>
-        </transition>
+        <!-- 空状态：线性图标 + 中文说明 + 替代动作（§4.5） -->
+        <AppEmptyState
+          v-else
+          class="message-empty"
+          :icon="Message"
+          :description="getEmptyDescription()"
+          action-text="刷新"
+          @action="loadMessages"
+        />
       </div>
     </div>
 
@@ -481,33 +477,23 @@ const handleDeleteFromDetail = async (messageId) => {
     >
       <template #header>
         <div class="detail-modal-header">
-          <div class="header-left">
-            <div class="detail-icon-wrapper">
-              <span class="detail-icon">{{ getMessageIcon(messageDetail?.type) }}</span>
-            </div>
-            <div class="header-title-section">
-              <h3 class="detail-modal-title">{{ messageDetail?.title }}</h3>
-              <div class="detail-meta">
-                <el-tag
-                  :type="
-                    messageDetail?.type === 'order'
-                      ? 'primary'
-                      : messageDetail?.type === 'system'
-                        ? 'warning'
-                        : 'success'
-                  "
-                  size="small"
-                >
-                  {{
-                    messageDetail?.type === 'order'
-                      ? '订单消息'
-                      : messageDetail?.type === 'system'
-                        ? '系统通知'
-                        : '优惠活动'
-                  }}
-                </el-tag>
-                <span class="detail-time">{{ messageDetail?.time }}</span>
-              </div>
+          <div class="detail-icon-wrapper">
+            <el-icon aria-hidden="true"><component :is="messageDetailType.icon" /></el-icon>
+          </div>
+          <div class="header-title-section">
+            <h3 class="detail-modal-title">{{ messageDetail?.title }}</h3>
+            <div class="detail-meta">
+              <el-tag
+                :type="messageDetailType.tagType"
+                size="small"
+                effect="plain"
+                round
+                class="message-type-tag"
+                :class="messageDetailType.tagClass"
+              >
+                {{ messageDetailType.label }}
+              </el-tag>
+              <span class="detail-time">{{ formatTime(messageDetail?.time) }}</span>
             </div>
           </div>
         </div>
@@ -538,655 +524,380 @@ const handleDeleteFromDetail = async (messageId) => {
   </div>
 </template>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
+<style scoped>
+/* 页面颜色、间距、圆角、字阶与动效均取自 tokens.css（§3、§7.1），无裸色值。 */
+.message-center-container {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 
-// 优化列表项动画性能 - 使用GPU加速
-.list-enter-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: opacity, transform;
+  /* 圆角统一走 token（§3.4） */
+  :deep(.el-button) {
+    border-radius: var(--radius-md);
+  }
+
+  :deep(.el-tag) {
+    border-radius: var(--radius-sm);
+  }
+
+  :deep(.el-badge__content) {
+    border-radius: var(--radius-full);
+  }
+
+  :deep(.el-checkbox__inner) {
+    border-radius: var(--radius-sm);
+  }
+}
+
+.page-header {
+  margin-bottom: var(--space-6);
+}
+
+/* 未读摘要：浅底 + 线性图标 + 数值（§4.8） */
+.unread-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--canvas-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--ink-700);
+  font-size: var(--text-body);
+}
+
+.unread-summary__icon {
+  color: var(--brand-500);
+  font-size: 18px;
+}
+
+.unread-summary__count {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-900);
+}
+
+.unread-summary__action {
+  margin-left: auto;
+}
+
+/* tab 区做成独立浅表面块，列表区保持在页面底色上，拉出层级差（P1） */
+.message-tabs {
+  padding: 0 var(--space-5);
+  margin-bottom: var(--card-gap);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.message-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
+
+.message-tabs :deep(.el-tabs__nav-wrap::after) {
+  height: 1px;
+  background-color: var(--line);
+}
+
+.tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-body);
+}
+
+/* 工具栏：中性浅底，不再用橙色渐变条（§4.6） */
+.message-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--card-gap);
+  background: var(--canvas-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.message-list-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+}
+
+/* 消息卡：L2 浮起质感，hover 升一档（§3.4） */
+.message-card {
+  margin: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.message-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.message-card.unread {
+  border-left: 3px solid var(--brand-500);
+}
+
+.message-card.selected {
+  background: var(--brand-50);
+}
+
+.message-card :deep(.el-card__body) {
+  padding: var(--card-padding);
+}
+
+.message-card-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.message-checkbox {
+  margin-top: var(--space-5);
+  flex-shrink: 0;
+}
+
+.message-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.message-type-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.message-type-tag__icon {
+  font-size: 12px;
+}
+
+/* 系统通知走中性标签，避免品牌橙被当成分类色（§3.1） */
+.message-type-tag.is-system {
+  --el-tag-text-color: var(--neutral);
+  --el-tag-bg-color: var(--neutral-bg);
+  --el-tag-border-color: var(--line-strong);
+}
+
+/* 时间用数字字体 + 等宽数字（§3.2、§8） */
+.message-time {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-caption);
+  color: var(--ink-400);
+  white-space: nowrap;
+}
+
+.message-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-h3);
+  line-height: 24px;
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
+}
+
+/* 未读标记：品牌色圆点（P1） */
+.message-unread-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--brand-500);
+}
+
+/* 摘要统一两行截断，保证卡片高度接近（P1） */
+.message-text {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--ink-500);
+  font-size: var(--text-body);
+  line-height: 22px;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.message-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.message-empty {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+/* 详情弹窗：头部改中性表面，去掉橙色渐变（§3.4） */
+:deep(.message-detail-dialog) {
+  border-radius: var(--radius-lg);
+}
+
+:deep(.message-detail-dialog .el-dialog__header) {
+  padding: 0;
+  margin: 0;
+}
+
+:deep(.message-detail-dialog .el-dialog__body) {
+  padding: 0 var(--space-6) var(--space-6);
+}
+
+:deep(.message-detail-dialog .el-dialog__footer) {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--line);
+}
+
+.detail-modal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  background: var(--canvas-sunken);
+  border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.detail-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  color: var(--brand-500);
+  font-size: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.header-title-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-modal-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-h3);
+  line-height: 24px;
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
+}
+
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.detail-time {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-caption);
+  color: var(--ink-500);
+}
+
+.detail-body {
+  padding: var(--space-6) 0;
+}
+
+.detail-text {
+  font-size: var(--text-body);
+  line-height: 24px;
+  color: var(--ink-700);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detail-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* 列表增删/重排：用 transform + opacity，时长与曲线取 token（§3.5） */
+.list-enter-active,
+.list-leave-active {
+  transition:
+    opacity var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-standard);
 }
 
 .list-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
-  will-change: opacity, transform;
   position: absolute;
   width: 100%;
 }
 
 .list-enter-from {
   opacity: 0;
-  transform: translateY(10px) scale(0.98);
+  transform: translateY(4px);
 }
 
 .list-leave-to {
   opacity: 0;
-  transform: translateX(20px);
+  transform: translateY(-4px);
 }
 
 .list-move {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--duration-base) var(--ease-in-out);
 }
 
-// 工具栏滑动动画
-.toolbar-slide-enter-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
+/* 工具栏出现/收起 */
+.toolbar-slide-enter-active,
 .toolbar-slide-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 }
 
-.toolbar-slide-enter-from {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
+.toolbar-slide-enter-from,
 .toolbar-slide-leave-to {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-4px);
 }
 
-// 空状态动画
-.empty-fade-enter-active {
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.empty-fade-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
-}
-
-.empty-fade-enter-from {
-  opacity: 0;
-  transform: scale(0.9) translateY(15px);
-}
-
-.empty-fade-leave-to {
-  opacity: 0;
-  transform: scale(0.95) translateY(-5px);
-}
-
-.message-center-container {
-  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-
-  // 全局按钮圆角统一
-  :deep(.el-button) {
-    border-radius: @nordic-radius-md;
+/* 减少动态偏好下直接落终值（§3.5） */
+@media (prefers-reduced-motion: reduce) {
+  .message-card,
+  .list-enter-active,
+  .list-leave-active,
+  .list-move,
+  .toolbar-slide-enter-active,
+  .toolbar-slide-leave-active {
+    transition: none;
   }
 
-  // Badge 徽章圆角
-  :deep(.el-badge__content) {
-    border-radius: @nordic-radius-lg;
+  .message-card:hover {
+    transform: none;
   }
-
-  // Tag 标签圆角
-  :deep(.el-tag) {
-    border-radius: @nordic-radius-sm;
-  }
-
-  // Checkbox 复选框圆角
-  :deep(.el-checkbox__inner) {
-    border-radius: @nordic-radius-xs;
-  }
-
-  h2 {
-    .nordic-section-title();
-    font-size: @nordic-text-xl;
-    margin: 0 0 @nordic-space-lg 0;
-  }
-
-  // 汇总卡片样式
-  .message-summary-card {
-    margin-bottom: @nordic-space-lg;
-    padding: @nordic-space-md @nordic-space-lg;
-    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 4px 16px fade(@nordic-accent, 35%);
-    animation: slideInDown 0.5s ease-out;
-
-    .summary-content {
-      display: flex;
-      align-items: center;
-      gap: @nordic-space-md;
-
-      .summary-icon {
-        font-size: @nordic-text-2xl;
-        animation: ring 2s ease-in-out infinite;
-      }
-
-      .summary-text {
-        flex: 1;
-        color: @nordic-surface;
-
-        .summary-title {
-          font-size: @nordic-text-md;
-          font-weight: 600;
-          margin-bottom: 6px;
-        }
-
-        .summary-details {
-          font-size: @nordic-text-base;
-          opacity: 0.95;
-          display: flex;
-          align-items: center;
-          gap: @nordic-space-sm;
-
-          .divider {
-            opacity: 0.7;
-          }
-        }
-      }
-    }
-  }
-
-  .message-tabs {
-    margin-bottom: @nordic-space-lg;
-
-    .tab-label {
-      display: flex;
-      align-items: center;
-      gap: @nordic-space-sm;
-
-      .tab-badge {
-        :deep(.el-badge__content) {
-          background-color: @nordic-red;
-          border-color: @nordic-red;
-        }
-      }
-    }
-
-    .friend-tab {
-      display: flex;
-      align-items: center;
-      gap: @nordic-space-sm;
-
-      .friend-badge {
-        :deep(.el-badge__content) {
-          background-color: @nordic-red;
-          border-color: @nordic-red;
-        }
-      }
-    }
-  }
-
-  // 好友请求列表样式
-  .friend-requests {
-    .loading-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 60px @nordic-space-lg;
-      color: @nordic-text-muted;
-
-      p {
-        margin-top: @nordic-space-md;
-        font-size: @nordic-text-base;
-      }
-    }
-
-    .empty-requests {
-      padding: 60px @nordic-space-lg;
-
-      .empty-icon-animated {
-        .empty-icon-circle {
-          width: 120px;
-          height: 120px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 64px;
-          margin: 0 auto 20px;
-          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-border 100%);
-          border-radius: 50%;
-          animation: emptyFloat 3s ease-in-out infinite;
-          box-shadow: 0 8px 24px @nordic-shadow;
-
-          &.friend-empty {
-            background: linear-gradient(135deg, @nordic-red-light 0%, fade(@nordic-red, 20%) 100%);
-            animation: waveHand 2s ease-in-out infinite;
-          }
-        }
-      }
-
-      :deep(.el-empty__description) {
-        animation: emptyFadeIn 0.8s ease-out 0.3s both;
-      }
-    }
-
-    .request-list {
-      display: flex;
-      flex-direction: column;
-      gap: @nordic-space-md;
-
-      .request-card {
-        .nordic-card();
-        border-radius: @nordic-radius-lg;
-
-        .request-content {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: @nordic-space-lg;
-
-          .requester-info {
-            display: flex;
-            align-items: center;
-            gap: @nordic-space-md;
-            flex: 1;
-
-            .requester-avatar {
-              width: 64px;
-              height: 64px;
-              border-radius: @nordic-radius-lg;
-              overflow: hidden;
-              background: @nordic-bg;
-              border: 1px solid @nordic-border;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              flex-shrink: 0;
-
-              img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-              }
-
-              .avatar-emoji {
-                font-size: @nordic-text-2xl;
-              }
-            }
-
-            .requester-details {
-              flex: 1;
-
-              .requester-name {
-                font-size: @nordic-text-md;
-                font-weight: 600;
-                color: @nordic-text;
-                margin: 0 0 6px 0;
-              }
-
-              .requester-id {
-                font-size: @nordic-text-sm;
-                color: @nordic-text-muted;
-                margin: 0 0 4px 0;
-              }
-
-              .request-time {
-                font-size: @nordic-text-xs;
-                color: @nordic-text-muted;
-                margin: 0;
-              }
-            }
-          }
-
-          .request-actions {
-            display: flex;
-            gap: 12px;
-            flex-shrink: 0;
-
-            .el-button {
-              border-radius: @nordic-radius-sm;
-              padding: 10px @nordic-space-lg;
-              font-weight: 500;
-              transition: all 0.3s ease;
-
-              &:hover {
-                transform: translateY(-1px);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 消息列表样式
-  .message-list-container {
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-
-    .message-toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px @nordic-space-md;
-      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-      border-radius: @nordic-radius-lg;
-      margin-bottom: @nordic-space-md;
-      box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
-
-      :deep(.el-checkbox__label) {
-        color: @nordic-surface;
-        font-weight: 500;
-      }
-
-      :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-        color: @nordic-surface;
-      }
-
-      :deep(.el-checkbox__inner) {
-        background-color: fade(@nordic-surface, 20%);
-        border-color: fade(@nordic-surface, 40%);
-      }
-
-      :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-        background-color: @nordic-surface;
-        border-color: @nordic-surface;
-      }
-
-      :deep(.el-checkbox__input.is-checked .el-checkbox__inner::after) {
-        border-color: @nordic-accent;
-      }
-
-      .toolbar-actions {
-        display: flex;
-        gap: 12px;
-      }
-    }
-
-    .message-list {
-      display: flex;
-      flex-direction: column;
-      gap: @nordic-space-lg;
-      transform: translateZ(0);
-      -webkit-transform: translateZ(0);
-    }
-
-    // 空状态包装器
-    .empty-state-wrapper {
-      padding: 40px @nordic-space-lg;
-
-      .empty-icon-animated {
-        .empty-icon-circle {
-          width: 120px;
-          height: 120px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 64px;
-          margin: 0 auto 20px;
-          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-border 100%);
-          border-radius: 50%;
-          animation: emptyFloat 3s ease-in-out infinite;
-          box-shadow: 0 8px 24px @nordic-shadow;
-        }
-      }
-
-      :deep(.el-empty__description) {
-        animation: emptyFadeIn 0.8s ease-out 0.3s both;
-      }
-
-      .empty-tips {
-        margin-top: @nordic-space-md;
-        padding: 12px @nordic-space-lg;
-        background: linear-gradient(135deg, @nordic-red-light 0%, fade(@nordic-red, 10%) 100%);
-        border-radius: @nordic-radius-sm;
-        animation: emptyFadeIn 0.8s ease-out 0.5s both;
-
-        p {
-          margin: 0;
-          font-size: @nordic-text-base;
-          color: @nordic-text-secondary;
-          text-align: center;
-        }
-      }
-    }
-  }
-
-  .message-card {
-    .nordic-card();
-    cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: @nordic-radius-lg;
-    will-change: transform;
-    margin-bottom: 17px;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-
-    &.unread {
-      border-left: 4px solid @nordic-blue;
-    }
-
-    &.selected {
-      background-color: @nordic-blue-light;
-    }
-
-    .message-card-content {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-
-      .message-checkbox {
-        margin-top: 20px;
-        flex-shrink: 0;
-      }
-
-      .message-body {
-        flex: 1;
-        cursor: pointer;
-      }
-
-      .message-actions {
-        display: flex;
-        flex-direction: column;
-        gap: @nordic-space-sm;
-        flex-shrink: 0;
-      }
-    }
-
-    .message-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-
-      .message-time {
-        font-size: @nordic-text-base;
-        color: @nordic-text-muted;
-      }
-    }
-
-    .message-content {
-      margin-bottom: 15px;
-
-      .message-title {
-        font-size: @nordic-text-md;
-        font-weight: bold;
-        margin-bottom: 5px;
-        margin: 0;
-        color: @nordic-text;
-      }
-
-      .message-text {
-        color: @nordic-text-secondary;
-        font-size: @nordic-text-base;
-        margin: 0;
-      }
-    }
-  }
-
-  /* 消息详情模态框样式 */
-  :deep(.message-detail-dialog) {
-    border-radius: @nordic-radius-lg;
-
-    .el-dialog__header {
-      padding: 0;
-      margin: 0;
-    }
-
-    .el-dialog__body {
-      padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-    }
-
-    .el-dialog__footer {
-      padding: @nordic-space-md @nordic-space-lg;
-      border-top: 1px solid @nordic-border;
-      border-radius: 0 0 @nordic-radius-lg @nordic-radius-lg;
-    }
-  }
-
-  .detail-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: @nordic-space-lg;
-    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-    border-radius: @nordic-radius-lg @nordic-radius-lg 0 0;
-    margin: -20px -20px 0 -20px;
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: @nordic-space-md;
-      flex: 1;
-
-      .detail-icon-wrapper {
-        width: 56px;
-        height: 56px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: fade(@nordic-surface, 25%);
-        border-radius: @nordic-radius-lg;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 4px 12px @nordic-shadow;
-
-        .detail-icon {
-          font-size: @nordic-text-xl;
-          filter: drop-shadow(0 2px 4px @nordic-shadow);
-        }
-      }
-
-      .header-title-section {
-        flex: 1;
-        color: @nordic-surface;
-
-        .detail-modal-title {
-          margin: 0 0 8px 0;
-          font-size: @nordic-text-lg;
-          font-weight: 600;
-          color: @nordic-surface;
-          line-height: 1.3;
-        }
-
-        .detail-meta {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-
-          .detail-time {
-            font-size: @nordic-text-sm;
-            opacity: 0.95;
-            color: @nordic-surface;
-          }
-        }
-      }
-    }
-  }
-
-  .message-detail-content {
-    .detail-body {
-      padding: @nordic-space-xl 0;
-
-      .detail-text {
-        font-size: 15px;
-        line-height: 1.8;
-        color: @nordic-text;
-        text-align: justify;
-        word-wrap: break-word;
-        white-space: pre-wrap;
-      }
-    }
-  }
-
-  .detail-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-  }
-}
-
-// 关键帧动画定义
-@keyframes emptyFloat {
-  0%,
-  100% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(-10px) scale(1.02);
-  }
-}
-
-@keyframes waveHand {
-  0%,
-  100% {
-    transform: rotate(0deg) scale(1);
-  }
-  25% {
-    transform: rotate(-10deg) scale(1.05);
-  }
-  75% {
-    transform: rotate(10deg) scale(1.05);
-  }
-}
-
-@keyframes emptyFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes ring {
-  0%, 100% {
-    transform: rotate(0deg);
-  }
-  10%, 30% {
-    transform: rotate(-10deg);
-  }
-  20%, 40% {
-    transform: rotate(10deg);
-  }
-  50% {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes slideInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.summary-fade-enter-active {
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.summary-fade-leave-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 1, 1);
-}
-
-.summary-fade-enter-from {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-
-.summary-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-20px) scale(0.95);
 }
 </style>
