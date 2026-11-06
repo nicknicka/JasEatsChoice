@@ -5,9 +5,10 @@ import { API_CONFIG } from '../../config/index.js'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from './../../store/authStore'
 import { useUserStore } from './../../store/userStore'
+import { useRouter } from 'vue-router'
 import { NORDIC_COLORS, NORDIC_NUTRITION_COLORS, NORDIC_NUTRITION_BG } from '../../constants/nordicTheme.js'
-// 新增图标导入
-import { ArrowDown, WarningFilled, CircleCheckFilled } from '@element-plus/icons-vue'
+import { ArrowDown, WarningFilled, CircleCheckFilled, Bowl } from '@element-plus/icons-vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
 
 // 卡路里统计数据
 const calorieData = ref({
@@ -63,6 +64,18 @@ const getCurrentUserId = () => {
   }
 
   return null
+}
+
+const router = useRouter()
+
+// 今日为零数据时展示空状态与「记录第一餐」入口
+const hasTodayData = computed(() => calorieData.value.today.consumed > 0)
+
+// 本周全为 0 时收起历史趋势，避免整页空而长
+const hasWeeklyData = computed(() => calorieData.value.weekly.some((day) => day.consumed > 0))
+
+const goRecordMeal = () => {
+  router.push('/user/home/diet-record')
 }
 
 const updateRemainingCalories = () => {
@@ -263,7 +276,7 @@ const getCalorieColor = (percentage) => {
   } else if (percentage > 100) {
     return NORDIC_COLORS.yellow
   } else {
-    return NORDIC_COLORS.blue
+    return NORDIC_COLORS.accent
   }
 }
 
@@ -351,13 +364,15 @@ const getNutritionBarStyle = (item) => {
 <template>
   <div class="nordic-calorie">
     <!-- 页面标题 -->
-    <div class="nordic-page-header">
-      <h2>卡路里统计</h2>
+    <header class="calorie-header">
+      <h1>卡路里统计</h1>
       <span class="header-date">{{ new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }) }}</span>
-    </div>
+    </header>
 
-    <!-- 今日摄入 - 圆环卡片 -->
-    <div class="today-hero nordic-card">
+    <!-- 今日状态 -->
+    <h2 class="section-title">今日状态</h2>
+
+    <div v-if="hasTodayData" class="today-hero nordic-card">
       <div class="hero-ring-wrapper">
         <svg class="ring-svg" viewBox="0 0 120 120">
           <circle class="ring-bg" cx="60" cy="60" r="54" />
@@ -376,23 +391,24 @@ const getNutritionBarStyle = (item) => {
       </div>
 
       <div class="hero-stats">
-        <div class="stat-pill">
-          <span class="stat-dot remaining"></span>
-          <span class="stat-num">{{ Math.max(0, calorieData.today.remaining) }}</span>
-          <span class="stat-txt">剩余</span>
+        <div class="stat-block">
+          <span class="stat-label">剩余额度</span>
+          <span class="stat-num">{{ Math.max(0, calorieData.today.remaining) }}<em>kcal</em></span>
         </div>
-        <div class="stat-pill">
-          <span class="stat-dot target"></span>
-          <span class="stat-num">{{ calorieData.today.target }}</span>
-          <span class="stat-txt">目标</span>
+        <div class="stat-block">
+          <span class="stat-label">每日目标</span>
+          <span class="stat-num">{{ calorieData.today.target }}<em>kcal</em></span>
         </div>
       </div>
     </div>
 
-    <!-- 营养摄入 -->
-    <div class="section-title">
-      <span>营养摄入</span>
+    <div v-else class="today-empty nordic-card">
+      <AppEmptyState description="今天还没有饮食记录" :icon="Bowl" />
+      <el-button type="primary" class="today-empty__action" @click="goRecordMeal">记录第一餐</el-button>
     </div>
+
+    <!-- 营养摄入 -->
+    <h2 class="section-title">营养摄入</h2>
 
     <div class="nutrition-grid">
       <div
@@ -442,48 +458,48 @@ const getNutritionBarStyle = (item) => {
       </transition>
     </div>
 
-    <!-- 本周统计 -->
-    <div class="section-title" style="margin-top: var(--nordic-space-xl, 32px);">
-      <span>本周趋势</span>
-    </div>
+    <!-- 历史趋势 -->
+    <template v-if="hasWeeklyData">
+      <h2 class="section-title">历史趋势</h2>
 
-    <div class="weekly-summary">
-      <div class="weekly-stat">
-        <span class="ws-value">{{ calorieData.weekly.reduce((s, i) => s + i.consumed, 0) }}</span>
-        <span class="ws-label">总摄入 kcal</span>
-      </div>
-      <div class="weekly-divider"></div>
-      <div class="weekly-stat">
-        <span class="ws-value">{{ Math.round(calorieData.weekly.reduce((s, i) => s + i.consumed, 0) / Math.max(calorieData.weekly.length, 1)) }}</span>
-        <span class="ws-label">日均 kcal</span>
-      </div>
-      <div class="weekly-divider"></div>
-      <div class="weekly-stat">
-        <span class="ws-value">{{ calorieData.today.target }}</span>
-        <span class="ws-label">每日目标</span>
-      </div>
-    </div>
-
-    <div class="weekly-chart nordic-card">
-      <div
-        v-for="(item, idx) in calorieData.weekly"
-        :key="item.day"
-        class="weekly-bar-row"
-        :class="{ today: idx === todayDayIndex }"
-      >
-        <span class="bar-day">{{ item.day }}</span>
-        <div class="bar-track">
-          <div
-            class="bar-fill"
-            :style="{
-              width: (weeklyMax > 0 ? (item.consumed / weeklyMax) * 100 : 0) + '%',
-              background: idx === todayDayIndex ? 'var(--nordic-accent, #D4845A)' : 'var(--nordic-blue, #6B9BD2)'
-            }"
-          ></div>
+      <div class="weekly-summary">
+        <div class="weekly-stat">
+          <span class="ws-value">{{ calorieData.weekly.reduce((s, i) => s + i.consumed, 0) }}</span>
+          <span class="ws-label">总摄入 kcal</span>
         </div>
-        <span class="bar-val">{{ item.consumed }}</span>
+        <div class="weekly-divider"></div>
+        <div class="weekly-stat">
+          <span class="ws-value">{{ Math.round(calorieData.weekly.reduce((s, i) => s + i.consumed, 0) / Math.max(calorieData.weekly.length, 1)) }}</span>
+          <span class="ws-label">日均 kcal</span>
+        </div>
+        <div class="weekly-divider"></div>
+        <div class="weekly-stat">
+          <span class="ws-value">{{ calorieData.today.target }}</span>
+          <span class="ws-label">每日目标</span>
+        </div>
       </div>
-    </div>
+
+      <div class="weekly-chart nordic-card">
+        <div
+          v-for="(item, idx) in calorieData.weekly"
+          :key="item.day"
+          class="weekly-bar-row"
+          :class="{ today: idx === todayDayIndex }"
+        >
+          <span class="bar-day">{{ item.day }}</span>
+          <div class="bar-track">
+            <div
+              class="bar-fill"
+              :style="{
+                width: (weeklyMax > 0 ? (item.consumed / weeklyMax) * 100 : 0) + '%',
+                background: idx === todayDayIndex ? 'var(--brand-500)' : 'var(--info)'
+              }"
+            ></div>
+          </div>
+          <span class="bar-val">{{ item.consumed }}</span>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -492,28 +508,28 @@ const getNutritionBarStyle = (item) => {
 
 .nordic-calorie {
   .nordic-page-container();
-  max-width: 800px;
+  max-width: var(--page-max);
   margin: 0 auto;
 }
 
-// --- 页面标题 ---
-.nordic-page-header {
+// --- 页面标题（§4.7 用户端标准版） ---
+.calorie-header {
   display: flex;
   align-items: baseline;
-  gap: 12px;
-  margin-bottom: @nordic-space-lg;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
 
-  h2 {
-    font-size: @nordic-text-xl;
-    font-weight: 700;
-    color: @nordic-text;
+  h1 {
+    font-size: var(--text-h1);
+    font-weight: var(--weight-semibold);
+    color: var(--ink-900);
     margin: 0;
-    letter-spacing: -0.5px;
+    letter-spacing: var(--tracking-tight);
   }
 
   .header-date {
-    font-size: @nordic-text-sm;
-    color: @nordic-text-muted;
+    font-size: var(--text-body-sm);
+    color: var(--ink-400);
   }
 }
 
@@ -527,16 +543,15 @@ const getNutritionBarStyle = (item) => {
 .today-hero {
   display: flex;
   align-items: center;
-  gap: 40px;
-  padding: 32px;
-  margin-bottom: @nordic-space-lg;
-  .nordic-animate-fade();
+  gap: var(--space-8);
+  padding: var(--space-8);
+  margin-bottom: var(--space-6);
 }
 
 .hero-ring-wrapper {
   position: relative;
-  width: 160px;
-  height: 160px;
+  width: 168px;
+  height: 168px;
   flex-shrink: 0;
 
   .ring-svg {
@@ -555,7 +570,7 @@ const getNutritionBarStyle = (item) => {
     fill: none;
     stroke-width: 8;
     stroke-linecap: round;
-    transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: stroke-dashoffset var(--duration-num) var(--ease-out);
   }
 
   .ring-center {
@@ -565,72 +580,83 @@ const getNutritionBarStyle = (item) => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: var(--space-1);
 
     .ring-value {
-      font-size: 36px;
-      font-weight: 700;
-      color: @nordic-text;
-      letter-spacing: -1px;
+      font-family: var(--font-num);
+      font-size: var(--text-display);
+      font-weight: var(--weight-bold);
+      color: var(--ink-900);
       line-height: 1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: var(--tracking-tight);
     }
 
     .ring-label {
-      font-size: @nordic-text-xs;
-      color: @nordic-text-muted;
-      margin-top: 4px;
+      font-size: var(--text-body-sm);
+      color: var(--ink-500);
     }
   }
 }
 
 .hero-stats {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   flex: 1;
+  min-width: 0;
 
-  .stat-pill {
+  .stat-block {
+    flex: 1;
+    min-width: 0;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    background: @nordic-bg;
-    border-radius: @nordic-radius-md;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-5);
+    background: var(--canvas);
+    border-radius: var(--radius-md);
 
-    .stat-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-
-      &.remaining { background: @nordic-green; }
-      &.target { background: @nordic-blue; }
+    .stat-label {
+      font-size: var(--text-body-sm);
+      color: var(--ink-500);
     }
 
     .stat-num {
-      font-size: @nordic-text-lg;
-      font-weight: 600;
-      color: @nordic-text;
-    }
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-1);
+      font-family: var(--font-num);
+      font-size: var(--text-h1);
+      font-weight: var(--weight-bold);
+      color: var(--ink-900);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: var(--tracking-tight);
 
-    .stat-txt {
-      font-size: @nordic-text-sm;
-      color: @nordic-text-muted;
+      em {
+        font-style: normal;
+        font-size: var(--text-body-sm);
+        font-weight: var(--weight-medium);
+        color: var(--ink-400);
+      }
     }
   }
 }
 
-// --- 分区标题 ---
-.section-title {
+// --- 今日空状态 ---
+.today-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-bottom: @nordic-space-md;
+  padding: 0 0 var(--space-6);
+  margin-bottom: var(--space-6);
+}
 
-  span {
-    font-size: @nordic-text-md;
-    font-weight: 600;
-    color: @nordic-text;
-  }
+// --- 分区标题 ---
+h2.section-title {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
+  margin: 0 0 var(--space-4);
+  letter-spacing: var(--tracking-normal);
 }
 
 // --- 营养摄入 ---
@@ -779,7 +805,7 @@ const getNutritionBarStyle = (item) => {
     padding: 12px 16px;
     background: @nordic-green-light;
     border-radius: @nordic-radius-md;
-    color: #4a7a4d;
+    color: var(--success);
     font-size: @nordic-text-sm;
 
     .ok-icon {
