@@ -12,6 +12,7 @@ import {
   VideoCamera,
   ArrowRight,
   Star,
+  StarFilled,
   Share,
   Coffee,
   Document,
@@ -201,6 +202,8 @@ const fetchRecommendedDishes = async () => {
           name: rec.name,
           image: resolveDishImage(rec.image),
           category: rec.recommendSource || rec.type || '推荐',
+          price: rec.price,
+          merchantName: rec.merchantName || rec.merchant?.name || rec.shopName || '',
           kcal: rec.calories || 0, // 使用kcal字段以兼容模板
           calories: rec.calories || 0, // 同时保留calories字段
           tags: tagsString, // 转换为字符串
@@ -449,6 +452,11 @@ const recommendEmptyMessage = computed(() => {
 const formatKcal = (value) => {
   const kcal = Number(value)
   return Number.isFinite(kcal) && kcal > 0 ? `${Math.round(kcal)} kcal` : '热量待补'
+}
+
+const formatPrice = (value) => {
+  const price = Number(value)
+  return Number.isFinite(price) && price > 0 ? `¥${price.toFixed(2)}` : ''
 }
 
 // 问候语
@@ -960,6 +968,7 @@ watch(
             @click="handleDishClick(dish)"
             tabindex="0"
             @keyup.enter="handleDishClick(dish)"
+            @keyup.space.prevent="handleDishClick(dish)"
           >
             <div class="rec-card-image">
               <img :src="dish.image || defaultDishImage" :alt="dish.name" loading="lazy" @error="handleImageError" />
@@ -969,21 +978,26 @@ watch(
                   <el-icon><Share /></el-icon>
                 </button>
                 <button
-                  class="rec-action-btn"
+                  class="rec-action-btn rec-action-btn--favorite"
                   :class="{ 'is-fav': isFavorite(dish) }"
                   @click="toggleFavorite(dish, $event)"
                   :title="isFavorite(dish) ? '取消收藏' : '收藏'"
                 >
-                  <el-icon><Star /></el-icon>
+                  <el-icon>
+                    <StarFilled v-if="isFavorite(dish)" />
+                    <Star v-else />
+                  </el-icon>
                 </button>
               </div>
             </div>
             <div class="rec-card-body">
               <h3 class="rec-dish-name">{{ dish.name }}</h3>
+              <p v-if="dish.merchantName" class="rec-merchant">{{ dish.merchantName }}</p>
               <div class="rec-dish-meta">
+                <span v-if="formatPrice(dish.price)" class="rec-price">{{ formatPrice(dish.price) }}</span>
                 <span class="rec-kcal">{{ formatKcal(dish.kcal) }}</span>
-                <span v-if="dish.tags" class="rec-tags">{{ dish.tags }}</span>
               </div>
+              <p v-if="dish.tags" class="rec-tags">{{ dish.tags }}</p>
               <div class="rec-rating">
                 <el-rate
                   v-if="dish.rating && dish.rating > 0"
@@ -1000,8 +1014,15 @@ watch(
       </section>
 
       <!-- 今日热点 -->
-      <section v-if="hotTopic.content" class="hot-section fade-in-up-delay-300" @click="handleHotTopicClick">
-        <div class="hot-card" :class="{ clickable: hotTopic.clickable }">
+      <section v-if="hotTopic.content" class="hot-section fade-in-up-delay-300">
+        <div
+          class="hot-card"
+          role="button"
+          tabindex="0"
+          @click="handleHotTopicClick"
+          @keyup.enter="handleHotTopicClick"
+          @keyup.space.prevent="handleHotTopicClick"
+        >
           <div class="hot-left">
             <span class="hot-emoji"><el-icon><Promotion /></el-icon></span>
             <span class="hot-badge">HOT</span>
@@ -1010,7 +1031,7 @@ watch(
             <span class="hot-label">今日热点</span>
             <p class="hot-content">{{ hotTopic.content }}</p>
           </div>
-          <el-icon v-if="hotTopic.clickable" class="hot-arrow"><ArrowRight /></el-icon>
+          <el-icon class="hot-arrow"><ArrowRight /></el-icon>
         </div>
       </section>
 
@@ -1175,7 +1196,7 @@ watch(
 @savour-pill: 100px;
 
 .font-display() {
-  font-family: 'Georgia', 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  font-family: var(--font-sans);
 }
 
 // ===== 动画 =====
@@ -1222,6 +1243,11 @@ watch(
   overflow: hidden;
   box-sizing: border-box;
 
+  button:focus-visible {
+    outline: 2px solid var(--brand-500);
+    outline-offset: 2px;
+  }
+
   // 噪点纹理
   .noise-layer {
     position: fixed;
@@ -1261,17 +1287,17 @@ watch(
 
 // ===== 英雄区域 =====
 .hero-section {
-  margin-bottom: @nordic-space-lg;
+  margin-bottom: var(--space-8);
 
   .hero-grid {
     display: grid;
-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-    gap: @nordic-space-lg;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-5);
     align-items: stretch;
   }
 
   .hero-greeting {
-    min-height: 196px;
+    min-height: 160px;
     display: flex;
     flex-direction: column;
 
@@ -1286,18 +1312,18 @@ watch(
 
     .greeting-title {
       .font-display();
-      font-size: 36px;
-      font-weight: 700;
-      color: @savour-text;
-      margin: 0 0 @nordic-space-sm;
-      letter-spacing: -0.5px;
-      line-height: 1.2;
+      font-size: var(--text-h1);
+      font-weight: var(--weight-semibold);
+      color: var(--ink-900);
+      margin: 0 0 var(--space-3);
+      letter-spacing: var(--tracking-tight);
+      line-height: 32px;
     }
 
     .greeting-date {
-      font-size: @nordic-text-sm;
-      color: @savour-text-sec;
-      margin: 0 0 @nordic-space-lg;
+      font-size: var(--text-body-sm);
+      color: var(--ink-500);
+      margin: 0 0 var(--space-5);
     }
 
     .hero-actions {
@@ -1356,10 +1382,10 @@ watch(
 
   .hero-weather {
     .weather-skeleton {
-      min-height: 196px;
-      background: @savour-surface;
-      border-radius: @savour-radius-lg;
-      border: 1px solid @savour-border;
+      min-height: 176px;
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
       overflow: hidden;
     }
 
@@ -1373,12 +1399,12 @@ watch(
       --card-text-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
       --card-subtle-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 
-      border-radius: @savour-radius-lg;
+      border-radius: var(--radius-lg);
       overflow: hidden;
       position: relative;
-      min-height: 196px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      min-height: 176px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow var(--duration-fast) var(--ease-standard);
 
       &::before {
         content: '';
@@ -1391,37 +1417,37 @@ watch(
       }
 
       &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        transform: none;
+        box-shadow: var(--shadow-md);
       }
 
       .weather-inner {
         position: relative;
         z-index: 1;
-        padding: 24px;
+        padding: var(--space-4) var(--space-5);
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: var(--space-2);
         color: var(--card-text);
       }
 
       .weather-temp-row {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: var(--space-2);
 
         .weather-icon {
-          font-size: 40px;
+          font-size: 28px;
           color: #fff;
           filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
           animation: weather-float 3s ease-in-out infinite;
         }
 
         .weather-temp-value {
-          font-size: 56px;
-          font-weight: 800;
+          font-size: 36px;
+          font-weight: var(--weight-bold);
           line-height: 1;
-          letter-spacing: -2px;
+          letter-spacing: -1px;
           background: var(--card-text-gradient);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -1431,25 +1457,25 @@ watch(
       }
 
       .weather-range {
-        font-size: 18px;
-        font-weight: 500;
+        font-size: var(--text-body-sm);
+        font-weight: var(--weight-medium);
         opacity: 0.9;
         text-shadow: var(--card-subtle-shadow);
-        margin-top: -4px;
+        margin-top: 0;
       }
 
       .weather-condition {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 6px 16px;
+        gap: var(--space-2);
+        padding: var(--space-1) var(--space-3);
         background: var(--card-glass-bg);
         backdrop-filter: blur(10px);
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: 600;
+        border-radius: var(--radius-full);
+        font-size: var(--text-caption);
+        font-weight: var(--weight-semibold);
         cursor: pointer;
-        transition: background 0.2s ease;
+        transition: background-color var(--duration-fast) var(--ease-standard);
         border: 1px solid var(--card-glass-border);
         align-self: flex-start;
         text-shadow: var(--card-subtle-shadow);
@@ -1460,8 +1486,8 @@ watch(
       .weather-location {
         display: flex;
         align-items: center;
-        gap: 6px;
-        font-size: 14px;
+        gap: var(--space-1);
+        font-size: var(--text-body-sm);
 
         .location-name {
           font-weight: 500;
@@ -1473,15 +1499,15 @@ watch(
         }
 
         .location-change-btn {
-          padding: 4px 12px;
+          padding: 3px var(--space-2);
           background: var(--card-glass-bg);
           border: 1px solid var(--card-glass-border-strong);
-          border-radius: 12px;
+          border-radius: var(--radius-md);
           color: var(--card-text);
-          font-size: 12px;
+          font-size: var(--text-caption);
           cursor: pointer;
           backdrop-filter: blur(8px);
-          transition: all 0.2s ease;
+          transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
 
           &:hover {
             background: var(--card-glass-bg-hover);
@@ -1493,19 +1519,19 @@ watch(
       .weather-recommendation {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 10px 16px;
+        gap: var(--space-1);
+        padding: 6px 10px;
         background: var(--card-glass-bg);
         backdrop-filter: blur(10px);
-        border-radius: 12px;
+        border-radius: var(--radius-md);
         border: 1px solid var(--card-glass-border);
-        font-size: 14px;
-        font-weight: 600;
-        margin-top: 4px;
+        font-size: var(--text-caption);
+        font-weight: var(--weight-semibold);
+        margin-top: 0;
 
         .sparkle {
           animation: sparkle-pulse 2s ease-in-out infinite;
-          font-size: 18px;
+          font-size: 14px;
         }
 
         .rec-text {
@@ -1593,21 +1619,23 @@ watch(
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: @nordic-space-md;
+  margin-bottom: var(--space-5);
 
   .section-title {
     .font-display();
-    font-size: 24px;
-    font-weight: 700;
-    color: @savour-text;
+    font-size: var(--text-h2);
+    line-height: 28px;
+    font-weight: var(--weight-semibold);
+    color: var(--ink-900);
     margin: 0;
-    letter-spacing: -0.3px;
+    letter-spacing: var(--tracking-tight);
   }
 
   .section-subtitle {
-    font-size: @nordic-text-sm;
-    color: @savour-text-sec;
-    margin: 4px 0 0;
+    font-size: var(--text-body-sm);
+    line-height: 20px;
+    color: var(--ink-500);
+    margin: var(--space-1) 0 0;
   }
 
   .view-all-link {
@@ -1634,7 +1662,7 @@ watch(
 
 // ===== 推荐区域 =====
 .recs-section {
-  margin-bottom: @nordic-space-xl;
+  margin-bottom: var(--space-10);
 }
 
 .rec-grid,
@@ -1646,98 +1674,145 @@ watch(
   gap: @nordic-space-lg;
 }
 
+.rec-grid {
+  gap: var(--card-gap);
+  grid-auto-rows: 1fr;
+}
+
 .rec-card {
   width: 100%;
-  border-radius: @savour-radius;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid @savour-border;
-  background: @savour-surface;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
 
   &:hover {
-    transform: translateY(-4px);
-    border-color: rgba(198, 123, 92, 0.35);
-    box-shadow: 0 10px 24px rgba(45, 42, 38, 0.08);
+    transform: translateY(-2px);
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-md);
 
-    .rec-card-image img { transform: scale(1.04); }
     .rec-action-btn { opacity: 1; }
   }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-500);
+    outline-offset: 2px;
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+  }
+
+  &:focus-within .rec-action-btn { opacity: 1; }
 
   .rec-card-image {
     position: relative;
     width: 100%;
     aspect-ratio: 4 / 3;
     overflow: hidden;
-    background: @savour-bg;
+    background: var(--canvas-sunken);
+    flex-shrink: 0;
 
     img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.4s ease;
     }
 
     .rec-category-badge {
       position: absolute;
-      top: 12px;
-      left: 12px;
+      top: var(--space-3);
+      left: var(--space-3);
       z-index: 2;
-      padding: 4px 8px;
-      background: rgba(0, 0, 0, 0.45);
-      color: #fff;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
+      padding: var(--space-1) var(--space-2);
+      background: var(--overlay);
+      color: var(--surface);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-caption);
+      font-weight: var(--weight-semibold);
       backdrop-filter: blur(4px);
     }
 
     .rec-card-actions {
       position: absolute;
-      top: 12px;
-      right: 12px;
+      top: var(--space-3);
+      right: var(--space-3);
       z-index: 2;
       display: flex;
-      gap: 8px;
+      gap: var(--space-2);
     }
 
     .rec-action-btn {
       width: 32px;
       height: 32px;
-      border-radius: 50%;
-      border: none;
-      background: rgba(255, 255, 255, 0.9);
-      color: @savour-text;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink-700);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       opacity: 0;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-      transition: all 0.2s ease;
+      box-shadow: var(--shadow-sm);
+      transition:
+        background-color var(--duration-fast) var(--ease-standard),
+        color var(--duration-fast) var(--ease-standard),
+        opacity var(--duration-fast) var(--ease-standard);
 
       &:hover {
-        background: #fff;
-        color: @savour-accent;
-        transform: scale(1.06);
+        background: var(--brand-50);
+        color: var(--brand-600);
+      }
+
+      &:focus-visible {
+        opacity: 1;
+        outline: 2px solid var(--brand-500);
+        outline-offset: 2px;
       }
 
       &.is-fav {
         opacity: 1;
-        color: @savour-gold;
+        color: var(--brand-500);
       }
     }
+
+    .rec-action-btn--favorite { opacity: 1; }
   }
 
   .rec-card-body {
-    padding: 16px;
+    padding: var(--card-padding);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 
     .rec-dish-name {
-      font-size: 17px;
-      font-weight: 700;
-      color: @savour-text;
-      margin: 0 0 10px;
+      font-size: var(--text-h3);
+      line-height: 24px;
+      font-weight: var(--weight-semibold);
+      color: var(--ink-900);
+      margin: 0 0 var(--space-1);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rec-merchant {
+      min-height: 20px;
+      margin: 0 0 var(--space-2);
+      color: var(--ink-500);
+      font-size: var(--text-body-sm);
+      line-height: 20px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -1746,48 +1821,63 @@ watch(
     .rec-dish-meta {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
+      gap: var(--space-2);
+      margin-bottom: var(--space-2);
       min-height: 24px;
 
-      .rec-kcal {
-        padding: 3px 8px;
-        background: @savour-accent-light;
-        border-radius: 6px;
-        color: @savour-accent-hover;
-        font-size: 12px;
-        font-weight: 600;
+      .rec-price {
+        color: var(--ink-900);
+        font-family: var(--font-num);
+        font-size: var(--text-h3);
+        font-variant-numeric: tabular-nums;
+        font-weight: var(--weight-semibold);
+        line-height: 24px;
         white-space: nowrap;
       }
 
-      .rec-tags {
-        color: @savour-text-sec;
-        font-size: 12px;
-        overflow: hidden;
-        text-overflow: ellipsis;
+      .rec-kcal {
+        padding: 2px var(--space-2);
+        background: var(--neutral-bg);
+        border-radius: var(--radius-sm);
+        color: var(--ink-500);
+        font-size: var(--text-caption);
+        font-weight: var(--weight-medium);
+        line-height: 18px;
         white-space: nowrap;
       }
+    }
+
+    .rec-tags {
+      min-height: 18px;
+      margin: 0 0 var(--space-2);
+      color: var(--ink-400);
+      font-size: var(--text-caption);
+      line-height: 18px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .rec-rating {
       display: flex;
       align-items: center;
-      min-height: 18px;
+      min-height: 20px;
+      margin-top: auto;
 
-      :deep(.el-rate) { height: 18px; }
+      :deep(.el-rate) { height: 20px; }
       :deep(.el-rate__icon) {
-        color: @savour-gold;
+        color: var(--warning);
         margin-right: 2px;
       }
       :deep(.el-rate__text) {
-        color: @savour-text-sec !important;
-        font-size: 12px;
+        color: var(--ink-500) !important;
+        font-size: var(--text-caption);
       }
     }
 
     .no-rating {
-      color: @savour-text-muted;
-      font-size: 12px;
+      color: var(--ink-400);
+      font-size: var(--text-caption);
     }
   }
 }
@@ -1848,55 +1938,63 @@ watch(
 
 // ===== 今日热点 =====
 .hot-section {
-  margin-bottom: @nordic-space-lg;
-  cursor: pointer;
+  margin-bottom: var(--space-8);
 
   .hot-card {
     display: flex;
     align-items: center;
-    gap: @nordic-space-md;
-    padding: @nordic-space-md @nordic-space-lg;
-    background: @savour-surface;
-    border-radius: @savour-radius;
-    border: 1px solid @savour-border;
-    border-left: 4px solid #E25B45;
-    transition: all 0.25s ease;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    background: var(--brand-50);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--brand-500);
+    cursor: pointer;
+    transition:
+      transform var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard);
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+      border-color: var(--line-strong);
+      border-left-color: var(--brand-600);
+
+      .hot-arrow { transform: translateX(4px); }
     }
 
-    &.clickable {
-      cursor: pointer;
+    &:focus-visible {
+      outline: 2px solid var(--brand-500);
+      outline-offset: 2px;
+    }
 
-      &:hover {
-        box-shadow: 0 8px 24px rgba(226, 91, 69, 0.12);
-        .hot-arrow { transform: translateX(4px); }
-      }
+    &:active {
+      transform: translateY(0);
+      box-shadow: none;
     }
 
     .hot-left {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: var(--space-2);
       flex-shrink: 0;
 
       .hot-emoji {
         display: inline-flex;
         align-items: center;
-        color: #E25B45;
+        color: var(--brand-600);
         font-size: 24px;
       }
 
       .hot-badge {
-        padding: 4px 10px;
-        background: linear-gradient(135deg, #E25B45, #FF7B5C);
-        color: #fff;
-        border-radius: 12px;
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 1px;
+        padding: var(--space-1) var(--space-2);
+        background: var(--brand-100);
+        color: var(--brand-700);
+        border-radius: var(--radius-full);
+        font-size: var(--text-caption);
+        font-weight: var(--weight-bold);
+        letter-spacing: var(--tracking-wide);
       }
     }
 
@@ -1905,18 +2003,18 @@ watch(
       min-width: 0;
 
       .hot-label {
-        font-size: 12px;
-        color: @savour-text-muted;
-        font-weight: 600;
+        font-size: var(--text-caption);
+        color: var(--ink-500);
+        font-weight: var(--weight-semibold);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: var(--tracking-wide);
       }
 
       .hot-content {
-        font-size: 15px;
-        font-weight: 600;
-        color: @savour-text;
-        margin: 4px 0 0;
+        font-size: var(--text-body);
+        font-weight: var(--weight-semibold);
+        color: var(--ink-900);
+        margin: var(--space-1) 0 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -1924,9 +2022,9 @@ watch(
     }
 
     .hot-arrow {
-      color: #E25B45;
+      color: var(--brand-600);
       font-size: 18px;
-      transition: transform 0.2s ease;
+      transition: transform var(--duration-fast) var(--ease-standard);
       flex-shrink: 0;
     }
   }
@@ -2125,7 +2223,7 @@ watch(
 @media (max-width: 900px) {
   .hero-section .hero-grid {
     grid-template-columns: 1fr;
-    gap: @nordic-space-md;
+    gap: var(--space-5);
   }
 
   .hero-greeting {
@@ -2133,21 +2231,21 @@ watch(
   }
 
   .hero-greeting .greeting-title {
-    font-size: 28px;
+    font-size: var(--text-h1);
   }
 
   .weather-card {
-    min-height: 220px;
+    min-height: auto;
   }
 }
 
 @media (max-width: 600px) {
   .home-scroll-container {
-    padding: 16px 16px 32px;
+    padding: var(--space-4) var(--space-4) var(--space-8);
   }
 
   .hero-greeting .greeting-title {
-    font-size: 26px;
+    font-size: var(--text-h1);
   }
 
   .hero-actions .action-pill {
