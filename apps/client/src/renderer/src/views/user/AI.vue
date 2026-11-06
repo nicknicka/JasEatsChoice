@@ -1,12 +1,14 @@
 <template>
   <el-main class="ai-page-content">
-    <header class="page-header">
-      <h2>AI饮食助手</h2>
-      <div class="status-badge" :class="{ offline: aiStatus !== '在线' }">
-        <span class="status-dot"></span>
-        {{ aiStatus }}
-      </div>
-    </header>
+    <!-- 页头：标准版，标题 --text-h1 + 上下 --space-6（§4.7）；状态徽章进右侧动作区 -->
+    <AppPageHeader title="AI饮食助手">
+      <template #actions>
+        <span class="status-badge" :class="{ offline: aiStatus !== '在线' }">
+          <span class="status-dot"></span>
+          {{ aiStatus }}
+        </span>
+      </template>
+    </AppPageHeader>
 
     <nav class="tab-nav">
       <div class="tab-nav-track">
@@ -30,7 +32,7 @@
       </div>
     </nav>
 
-    <div v-if="capabilityNotice" class="capability-notice">
+    <div v-if="capabilityNotice && !aiUnavailable" class="capability-notice">
       {{ capabilityNotice }}
     </div>
 
@@ -42,16 +44,29 @@
           :key="activeTab"
           ref="aiChatRef"
           class="tab-pane"
+          :inert="chatUnavailable || undefined"
           v-bind="activeTab === 'recipe' ? { recipeStreamTimeoutMs } : {}"
         />
       </keep-alive>
+
+      <!-- 未配置 / 状态未知：对话工作区转为不可用态，只保留说明与重试入口（§4.5、§4.6） -->
+      <AppEmptyState
+        v-if="chatUnavailable"
+        class="ai-workspace-unavailable"
+        :icon="Warning"
+        :description="unavailableText"
+        action-text="重试"
+        @action="retryCapabilities"
+      />
     </div>
   </el-main>
 </template>
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onActivated, defineAsyncComponent, h, markRaw } from 'vue'
-import { ChatRound, Camera, Document, Link as LinkIcon } from '@element-plus/icons-vue'
+import { ChatRound, Camera, Document, Link as LinkIcon, Warning } from '@element-plus/icons-vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
 import AiChatFull from './AI/components/AIChatFull.vue'
 import { API_CONFIG } from '../../config'
 
@@ -61,7 +76,7 @@ const DishRecognition = defineAsyncComponent(() =>
 
 const RecipeOptimization = defineAsyncComponent({
   loader: () => import('./AI/components/RecipeOptimization.vue'),
-  errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: #909399;' }, [
+  errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: var(--ink-500);' }, [
     h('p', '食谱优化组件加载失败'),
     h('p', { style: 'font-size: 14px; margin-top: 8px;' }, '请刷新页面重试')
   ]),
@@ -71,7 +86,7 @@ const RecipeOptimization = defineAsyncComponent({
 
 const ContentExtractionTab = defineAsyncComponent({
   loader: () => import('./AI/components/ContentExtractionTab.vue'),
-  errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: #909399;' }, [
+  errorComponent: () => h('div', { style: 'padding: 20px; text-align: center; color: var(--ink-500);' }, [
     h('p', '内容提取组件加载失败'),
     h('p', { style: 'font-size: 14px; margin-top: 8px;' }, '请刷新页面重试')
   ]),
@@ -139,6 +154,25 @@ const capabilityNotice = computed(() => {
   if (capabilities.value?.streaming !== true) unavailable.push('食谱优化')
   return unavailable.length > 0 ? `${unavailable.join('、')}暂未开放` : ''
 })
+
+// 未配置或状态未知：对话能力整体不可用
+const aiUnavailable = computed(
+  () => capabilitiesLoaded.value && (!!capabilitiesError.value || capabilities.value?.available !== true)
+)
+
+// 仅当前停在对话 tab 时才锁工作区，切到「内容提取」等仍可正常使用
+const chatUnavailable = computed(() => aiUnavailable.value && activeTab.value === 'chat')
+
+const unavailableText = computed(() => {
+  if (capabilitiesError.value) return capabilitiesError.value
+  return capabilities.value?.unavailableMessage || 'AI 助手暂不可用'
+})
+
+const retryCapabilities = () => {
+  capabilitiesError.value = ''
+  capabilitiesLoaded.value = false
+  loadCapabilities()
+}
 
 const sliderStyle = computed(() => ({
   left: `${sliderLeft.value}px`,
@@ -217,78 +251,60 @@ onActivated(() => {
 </script>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
 .ai-page-content {
-  padding: 20px 20px 0 20px;
-  background-color: @nordic-bg;
-  height: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  max-width: 1400px;
-  width: 95%;
+  height: 100%;
+  width: 100%;
+  max-width: var(--page-max);
   margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-6);
+  background-color: var(--canvas);
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
+/* 状态徽章：进页头右侧动作区，未配置/状态未知统一走中性色（§4.7、§5.3） */
+.status-badge {
+  display: inline-flex;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid @nordic-border;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
 
-  h2 {
-    font-size: @nordic-text-xl;
-    font-weight: 700;
-    margin: 0;
-    color: @nordic-text;
-    letter-spacing: -0.5px;
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: statusPulse 2s ease-in-out infinite;
   }
 
-  .status-badge {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    background: @nordic-green-light;
-    color: @nordic-green-dark;
-    border-radius: @nordic-radius-pill;
-    font-size: @nordic-text-sm;
-    font-weight: 600;
-
-    &.offline {
-      background: @nordic-border;
-      color: @nordic-text-secondary;
-
-      .status-dot {
-        background: @nordic-text-secondary;
-        animation: none;
-      }
-    }
+  &.offline {
+    background: var(--neutral-bg);
+    color: var(--ink-500);
 
     .status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: @nordic-green;
-      animation: statusPulse 2s ease-in-out infinite;
+      animation: none;
     }
   }
 }
 
 .tab-nav {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
   flex-shrink: 0;
 
   .tab-nav-track {
     display: inline-flex;
     position: relative;
-    background: @nordic-border;
-    border-radius: 12px;
-    padding: 4px;
-    gap: 4px;
+    background: var(--line);
+    border-radius: var(--radius-lg);
+    padding: var(--space-1);
+    gap: var(--space-1);
   }
 
   .tab-btn {
@@ -296,79 +312,97 @@ onActivated(() => {
     z-index: 1;
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 10px 20px;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-5);
     border: none;
     background: transparent;
-    color: @nordic-text-secondary;
+    color: var(--ink-500);
     font-family: inherit;
-    font-size: @nordic-text-base;
-    font-weight: 500;
+    font-size: var(--text-body);
+    font-weight: var(--weight-medium);
     cursor: pointer;
-    border-radius: 9px;
-    transition: color 0.3s ease;
+    border-radius: var(--radius-md);
+    transition: color var(--duration-fast) var(--ease-out);
     white-space: nowrap;
 
     &:hover:not(.active) {
-      color: @nordic-text;
+      color: var(--ink-900);
     }
 
     &.active {
-      color: @nordic-text;
-      font-weight: 600;
+      color: var(--ink-900);
+      font-weight: var(--weight-semibold);
     }
 
     &.disabled,
     &:disabled {
-      color: @nordic-text-secondary;
+      color: var(--ink-400);
       cursor: not-allowed;
       opacity: 0.65;
     }
 
     .tab-unavailable {
-      padding: 1px 5px;
-      border-radius: 4px;
-      background: @nordic-border;
-      color: @nordic-text-secondary;
-      font-size: 11px;
-      font-weight: 500;
+      padding: 1px var(--space-1);
+      border-radius: var(--radius-sm);
+      background: var(--neutral-bg);
+      color: var(--ink-500);
+      font-size: var(--text-caption);
+      font-weight: var(--weight-medium);
     }
   }
 }
 
+/* 提示条：降到副信息层级，不与工作区抢主次（§3.4、§4.6） */
 .capability-notice {
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: @nordic-border;
-  color: @nordic-text-secondary;
-  font-size: @nordic-text-sm;
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--canvas-sunken);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
 }
 
 .tab-slider {
-    position: absolute;
-    top: 4px;
-    bottom: 4px;
-    background: @nordic-surface;
-    border-radius: 9px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.04);
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 0;
+  position: absolute;
+  top: var(--space-1);
+  bottom: var(--space-1);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--duration-base) var(--ease-in-out);
+  z-index: 0;
 }
 
+/* 对话工作区：固定高度、内部滚动、输入框固定在底部（§4.6） */
 .tab-content-area {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background: @nordic-surface;
-  border-radius: @nordic-radius-lg;
-  box-shadow: 0 2px 12px @nordic-shadow;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 
   .tab-pane {
     height: 100%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+}
+
+/* 不可用态：覆盖对话工作区，只留图标 + 说明 + 重试（§4.5、§4.6） */
+.ai-workspace-unavailable {
+  position: absolute;
+  inset: 0;
+  background: var(--surface);
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-badge .status-dot {
+    animation: none;
   }
 }
 
