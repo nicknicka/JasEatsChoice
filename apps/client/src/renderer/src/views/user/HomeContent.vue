@@ -1179,18 +1179,18 @@ watch(
 @import '../../assets/css/nordic-theme.less';
 
 // ===== Savour 设计系统 =====
-// tokens.css 的编译期镜像，待退役；颜色函数要求这里的值保持静态字面量。
-@savour-bg: #FBF7F3;
-@savour-surface: #FFFFFF;
-@savour-text: #1F1B18;
-@savour-text-sec: #6B625B;
-@savour-text-muted: #8C8179;
-@savour-accent: #ED6A42;
-@savour-accent-hover: #D9532C;
-@savour-accent-light: #FDE4D8;
-@savour-green: #2E9E5B;
-@savour-gold: #E08A00;
-@savour-border: #E8E1DA;
+// tokens.css 的引用镜像，待退役；页内已无 Less 颜色函数依赖静态字面量。
+@savour-bg: var(--canvas);
+@savour-surface: var(--surface);
+@savour-text: var(--ink-900);
+@savour-text-sec: var(--ink-500);
+@savour-text-muted: var(--ink-400);
+@savour-accent: var(--brand-500);
+@savour-accent-hover: var(--brand-600);
+@savour-accent-light: var(--brand-100);
+@savour-green: var(--success);
+@savour-gold: var(--warning);
+@savour-border: var(--line);
 @savour-radius: 16px;
 @savour-radius-lg: 24px;
 @savour-pill: 100px;
@@ -1352,20 +1352,20 @@ watch(
           border-color: @savour-accent;
           background: @savour-accent-light;
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(198, 123, 92, 0.15);
+          box-shadow: var(--shadow-md);
         }
 
         &:active { transform: translateY(0); }
 
         &.pill-primary {
           background: @savour-accent;
-          color: #fff;
+          color: var(--surface);
           border-color: @savour-accent;
 
           &:hover {
             background: @savour-accent-hover;
             border-color: @savour-accent-hover;
-            box-shadow: 0 4px 16px rgba(198, 123, 92, 0.3);
+            box-shadow: var(--shadow-md);
           }
         }
 
@@ -1390,14 +1390,14 @@ watch(
     }
 
     .weather-card {
-      --card-glass-bg: rgba(255, 255, 255, 0.15);
-      --card-glass-bg-hover: rgba(255, 255, 255, 0.2);
-      --card-glass-border: rgba(255, 255, 255, 0.22);
-      --card-glass-border-strong: rgba(255, 255, 255, 0.3);
-      --card-text: #fff;
-      --card-text-gradient: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.82) 100%);
-      --card-text-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-      --card-subtle-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+      --card-glass-bg: color-mix(in srgb, var(--surface) 15%, transparent);
+      --card-glass-bg-hover: color-mix(in srgb, var(--surface) 20%, transparent);
+      --card-glass-border: color-mix(in srgb, var(--surface) 22%, transparent);
+      --card-glass-border-strong: color-mix(in srgb, var(--surface) 30%, transparent);
+      --card-text: var(--surface);
+      --card-text-gradient: linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 82%, transparent) 100%);
+      --card-text-shadow: 0 4px 12px color-mix(in srgb, var(--ink-900) 25%, transparent);
+      --card-subtle-shadow: 0 1px 4px color-mix(in srgb, var(--ink-900) 15%, transparent);
 
       border-radius: var(--radius-lg);
       overflow: hidden;
@@ -1438,8 +1438,8 @@ watch(
 
         .weather-icon {
           font-size: 28px;
-          color: #fff;
-          filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.25));
+          color: var(--surface);
+          filter: drop-shadow(0 3px 8px color-mix(in srgb, var(--ink-900) 25%, transparent));
           animation: weather-float 3s ease-in-out infinite;
         }
 
@@ -1553,28 +1553,28 @@ watch(
 
     [data-theme='sunny'],
     [data-theme='hot'] {
-      --card-glass-bg: rgba(255, 244, 220, 0.22);
-      --card-glass-bg-hover: rgba(255, 244, 220, 0.3);
-      --card-glass-border: rgba(255, 244, 220, 0.4);
-      --card-glass-border-strong: rgba(255, 244, 220, 0.5);
-      --card-text-gradient: linear-gradient(180deg, #fffaf0 0%, rgba(255, 250, 240, 0.85) 100%);
+      --card-glass-bg: color-mix(in srgb, var(--brand-50) 22%, transparent);
+      --card-glass-bg-hover: color-mix(in srgb, var(--brand-50) 30%, transparent);
+      --card-glass-border: color-mix(in srgb, var(--brand-50) 40%, transparent);
+      --card-glass-border-strong: color-mix(in srgb, var(--brand-50) 50%, transparent);
+      --card-text-gradient: linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 85%, transparent) 100%);
     }
 
     [data-theme='rain'] {
-      --card-glass-bg: rgba(255, 255, 255, 0.12);
-      --card-glass-bg-hover: rgba(255, 255, 255, 0.18);
-      --card-glass-border: rgba(255, 255, 255, 0.2);
-      --card-glass-border-strong: rgba(255, 255, 255, 0.28);
+      --card-glass-bg: color-mix(in srgb, var(--surface) 12%, transparent);
+      --card-glass-bg-hover: color-mix(in srgb, var(--surface) 18%, transparent);
+      --card-glass-border: color-mix(in srgb, var(--surface) 20%, transparent);
+      --card-glass-border-strong: color-mix(in srgb, var(--surface) 28%, transparent);
     }
 
     [data-theme='snow'],
     [data-theme='cold'] {
-      --card-glass-bg: rgba(245, 250, 255, 0.28);
-      --card-glass-bg-hover: rgba(245, 250, 255, 0.4);
-      --card-glass-border: rgba(255, 255, 255, 0.45);
-      --card-glass-border-strong: rgba(255, 255, 255, 0.55);
-      --card-text: #182438;
-      --card-text-gradient: linear-gradient(180deg, #22324a 0%, rgba(34, 50, 74, 0.85) 100%);
+      --card-glass-bg: color-mix(in srgb, var(--info-bg) 28%, transparent);
+      --card-glass-bg-hover: color-mix(in srgb, var(--info-bg) 40%, transparent);
+      --card-glass-border: color-mix(in srgb, var(--surface) 45%, transparent);
+      --card-glass-border-strong: color-mix(in srgb, var(--surface) 55%, transparent);
+      --card-text: var(--ink-900);
+      --card-text-gradient: linear-gradient(180deg, var(--ink-900) 0%, color-mix(in srgb, var(--ink-900) 85%, transparent) 100%);
       --card-text-shadow: none;
       --card-subtle-shadow: none;
 
@@ -1583,30 +1583,30 @@ watch(
         position: absolute;
         inset: 0;
         background:
-          radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.5) 0%, transparent 30%),
-          radial-gradient(circle at 80% 78%, rgba(255, 255, 255, 0.35) 0%, transparent 38%);
+          radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--surface) 50%, transparent) 0%, transparent 30%),
+          radial-gradient(circle at 80% 78%, color-mix(in srgb, var(--surface) 35%, transparent) 0%, transparent 38%);
         pointer-events: none;
       }
     }
 
     [data-theme='cloudy'] {
-      --card-glass-bg: rgba(255, 255, 255, 0.1);
-      --card-glass-bg-hover: rgba(255, 255, 255, 0.16);
-      --card-glass-border: rgba(255, 255, 255, 0.18);
-      --card-glass-border-strong: rgba(255, 255, 255, 0.26);
+      --card-glass-bg: color-mix(in srgb, var(--surface) 10%, transparent);
+      --card-glass-bg-hover: color-mix(in srgb, var(--surface) 16%, transparent);
+      --card-glass-border: color-mix(in srgb, var(--surface) 18%, transparent);
+      --card-glass-border-strong: color-mix(in srgb, var(--surface) 26%, transparent);
     }
 
     [data-theme='thunder'] {
-      --card-glass-bg: rgba(255, 255, 255, 0.08);
-      --card-glass-bg-hover: rgba(255, 255, 255, 0.14);
-      --card-glass-border: rgba(255, 255, 255, 0.16);
-      --card-glass-border-strong: rgba(255, 255, 255, 0.24);
+      --card-glass-bg: color-mix(in srgb, var(--surface) 8%, transparent);
+      --card-glass-bg-hover: color-mix(in srgb, var(--surface) 14%, transparent);
+      --card-glass-border: color-mix(in srgb, var(--surface) 16%, transparent);
+      --card-glass-border-strong: color-mix(in srgb, var(--surface) 24%, transparent);
 
       &::after {
         content: '';
         position: absolute;
         inset: 0;
-        background: radial-gradient(circle at 50% 8%, rgba(212, 180, 255, 0.45) 0%, transparent 50%);
+        background: radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--info) 45%, transparent) 0%, transparent 50%);
         animation: weather-thunder-flash 8s ease-in-out infinite;
         pointer-events: none;
       }
@@ -1891,7 +1891,7 @@ watch(
   border: 1px solid @savour-border;
 
   :deep(.el-skeleton__item) {
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.04) 25%, rgba(0, 0, 0, 0.08) 50%, rgba(0, 0, 0, 0.04) 75%);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ink-900) 4%, transparent) 25%, color-mix(in srgb, var(--ink-900) 8%, transparent) 50%, color-mix(in srgb, var(--ink-900) 4%, transparent) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s ease infinite;
   }
@@ -1920,7 +1920,7 @@ watch(
   .retry-btn {
     padding: 8px 24px;
     background: @savour-accent;
-    color: #fff;
+    color: var(--surface);
     border: none;
     border-radius: @savour-pill;
     font-size: @nordic-text-sm;
@@ -1931,7 +1931,7 @@ watch(
     &:hover {
       background: @savour-accent-hover;
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(198, 123, 92, 0.3);
+      box-shadow: var(--shadow-md);
     }
   }
 }
@@ -2042,13 +2042,13 @@ watch(
   overflow: hidden;
   cursor: pointer;
   border: 1px solid @savour-border;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 
   &:hover {
     transform: translateY(-4px);
-    border-color: rgba(198, 123, 92, 0.35);
-    box-shadow: 0 10px 24px rgba(45, 42, 38, 0.08);
+    border-color: var(--brand-300);
+    box-shadow: var(--shadow-md);
 
     .tut-image img { transform: scale(1.04); }
   }
@@ -2075,10 +2075,10 @@ watch(
       align-items: center;
       gap: 4px;
       padding: 4px 8px;
-      background: rgba(0, 0, 0, 0.45);
+      background: var(--overlay);
       backdrop-filter: blur(4px);
       border-radius: 6px;
-      color: #fff;
+      color: var(--surface);
       font-size: 12px;
       font-weight: 600;
     }
@@ -2161,7 +2161,7 @@ watch(
     margin-bottom: 8px;
     transition: background 0.2s ease;
 
-    &:hover { background: darken(@savour-bg, 3%); }
+    &:hover { background: color-mix(in srgb, var(--canvas) 97%, var(--ink-900)); }
 
     .detail-label {
       font-size: 14px;
