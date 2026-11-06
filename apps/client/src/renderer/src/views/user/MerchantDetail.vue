@@ -42,7 +42,7 @@
 
         <!-- 空状态：商家没有菜单 -->
         <div v-else-if="!hasMenus && activeMenuTab !== 'comments'" class="empty-state-notice">
-          <div class="empty-state-icon">🍽️</div>
+          <el-icon class="empty-state-icon"><Dish /></el-icon>
           <h3 class="empty-state-title">该商家暂未上架菜单</h3>
           <p class="empty-state-desc">商家正在努力准备中，敬请期待</p>
           <el-button type="primary" @click="router.push('/user/home/merchants')">
@@ -86,7 +86,8 @@
                 class="category-nav-tag"
                 @click="scrollToCategory(category)"
               >
-                {{ getCategoryEmoji(category) }} {{ category }}
+                <el-icon class="category-icon"><component :is="getCategoryIcon(category)" /></el-icon>
+                {{ category }}
               </el-tag>
             </div>
           </div>
@@ -98,13 +99,16 @@
             :id="`category-${category}`"
             class="dish-category-section"
           >
-            <h3 class="category-title">{{ getCategoryEmoji(category) }} {{ category }}</h3>
+            <h3 class="category-title">
+              <el-icon class="category-icon"><component :is="getCategoryIcon(category)" /></el-icon>
+              {{ category }}
+            </h3>
             <div class="dish-grid">
               <dish-card
                 v-for="item in filteredAndSortedDishes(category)"
                 :key="item.id"
                 :dish="item"
-                :category-emoji="getCategoryEmoji(category)"
+                :category-icon="getCategoryIcon(category)"
                 :view-mode="viewMode"
                 @add-to-cart="addMenuItem"
                 class="stagger-item"
@@ -120,7 +124,7 @@
           <div v-if="activeMenuTab === 'comments'">
             <!-- 商家没有菜单的提示 -->
             <div v-if="!hasMenus" class="no-menus-notice">
-              <div class="notice-icon">📋</div>
+              <el-icon class="notice-icon"><Document /></el-icon>
               <p class="notice-text">当前商家还没有上架菜单</p>
             </div>
 
@@ -209,7 +213,19 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ShoppingCart, Search, CaretTop } from '@element-plus/icons-vue'
+import {
+  ShoppingCart,
+  Search,
+  CaretTop,
+  Bowl,
+  Coffee,
+  Dish,
+  Document,
+  Food,
+  ForkSpoon,
+  IceCream,
+  Sunny
+} from '@element-plus/icons-vue'
 import axios from 'axios'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import { useAuthStore } from '../../store/authStore'
@@ -1040,19 +1056,19 @@ const calculateRealTimePrice = (item) => {
   return result
 }
 
-// 根据菜品分类返回对应的 emoji 图标
-const getCategoryEmoji = (category) => {
-  const emojiMap = {
-    招牌菜: '🔥',
-    主食: '🍚',
-    饮品: '🥤',
-    小吃: '🍢',
-    甜点: '🍰',
-    汤: '🍲',
-    凉菜: '🥗',
-    热菜: '🍛'
+// 根据菜品分类返回对应的 Element 线性图标（§4.9）
+const getCategoryIcon = (category) => {
+  const iconMap = {
+    招牌菜: Food,
+    主食: Bowl,
+    饮品: Coffee,
+    小吃: ForkSpoon,
+    甜点: IceCream,
+    汤: Dish,
+    凉菜: Sunny,
+    热菜: Dish
   }
-  return emojiMap[category] || '🍽️'
+  return iconMap[category] || Dish
 }
 
 // 滚动到指定分类
@@ -1210,6 +1226,8 @@ watch(activeMenuTab, (newTab, oldTab) => {
   padding: 0;
   min-height: 100vh;
   background-color: @nordic-bg;
+  // 为浮动购物车预留安全边距，避免遮挡菜单热区最后一行（§4.6）
+  padding-bottom: 140px;
 
   .merchant-detail-card {
     border-radius: 0;
@@ -1254,8 +1272,8 @@ watch(activeMenuTab, (newTab, oldTab) => {
           transition: all @nordic-transition-slow ease;
 
           &.is-active {
-            color: @nordic-red;
-            border-bottom: 2px solid @nordic-red;
+            color: var(--brand-600);
+            border-bottom: 2px solid var(--brand-500);
             font-weight: 500;
           }
         }
@@ -1284,9 +1302,9 @@ watch(activeMenuTab, (newTab, oldTab) => {
         min-height: 400px;
 
         .empty-state-icon {
-          font-size: 64px;
+          font-size: 40px;
+          color: var(--ink-400);
           margin-bottom: @nordic-space-md;
-          opacity: 0.8;
         }
 
         .empty-state-title {
@@ -1349,15 +1367,23 @@ watch(activeMenuTab, (newTab, oldTab) => {
           margin-top: @nordic-space-md;
 
           .category-nav-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-1);
             cursor: pointer;
             transition: all @nordic-transition-slow ease;
             font-size: @nordic-text-base;
             padding: @nordic-space-sm @nordic-space-md;
 
+            .category-icon {
+              color: var(--brand-500);
+            }
+
             &:hover {
               transform: translateY(-2px);
               box-shadow: 0 4px 12px fade(@nordic-accent, 20%);
             }
+
           }
         }
       }
@@ -1378,10 +1404,17 @@ watch(activeMenuTab, (newTab, oldTab) => {
         margin-bottom: @nordic-space-xl;
 
         .category-title {
+          display: flex;
+          align-items: center;
+          gap: var(--space-2);
           font-size: @nordic-text-md;
           font-weight: bold;
           color: @nordic-text;
           margin-bottom: @nordic-space-md;
+
+          .category-icon {
+            color: var(--brand-500);
+          }
         }
 
         // 菜品网格布局
@@ -1402,7 +1435,8 @@ watch(activeMenuTab, (newTab, oldTab) => {
         border: 1px solid fade(@nordic-yellow, 30%);
 
         .notice-icon {
-          font-size: 3.429rem;
+          font-size: 32px;
+          color: var(--warning);
           margin-bottom: @nordic-space-md;
         }
 
@@ -1539,13 +1573,13 @@ watch(activeMenuTab, (newTab, oldTab) => {
   justify-content: center;
   align-items: center;
   cursor: grab;
-  box-shadow: 0 8px 32px fade(@nordic-accent, 50%);
+  box-shadow: var(--shadow-lg);
   color: @nordic-white;
   transition:
     box-shadow @nordic-transition-slow ease,
     transform @nordic-transition-fast ease;
   z-index: 9999;
-  border: 3px solid fade(@nordic-white, 30%);
+  border: 2px solid color-mix(in srgb, var(--brand-500) 30%, transparent);
   backdrop-filter: blur(10px);
   user-select: none;
   touch-action: none;
@@ -1559,7 +1593,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
   &:hover:not(:active) {
     transform: translateY(-4px);
-    box-shadow: 0 12px 40px fade(@nordic-accent, 50%);
+    box-shadow: var(--shadow-lg);
   }
 
   // 购物车图标容器
@@ -1606,7 +1640,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
     font-size: 0.75rem;
     font-weight: 700;
     color: @nordic-white;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    text-shadow: var(--shadow-sm);
     pointer-events: none;
     white-space: nowrap;
     line-height: 1.2;

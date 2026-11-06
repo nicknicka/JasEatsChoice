@@ -154,35 +154,34 @@ const handleToggleFavorite = () => {
 
 <style scoped lang="less">
 .merchant-header {
-  padding: 18px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 16px;
-  border: 1px solid rgba(59, 130, 246, 0.08);
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.08);
-  margin-bottom: 16px;
+  padding: var(--space-5);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-4);
 
   .header-top {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 14px;
+    margin-bottom: var(--space-3);
 
     .avatar-name-section {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: var(--space-3);
       flex: 1;
 
       .merchant-avatar {
         width: 56px;
         height: 56px;
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
         overflow: hidden;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        background: var(--canvas-sunken);
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.25);
         flex-shrink: 0;
 
         img {
@@ -192,7 +191,7 @@ const handleToggleFavorite = () => {
         }
 
         .default-avatar {
-          color: #ffffff;
+          color: var(--ink-400);
         }
       }
 
@@ -201,9 +200,9 @@ const handleToggleFavorite = () => {
         min-width: 0;
 
         .merchant-name {
-          font-size: 1.286rem /* 原值: 18px */;
-          font-weight: 800;
-          color: #0f172a;
+          font-size: var(--text-h2);
+          font-weight: var(--weight-semibold);
+          color: var(--ink-900);
           line-height: 1.3;
           margin: 0 0 6px 0;
           overflow: hidden;
@@ -217,9 +216,11 @@ const handleToggleFavorite = () => {
           gap: 10px;
 
           .rating-number {
-            font-size: 26px;
-            font-weight: 700;
-            color: #f59e0b;
+            font-family: var(--font-num);
+            font-variant-numeric: tabular-nums;
+            font-size: var(--text-h2);
+            font-weight: var(--weight-semibold);
+            color: var(--warning);
             line-height: 1;
           }
 
@@ -229,17 +230,19 @@ const handleToggleFavorite = () => {
 
             :deep(.el-rate) {
               .el-rate__icon {
-                font-size: 1.143rem /* 原值: 16px */;
+                font-size: var(--text-h3);
                 margin-right: 2px;
               }
             }
           }
 
           .rating-score-text {
-            font-size: 1rem /* 原值: 14px */;
-            font-weight: 700;
-            color: #f59e0b;
-            margin-left: 8px;
+            font-family: var(--font-num);
+            font-variant-numeric: tabular-nums;
+            font-size: var(--text-body);
+            font-weight: var(--weight-semibold);
+            color: var(--warning);
+            margin-left: var(--space-2);
           }
         }
       }
@@ -248,14 +251,14 @@ const handleToggleFavorite = () => {
     .favorite-button {
       flex-shrink: 0;
       height: 36px;
-      padding: 0 16px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 10px;
-      font-size: 0.929rem /* 原值: 13px */;
-      font-weight: 600;
+      padding: 0 var(--space-4);
+      transition: background var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+      border-radius: var(--radius-md);
+      font-size: var(--text-body-sm);
+      font-weight: var(--weight-semibold);
 
       &:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
       }
 
       &:active {
@@ -263,39 +266,37 @@ const handleToggleFavorite = () => {
       }
 
       &.el-button--warning {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        background: var(--brand-500);
         border-color: transparent;
-        box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
-        color: #ffffff;
+        color: var(--surface);
       }
 
       &.el-button--default {
-        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        background: var(--canvas-sunken);
         border-color: transparent;
-        color: #475569;
+        color: var(--ink-700);
       }
     }
   }
 
   .tags-row {
-    margin-bottom: 14px;
+    margin-bottom: var(--space-3);
 
     .tags-status-group {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-2);
       flex-wrap: wrap;
       min-height: 32px;
 
       .type-tag {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        background: var(--canvas-sunken);
         border: none;
-        color: #ffffff;
-        font-size: 0.857rem /* 原值: 12px */;
+        color: var(--ink-700);
+        font-size: var(--text-caption);
         padding: 4px 12px;
-        font-weight: 600;
-        border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+        font-weight: var(--weight-semibold);
+        border-radius: var(--radius-sm);
         flex-shrink: 0;
       }
 
@@ -304,63 +305,63 @@ const handleToggleFavorite = () => {
         align-items: center;
         gap: 5px;
         padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 0.857rem /* 原值: 12px */;
-        font-weight: 600;
+        border-radius: var(--radius-sm);
+        font-size: var(--text-caption);
+        font-weight: var(--weight-semibold);
         flex-shrink: 0;
 
         .status-dot {
           width: 6px;
           height: 6px;
-          border-radius: 50%;
+          border-radius: var(--radius-full);
           animation: pulse 2s infinite;
         }
 
         &.status-open {
-          background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-          color: #047857;
+          background: var(--success-bg);
+          color: var(--success);
 
           .status-dot {
-            background: #10b981;
-            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+            background: var(--success);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 20%, transparent);
           }
         }
 
         &.status-closed {
-          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-          color: #b91c1c;
+          background: var(--danger-bg);
+          color: var(--danger);
 
           .status-dot {
-            background: #ef4444;
+            background: var(--danger);
             animation: none;
           }
         }
       }
 
       .feature-tag {
-        background: rgba(59, 130, 246, 0.08);
-        border: 1px solid rgba(59, 130, 246, 0.15);
-        color: #3b82f6;
-        font-size: 0.75rem /* 原值: 11px */;
+        background: var(--canvas-sunken);
+        border: 1px solid var(--line);
+        color: var(--ink-500);
+        font-size: var(--text-caption);
         padding: 3px 10px;
-        border-radius: 6px;
-        font-weight: 500;
+        border-radius: var(--radius-sm);
+        font-weight: var(--weight-medium);
       }
 
       .distance-badge {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: var(--space-1);
         padding: 4px 10px;
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        color: #1d4ed8;
-        border-radius: 6px;
-        font-size: 0.857rem /* 原值: 12px */;
-        font-weight: 600;
+        background: var(--info-bg);
+        color: var(--info);
+        border-radius: var(--radius-sm);
+        font-size: var(--text-caption);
+        font-weight: var(--weight-semibold);
         flex-shrink: 0;
 
         .el-icon {
-          font-size: 0.929rem /* 原值: 13px */;
+          font-size: var(--text-body-sm);
         }
       }
     }
@@ -369,23 +370,23 @@ const handleToggleFavorite = () => {
   .info-row {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 12px;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
     flex-wrap: wrap;
 
     .info-item {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.929rem /* 原值: 13px */;
-      color: #475569;
-      font-weight: 500;
+      font-size: var(--text-body-sm);
+      color: var(--ink-700);
+      font-weight: var(--weight-medium);
       padding: 6px 12px;
-      background: rgba(59, 130, 246, 0.05);
-      border-radius: 8px;
+      background: var(--canvas);
+      border-radius: var(--radius-md);
 
       .el-icon {
-        color: #3b82f6;
+        color: var(--ink-500);
         flex-shrink: 0;
       }
 
@@ -405,10 +406,10 @@ const handleToggleFavorite = () => {
 
 @keyframes pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 40%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 0%, transparent);
   }
 }
 </style>

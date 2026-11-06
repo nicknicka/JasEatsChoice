@@ -7,9 +7,10 @@
         :alt="dish.name"
         loading="lazy"
         class="dish-img"
-        @error="handleImageError"
       />
-      <span v-else class="dish-emoji">{{ categoryEmoji }}</span>
+      <el-icon v-else class="dish-placeholder-icon" :size="32">
+        <component :is="categoryIcon" />
+      </el-icon>
     </div>
 
     <div class="dish-info">
@@ -80,7 +81,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { ElInputNumber, ElButton, ElTag } from 'element-plus'
 import { ShoppingCart } from '@element-plus/icons-vue'
 
@@ -89,21 +90,13 @@ const props = defineProps({
     type: Object,
     required: true
   },
-  categoryEmoji: {
-    type: String,
-    default: '🍽️'
+  categoryIcon: {
+    type: [Object, Function],
+    default: null
   }
 })
 
 const emit = defineEmits(['add-to-cart'])
-
-// 图片加载失败标记
-const imageError = ref(false)
-
-// 处理图片加载错误
-const handleImageError = () => {
-  imageError.value = true
-}
 
 // 计算是否有食材
 const hasIngredients = computed(() => {
@@ -133,66 +126,64 @@ const toggleOptionalIngredient = (ingredient) => {
 
 <style scoped lang="less">
 .dish-card {
-  border: 1px solid rgba(59, 130, 246, 0.1);
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 
   &:hover {
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
-    transform: translateY(-4px);
-    border-color: rgba(59, 130, 246, 0.2);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--line-strong);
   }
 
   .dish-image {
     width: 100%;
-    height: 140px;
+    height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
     overflow: hidden;
-    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf4 100%);
+    background: var(--canvas-sunken);
     flex-shrink: 0;
 
     .dish-img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.3s ease;
+      transition: transform var(--duration-base) var(--ease-out);
     }
 
-    .dish-emoji {
-      font-size: 3.429rem /* 原值: 48px */;
-      filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.1));
+    .dish-placeholder-icon {
+      color: var(--ink-400);
     }
   }
 
   &:hover {
     .dish-image {
       .dish-img {
-        transform: scale(1.05);
+        transform: scale(1.04);
       }
     }
   }
 
   .dish-info {
-    padding: 16px;
+    padding: var(--space-4);
     flex: 1;
     display: flex;
     flex-direction: column;
   }
 
   .dish-name {
-    font-size: 1.143rem /* 原值: 16px */;
-    font-weight: 700;
-    color: #1e293b;
+    font-size: var(--text-h3);
+    font-weight: var(--weight-semibold);
+    color: var(--ink-900);
     line-height: 1.3;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
@@ -204,18 +195,16 @@ const toggleOptionalIngredient = (ingredient) => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
   }
 
   .dish-price {
-    font-size: 1.429rem /* 原值: 20px */;
-    color: #f59e0b;
-    font-weight: 700;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-h2);
+    color: var(--ink-900);
+    font-weight: var(--weight-semibold);
     flex: 1;
   }
 
@@ -228,17 +217,17 @@ const toggleOptionalIngredient = (ingredient) => {
 
       .el-input-number__decrease,
       .el-input-number__increase {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        background: var(--brand-500);
         border-color: transparent;
-        color: #ffffff;
+        color: var(--surface);
       }
     }
   }
 
   .dish-desc {
-    font-size: 0.857rem /* 原值: 12px */;
-    color: #64748b;
-    margin-bottom: 12px;
+    font-size: var(--text-body-sm);
+    color: var(--ink-500);
+    margin-bottom: var(--space-3);
     line-height: 1.5;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -248,25 +237,25 @@ const toggleOptionalIngredient = (ingredient) => {
   }
 
   .dish-ingredients {
-    margin-bottom: 12px;
+    margin-bottom: var(--space-3);
 
     .ingredient-section {
-      margin-bottom: 8px;
+      margin-bottom: var(--space-2);
 
       .ingredient-label {
         display: flex;
         align-items: center;
         margin-bottom: 6px;
-        font-size: 0.857rem /* 原值: 12px */;
-        color: #64748b;
+        font-size: var(--text-body-sm);
+        color: var(--ink-500);
 
         .label-icon {
-          font-size: 0.857rem /* 原值: 12px */;
-          margin-right: 4px;
+          font-size: var(--text-body-sm);
+          margin-right: var(--space-1);
         }
 
         .label-text {
-          font-weight: 500;
+          font-weight: var(--weight-medium);
         }
       }
 
@@ -280,22 +269,22 @@ const toggleOptionalIngredient = (ingredient) => {
     .optional-section {
       margin-top: 6px;
       padding-top: 10px;
-      border-top: 1px dashed #e0e0e0;
+      border-top: 1px dashed var(--line);
 
       .optional-label {
         display: flex;
         align-items: center;
         margin-bottom: 6px;
-        font-size: 0.857rem /* 原值: 12px */;
-        color: #64748b;
+        font-size: var(--text-body-sm);
+        color: var(--ink-500);
 
         .label-icon {
-          font-size: 0.857rem /* 原值: 12px */;
-          margin-right: 4px;
+          font-size: var(--text-body-sm);
+          margin-right: var(--space-1);
         }
 
         .label-text {
-          font-weight: 500;
+          font-weight: var(--weight-medium);
         }
       }
 
@@ -308,22 +297,22 @@ const toggleOptionalIngredient = (ingredient) => {
 
     .optional-tag {
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all var(--duration-fast) var(--ease-out);
       user-select: none;
       border-style: solid;
 
       &:hover {
         transform: translateY(-1px);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--shadow-sm);
       }
 
       &.is-selected {
-        font-weight: 600;
+        font-weight: var(--weight-semibold);
         border-width: 1.5px;
       }
 
       .ingredient-price {
-        font-size: 0.75rem /* 原值: 11px */;
+        font-size: var(--text-caption);
         margin-left: 2px;
       }
     }
@@ -331,14 +320,13 @@ const toggleOptionalIngredient = (ingredient) => {
 
   .add-cart-btn {
     width: 100%;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: var(--brand-500);
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     height: 40px;
-    font-size: 1rem /* 原值: 14px */;
-    font-weight: 600;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
+    transition: background var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
     margin-top: auto;
     display: flex;
     align-items: center;
@@ -346,9 +334,8 @@ const toggleOptionalIngredient = (ingredient) => {
     gap: 6px;
 
     &:hover {
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      background: var(--brand-600);
+      transform: translateY(-1px);
     }
 
     &:active {
