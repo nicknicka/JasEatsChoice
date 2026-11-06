@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
 import { ElMessage } from 'element-plus'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import { reviewAPI } from '../../api/review.js'
 import paymentApi from '../../api/payment'
@@ -42,9 +43,9 @@ const orderStatusMap = {
 
 // 订单状态标签样式映射
 const statusTagTypeMap = {
-  pending: 'info',
+  pending: 'warning',
   pendingAccept: 'warning',
-  preparing: 'primary',
+  preparing: 'info',
   completed: 'success',
   cancelled: 'danger'
 }
@@ -156,19 +157,22 @@ const loadOrderDetail = async () => {
       )
     }
 
+    const status = orderStatusToText(orderData.status)
+
     // 4. 组装订单数据
     order.value = {
       id: orderData.id,
       orderNo: orderData.id,
-      status: orderStatusToText(orderData.status),
+      status,
       merchant: merchantName,
       merchantId: orderData.merchantId,
       total: orderData.totalAmount,
       time: formatTime(orderData.createdAt),
+      cancelTime: status === 'cancelled' ? formatTime(orderData.updatedAt) : '',
       items: items,
       itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
       paymentMethod: '平台币余额',
-      paymentTime: orderData.updatedAt ? formatTime(orderData.updatedAt) : null,
+      paymentTime: orderData.paymentTime ? formatTime(orderData.paymentTime) : null,
       remark: orderData.remark || '',
       _raw: orderData
     }
@@ -363,6 +367,11 @@ const contactMerchant = () => {
   })
 }
 
+// 返回订单列表
+const goToOrderList = () => {
+  router.push('/user/home/orders')
+}
+
 // 获取当前活动步骤（5状态系统）
 const getActiveStep = () => {
   if (!order.value) return 0
@@ -371,7 +380,7 @@ const getActiveStep = () => {
     pending: 0,
     pendingAccept: 1,
     preparing: 2,
-    completed: 3,
+    completed: 4,
     cancelled: 0
   }
 
@@ -382,28 +391,33 @@ const getActiveStep = () => {
 <template>
   <div class="order-detail-container">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <CommonBackButton />
-      <h2 class="page-title">订单详情</h2>
-    </div>
+    <AppPageHeader class="page-header" title="订单详情">
+      <template #extra>
+        <CommonBackButton />
+      </template>
+    </AppPageHeader>
 
     <!-- 加载状态 -->
     <div v-loading="loading" element-loading-text="加载中..." class="loading-container">
       <!-- 订单详情内容 -->
       <div v-if="order" class="order-detail-content">
         <!-- 订单状态卡片 -->
-        <el-card class="status-card scale-in" shadow="hover">
-          <div class="status-header">
-            <div class="order-info-basic">
-              <div class="order-no">订单号: {{ order.orderNo }}</div>
-              <el-tag :type="statusTagTypeMap[order.status]" size="large" effect="dark">
+        <el-card class="status-card" shadow="never">
+          <div class="status-summary">
+            <div class="status-header">
+              <span class="status-label">订单状态</span>
+              <el-tag :type="statusTagTypeMap[order.status]" effect="light">
                 {{ orderStatusMap[order.status] }}
               </el-tag>
+            </div>
+            <div class="order-meta">
+              <span class="order-meta-label">订单号</span>
+              <span class="order-no">{{ order.orderNo }}</span>
             </div>
           </div>
 
           <!-- 订单进度 -->
-          <div class="order-progress">
+          <div v-if="order.status !== 'cancelled'" class="order-progress">
             <el-steps :active="getActiveStep()" finish-status="success" align-center>
               <el-step title="待支付" />
               <el-step title="待接单" />
@@ -411,13 +425,22 @@ const getActiveStep = () => {
               <el-step title="已完成" />
             </el-steps>
           </div>
+
+          <!-- 取消信息 -->
+          <div v-else class="cancelled-summary">
+            <div class="cancelled-meta">
+              <span class="cancelled-label">取消时间</span>
+              <span class="cancelled-value">{{ order.cancelTime || order.time }}</span>
+            </div>
+            <el-button type="primary" plain @click="goToOrderList">返回订单列表</el-button>
+          </div>
         </el-card>
 
         <!-- 商家信息卡片 -->
         <el-card class="merchant-card fade-in-up delay-100" shadow="hover">
           <template #header>
             <div class="card-header">
-              <el-icon :size="20" color="#6ba4ff"><Shop /></el-icon>
+              <el-icon :size="20" color="var(--info)"><Shop /></el-icon>
               <span class="card-title">商家信息</span>
               <el-button type="primary" link @click="contactMerchant">
                 <el-icon><Phone /></el-icon>
@@ -434,7 +457,7 @@ const getActiveStep = () => {
         </el-card>
 
         <!-- 订单商品卡片 -->
-        <el-card class="items-card" shadow="hover">
+        <el-card v-if="order.items && order.items.length > 0" class="items-card" shadow="never">
           <template #header>
             <div class="card-header">
               <span class="card-title">订单商品</span>
@@ -442,7 +465,7 @@ const getActiveStep = () => {
             </div>
           </template>
 
-          <div class="items-list" v-if="order.items && order.items.length > 0">
+          <div class="items-list">
             <div class="item-row stagger-item" v-for="(item, index) in order.items" :key="index">
               <!-- 商品图片 -->
               <div class="item-image">
@@ -536,17 +559,13 @@ const getActiveStep = () => {
             </div>
           </div>
 
-          <!-- 空状态 -->
-          <div v-else class="items-empty">
-            <el-empty description="暂无商品信息" :image-size="60" />
-          </div>
         </el-card>
 
         <!-- 订单金额卡片 -->
         <el-card class="amount-card" shadow="hover">
           <template #header>
             <div class="card-header">
-              <el-icon :size="20" color="#e6a23c"><Money /></el-icon>
+              <el-icon :size="20" color="var(--brand-500)"><Money /></el-icon>
               <span class="card-title">订单金额</span>
             </div>
           </template>
@@ -563,7 +582,7 @@ const getActiveStep = () => {
         <el-card class="payment-card" shadow="hover">
           <template #header>
             <div class="card-header">
-              <el-icon :size="20" color="#909399"><Money /></el-icon>
+              <el-icon :size="20" color="var(--ink-500)"><Money /></el-icon>
               <span class="card-title">支付信息</span>
             </div>
           </template>
@@ -588,7 +607,7 @@ const getActiveStep = () => {
         <el-card v-if="order.remark" class="remark-card" shadow="hover">
           <template #header>
             <div class="card-header">
-              <el-icon :size="20" color="#409eff"><EditPen /></el-icon>
+              <el-icon :size="20" color="var(--brand-500)"><EditPen /></el-icon>
               <span class="card-title">订单备注</span>
             </div>
           </template>
@@ -599,7 +618,7 @@ const getActiveStep = () => {
         <div class="order-actions">
           <el-button
             v-if="order.status === 'pending'"
-            type="warning"
+            type="primary"
             size="large"
             :loading="paying"
             @click="payOrder(order)"
@@ -610,6 +629,7 @@ const getActiveStep = () => {
           <el-button
             v-if="order.status === 'pending' || order.status === 'pendingAccept'"
             type="danger"
+            plain
             size="large"
             @click="cancelOrder(order)"
             class="action-btn cancel-btn"
@@ -619,6 +639,7 @@ const getActiveStep = () => {
           <el-button
             v-if="order.status === 'pendingAccept' || order.status === 'preparing'"
             type="primary"
+            plain
             size="large"
             @click="contactMerchant"
             class="action-btn contact-btn"
@@ -639,24 +660,16 @@ const getActiveStep = () => {
 @import '../../assets/css/nordic-theme.less';
 
 .order-detail-container {
-  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-  background: @nordic-bg;
+  padding: 0 var(--space-6) var(--space-8);
+  background: var(--canvas);
   min-height: calc(100vh - 80px);
 
   .page-header {
-    .nordic-card();
-    display: flex;
-    align-items: center;
-    margin-bottom: @nordic-space-lg;
-    padding: @nordic-space-md @nordic-space-lg;
-  }
+    margin-bottom: var(--space-6);
 
-  .page-title {
-    font-size: @nordic-text-xl;
-    margin: 0;
-    margin-left: 15px;
-    color: @nordic-text;
-    font-weight: 600;
+    :deep(.app-page-header__extra) {
+      order: -1;
+    }
   }
 
   .loading-container {
@@ -666,124 +679,159 @@ const getActiveStep = () => {
   .order-detail-content {
     display: flex;
     flex-direction: column;
-    gap: @nordic-space-md;
+    gap: var(--space-5);
   }
 
   // 通用卡片样式
   .el-card {
-    .nordic-card();
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--duration-fast) var(--ease-standard);
     overflow: hidden;
 
+    &:hover {
+      box-shadow: var(--shadow-md);
+    }
+
     :deep(.el-card__header) {
-      padding: @nordic-space-md @nordic-space-lg;
-      border-bottom: 1px solid @nordic-divider;
-      background: linear-gradient(to bottom, fade(@nordic-bg, 50%) 0%, @nordic-surface 100%);
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--line);
+      background: var(--canvas);
     }
 
     :deep(.el-card__body) {
-      padding: @nordic-space-lg;
+      padding: var(--space-5);
     }
   }
 
   .card-header {
     display: flex;
     align-items: center;
-    gap: @nordic-space-2sm;
+    gap: var(--space-3);
 
     .card-title {
-      font-size: @nordic-text-md;
-      font-weight: 600;
-      color: @nordic-text;
+      font-size: var(--text-h3);
+      line-height: 24px;
+      font-weight: var(--weight-semibold);
+      color: var(--ink-900);
       flex: 1;
     }
   }
 
   // 状态卡片
   .status-card {
-    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-    border: none;
+    background: var(--surface);
+    border: 1px solid var(--line);
 
     :deep(.el-card__body) {
-      padding: @nordic-space-xl;
+      padding: var(--space-5);
     }
 
-    .status-header {
-      margin-bottom: @nordic-space-xl;
-    }
-
-    .order-info-basic {
-      display: flex;
-      justify-content: space-between;
+    .status-summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(240px, auto);
       align-items: center;
-      flex-wrap: wrap;
-      gap: @nordic-space-md;
+      gap: var(--space-6);
+      padding-bottom: var(--space-5);
+      border-bottom: 1px solid var(--line);
+    }
 
-      .order-no {
-        font-size: @nordic-text-md;
-        font-weight: 600;
-        color: @nordic-white;
-      }
+    .status-header,
+    .order-meta {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      min-width: 0;
+    }
 
-      :deep(.el-tag) {
-        border: none;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      }
+    .status-label,
+    .order-meta-label {
+      font-size: var(--text-body-sm);
+      color: var(--ink-500);
+    }
+
+    .order-meta {
+      justify-self: end;
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    .order-no {
+      font-family: var(--font-num);
+      font-size: var(--text-body);
+      font-weight: var(--weight-medium);
+      color: var(--ink-700);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    :deep(.el-tag) {
+      padding: var(--space-1) var(--space-3);
+      height: auto;
+      align-self: flex-start;
+      width: fit-content;
+      border: none;
+      font-size: var(--text-body);
+      line-height: 22px;
+      font-weight: var(--weight-medium);
+    }
+
+    :deep(.el-tag--warning) {
+      color: var(--warning);
+      background: var(--warning-bg);
+    }
+
+    :deep(.el-tag--info) {
+      color: var(--info);
+      background: var(--info-bg);
+    }
+
+    :deep(.el-tag--success) {
+      color: var(--success);
+      background: var(--success-bg);
+    }
+
+    :deep(.el-tag--danger) {
+      color: var(--danger);
+      background: var(--danger-bg);
     }
 
     .order-progress {
+      padding-top: var(--space-5);
+
       :deep(.el-steps) {
-        .el-step__head {
-          .el-step__icon {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.4);
-
-            .el-step__icon-inner {
-              color: @nordic-white;
-            }
-          }
-
-          &.is-process {
-            .el-step__icon {
-              background: @nordic-white;
-              border-color: @nordic-white;
-
-              .el-step__icon-inner {
-                color: @nordic-accent;
-              }
-            }
-          }
-
-          &.is-success {
-            .el-step__icon {
-              background: rgba(255, 255, 255, 0.3);
-              border-color: @nordic-white;
-
-              .el-step__icon-inner {
-                color: @nordic-white;
-              }
-            }
-          }
-        }
-
         .el-step__title {
-          &.is-process {
-            color: @nordic-white;
-            font-weight: 600;
-          }
-
-          &.is-success {
-            color: rgba(255, 255, 255, 0.8);
-          }
-        }
-
-        .el-step__line {
-          background-color: rgba(255, 255, 255, 0.3);
-
-          .el-step__line-inner {
-            background-color: @nordic-white;
-          }
+          font-size: var(--text-body-sm);
         }
       }
+    }
+
+    .cancelled-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding-top: var(--space-5);
+    }
+
+    .cancelled-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .cancelled-label {
+      font-size: var(--text-body-sm);
+      color: var(--ink-500);
+    }
+
+    .cancelled-value {
+      font-family: var(--font-num);
+      font-size: var(--text-body);
+      color: var(--ink-700);
+      font-variant-numeric: tabular-nums;
     }
   }
 
@@ -791,22 +839,23 @@ const getActiveStep = () => {
   .merchant-card {
     .merchant-details {
       .merchant-name {
-        font-size: @nordic-text-lg;
-        font-weight: 600;
-        color: @nordic-text;
-        margin-bottom: @nordic-space-sm;
+        font-size: var(--text-h2);
+        line-height: 28px;
+        font-weight: var(--weight-semibold);
+        color: var(--ink-900);
+        margin-bottom: var(--space-2);
       }
 
       .merchant-meta {
         display: flex;
         align-items: center;
-        gap: @nordic-space-md;
-        font-size: @nordic-text-base;
-        color: @nordic-text-secondary;
+        gap: var(--space-4);
+        font-size: var(--text-body);
+        color: var(--ink-500);
 
         .rating {
-          color: @nordic-yellow;
-          font-weight: 500;
+          color: var(--warning);
+          font-weight: var(--weight-medium);
         }
       }
     }
@@ -817,58 +866,46 @@ const getActiveStep = () => {
     .items-list {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: var(--space-3);
     }
 
     .item-row {
       display: flex;
       align-items: stretch;
-      padding: 14px;
-      background: fade(@nordic-bg, 50%);
-      border-radius: @nordic-radius-md;
-      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: var(--space-4);
+      background: var(--canvas);
+      border-radius: var(--radius-md);
+      transition: box-shadow var(--duration-fast) var(--ease-standard);
       position: relative;
-      border: 1px solid @nordic-border;
+      border: 1px solid var(--line);
       min-height: 94px;
 
       &:hover {
-        box-shadow: 0 6px 20px fade(@nordic-accent, 20%);
-        transform: translateY(-3px) scale(1.015);
-        border-color: fade(@nordic-accent, 50%);
-        background: linear-gradient(to bottom, @nordic-surface 0%, fade(@nordic-accent-light, 30%) 100%);
-
-        &::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: @nordic-radius-md;
-          box-shadow: inset 0 0 0 1px fade(@nordic-accent, 30%);
-          pointer-events: none;
-        }
+        box-shadow: var(--shadow-sm);
       }
 
       .item-image {
         width: 70px;
         min-height: 70px;
         height: 70px;
-        border-radius: @nordic-radius-md;
+        border-radius: var(--radius-md);
         overflow: visible;
-        margin-right: 14px;
+        margin-right: var(--space-4);
         flex-shrink: 0;
-        background: linear-gradient(135deg, @nordic-blue-light 0%, fade(@nordic-blue, 20%) 100%);
+        background: var(--info-bg);
         position: relative;
         z-index: 1;
-        box-shadow: 0 2px 8px fade(@nordic-blue, 15%);
+        box-shadow: var(--shadow-sm);
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid fade(@nordic-blue, 30%);
+        border: 1px solid var(--line);
 
         img {
           width: 100%;
           height: 100%;
           object-fit: cover;
-          border-radius: @nordic-radius-md;
+          border-radius: var(--radius-md);
           position: relative;
           z-index: 1;
         }
@@ -882,8 +919,8 @@ const getActiveStep = () => {
 
           span {
             font-size: 2rem;
-            font-weight: 600;
-            color: @nordic-blue;
+            font-weight: var(--weight-semibold);
+            color: var(--info);
           }
         }
 
@@ -891,31 +928,26 @@ const getActiveStep = () => {
           position: absolute;
           top: -4px;
           right: -4px;
-          background: linear-gradient(135deg, @nordic-red 0%, @nordic-red 100%);
-          color: @nordic-white;
-          font-size: @nordic-text-xs;
-          font-weight: 700;
+          background: var(--danger);
+          color: var(--surface);
+          font-size: var(--text-caption);
+          font-weight: var(--weight-bold);
           min-width: 18px;
           height: 18px;
           padding: 0 5px;
-          border-radius: @nordic-radius-pill;
-          box-shadow:
-            0 2px 6px fade(@nordic-red, 40%),
-            0 0 0 1.5px @nordic-white;
+          border-radius: var(--radius-full);
+          box-shadow: var(--shadow-sm);
           z-index: 100;
           display: flex;
           align-items: center;
           justify-content: center;
           line-height: 1;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          animation: badge-bounce 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+          transition: transform var(--duration-fast) var(--ease-standard);
           pointer-events: none;
 
           .item-row:hover & {
             transform: scale(1.1) rotate(-3deg);
-            box-shadow:
-              0 3px 8px fade(@nordic-red, 50%),
-              0 0 0 1.5px @nordic-white;
+            box-shadow: var(--shadow-md);
           }
 
           &.large-number {
@@ -925,19 +957,6 @@ const getActiveStep = () => {
           }
         }
 
-        @keyframes badge-bounce {
-          0% {
-            transform: scale(0) rotate(-180deg);
-            opacity: 0;
-          }
-          50% {
-            transform: scale(1.2) rotate(10deg);
-          }
-          100% {
-            transform: scale(1) rotate(0deg);
-            opacity: 1;
-          }
-        }
       }
 
       .item-info {
@@ -948,10 +967,10 @@ const getActiveStep = () => {
         justify-content: space-between;
 
         .item-name {
-          font-size: 15px;
-          font-weight: 600;
-          color: @nordic-text;
-          margin-bottom: @nordic-space-sm;
+          font-size: var(--text-body);
+          font-weight: var(--weight-semibold);
+          color: var(--ink-900);
+          margin-bottom: var(--space-2);
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -981,7 +1000,7 @@ const getActiveStep = () => {
 
             .label-text {
               color: @nordic-text-secondary;
-              font-weight: 500;
+              font-weight: var(--weight-medium);
             }
           }
 
@@ -996,26 +1015,26 @@ const getActiveStep = () => {
               align-items: center;
               gap: 3px;
               padding: 3px 8px;
-              border-radius: @nordic-radius-sm;
-              font-size: @nordic-text-xs;
+              border-radius: var(--radius-sm);
+              font-size: var(--text-caption);
               line-height: 1.4;
               transition: all 0.2s ease;
 
               &.required {
-                background: @nordic-green;
-                color: @nordic-white;
-                font-weight: 500;
-                box-shadow: 0 1px 4px fade(@nordic-green, 25%);
+                background: var(--success);
+                color: var(--surface);
+                font-weight: var(--weight-medium);
+                box-shadow: var(--shadow-sm);
               }
 
               &.optional {
-                background: @nordic-green-light;
-                color: @nordic-green-dark;
-                border: 1px solid fade(@nordic-green, 30%);
+                background: var(--success-bg);
+                color: var(--success);
+                border: 1px solid var(--success);
               }
 
               .ingredient-price {
-                font-size: 10px;
+                font-size: var(--text-caption);
                 opacity: 0.85;
                 margin-left: 2px;
               }
@@ -1027,19 +1046,18 @@ const getActiveStep = () => {
           display: flex;
           align-items: flex-start;
           gap: 5px;
-          margin-bottom: @nordic-space-sm;
-          font-size: @nordic-text-xs;
-          color: @nordic-accent-dark;
-          padding: 6px @nordic-space-2sm;
-          background: @nordic-yellow-light;
-          border-radius: @nordic-radius-sm;
-          border: 1px solid fade(@nordic-yellow, 30%);
+          margin-bottom: var(--space-2);
+          font-size: var(--text-caption);
+          color: var(--warning);
+          padding: var(--space-1) var(--space-3);
+          background: var(--warning-bg);
+          border-radius: var(--radius-sm);
+          border: 1px solid var(--warning);
           line-height: 1.5;
-          box-shadow: 0 1px 4px fade(@nordic-yellow, 8%);
 
           .el-icon {
-            font-size: 13px;
-            color: @nordic-accent-dark;
+            font-size: var(--text-body-sm);
+            color: var(--warning);
             flex-shrink: 0;
             margin-top: 1px;
           }
@@ -1053,29 +1071,24 @@ const getActiveStep = () => {
         .item-price-detail {
           display: flex;
           align-items: center;
-          gap: @nordic-space-md;
+          gap: var(--space-4);
           margin-top: auto;
           flex-shrink: 0;
 
           .unit-price {
-            font-size: @nordic-text-xs;
-            color: @nordic-text-muted;
+            font-size: var(--text-body-sm);
+            color: var(--ink-500);
           }
 
           .total-price {
-            font-size: @nordic-text-md;
-            font-weight: 700;
-            color: @nordic-red;
+            font-family: var(--font-num);
+            font-size: var(--text-h3);
+            font-weight: var(--weight-bold);
+            color: var(--ink-900);
+            font-variant-numeric: tabular-nums;
           }
         }
       }
-    }
-
-    .items-empty {
-      text-align: center;
-      padding: @nordic-space-xl;
-      color: @nordic-text-muted;
-      font-size: @nordic-text-base;
     }
   }
 
@@ -1086,32 +1099,37 @@ const getActiveStep = () => {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: @nordic-space-2sm 0;
+        padding: var(--space-2) 0;
 
         .amount-label {
-          font-size: @nordic-text-base;
-          color: @nordic-text-secondary;
+          font-size: var(--text-body);
+          color: var(--ink-500);
         }
 
         .amount-value {
-          font-size: 15px;
-          color: @nordic-text;
-          font-weight: 500;
+          font-family: var(--font-num);
+          font-size: var(--text-body);
+          color: var(--ink-900);
+          font-weight: var(--weight-medium);
+          font-variant-numeric: tabular-nums;
         }
 
         &.total-row {
-          padding-top: @nordic-space-md;
+          padding-top: var(--space-4);
+          border-top: 1px solid var(--line);
 
           .total-label {
-            font-size: @nordic-text-md;
-            font-weight: 600;
-            color: @nordic-text;
+            font-size: var(--text-h3);
+            font-weight: var(--weight-semibold);
+            color: var(--ink-900);
           }
 
           .total-value {
-            font-size: @nordic-text-xl;
-            font-weight: 700;
-            color: @nordic-yellow;
+            font-family: var(--font-num);
+            font-size: var(--text-h1);
+            font-weight: var(--weight-bold);
+            color: var(--ink-900);
+            font-variant-numeric: tabular-nums;
           }
         }
       }
@@ -1123,23 +1141,25 @@ const getActiveStep = () => {
     .payment-details {
       display: flex;
       flex-direction: column;
-      gap: @nordic-space-2sm;
+      gap: var(--space-2);
 
       .payment-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: @nordic-space-sm 0;
+        padding: var(--space-2) 0;
 
         .payment-label {
-          font-size: @nordic-text-base;
-          color: @nordic-text-secondary;
+          font-size: var(--text-body);
+          color: var(--ink-500);
         }
 
         .payment-value {
-          font-size: @nordic-text-base;
-          color: @nordic-text;
-          font-weight: 500;
+          font-family: var(--font-num);
+          font-size: var(--text-body);
+          color: var(--ink-700);
+          font-weight: var(--weight-medium);
+          font-variant-numeric: tabular-nums;
         }
       }
     }
@@ -1297,51 +1317,23 @@ const getActiveStep = () => {
   .order-actions {
     display: flex;
     justify-content: center;
-    gap: @nordic-space-md;
-    padding: @nordic-space-lg 0;
+    gap: var(--space-3);
+    padding: var(--space-5) 0;
 
     .action-btn {
       min-width: 160px;
-      height: 48px;
-      font-size: @nordic-text-md;
-      font-weight: 600;
-      border-radius: @nordic-radius-pill;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 12px @nordic-shadow;
+      height: 44px;
+      font-size: var(--text-body);
+      font-weight: var(--weight-semibold);
+      border-radius: var(--radius-md);
+      transition:
+        color var(--duration-fast) var(--ease-standard),
+        border-color var(--duration-fast) var(--ease-standard),
+        background-color var(--duration-fast) var(--ease-standard);
+      box-shadow: none;
 
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px @nordic-shadow-hover;
-      }
-
-      &.cancel-btn {
-        background: linear-gradient(135deg, @nordic-red 0%, @nordic-red 100%);
-        border: none;
-        box-shadow: 0 4px 12px fade(@nordic-red, 30%);
-
-        &:hover {
-          box-shadow: 0 6px 16px fade(@nordic-red, 40%);
-        }
-      }
-
-      &.evaluate-btn {
-        background: linear-gradient(135deg, @nordic-green 0%, @nordic-green 100%);
-        border: none;
-        box-shadow: 0 4px 12px fade(@nordic-green, 30%);
-
-        &:hover {
-          box-shadow: 0 6px 16px fade(@nordic-green, 40%);
-        }
-      }
-
-      &.contact-btn {
-        background: linear-gradient(135deg, @nordic-blue 0%, @nordic-blue 100%);
-        border: none;
-        box-shadow: 0 4px 12px fade(@nordic-blue, 30%);
-
-        &:hover {
-          box-shadow: 0 6px 16px fade(@nordic-blue, 40%);
-        }
+        transform: none;
       }
     }
   }
@@ -1350,48 +1342,53 @@ const getActiveStep = () => {
 // 响应式设计
 @media (max-width: @nordic-breakpoint-md) {
   .order-detail-container {
-    padding: 0 12px @nordic-space-md 12px;
+    padding: 0 var(--space-4) var(--space-8);
 
     .page-header {
-      padding: 14px @nordic-space-md;
-      border-radius: @nordic-radius-lg;
-    }
-
-    .page-title {
-      font-size: @nordic-text-lg;
+      margin-bottom: var(--space-5);
     }
 
     .order-detail-content {
-      gap: @nordic-space-md;
+      gap: var(--space-4);
     }
 
     .el-card {
-      border-radius: @nordic-radius-lg;
+      border-radius: var(--radius-lg);
 
       :deep(.el-card__body) {
-        padding: @nordic-space-md;
+        padding: var(--space-4);
       }
 
       :deep(.el-card__header) {
-        padding: 14px @nordic-space-md;
+        padding: var(--space-3) var(--space-4);
       }
     }
 
     .status-card {
       :deep(.el-card__body) {
-        padding: @nordic-space-lg @nordic-space-md;
+        padding: var(--space-5);
       }
 
-      .order-info-basic {
+      .status-summary {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+      }
+
+      .order-meta {
+        justify-self: start;
+        align-items: flex-start;
+        text-align: left;
+      }
+
+      .cancelled-summary {
         flex-direction: column;
-        align-items: flex-start !important;
-        gap: @nordic-space-2sm;
+        align-items: flex-start;
       }
 
       .order-progress {
         :deep(.el-steps) {
           .el-step__title {
-            font-size: @nordic-text-xs !important;
+            font-size: var(--text-body-sm) !important;
           }
 
           .el-step__icon {
