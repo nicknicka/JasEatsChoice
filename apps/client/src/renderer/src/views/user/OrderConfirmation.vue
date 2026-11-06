@@ -4,7 +4,7 @@
     <div class="page-header">
       <div class="header-content">
         <common-back-button type="text" size="small" />
-        <h2 class="page-title">
+        <h1 class="page-title">
           <template v-if="fromChat">
             <el-tag :type="fromSingleChat ? 'primary' : 'success'" size="large" class="chat-tag">
               {{ fromSingleChat ? '单聊' : '群聊' }}
@@ -12,7 +12,7 @@
             订单确认
           </template>
           <template v-else> 订单确认 </template>
-        </h2>
+        </h1>
       </div>
     </div>
 
@@ -20,7 +20,7 @@
       <!-- 左侧主要内容区 -->
       <div class="content-left">
         <!-- 商家信息卡片 -->
-        <el-card class="info-card merchant-card scale-in" shadow="hover">
+        <el-card class="info-card merchant-card enter" shadow="never">
           <div class="merchant-info">
             <div class="merchant-avatar">
               <el-icon :size="40"><Shop /></el-icon>
@@ -37,21 +37,24 @@
         </el-card>
 
         <!-- 自取提示卡片 -->
-        <el-card class="info-card pickup-card" shadow="hover">
+        <el-card class="info-card pickup-card enter" shadow="never">
           <div class="pickup-info">
             <div class="pickup-icon">
-              <el-icon :size="32" color="#67c23a"><Shop /></el-icon>
+              <el-icon :size="32"><Shop /></el-icon>
             </div>
             <div class="pickup-details">
               <div class="pickup-title">到店自取</div>
               <div class="pickup-desc">请到店取餐，商家地址：{{ merchantInfo.address || '商家地址' }}</div>
-              <div class="pickup-time">预计等待时间：约15-20分钟</div>
+              <div class="pickup-time">
+                <el-icon><Clock /></el-icon>
+                预计等待时间：约15-20分钟
+              </div>
             </div>
           </div>
         </el-card>
 
         <!-- 订单商品卡片 -->
-        <el-card class="info-card fade-in-up delay-100" shadow="hover">
+        <el-card class="info-card enter" shadow="never">
           <template #header>
             <div class="card-header">
               <span class="card-title">订单商品</span>
@@ -65,7 +68,7 @@
           <!-- 已支付订单 -->
           <div v-if="orderInfo.paidItems.length > 0" class="order-section">
             <div class="section-header">
-              <el-icon color="#67c23a"><CircleCheck /></el-icon>
+              <el-icon class="icon-success"><CircleCheck /></el-icon>
               <span class="section-title">已支付商品</span>
               <el-tag type="success" size="small" effect="plain">不可修改</el-tag>
             </div>
@@ -73,9 +76,9 @@
           </div>
 
           <!-- 未支付订单 -->
-          <div class="order-section stagger-item" :class="{ 'mt-20': orderInfo.paidItems.length > 0 }">
+          <div class="order-section" :class="{ 'mt-20': orderInfo.paidItems.length > 0 }">
             <div class="section-header">
-              <el-icon color="#e6a23c"><Clock /></el-icon>
+              <el-icon class="icon-warning"><Clock /></el-icon>
               <span class="section-title">待支付商品</span>
               <el-tag :type="canEditOrderItems ? 'warning' : 'info'" size="small" effect="plain">
                 {{ canEditOrderItems ? '可编辑' : '已锁单' }}
@@ -86,7 +89,7 @@
         </el-card>
 
         <!-- 支付明细卡片 -->
-        <el-card class="info-card payment-summary-card fade-in-up delay-200" shadow="hover">
+        <el-card class="info-card payment-summary-card enter" shadow="never">
           <template #header>
             <div class="card-header">
               <span class="card-title">支付明细</span>
@@ -109,7 +112,9 @@
 
             <div class="detail-row total-row">
               <span class="total-label">应付金额</span>
-              <span class="total-value">¥{{ finalAmount.toFixed(2) }}</span>
+              <span class="total-value" :class="{ 'amount-updated': amountFlashing }">
+                ¥{{ finalAmount.toFixed(2) }}
+              </span>
             </div>
           </div>
 
@@ -118,7 +123,7 @@
             <div class="coupon-item" v-for="discount in discounts" :key="discount.id">
               <div class="coupon-info-main">
                 <div class="coupon-left">
-                  <el-icon color="#e6a23c"><Ticket /></el-icon>
+                  <el-icon class="icon-warning"><Ticket /></el-icon>
                   <div class="coupon-details">
                     <span class="coupon-name">{{ discount.name }}</span>
                     <span class="coupon-desc" v-if="discount.minAmount > 0">
@@ -155,7 +160,7 @@
         </el-card>
 
         <!-- 订单备注卡片 -->
-        <el-card class="info-card" shadow="hover">
+        <el-card class="info-card enter" shadow="never">
           <template #header>
             <div class="card-header">
               <span class="card-title">订单备注</span>
@@ -190,7 +195,7 @@
         </el-card>
 
         <!-- 支付方式卡片 -->
-        <el-card class="info-card" shadow="hover">
+        <el-card class="info-card enter" shadow="never">
           <template #header>
             <div class="card-header">
               <span class="card-title">支付方式</span>
@@ -218,18 +223,18 @@
     </div>
 
     <!-- 底部提交栏 -->
-    <div class="bottom-submit-bar scale-in delay-300">
+    <div class="bottom-submit-bar enter">
       <div class="submit-bar-content">
         <div class="submit-bar-left">
           <div class="payment-tips">
-            <el-icon color="#909399" :size="16"><InfoFilled /></el-icon>
+            <el-icon class="icon-muted" :size="16"><InfoFilled /></el-icon>
             <span>已支付订单不可修改，仅支付未支付部分</span>
           </div>
         </div>
         <div class="submit-bar-right">
           <div class="total-info">
             <span class="total-label">应付金额：</span>
-            <span class="total-amount">¥{{ finalAmount.toFixed(2) }}</span>
+            <span class="total-amount" :class="{ 'amount-updated': amountFlashing }">¥{{ finalAmount.toFixed(2) }}</span>
           </div>
           <el-button
             type="primary"
@@ -237,6 +242,7 @@
             class="submit-button-fixed"
             @click="confirmOrder"
             :loading="submitting"
+            :disabled="submitting"
           >
             {{ submitButtonText }}
           </el-button>
@@ -405,6 +411,35 @@ if (!merchantId.value) {
   router.back()
 }
 
+// 合并重复商品行：同一菜品（含同规格、同备注）只保留一行并累加数量，总额不变
+const mergeOrderItems = (items) => {
+  const merged = []
+  const indexByKey = new Map()
+
+  ;(items || []).forEach((item) => {
+    const key = JSON.stringify([
+      String(item.id ?? item.dishId ?? ''),
+      item.requiredIngredients || [],
+      item.selectedOptionalIngredients || [],
+      item.note || item.customization || ''
+    ])
+    const hitIndex = indexByKey.get(key)
+
+    if (hitIndex === undefined) {
+      indexByKey.set(key, merged.length)
+      merged.push({ ...item })
+      return
+    }
+
+    const target = merged[hitIndex]
+    const quantity = Number(item.quantity) || 0
+    target.quantity = (Number(target.quantity) || 0) + quantity
+    target.totalPrice = (Number(target.price) || 0) * target.quantity
+  })
+
+  return merged
+}
+
 // 订单信息（ID由后端IdGenerator统一生成，避免重复）
 const orderInfo = ref({
   orderId: null,
@@ -413,7 +448,7 @@ const orderInfo = ref({
   creator: pendingOrder.creator || '',
   members: pendingOrder.members || [],
   paidItems: [],
-  unpaidItems: pendingOrder.cartItems || [],
+  unpaidItems: mergeOrderItems(pendingOrder.cartItems),
   totalPaid: 0.0,
   totalUnpaid:
     pendingOrder.totalAmount ||
@@ -549,6 +584,20 @@ const discountAmount = computed(() => {
 // 最终金额（注意：orderInfo.totalUnpaid 已经在 useDiscount 中被修改过了）
 const finalAmount = computed(() => {
   return orderInfo.value.totalUnpaid
+})
+
+// 金额变化反馈：实付金额变化时一次性高亮，动画时长/缓动由 CSS token 决定
+const amountFlashing = ref(false)
+let amountFlashTimer = null
+watch(finalAmount, () => {
+  amountFlashing.value = false
+  if (amountFlashTimer) clearTimeout(amountFlashTimer)
+  requestAnimationFrame(() => {
+    amountFlashing.value = true
+    amountFlashTimer = setTimeout(() => {
+      amountFlashing.value = false
+    }, 600)
+  })
 })
 
 const resetDiscountState = () => {
@@ -1043,67 +1092,73 @@ const confirmOrder = async () => {
 </script>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
 .order-confirmation-container {
   min-height: 100vh;
-  background: @nordic-bg;
-  padding-bottom: 100px;
+  background: var(--canvas);
+  color: var(--ink-900);
+  font-family: var(--font-sans);
+  /* 底部固定支付栏高度 + 滚动安全距离，最后一张卡片不被吸底栏遮挡（§4.4 / §4.6） */
+  padding-bottom: calc(80px + var(--space-6));
 
   .page-header {
-    background: @nordic-surface;
-    box-shadow: 0 2px 8px @nordic-shadow;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
     position: sticky;
     top: 0;
     z-index: 100;
 
     .header-content {
-      max-width: 1200px;
+      max-width: var(--page-max);
       margin: 0 auto;
-      padding: @nordic-space-md @nordic-space-lg;
+      padding: var(--space-6) var(--page-gutter);
       display: flex;
       align-items: center;
-      gap: @nordic-space-md;
+      gap: var(--space-4);
 
       .page-title {
-        font-size: @nordic-text-lg;
-        font-weight: 600;
+        font-size: var(--text-h1);
+        line-height: 32px;
+        font-weight: var(--weight-semibold);
+        letter-spacing: var(--tracking-tight);
         margin: 0;
-        color: @nordic-text;
+        color: var(--ink-900);
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: var(--space-3);
 
         .chat-tag {
-          font-size: @nordic-text-base;
+          font-size: var(--text-body);
         }
       }
     }
   }
 
   .main-content {
-    max-width: 1200px;
-    margin: @nordic-space-lg auto;
-    padding: 0 @nordic-space-lg;
+    max-width: var(--page-max);
+    margin: var(--space-6) auto;
+    padding: 0 var(--page-gutter);
 
     .content-left {
       display: flex;
       flex-direction: column;
-      gap: @nordic-space-md + 4px;
+      gap: var(--space-5);
     }
   }
 
+  // 卡片统一 L1 微质感：--surface + 1px --line + 顶部内高光（§3.4 / §4.2）
   .info-card {
-    .nordic-card();
-    border-radius: @nordic-radius-lg;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface) 60%, transparent);
 
     :deep(.el-card__header) {
-      padding: @nordic-space-md 20px;
-      border-bottom: 1px solid @nordic-divider;
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--line);
     }
 
     :deep(.el-card__body) {
-      padding: 20px;
+      padding: var(--space-5);
     }
 
     .card-header {
@@ -1112,9 +1167,9 @@ const confirmOrder = async () => {
       align-items: center;
 
       .card-title {
-        font-size: @nordic-text-md;
-        font-weight: 600;
-        color: @nordic-text;
+        font-size: var(--text-h3);
+        font-weight: var(--weight-semibold);
+        color: var(--ink-900);
       }
     }
   }
@@ -1123,69 +1178,70 @@ const confirmOrder = async () => {
   .merchant-card {
     .merchant-info {
       display: flex;
-      gap: @nordic-space-md;
+      gap: var(--space-4);
       align-items: center;
 
       .merchant-avatar {
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-        border-radius: @nordic-radius-lg;
+        width: 56px;
+        height: 56px;
+        background: var(--brand-500);
+        border-radius: var(--radius-lg);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: @nordic-white;
+        color: var(--surface);
       }
 
       .merchant-details {
         flex: 1;
 
         .merchant-name {
-          font-size: @nordic-text-md + 2px;
-          font-weight: 600;
-          color: @nordic-text;
-          margin-bottom: @nordic-space-sm;
+          font-size: var(--text-h3);
+          font-weight: var(--weight-semibold);
+          color: var(--ink-900);
+          margin-bottom: var(--space-1);
         }
 
         .merchant-meta {
           display: flex;
           align-items: center;
-          gap: @nordic-space-sm;
-          font-size: @nordic-text-base;
-          color: @nordic-text-secondary;
+          gap: var(--space-2);
+          font-size: var(--text-body);
+          color: var(--ink-500);
 
           .separator {
-            color: @nordic-border;
+            color: var(--line-strong);
           }
 
           .pickup-type {
-            color: @nordic-green;
-            font-weight: 500;
+            color: var(--ink-500);
           }
         }
       }
     }
   }
 
-  // 自取提示卡片
+  // 自取提示：中性信息块，不再用蓝色作强调（§2 冲突裁决）
   .pickup-card {
-    background: linear-gradient(135deg, @nordic-blue-light 0%, @nordic-blue-light 100%);
-    border: 1px solid @nordic-blue;
+    background: var(--canvas-sunken);
+    border: 1px solid var(--line);
+    box-shadow: none;
 
     .pickup-info {
       display: flex;
-      gap: @nordic-space-md;
+      gap: var(--space-4);
       align-items: flex-start;
 
       .pickup-icon {
-        width: 56px;
-        height: 56px;
-        background: linear-gradient(135deg, @nordic-green 0%, lighten(@nordic-green, 8%) 100%);
-        border-radius: @nordic-radius-lg;
+        width: 48px;
+        height: 48px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: @nordic-white;
+        color: var(--ink-500);
         flex-shrink: 0;
       }
 
@@ -1193,30 +1249,25 @@ const confirmOrder = async () => {
         flex: 1;
 
         .pickup-title {
-          font-size: @nordic-text-md;
-          font-weight: 600;
-          color: @nordic-text;
-          margin-bottom: @nordic-space-sm;
+          font-size: var(--text-h3);
+          font-weight: var(--weight-semibold);
+          color: var(--ink-900);
+          margin-bottom: var(--space-1);
         }
 
         .pickup-desc {
-          font-size: @nordic-text-base;
-          color: @nordic-text-secondary;
-          margin-bottom: 6px;
+          font-size: var(--text-body);
+          color: var(--ink-500);
+          margin-bottom: var(--space-1);
           line-height: 1.5;
         }
 
         .pickup-time {
-          font-size: @nordic-text-sm;
-          color: @nordic-text-secondary;
+          font-size: var(--text-body-sm);
+          color: var(--ink-500);
           display: flex;
           align-items: center;
-          gap: @nordic-space-xs;
-
-          &::before {
-            content: '⏱';
-            font-size: @nordic-text-base;
-          }
+          gap: var(--space-1);
         }
       }
     }
@@ -1228,58 +1279,59 @@ const confirmOrder = async () => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid @nordic-divider;
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--line);
 
       &:last-child {
         border-bottom: none;
       }
 
       .label {
-        color: @nordic-text-secondary;
-        font-size: @nordic-text-base;
+        color: var(--ink-500);
+        font-size: var(--text-body);
       }
 
       .value {
-        color: @nordic-text;
-        font-weight: 500;
+        color: var(--ink-900);
+        font-weight: var(--weight-medium);
       }
 
       &.amount-row {
         display: flex;
         justify-content: space-around;
-        padding: 20px 0;
-        margin-top: @nordic-space-sm;
-        background: @nordic-bg;
-        border-radius: @nordic-radius-sm;
+        padding: var(--space-5) 0;
+        margin-top: var(--space-2);
+        background: var(--canvas);
+        border-radius: var(--radius-sm);
 
         .amount-item {
           text-align: center;
           flex: 1;
 
           .amount-label {
-            font-size: @nordic-text-sm;
-            color: @nordic-text-secondary;
-            margin-bottom: @nordic-space-sm;
+            font-size: var(--text-body-sm);
+            color: var(--ink-500);
+            margin-bottom: var(--space-2);
           }
 
           .amount-value {
-            font-size: @nordic-text-xl;
-            font-weight: 700;
+            font-size: var(--text-display);
+            font-weight: var(--weight-bold);
+            color: var(--ink-900);
 
             &.paid {
-              color: @nordic-green;
+              color: var(--ink-900);
             }
 
             &.unpaid {
-              color: @nordic-yellow;
+              color: var(--ink-900);
             }
           }
         }
 
         .amount-divider {
           width: 1px;
-          background: @nordic-border;
+          background: var(--line);
         }
       }
     }
@@ -1288,67 +1340,82 @@ const confirmOrder = async () => {
   // 订单商品
   .order-section {
     &.mt-20 {
-      margin-top: 20px;
+      margin-top: var(--space-5);
     }
 
     .section-header {
       display: flex;
       align-items: center;
-      gap: @nordic-space-sm;
-      margin-bottom: @nordic-space-md;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
 
       .section-title {
-        font-size: @nordic-text-base + 1px;
-        font-weight: 600;
-        color: @nordic-text;
+        font-size: var(--text-body);
+        font-weight: var(--weight-semibold);
+        color: var(--ink-900);
         flex: 1;
       }
     }
+  }
+
+  // 语义图标只做小面积提示（§3.1）
+  .icon-success {
+    color: var(--success);
+  }
+
+  .icon-warning {
+    color: var(--warning);
+  }
+
+  .icon-muted {
+    color: var(--ink-400);
   }
 
   // 支付方式
   .payment-methods {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: var(--space-3);
 
     .payment-method-item {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: @nordic-space-md;
-      border: 2px solid @nordic-border;
-      border-radius: @nordic-radius-sm;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border: 2px solid var(--line);
+      border-radius: var(--radius-md);
       cursor: pointer;
-      transition: all @nordic-transition-slow;
+      transition:
+        border-color var(--duration-fast) var(--ease-out),
+        background var(--duration-fast) var(--ease-out);
 
       &:hover {
-        border-color: @nordic-blue;
-        background: @nordic-bg;
+        border-color: var(--brand-300);
+        background: var(--canvas);
       }
 
       &.active {
-        border-color: @nordic-blue;
-        background: @nordic-blue-light;
+        border-color: var(--brand-500);
+        background: var(--brand-50);
       }
 
       .method-icon {
-        font-size: @nordic-text-xl;
+        font-size: var(--text-h2);
       }
 
       .method-info {
         flex: 1;
 
         .method-name {
-          font-size: @nordic-text-base + 1px;
-          font-weight: 500;
-          color: @nordic-text;
+          font-size: var(--text-body);
+          font-weight: var(--weight-medium);
+          color: var(--ink-900);
         }
 
         .method-desc {
-          font-size: @nordic-text-sm;
-          color: @nordic-text-secondary;
-          margin-top: @nordic-space-xs;
+          font-size: var(--text-body-sm);
+          color: var(--ink-500);
+          margin-top: var(--space-1);
         }
       }
     }
@@ -1357,30 +1424,30 @@ const confirmOrder = async () => {
   // 订单备注卡片
   .order-remark-section {
     .order-remark-textarea {
-      margin-bottom: 12px;
+      margin-bottom: var(--space-3);
 
       :deep(.el-textarea__inner) {
-        border-radius: @nordic-radius-sm;
-        font-size: @nordic-text-base;
-        padding: 12px;
-        background: @nordic-bg;
-        transition: all @nordic-transition-slow;
+        border-radius: var(--radius-sm);
+        font-size: var(--text-body);
+        padding: var(--space-3);
+        background: var(--canvas);
+        transition: border-color var(--duration-fast) var(--ease-out);
 
         &:focus {
-          background: @nordic-surface;
-          border-color: @nordic-blue;
-          box-shadow: 0 0 0 2px @nordic-blue-light;
+          background: var(--surface);
+          border-color: var(--brand-500);
+          box-shadow: 0 0 0 2px var(--brand-100);
         }
 
         &::placeholder {
-          color: @nordic-text-muted;
-          font-size: @nordic-text-sm;
+          color: var(--ink-400);
+          font-size: var(--text-body-sm);
         }
       }
 
       :deep(.el-input__count) {
-        font-size: @nordic-text-xs;
-        color: @nordic-text-muted;
+        font-size: var(--text-caption);
+        color: var(--ink-400);
         background: transparent;
       }
     }
@@ -1389,138 +1456,141 @@ const confirmOrder = async () => {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: @nordic-space-sm;
-      padding-top: @nordic-space-sm;
-      border-top: 1px solid @nordic-divider;
+      gap: var(--space-2);
+      padding-top: var(--space-2);
+      border-top: 1px solid var(--line);
 
       .quick-remark-label {
-        font-size: @nordic-text-sm;
-        color: @nordic-text-secondary;
-        font-weight: 500;
+        font-size: var(--text-body-sm);
+        color: var(--ink-500);
+        font-weight: var(--weight-medium);
       }
 
       .quick-remark-tag {
         cursor: pointer;
-        transition: all @nordic-transition-slow;
+        transition:
+          background var(--duration-fast) var(--ease-out),
+          color var(--duration-fast) var(--ease-out),
+          border-color var(--duration-fast) var(--ease-out);
         user-select: none;
 
         &:hover {
-          background: @nordic-blue;
-          color: @nordic-white;
-          border-color: @nordic-blue;
-          transform: translateY(-1px);
-        }
-
-        &:active {
-          transform: translateY(0);
+          background: var(--brand-500);
+          color: var(--surface);
+          border-color: var(--brand-500);
         }
       }
     }
   }
 
-  // 支付明细卡片
+  // 支付明细卡片：原价 / 优惠 / 实付三段关系（§5.2 金额不染色、tabular-nums）
   .payment-summary-card {
     .payment-details {
       .detail-row {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        padding: @nordic-space-sm 0;
+        align-items: baseline;
+        gap: var(--space-4);
+        padding: var(--space-2) 0;
 
         .detail-label {
-          color: @nordic-text-secondary;
-          font-size: @nordic-text-base;
+          color: var(--ink-500);
+          font-size: var(--text-body);
         }
 
         .detail-value {
-          color: @nordic-text;
-          font-weight: 500;
-
-          &.discount {
-            color: @nordic-red;
-          }
+          color: var(--ink-900);
+          font-family: var(--font-num);
+          font-variant-numeric: tabular-nums;
+          font-weight: var(--weight-medium);
+          white-space: nowrap;
         }
 
         &.total-row {
-          padding-top: 12px;
+          padding-top: var(--space-3);
 
           .total-label {
-            font-size: @nordic-text-md;
-            font-weight: 600;
-            color: @nordic-text;
+            font-size: var(--text-h3);
+            font-weight: var(--weight-semibold);
+            color: var(--ink-900);
           }
 
           .total-value {
-            font-size: @nordic-text-xl;
-            font-weight: 700;
-            color: @nordic-yellow;
+            font-size: var(--text-display);
+            line-height: 40px;
+            font-weight: var(--weight-bold);
+            color: var(--ink-900);
+            font-family: var(--font-num);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
           }
         }
       }
     }
 
     .coupon-section {
-      margin: @nordic-space-md 0;
+      margin: var(--space-4) 0;
 
       .coupon-item {
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        padding: @nordic-space-md;
-        background: linear-gradient(135deg, @nordic-yellow-light 0%, @nordic-yellow-light 100%);
-        border: 1px solid @nordic-yellow;
-        border-radius: @nordic-radius-lg;
-        margin-bottom: 12px;
-        transition: all @nordic-transition-slow ease;
+        gap: var(--space-3);
+        padding: var(--space-4);
+        background: var(--warning-bg);
+        border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--space-3);
+        transition: border-color var(--duration-fast) var(--ease-out);
 
         &:last-child {
           margin-bottom: 0;
         }
 
         &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px @nordic-shadow-hover;
+          border-color: color-mix(in srgb, var(--warning) 60%, transparent);
         }
 
         .coupon-info-main {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 12px;
+          gap: var(--space-3);
 
           .coupon-left {
             flex: 1;
             display: flex;
             align-items: center;
-            gap: @nordic-space-2sm;
+            gap: var(--space-3);
 
             .el-icon {
-              font-size: @nordic-text-xl;
+              font-size: var(--text-h2);
             }
 
             .coupon-details {
               display: flex;
               flex-direction: column;
-              gap: @nordic-space-xs;
+              gap: var(--space-1);
 
               .coupon-name {
-                font-size: @nordic-text-base + 1px;
-                font-weight: 600;
-                color: @nordic-yellow-dark;
+                font-size: var(--text-body);
+                font-weight: var(--weight-semibold);
+                color: var(--ink-900);
               }
 
               .coupon-desc {
-                font-size: @nordic-text-xs;
-                color: @nordic-yellow-dark;
+                font-size: var(--text-caption);
+                color: var(--ink-500);
               }
             }
           }
 
           .coupon-amount {
-            font-size: @nordic-text-lg;
-            font-weight: 700;
-            color: @nordic-yellow;
-            text-shadow: 0 1px 2px @nordic-shadow;
+            font-size: var(--text-h3);
+            font-weight: var(--weight-bold);
+            color: var(--ink-900);
+            font-family: var(--font-num);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
           }
         }
       }
@@ -1531,19 +1601,21 @@ const confirmOrder = async () => {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 12px;
-        background: @nordic-blue-light;
-        border-radius: @nordic-radius-sm;
+        padding: var(--space-2) var(--space-3);
+        background: var(--canvas-sunken);
+        border-radius: var(--radius-sm);
 
         .balance-label {
-          font-size: @nordic-text-sm;
-          color: @nordic-text-secondary;
+          font-size: var(--text-body-sm);
+          color: var(--ink-500);
         }
 
         .balance-value {
-          font-size: @nordic-text-base + 1px;
-          font-weight: 600;
-          color: @nordic-green;
+          font-size: var(--text-body);
+          font-weight: var(--weight-semibold);
+          color: var(--ink-900);
+          font-family: var(--font-num);
+          font-variant-numeric: tabular-nums;
         }
       }
     }
@@ -1553,40 +1625,40 @@ const confirmOrder = async () => {
   .payment-tips {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 12px;
-    background: @nordic-bg;
-    border-radius: @nordic-radius-sm;
-    font-size: @nordic-text-sm;
-    color: @nordic-text-secondary;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    background: var(--canvas);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-body-sm);
+    color: var(--ink-500);
     text-align: center;
     justify-content: center;
   }
 }
 
-// 底部提交栏
+// 底部提交栏：全屏唯一主动作（§4.1），吸底不遮挡内容（§4.6）
 .bottom-submit-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 999;
-  background: @nordic-surface;
-  box-shadow: 0 -2px 12px @nordic-shadow-hover;
-  border-top: 1px solid @nordic-border;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
 
   .submit-bar-content {
-    max-width: 1200px;
+    max-width: var(--page-max);
     margin: 0 auto;
-    padding: @nordic-space-md @nordic-space-lg;
+    padding: var(--space-4) var(--page-gutter);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: @nordic-space-lg;
+    gap: var(--space-6);
 
     @media (max-width: 768px) {
       flex-direction: column;
-      gap: 12px;
+      gap: var(--space-3);
     }
 
     .submit-bar-left {
@@ -1595,9 +1667,9 @@ const confirmOrder = async () => {
       .payment-tips {
         display: flex;
         align-items: center;
-        gap: @nordic-space-sm;
-        font-size: @nordic-text-base;
-        color: @nordic-text-secondary;
+        gap: var(--space-1);
+        font-size: var(--text-body);
+        color: var(--ink-500);
         text-align: left;
         justify-content: flex-start;
         padding: 0;
@@ -1609,7 +1681,7 @@ const confirmOrder = async () => {
     .submit-bar-right {
       display: flex;
       align-items: center;
-      gap: @nordic-space-lg;
+      gap: var(--space-5);
 
       @media (max-width: 768px) {
         width: 100%;
@@ -1624,46 +1696,78 @@ const confirmOrder = async () => {
         }
 
         .total-label {
-          font-size: @nordic-text-base;
-          color: @nordic-text-secondary;
-          margin-right: @nordic-space-sm;
+          font-size: var(--text-body);
+          color: var(--ink-500);
+          margin-right: var(--space-2);
         }
 
         .total-amount {
-          font-size: @nordic-text-xl;
-          font-weight: 700;
-          color: @nordic-yellow;
+          font-size: var(--text-display);
+          line-height: 40px;
+          font-weight: var(--weight-bold);
+          color: var(--ink-900);
+          font-family: var(--font-num);
+          font-variant-numeric: tabular-nums;
+          white-space: nowrap;
         }
       }
 
       .submit-button-fixed {
-        min-width: 180px;
+        min-width: 160px;
         height: 48px;
-        font-size: @nordic-text-md;
-        font-weight: 600;
-        border-radius: @nordic-radius-pill;
-        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
+        font-size: var(--text-h3);
+        font-weight: var(--weight-semibold);
+        border-radius: var(--radius-md);
+        background: var(--brand-500);
         border: none;
-        box-shadow: 0 4px 16px @nordic-shadow-hover;
+        box-shadow: none;
 
         &:hover {
-          background: linear-gradient(135deg, lighten(@nordic-accent, 5%) 0%, lighten(@nordic-accent-dark, 5%) 100%);
-          box-shadow: 0 6px 20px @nordic-shadow-hover;
-          transform: translateY(-2px);
-        }
-
-        &:active {
-          transform: translateY(0);
+          background: var(--brand-600);
         }
 
         @media (max-width: 768px) {
           min-width: 140px;
           height: 44px;
-          font-size: @nordic-text-base + 1px;
+          font-size: var(--text-body);
         }
       }
     }
   }
+}
+
+// 金额变化一次性反馈：时长/缓动取自 token（§3.5）
+@keyframes amount-feedback {
+  0% {
+    opacity: 0.45;
+    transform: translateY(2px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.amount-updated {
+  animation: amount-feedback var(--refresh-feedback) var(--ease-spring);
+}
+
+// 卡片 / 分区首次进入：只播一次，时长/缓动取自 token（§3.5）
+@keyframes enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.enter {
+  animation: enter-rise var(--duration-base) var(--ease-out) both;
 }
 
 // 购物车弹窗
@@ -1675,10 +1779,10 @@ const confirmOrder = async () => {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding: 12px;
-    border: 1px solid @nordic-divider;
-    border-radius: @nordic-radius-sm;
-    margin-bottom: 12px;
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-3);
 
     &:last-child {
       margin-bottom: 0;
@@ -1686,56 +1790,58 @@ const confirmOrder = async () => {
 
     .cart-item-main {
       flex: 1;
-      padding-right: 12px;
+      padding-right: var(--space-3);
 
       .item-name {
-        font-size: @nordic-text-base + 1px;
-        font-weight: 500;
-        color: @nordic-text;
-        margin-bottom: 6px;
+        font-size: var(--text-body);
+        font-weight: var(--weight-medium);
+        color: var(--ink-900);
+        margin-bottom: var(--space-1);
       }
 
       .item-price {
-        font-size: @nordic-text-base;
-        color: @nordic-text-secondary;
-        margin-bottom: @nordic-space-sm;
+        font-family: var(--font-num);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-body-sm);
+        color: var(--ink-500);
+        margin-bottom: var(--space-2);
       }
 
       .item-specs {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: @nordic-space-sm;
+        gap: var(--space-1);
+        margin-bottom: var(--space-2);
 
         .ingredient-tag {
-          font-size: @nordic-text-xs;
+          font-size: var(--text-caption);
         }
       }
 
       .item-note-edit {
-        margin-top: @nordic-space-sm;
+        margin-top: var(--space-2);
 
         :deep(.el-textarea__inner) {
-          border-radius: @nordic-radius-sm;
-          font-size: @nordic-text-sm;
-          padding: @nordic-space-sm 12px;
-          background: @nordic-bg;
-          transition: all @nordic-transition-slow;
+          border-radius: var(--radius-sm);
+          font-size: var(--text-body-sm);
+          padding: var(--space-2) var(--space-3);
+          background: var(--canvas);
+          transition: border-color var(--duration-fast) var(--ease-out);
 
           &:focus {
-            background: @nordic-surface;
-            border-color: @nordic-blue;
+            background: var(--surface);
+            border-color: var(--brand-500);
           }
 
           &::placeholder {
-            color: @nordic-text-muted;
-            font-size: @nordic-text-xs;
+            color: var(--ink-400);
+            font-size: var(--text-caption);
           }
         }
 
         :deep(.el-input__count) {
-          font-size: 11px;
-          color: @nordic-text-muted;
+          font-size: var(--text-caption);
+          color: var(--ink-400);
           background: transparent;
         }
       }
@@ -1744,12 +1850,14 @@ const confirmOrder = async () => {
     .cart-item-controls {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: var(--space-3);
 
       .item-total {
-        font-size: @nordic-text-md;
-        font-weight: 600;
-        color: @nordic-yellow;
+        font-family: var(--font-num);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-h3);
+        font-weight: var(--weight-semibold);
+        color: var(--ink-900);
         min-width: 80px;
         text-align: right;
       }
@@ -1758,40 +1866,42 @@ const confirmOrder = async () => {
 }
 
 .empty-cart {
-  padding: 40px 0;
+  padding: var(--space-10) 0;
 }
 
 // AA支付模态框
 .aa-payment-content {
-  padding: 20px 0;
+  padding: var(--space-5) 0;
 
   .aa-info {
     .info-item {
       display: flex;
       justify-content: space-between;
-      margin-bottom: @nordic-space-md;
-      padding: 12px;
-      background: @nordic-bg;
-      border-radius: @nordic-radius-sm;
+      margin-bottom: var(--space-4);
+      padding: var(--space-3);
+      background: var(--canvas);
+      border-radius: var(--radius-sm);
 
       &:last-child {
         margin-bottom: 0;
       }
 
       .info-label {
-        font-weight: 500;
-        color: @nordic-text-secondary;
+        font-weight: var(--weight-medium);
+        color: var(--ink-500);
       }
 
       .info-value {
-        font-size: @nordic-text-md;
-        color: @nordic-text;
-        font-weight: 500;
+        font-family: var(--font-num);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-h3);
+        color: var(--ink-900);
+        font-weight: var(--weight-medium);
 
         &.highlight {
-          color: @nordic-yellow;
-          font-weight: 600;
-          font-size: @nordic-text-lg;
+          color: var(--ink-900);
+          font-weight: var(--weight-bold);
+          font-size: var(--text-h2);
         }
       }
     }
@@ -1800,27 +1910,29 @@ const confirmOrder = async () => {
 
 // 自定义分摊模态框
 .custom-share-content {
-  padding: 20px 0;
+  padding: var(--space-5) 0;
 
   .custom-info {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
 
     .info-item {
       display: flex;
       justify-content: space-between;
-      padding: 12px;
-      background: @nordic-bg;
-      border-radius: @nordic-radius-sm;
+      padding: var(--space-3);
+      background: var(--canvas);
+      border-radius: var(--radius-sm);
 
       .info-label {
-        font-weight: 500;
-        color: @nordic-text-secondary;
+        font-weight: var(--weight-medium);
+        color: var(--ink-500);
       }
 
       .info-value {
-        font-size: @nordic-text-md;
-        color: @nordic-text;
-        font-weight: 500;
+        font-family: var(--font-num);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-h3);
+        color: var(--ink-900);
+        font-weight: var(--weight-medium);
       }
     }
   }
@@ -1830,18 +1942,18 @@ const confirmOrder = async () => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px;
-      border: 1px solid @nordic-divider;
-      border-radius: @nordic-radius-sm;
-      margin-bottom: 12px;
+      padding: var(--space-3);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--space-3);
 
       &:last-child {
         margin-bottom: 0;
       }
 
       .member-name {
-        font-weight: 500;
-        color: @nordic-text;
+        font-weight: var(--weight-medium);
+        color: var(--ink-900);
       }
     }
   }
