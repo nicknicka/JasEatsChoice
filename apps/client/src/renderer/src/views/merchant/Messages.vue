@@ -476,10 +476,14 @@ const totalStats = computed(() => {
   }
 })
 
-// 0 条时收起统计与批量操作（评审 P0）：只在有消息时渲染
-const hasMessages = computed(() => filteredMessages.value.length > 0)
+// 总消息数为 0 时才收起统计与批量操作（评审 P0）。
+// 注意：不能用 filteredMessages，否则切到空子分类会把分类 chip 一起藏掉，用户无法切回。
+const hasAnyMessages = computed(() => messages.value.length > 0)
 
 const hasUnreadMessage = computed(() => filteredMessages.value.some((message) => !message.isRead))
+
+// 空态文案：子分类为空时说明是「当前分类」，避免让用户以为全局没有消息
+const emptyDescription = computed(() => (activeCategory.value === 'all' ? '暂无消息' : '当前分类暂无消息'))
 
 // 次级统计条：品牌色主指标之外的 4 个中性指标（§4.8）
 const secondaryStats = computed(() => [
@@ -623,7 +627,7 @@ const refreshMessages = async () => {
       <!-- 消息列表 -->
       <div class="messages-list-container" v-if="!selectedMessage">
         <!-- 概览：有数据时才显示（§4.8；0 条收起统计，评审 P0） -->
-        <section v-if="hasMessages" class="stats-section">
+        <section v-if="hasAnyMessages" class="stats-section">
           <AppStatCard class="stats-overview__primary" label="总消息" :value="totalStats.total" />
           <div class="stats-overview__secondary">
             <div v-for="stat in secondaryStats" :key="stat.label" class="stats-secondary">
@@ -634,7 +638,7 @@ const refreshMessages = async () => {
         </section>
 
         <!-- 分类筛选 + 列表工具条（有数据时才显示批量操作） -->
-        <div v-if="hasMessages" class="category-section">
+        <div v-if="hasAnyMessages" class="category-section">
           <div class="category-tags">
             <div
               v-for="category in ['all', 'system', 'order', 'comment']"
@@ -697,7 +701,7 @@ const refreshMessages = async () => {
                   size="small"
                   @click="toggleSelectMode"
                   :icon="Select"
-                  :disabled="!hasMessages"
+                  :disabled="!hasAnyMessages"
                 >
                   批量管理
                 </el-button>
@@ -775,11 +779,11 @@ const refreshMessages = async () => {
           </div>
         </div>
 
-        <!-- 空数据提示：0 条时上移到筛选区位置，并收起统计与批量操作（评审 P0） -->
+        <!-- 空数据提示：当前分类/搜索结果为空（总消息为 0 时上方统计与分类区已收起） -->
         <AppEmptyState
           v-if="filteredMessages.length === 0 && !loading"
           class="empty-messages"
-          description="暂无消息"
+          :description="emptyDescription"
           action-text="刷新"
           compact
           @action="refreshMessages"
