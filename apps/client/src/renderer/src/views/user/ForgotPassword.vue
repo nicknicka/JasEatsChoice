@@ -306,19 +306,11 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="less">
-@accent: #F2784B;
-@accent-light: #FF9A76;
-@accent-gradient: linear-gradient(135deg, #F2784B, #E85D3A);
-@text-dark: #2C3E50;
-@text-muted: #8E9AAF;
-@text-placeholder: #B8C4CE;
-@input-bg: #FFFFFF;
-@input-border: #E8E4E0;
 
 .forgot-container {
   width: 100%;
   height: 100vh;
-  background: #FFF7F2;
+  background: var(--canvas);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -337,7 +329,7 @@ onUnmounted(() => {
 .orb-1 {
   width: 240px;
   height: 240px;
-  background: radial-gradient(circle, rgba(242, 120, 75, 0.2) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand-500) 20%, transparent) 0%, transparent 70%);
   top: -60px;
   left: -40px;
 }
@@ -345,7 +337,7 @@ onUnmounted(() => {
 .orb-2 {
   width: 160px;
   height: 160px;
-  background: radial-gradient(circle, rgba(255, 154, 118, 0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand-400) 18%, transparent) 0%, transparent 70%);
   bottom: 40px;
   right: -40px;
 }
@@ -368,11 +360,13 @@ onUnmounted(() => {
 }
 
 .forgot-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: @text-dark;
-  margin-bottom: 16px;
-  letter-spacing: 2px;
+  font-family: var(--font-sans);
+  font-size: var(--text-h1);
+  line-height: 32px;
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
+  margin-bottom: var(--space-4);
+  letter-spacing: var(--tracking-tight);
 }
 
 .steps-indicator {
@@ -392,43 +386,43 @@ onUnmounted(() => {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 2px solid #E0D8D2;
+  border: 2px solid var(--line-strong);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  color: @text-muted;
+  color: var(--ink-500);
   transition: all var(--duration-slow, 240ms) var(--ease-standard, cubic-bezier(0.2, 0, 0, 1));
-  background: white;
+  background: var(--surface);
 }
 
 .step.active .step-dot,
 .step.done .step-dot {
-  border-color: @accent;
-  background: @accent;
-  color: white;
+  border-color: var(--brand-500);
+  background: var(--brand-500);
+  color: var(--surface);
 }
 
 .step-label {
   font-size: 12px;
-  color: @text-muted;
+  color: var(--ink-500);
   letter-spacing: 1px;
   white-space: nowrap;
 }
 
 .step.active .step-label {
-  color: @text-dark;
+  color: var(--ink-900);
   font-weight: 500;
 }
 
 .step-line {
   width: 40px;
   height: 2px;
-  background: #E0D8D2;
+  background: var(--line-strong);
   transition: all 0.4s ease;
 
   &.filled {
-    background: @accent;
+    background: var(--brand-500);
   }
 }
 
@@ -455,52 +449,52 @@ onUnmounted(() => {
 }
 
 :deep(.el-form-item__error) {
-  color: #E07060;
+  color: var(--danger);
   font-size: 11px;
   padding-top: 2px;
 }
 
 :deep(.el-input__wrapper) {
-  background: @input-bg;
-  border: 1px solid @input-border;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
   padding: 7px 12px;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: darken(@input-border, 12%);
+    border-color: var(--line-strong);
   }
 
   &.is-focus {
-    border-color: @accent;
-    box-shadow: 0 0 0 3px rgba(242, 120, 75, 0.1);
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 14%, transparent);
   }
 }
 
 :deep(.el-input__inner) {
-  color: @text-dark;
+  color: var(--ink-900);
   font-size: 13px;
-  caret-color: @accent;
+  caret-color: var(--brand-500);
 
   &::placeholder {
-    color: @text-placeholder;
+    color: var(--ink-400);
     font-size: 13px;
   }
 }
 
 :deep(.el-input__prefix) {
-  color: @text-muted;
+  color: var(--ink-500);
   margin-right: 6px;
 }
 
 :deep(.el-input__suffix) {
-  color: @text-muted;
+  color: var(--ink-500);
 }
 
 :deep(.el-input__password) {
-  color: @text-muted;
-  &:hover { color: @text-dark; }
+  color: var(--ink-500);
+  &:hover { color: var(--ink-900); }
 }
 
 // 验证码行
@@ -520,10 +514,10 @@ onUnmounted(() => {
   flex-shrink: 0;
   height: 36px;
   padding: 0 14px;
-  border: 1px solid @accent;
+  border: 1px solid var(--brand-500);
   border-radius: 10px;
-  background: white;
-  color: @accent;
+  background: var(--surface);
+  color: var(--brand-500);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -531,14 +525,14 @@ onUnmounted(() => {
   white-space: nowrap;
 
   &:hover:not(:disabled) {
-    background: rgba(242, 120, 75, 0.06);
+    background: color-mix(in srgb, var(--brand-500) 6%, transparent);
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    border-color: @input-border;
-    color: @text-muted;
+    border-color: var(--line);
+    color: var(--ink-500);
   }
 }
 
@@ -566,13 +560,13 @@ onUnmounted(() => {
 .next-btn {
   width: 100%;
   margin-top: 4px;
-  background: @accent-gradient;
-  color: white;
-  box-shadow: 0 4px 14px rgba(242, 120, 75, 0.3);
+  background: var(--brand-500);
+  color: var(--surface);
+  box-shadow: var(--shadow-sm);
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(242, 120, 75, 0.4);
+    box-shadow: var(--shadow-md);
   }
 
   &:active {
@@ -588,25 +582,25 @@ onUnmounted(() => {
 
 .back-btn {
   flex: 0 0 100px;
-  background: white;
-  border: 1px solid @input-border;
-  color: @text-muted;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-500);
 
   &:hover {
-    border-color: @accent;
-    color: @accent;
+    border-color: var(--brand-500);
+    color: var(--brand-500);
   }
 }
 
 .submit-btn {
   flex: 1;
-  background: @accent-gradient;
-  color: white;
-  box-shadow: 0 4px 14px rgba(242, 120, 75, 0.3);
+  background: var(--brand-500);
+  color: var(--surface);
+  box-shadow: var(--shadow-sm);
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(242, 120, 75, 0.4);
+    box-shadow: var(--shadow-md);
   }
 
   &:active:not(:disabled) {
@@ -619,10 +613,10 @@ onUnmounted(() => {
   margin-top: 14px;
   padding-top: 14px;
   font-size: 12px;
-  color: @text-muted;
+  color: var(--ink-500);
 
   .link {
-    color: @accent;
+    color: var(--brand-500);
     cursor: pointer;
     font-weight: 500;
     transition: opacity 0.2s;
