@@ -139,6 +139,81 @@ async function getConversation(page, request, userId, sessionId) {
     } catch (e) { markFailed('7.4', e.message.slice(0, 50)); throw e }
   })
 
+  test('7.7 通讯录群发', async ({ page, request }) => {
+    markRunning('7.7')
+    try {
+      const senderId = String(
+        await page.evaluate(() => localStorage.getItem('auth_userId') || localStorage.getItem('userId'))
+      )
+
+      await page.goto('/user/home/contacts')
+      const rows = page.locator('.friend-item')
+      await expect(rows.first()).toBeVisible({ timeout: 10000 })
+      await expect.poll(() => rows.count()).toBeGreaterThanOrEqual(2)
+
+      // 取前两个联系人作为收件人（对应两条会话）
+      const recipients = []
+      for (let i = 0; i < 2; i += 1) {
+        const idText = await rows.nth(i).locator('.friend-id').innerText()
+        recipients.push(idText.replace(/[^0-9]/g, ''))
+      }
+      expect(new Set(recipients).size, '需要两个不同联系人').toBe(2)
+
+      const checkboxAt = (i) => rows.nth(i).locator('.friend-select .el-checkbox')
+      const toolbar = page.locator('.bulk-toolbar')
+
+      // 未选中：工具栏不出现
+      await expect(toolbar).toBeHidden()
+
+      // 勾选两人 → 工具栏出现且人数正确
+      await checkboxAt(0).click()
+      await checkboxAt(1).click()
+      await expect(toolbar).toBeVisible()
+      await expect(toolbar.locator('.bulk-toolbar__count')).toHaveText('已选 2 人')
+
+      // 全部取消 → 工具栏消失
+      await toolbar.getByRole('button', { name: '清空选择' }).click()
+      await expect(toolbar).toBeHidden()
+
+      // 重新勾选两人并打开群发对话框
+      await checkboxAt(0).click()
+      await checkboxAt(1).click()
+      await expect(toolbar.locator('.bulk-toolbar__count')).toHaveText('已选 2 人')
+      await toolbar.getByRole('button', { name: '群发消息' }).click()
+
+      const dialog = page.locator('.el-dialog').filter({ has: page.locator('.bulk-dialog') })
+      await expect(dialog).toBeVisible()
+      await expect(dialog.locator('.bulk-dialog__hint')).toHaveText('将分别发送给 2 位联系人')
+
+      const sendButton = dialog.getByRole('button', { name: '发送' })
+      // 空内容：提交被拦住
+      await expect(sendButton).toBeDisabled()
+
+      const content = `E2E 群发消息 ${Date.now()}`
+      await dialog.locator('textarea').fill(content)
+      await expect(sendButton).toBeEnabled()
+      await sendButton.click()
+
+      // 全部成功：清空选择、关闭对话框、成功提示
+      await expect(page.locator('.el-message--success').filter({ hasText: '已发送给 2 人' })).toBeVisible({ timeout: 15000 })
+      await expect(dialog).toBeHidden()
+      await expect(toolbar).toBeHidden()
+
+      // 收件人侧核对：每个收件人的会话里都能看到同一条消息
+      for (const recipientId of recipients) {
+        const sessions = await apiRequest(page, request, `/v1/chat/users/${encodeURIComponent(recipientId)}/chat-sessions`)
+        const session = sessions.find((item) => item.targetId === senderId && item.lastMessage === content)
+        expect(session, `收件人 ${recipientId} 应出现与发送者的会话`).toBeTruthy()
+
+        const history = await apiRequest(page, request, `/v1/chat/${encodeURIComponent(session.id)}/messages?size=50`)
+        const received = (history.records || []).filter((msg) => msg.content === content)
+        expect(received.length, `收件人 ${recipientId} 的会话应包含刚群发的消息`).toBeGreaterThanOrEqual(1)
+      }
+
+      markPassed('7.7', `群发给 ${recipients.length} 人，两个收件人会话均核对到同一内容`)
+    } catch (e) { markFailed('7.7', e.message.slice(0, 50)); throw e }
+  })
+
   test('7.5 通讯录', async ({ page }) => {
     markRunning('7.5')
     try {

@@ -3,7 +3,12 @@
     <!-- 页面头部：标准版标题容器（DESIGN-BASELINE §4.7） -->
     <AppPageHeader title="通讯录" :subtitle="`总好友 ${totalCount}`">
       <template #actions>
-        <el-button type="primary" :icon="Plus" @click="openAddFriendDialog">
+        <!-- 选中态下「群发消息」是唯一实心主按钮，这里同步降级（DESIGN-BASELINE §4.1 / §6.1） -->
+        <el-button
+          :type="selectedCount > 0 ? 'default' : 'primary'"
+          :icon="Plus"
+          @click="openAddFriendDialog"
+        >
           添加好友
         </el-button>
       </template>
@@ -101,6 +106,21 @@
       </AppCard>
     </div>
 
+    <!-- 群发工具栏：仅在有选中项时出现（issue 391，与选择状态绑定） -->
+    <transition name="el-fade-in-linear">
+      <AppCard v-if="selectedCount > 0" class="bulk-toolbar" :level="1" padding="sm">
+        <div class="bulk-toolbar__row">
+          <span class="bulk-toolbar__count">已选 {{ selectedCount }} 人</span>
+          <div class="bulk-toolbar__actions">
+            <el-button type="primary" :icon="Promotion" @click="openBulkDialog">
+              群发消息
+            </el-button>
+            <el-button text @click="clearSelection">清空选择</el-button>
+          </div>
+        </div>
+      </AppCard>
+    </transition>
+
     <!-- 内容区域：好友列表 + 字母索引 -->
     <div v-if="!loading && filteredFriends.length > 0" class="contacts-content">
       <AppCard class="contacts-list-card" :level="1" padding="none">
@@ -108,6 +128,15 @@
           <div class="friends-list-wrapper">
             <!-- 列表字段表头：明确列含义（DESIGN-BASELINE §4.3） -->
             <div class="list-header">
+              <span class="list-header__select">
+                <el-checkbox
+                  :model-value="isAllSelected"
+                  :indeterminate="isIndeterminate"
+                  :disabled="filteredFriends.length === 0"
+                  aria-label="全选联系人"
+                  @change="toggleSelectAll"
+                />
+              </span>
               <span class="list-header__field">联系人</span>
               <span class="list-header__field">用户 ID</span>
               <span class="list-header__field list-header__field--action">操作</span>
@@ -135,6 +164,15 @@
                   @keydown.space.prevent="startChat(friend)"
                   @contextmenu.prevent="showContextMenu($event, friend)"
                 >
+                  <!-- 行选择区：点复选框只切换选中，不进入聊天（issue 391） -->
+                  <div class="friend-select" @click.stop @keydown.stop>
+                    <el-checkbox
+                      :model-value="isSelected(friend)"
+                      :aria-label="`选择 ${friend.name}`"
+                      @change="toggleSelect(friend)"
+                    />
+                  </div>
+
                   <div class="friend-identity">
                     <div class="friend-avatar">
                       <img
@@ -317,6 +355,54 @@
         <el-button type="primary" @click="startChatFromDetail">开始聊天</el-button>
       </template>
     </el-dialog>
+
+    <!-- 群发消息对话框（issue 391）：多行输入 + 收件人提示 + 失败清单 -->
+    <el-dialog
+      v-model="bulkDialogVisible"
+      title="群发消息"
+      width="520px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="!bulkSending"
+      :show-close="!bulkSending"
+      :before-close="handleBulkDialogClose"
+    >
+      <div class="bulk-dialog">
+        <p class="bulk-dialog__hint">将分别发送给 {{ selectedCount }} 位联系人</p>
+        <el-input
+          v-model="bulkContent"
+          type="textarea"
+          :rows="5"
+          maxlength="500"
+          show-word-limit
+          resize="none"
+          :disabled="bulkSending"
+          placeholder="输入要群发的消息内容"
+        />
+        <div v-if="bulkFailures.length > 0" class="bulk-dialog__failures">
+          <p class="bulk-dialog__failures-title">
+            发送失败（{{ bulkFailures.length }} 人）
+          </p>
+          <ul class="bulk-dialog__failures-list">
+            <li v-for="friend in bulkFailures" :key="friend.id">
+              {{ friend.name }}（ID: {{ friend.id }}）
+            </li>
+          </ul>
+        </div>
+      </div>
+      <template #footer>
+        <el-button :disabled="bulkSending" @click="bulkDialogVisible = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="bulkSending"
+          :disabled="!canSubmitBulk"
+          @click="submitBulk"
+        >
+          发送
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -332,7 +418,8 @@ import {
   Delete,
   Select,
   Close,
-  ArrowDown
+  ArrowDown,
+  Promotion
 } from '@element-plus/icons-vue'
 import AppPageHeader from '../../components/common/AppPageHeader.vue'
 import AppCard from '../../components/common/AppCard.vue'
@@ -373,6 +460,13 @@ const contextMenuFriend = ref(null)
 const addFriendDialogVisible = ref(false)
 const friendDetailDialogVisible = ref(false)
 const selectedFriend = ref(null)
+
+// ========== 群发消息（issue 391，纯前端循环发单聊） ==========
+const selectedIds = ref([]) // 已勾选联系人的 id
+const bulkDialogVisible = ref(false)
+const bulkContent = ref('')
+const bulkSending = ref(false)
+const bulkFailures = ref([]) // 本轮群发失败的联系人
 
 // ========== 添加好友相关 ==========
 const friendSearchType = ref('nickname')
@@ -453,6 +547,25 @@ const emptyActionText = computed(() => {
   }
   return '添加好友'
 })
+
+// ========== 选择与群发（issue 391） ==========
+const selectedFriends = computed(() =>
+  friends.value.filter((friend) => selectedIds.value.includes(friend.id))
+)
+const selectedCount = computed(() => selectedFriends.value.length)
+// 表头全选只作用于当前可见（已筛选）的联系人
+const selectedInView = computed(() =>
+  filteredFriends.value.filter((friend) => selectedIds.value.includes(friend.id))
+)
+const isAllSelected = computed(
+  () =>
+    filteredFriends.value.length > 0 &&
+    selectedInView.value.length === filteredFriends.value.length
+)
+const isIndeterminate = computed(
+  () => selectedInView.value.length > 0 && !isAllSelected.value
+)
+const canSubmitBulk = computed(() => bulkContent.value.trim().length > 0)
 
 // ========== 获取用户ID ==========
 const getUserId = () => {
@@ -671,6 +784,103 @@ const formatRecentTime = (time) => {
   if (days < 7) return `${days}天前`
 
   return timeDate.toLocaleDateString()
+}
+
+// ========== 选择与群发（issue 391） ==========
+const isSelected = (friend) => selectedIds.value.includes(friend.id)
+
+const toggleSelect = (friend) => {
+  const index = selectedIds.value.indexOf(friend.id)
+  if (index === -1) {
+    selectedIds.value.push(friend.id)
+  } else {
+    selectedIds.value.splice(index, 1)
+  }
+}
+
+const toggleSelectAll = (checked) => {
+  const viewIds = filteredFriends.value.map((friend) => friend.id)
+  if (checked) {
+    viewIds.forEach((id) => {
+      if (!selectedIds.value.includes(id)) {
+        selectedIds.value.push(id)
+      }
+    })
+  } else {
+    selectedIds.value = selectedIds.value.filter((id) => !viewIds.includes(id))
+  }
+}
+
+const clearSelection = () => {
+  selectedIds.value = []
+}
+
+const openBulkDialog = () => {
+  if (selectedCount.value === 0) return
+  bulkContent.value = ''
+  bulkFailures.value = []
+  bulkDialogVisible.value = true
+}
+
+// 发送中不允许关闭对话框，避免状态错乱
+const handleBulkDialogClose = (done) => {
+  if (bulkSending.value) return
+  done()
+}
+
+const submitBulk = async () => {
+  if (bulkSending.value) return // 防重复提交
+
+  const content = bulkContent.value.trim()
+  if (!content) {
+    ElMessage.warning('请输入消息内容')
+    return
+  }
+  const recipients = [...selectedFriends.value]
+  if (recipients.length === 0) {
+    ElMessage.warning('请先选择要发送的联系人')
+    return
+  }
+
+  bulkSending.value = true
+  bulkFailures.value = []
+  const failures = []
+  let successCount = 0
+
+  // 串行逐个发送；单个失败不中断其余的人
+  for (const friend of recipients) {
+    try {
+      const response = await api.post('/v1/chat/messages', {
+        fromId: String(userId.value),
+        toId: String(friend.id),
+        sessionType: 'single',
+        msgType: 'text',
+        content
+      })
+      if (response && response.code === '200') {
+        successCount += 1
+      } else {
+        failures.push(friend)
+      }
+    } catch (error) {
+      console.error(`❌ [Contacts] 群发失败 - ${friend.name}(${friend.id}):`, error)
+      failures.push(friend)
+    }
+  }
+
+  bulkSending.value = false
+
+  if (failures.length === 0) {
+    ElMessage.success(`已发送给 ${successCount} 人`)
+    bulkDialogVisible.value = false
+    clearSelection()
+    return
+  }
+
+  // 部分失败：对话框内列出失败项，并把选中收敛到失败的人，避免重复发给已成功的人
+  bulkFailures.value = failures
+  selectedIds.value = failures.map((friend) => friend.id)
+  ElMessage.warning(`成功 ${successCount} 人，失败 ${failures.length} 人`)
 }
 
 // ========== 开始聊天 ==========
@@ -1282,7 +1492,7 @@ onMounted(async () => {
 /* 列表字段表头（§4.3：列头 → 数据行 → 行操作） */
 .list-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 200px 112px;
+  grid-template-columns: 40px minmax(0, 1fr) 200px 112px;
   gap: var(--space-4);
   align-items: center;
   padding: var(--space-3) var(--space-5);
@@ -1298,6 +1508,18 @@ onMounted(async () => {
 
 .list-header__field--action {
   text-align: right;
+}
+
+.list-header__select,
+.friend-select {
+  display: flex;
+  align-items: center;
+}
+
+/* 复选框与工具栏沿用中性卡面语言，不加彩色底（issue 391 视觉要求） */
+.list-header__select :deep(.el-checkbox),
+.friend-select :deep(.el-checkbox) {
+  margin-right: 0;
 }
 
 .friends-list-scroll {
@@ -1339,7 +1561,7 @@ onMounted(async () => {
 
 .friend-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 200px 112px;
+  grid-template-columns: 40px minmax(0, 1fr) 200px 112px;
   gap: var(--space-4);
   align-items: center;
   box-sizing: border-box;
@@ -1435,6 +1657,67 @@ onMounted(async () => {
   transition:
     background-color var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out);
+}
+
+/* ===== 群发工具栏（issue 391） ===== */
+.bulk-toolbar {
+  margin-bottom: var(--card-gap);
+}
+
+.bulk-toolbar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.bulk-toolbar__count {
+  color: var(--ink-700);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+}
+
+.bulk-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.bulk-toolbar__actions :deep(.el-button) {
+  height: var(--control-height-md);
+}
+
+/* ===== 群发对话框（issue 391） ===== */
+.bulk-dialog__hint {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+}
+
+.bulk-dialog__failures {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--canvas-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.bulk-dialog__failures-title {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.bulk-dialog__failures-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
+}
+
+.bulk-dialog__failures-list li {
+  margin-bottom: var(--space-1);
 }
 
 /* ===== 字母索引 ===== */
