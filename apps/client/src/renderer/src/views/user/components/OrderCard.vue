@@ -1,19 +1,16 @@
 <template>
-  <el-card class="order-card">
-    <div class="order-header">
-      <div class="order-info">
-        <div class="order-no">订单号: {{ order.orderNo }}</div>
-        <div class="order-merchant">商家: {{ order.merchant }}</div>
-        <div class="order-time">时间: {{ order.time }}</div>
-      </div>
-      <div class="order-status">
-        <el-tag :type="getTagType(order.status)">
-          {{ getStatusText(order.status) }}
-        </el-tag>
-      </div>
+  <el-card
+    class="order-card"
+    shadow="never"
+    @click="handleViewDetails"
+  >
+    <!-- ① 商家 -->
+    <div class="order-merchant">
+      <el-icon class="order-merchant__icon" aria-hidden="true"><Shop /></el-icon>
+      <span class="order-merchant__text">商家: {{ order.merchant }}</span>
     </div>
 
-    <!-- 菜品列表 -->
+    <!-- ② 商品摘要 -->
     <OrderItemsList
       :items="order.items"
       :item-count="order.itemCount"
@@ -23,74 +20,53 @@
       @image-error="handleImageError"
     />
 
-    <div class="order-total">
-      <div class="total-text">总金额:</div>
-      <div class="total-amount">¥{{ formatAmount(order.total) }}</div>
-    </div>
+    <!-- ③ 订单号 → ④ 状态 → ⑤ 金额 → ⑥ 主操作（DESIGN-BASELINE §4.2 卡片字段骨架） -->
+    <div class="order-footer">
+      <div class="order-meta">
+        <span class="order-no">订单号: {{ order.orderNo }}</span>
+        <span class="order-time">时间: {{ order.time }}</span>
+        <span class="order-status" :class="`order-status--${statusTone}`">
+          <el-tag effect="light" round>{{ statusText }}</el-tag>
+        </span>
+      </div>
 
-    <div class="order-actions">
-      <el-button type="primary" size="small" @click="handleViewDetails">
-        查看详情
-      </el-button>
-      <el-button
-        v-if="canPay"
-        type="warning"
-        size="small"
-        class="pay-btn"
-        @click="handlePay"
-      >
-        支付
-      </el-button>
-      <el-button
-        v-if="canCancel"
-        type="danger"
-        size="small"
-        @click="handleCancel"
-      >
-        取消订单
-      </el-button>
-      <el-button
-        v-if="canConfirmReceiptOrder"
-        type="success"
-        size="small"
-        @click="handleConfirmReceipt"
-      >
-        确认收货
-      </el-button>
-      <el-button
-        v-if="canEvaluate"
-        type="success"
-        size="small"
-        @click="handleEvaluate"
-      >
-        去评价
-      </el-button>
-      <el-button
-        v-if="canAdditionalReview"
-        type="warning"
-        size="small"
-        @click="handleAdditionalReview"
-      >
-        追加评价
-      </el-button>
-      <el-button
-        v-if="canReorder"
-        type="warning"
-        size="small"
-        @click="handleReorder"
-      >
-        再来一单
-      </el-button>
+      <div class="order-total">
+        <span class="total-text">总金额:</span>
+        <span class="total-amount">¥{{ formatAmount(order.total) }}</span>
+      </div>
+
+      <div class="order-actions">
+        <el-button
+          type="primary"
+          size="small"
+          class="order-actions__primary"
+          @click.stop="primaryAction.onClick"
+        >
+          {{ primaryAction.text }}
+        </el-button>
+        <el-button
+          v-for="action in secondaryActions"
+          :key="action.key"
+          size="small"
+          :class="[
+            'order-actions__secondary',
+            { 'order-actions__secondary--danger': action.danger }
+          ]"
+          @click.stop="action.onClick"
+        >
+          {{ action.text }}
+        </el-button>
+      </div>
     </div>
   </el-card>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { Shop } from '@element-plus/icons-vue'
 import OrderItemsList from './OrderItemsList.vue'
 import {
   getOrderStatusText,
-  getOrderStatusTagType,
   canCancelOrder,
   canConfirmReceipt,
   canEvaluateOrder
@@ -114,23 +90,25 @@ const props = defineProps({
 const emit = defineEmits(['view-details', 'pay', 'cancel', 'confirm-receipt', 'evaluate', 'additional-review', 'reorder', 'image-error'])
 
 /**
+ * 订单状态 → 语义色档位（DESIGN-BASELINE §3.1 状态表）
+ */
+const STATUS_TONE_MAP = {
+  pending: 'warning',
+  pendingAccept: 'warning',
+  preparing: 'info',
+  completed: 'success',
+  cancelled: 'danger'
+}
+
+/**
  * 获取状态文本
  */
-function getStatusText(status) {
-  return getOrderStatusText(status)
-}
+const statusText = computed(() => getOrderStatusText(props.order.status))
 
 /**
- * 获取标签类型
+ * 获取状态语义色档位
  */
-function getTagType(status) {
-  return getOrderStatusTagType(status)
-}
-
-/**
- * 是否可以支付订单
- */
-const canPay = computed(() => props.order.status === 'pending')
+const statusTone = computed(() => STATUS_TONE_MAP[props.order.status] || 'neutral')
 
 /**
  * 是否可以取消订单
@@ -163,6 +141,42 @@ const canReorder = computed(() => {
   return props.order.status === 'reviewed' ||
          props.order.status === 'pendingComment' ||
          props.order.status === 'cancelled'
+})
+
+/**
+ * 主操作：待支付订单是继续支付，其余是查看详情；
+ * 每张卡只有一个实心主按钮，其余动作走次级样式（DESIGN-BASELINE §4.1）
+ */
+const primaryAction = computed(() => {
+  if (props.order.status === 'pending') {
+    return { key: 'pay', text: '支付', onClick: handlePay }
+  }
+  return { key: 'view', text: '查看详情', onClick: handleViewDetails }
+})
+
+/**
+ * 次操作：按状态给出的可执行动作，危险动作用危险色文字按钮
+ */
+const secondaryActions = computed(() => {
+  const actions = []
+
+  if (canCancel.value) {
+    actions.push({ key: 'cancel', text: '取消订单', danger: true, onClick: handleCancel })
+  }
+  if (canConfirmReceiptOrder.value) {
+    actions.push({ key: 'confirm', text: '确认收货', onClick: handleConfirmReceipt })
+  }
+  if (canEvaluate.value) {
+    actions.push({ key: 'evaluate', text: '去评价', onClick: handleEvaluate })
+  }
+  if (canAdditionalReview.value) {
+    actions.push({ key: 'additional', text: '追加评价', onClick: handleAdditionalReview })
+  }
+  if (canReorder.value) {
+    actions.push({ key: 'reorder', text: '再来一单', onClick: handleReorder })
+  }
+
+  return actions
 })
 
 /**
@@ -231,240 +245,226 @@ function handleImageError(item) {
 
 <style scoped lang="less">
 .order-card {
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 
-  // 添加悬浮时的上移效果
   &:hover {
-    transform: translateY(-4px) scale(1.01);
-    box-shadow: 0 12px 32px rgba(92, 142, 255, 0.18);
-    border-color: rgba(92, 142, 255, 0.4);
-
-    // 为卡片添加微妙的渐变边框效果
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      border-radius: 16px;
-      padding: 2px;
-      background: linear-gradient(
-        135deg,
-        rgba(92, 142, 255, 0.2) 0%,
-        rgba(138, 180, 248, 0.15) 50%,
-        rgba(92, 142, 255, 0.2) 100%
-      );
-      -webkit-mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
-      mask-composite: exclude;
-      pointer-events: none;
-    }
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
   }
 
-  // 点击时的反馈
-  &:active {
-    transform: translateY(-2px) scale(1.005);
-    box-shadow: 0 8px 24px rgba(92, 142, 255, 0.15);
+  &:focus-visible {
+    outline: 2px solid var(--brand-500);
+    outline-offset: 2px;
   }
 
   :deep(.el-card__body) {
-    padding: 20px;
+    padding: var(--card-padding);
   }
 
-  .order-header {
+  .order-merchant {
     display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+
+    .order-merchant__icon {
+      color: var(--ink-500);
+      font-size: var(--text-h3);
+    }
+
+    .order-merchant__text {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--ink-900);
+      font-size: var(--text-h3);
+      font-weight: var(--weight-semibold);
+      line-height: 24px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .order-footer {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 16px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--line);
+  }
 
-    .order-info {
-      .order-no {
-        font-weight: 600;
-        margin-bottom: 6px;
-        color: #2c5282;
-        font-size: 1.071rem /* 原值: 15px */;
-      }
-      .order-merchant,
-      .order-time {
-        font-size: 0.929rem /* 原值: 13px */;
-        color: #64748b;
-        margin-bottom: 4px;
-      }
+  .order-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    min-width: 0;
+
+    .order-no,
+    .order-time {
+      color: var(--ink-500);
+      font-size: var(--text-body-sm);
+      line-height: 20px;
+      white-space: nowrap;
     }
 
-    .order-status {
-      :deep(.el-tag) {
-        border-radius: 20px;
-        padding: 6px 14px;
-        font-weight: 500;
-        border: none;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      }
+    .order-no {
+      font-family: var(--font-num);
+      font-variant-numeric: tabular-nums;
+      color: var(--ink-700);
     }
+  }
+
+  .order-status {
+    display: inline-flex;
+
+    :deep(.el-tag) {
+      height: auto;
+      border: none;
+      border-radius: var(--radius-full);
+      padding: 2px var(--space-3);
+      font-size: var(--text-body-sm);
+      font-weight: var(--weight-medium);
+      line-height: 18px;
+    }
+  }
+
+  .order-status--warning :deep(.el-tag) {
+    background-color: var(--warning-bg);
+    color: var(--warning);
+  }
+
+  .order-status--info :deep(.el-tag) {
+    background-color: var(--info-bg);
+    color: var(--info);
+  }
+
+  .order-status--success :deep(.el-tag) {
+    background-color: var(--success-bg);
+    color: var(--success);
+  }
+
+  .order-status--danger :deep(.el-tag) {
+    background-color: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  .order-status--neutral :deep(.el-tag) {
+    background-color: var(--neutral-bg);
+    color: var(--neutral);
   }
 
   .order-total {
     display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    margin-bottom: 16px;
-    margin-top: 16px;
-    padding-top: 4px;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin-left: auto;
 
     .total-text {
-      margin-right: 12px;
-      color: #64748b;
-      font-size: 1rem /* 原值: 14px */;
-      font-weight: 500;
+      color: var(--ink-500);
+      font-size: var(--text-body-sm);
     }
 
     .total-amount {
-      font-size: 1.429rem /* 原值: 20px */;
-      font-weight: 700;
-      color: #ff6b6b;
-      text-shadow: 0 1px 2px rgba(255, 107, 107, 0.1);
+      color: var(--ink-900);
+      font-family: var(--font-num);
+      font-variant-numeric: tabular-nums;
+      font-size: var(--text-h2);
+      font-weight: var(--weight-semibold);
+      line-height: 28px;
     }
   }
 
   .order-actions {
     display: flex;
-    justify-content: flex-end;
-    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
 
     :deep(.el-button) {
-      border-radius: 20px;
-      padding: 8px 18px;
-      font-weight: 500;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      min-height: 32px;
+      padding: 0 var(--space-4);
+      border-radius: var(--radius-md);
+      font-size: var(--text-body-sm);
+      font-weight: var(--weight-medium);
+      transition:
+        background-color var(--duration-fast) var(--ease-out),
+        border-color var(--duration-fast) var(--ease-out),
+        color var(--duration-fast) var(--ease-out);
+    }
 
-      &:hover {
-        transform: translateY(-1px);
-      }
+    .order-actions__primary {
+      background: var(--brand-500);
+      border-color: var(--brand-500);
+      color: var(--surface);
 
-      &.el-button--primary {
-        background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
-        border-color: transparent;
-        box-shadow: 0 3px 10px rgba(92, 142, 255, 0.3);
-
-        &:hover {
-          box-shadow: 0 4px 14px rgba(92, 142, 255, 0.4);
-        }
-      }
-
-      &.el-button--danger {
-        background: linear-gradient(135deg, #ff8a80 0%, #ff6b6b 100%);
-        border-color: transparent;
-        box-shadow: 0 3px 10px rgba(255, 107, 107, 0.3);
-
-        &:hover {
-          box-shadow: 0 4px 14px rgba(255, 107, 107, 0.4);
-        }
-      }
-
-      &.el-button--success {
-        background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
-        border-color: transparent;
-        box-shadow: 0 3px 10px rgba(102, 187, 106, 0.3);
-
-        &:hover {
-          box-shadow: 0 4px 14px rgba(102, 187, 106, 0.4);
-        }
+      &:hover,
+      &:focus {
+        background: var(--brand-600);
+        border-color: var(--brand-600);
+        color: var(--surface);
       }
     }
-  }
-}
 
-/* 订单卡片动画优化 */
-.order-card {
-  /* 为每个卡片添加入场动画 - 移除 backwards 避免延迟期间不可见 */
-  animation: card-slide-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    .order-actions__secondary {
+      background: var(--surface);
+      border-color: var(--line-strong);
+      color: var(--ink-700);
 
-  /* 为每个卡片添加递增的延迟，创建交错效果 */
-  &:nth-child(1) {
-    animation-delay: 0s;
-  }
-  &:nth-child(2) {
-    animation-delay: 0.05s;
-  }
-  &:nth-child(3) {
-    animation-delay: 0.1s;
-  }
-  &:nth-child(4) {
-    animation-delay: 0.15s;
-  }
-  &:nth-child(5) {
-    animation-delay: 0.2s;
-  }
-  &:nth-child(n + 6) {
-    animation-delay: 0.25s;
-  }
-}
+      &:hover,
+      &:focus {
+        background: var(--brand-50);
+        border-color: var(--brand-300);
+        color: var(--brand-600);
+      }
+    }
 
-/* 为订单卡片添加入场动画 */
-@keyframes card-slide-in {
-  0% {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+    .order-actions__secondary--danger {
+      border-color: var(--danger-bg);
+      color: var(--danger);
+
+      &:hover,
+      &:focus {
+        background: var(--danger-bg);
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+    }
   }
 }
 
 @media (max-width: 768px) {
   .order-card {
-    border-radius: 14px;
-
     :deep(.el-card__body) {
-      padding: 16px;
+      padding: var(--card-padding-compact);
     }
 
-    .order-header {
+    .order-footer {
       flex-direction: column;
-      align-items: flex-start !important;
-      margin-bottom: 12px;
-      padding-bottom: 12px;
-
-      .order-status {
-        margin-top: 10px;
-      }
+      align-items: stretch;
     }
 
     .order-total {
-      margin-bottom: 12px;
-
-      .total-text {
-        font-size: 0.929rem /* 原值: 13px */;
-      }
-
-      .total-amount {
-        font-size: 1.286rem /* 原值: 18px */;
-      }
+      margin-left: 0;
+      justify-content: flex-end;
     }
 
     .order-actions {
-      flex-direction: column;
-      gap: 8px;
+      justify-content: flex-end;
 
       :deep(.el-button) {
-        width: 100%;
-        padding: 10px;
+        flex: 1;
       }
     }
   }

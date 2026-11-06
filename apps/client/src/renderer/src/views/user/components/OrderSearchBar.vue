@@ -6,6 +6,7 @@
       clearable
       size="default"
       class="search-input"
+      aria-label="搜索订单"
       @input="handleSearchInput"
       @clear="handleClear"
     >
@@ -23,7 +24,7 @@
 
     <div v-if="searchKeyword" class="search-result-info">
       找到 <span class="result-count">{{ filteredCount }}</span> 个相关订单
-      <el-button type="primary" link size="small" class="clear-search-btn" @click="handleClear">
+      <el-button class="clear-search-btn" @click="handleClear">
         清除搜索
       </el-button>
     </div>
@@ -73,72 +74,53 @@ function handleClear() {
 
 <style scoped lang="less">
 .order-search-bar {
-  margin-bottom: 16px;
-  padding: 16px 20px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: var(--space-3);
 
   .search-input {
     :deep(.el-input__wrapper) {
-      border-radius: 24px;
-      padding: 8px 16px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(179, 212, 252, 0.3);
-      background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      min-height: 36px;
+      padding: 0 var(--space-3);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: none;
+      transition:
+        border-color var(--duration-fast) var(--ease-out),
+        outline-color var(--duration-fast) var(--ease-out);
 
       &:hover {
-        box-shadow: 0 4px 12px rgba(92, 142, 255, 0.15);
-        border-color: rgba(92, 142, 255, 0.4);
+        border-color: var(--line-strong);
       }
 
       &.is-focus {
-        box-shadow: 0 4px 16px rgba(92, 142, 255, 0.25);
-        border-color: #6ba4ff;
-        background: #ffffff;
+        border-color: var(--brand-500);
+        outline: 2px solid var(--brand-200);
+        outline-offset: 1px;
       }
     }
 
     :deep(.el-input__inner) {
-      font-size: 1rem /* 原值: 14px */;
-      color: #2c5282;
-      font-weight: 400;
+      font-size: var(--text-body);
+      color: var(--ink-900);
 
       &::placeholder {
-        color: #94a3b8;
-        font-weight: 300;
+        color: var(--ink-400);
       }
     }
 
     .search-icon {
-      color: #5c8eff;
-      font-size: 1.143rem /* 原值: 16px */;
-      animation: search-glow 2s ease-in-out infinite;
-    }
-
-    @keyframes search-glow {
-      0%,
-      100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      50% {
-        opacity: 0.7;
-        transform: scale(1.1);
-      }
+      color: var(--ink-400);
+      font-size: var(--text-body);
     }
 
     .clear-icon {
-      color: #94a3b8;
-      font-size: 1.143rem /* 原值: 16px */;
+      color: var(--ink-400);
+      font-size: var(--text-body);
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: color var(--duration-fast) var(--ease-out);
 
       &:hover {
-        color: #ff6b6b;
-        transform: rotate(90deg) scale(1.1);
+        color: var(--brand-600);
       }
     }
   }
@@ -146,41 +128,35 @@ function handleClear() {
   .search-result-info {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    padding: 8px 12px;
-    background: linear-gradient(135deg, #e7f5ff 0%, #f0f9ff 100%);
-    border-radius: 8px;
-    font-size: 0.929rem /* 原值: 13px */;
-    color: #1971c2;
-    border: 1px solid rgba(92, 142, 255, 0.2);
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    background: var(--canvas-sunken);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-body-sm);
+    color: var(--ink-700);
 
     .result-count {
-      font-weight: 700;
-      font-size: 1.143rem /* 原值: 16px */;
-      color: #5c8eff;
-      padding: 0 4px;
+      font-family: var(--font-num);
+      font-variant-numeric: tabular-nums;
+      font-weight: var(--weight-semibold);
+      color: var(--ink-900);
     }
 
     .clear-search-btn {
       margin-left: auto;
-      font-size: 0.929rem /* 原值: 13px */;
-      font-weight: 500;
-      color: #5c8eff;
-      transition: all 0.3s ease;
+      border-color: var(--line-strong);
+      border-radius: var(--radius-md);
+      font-size: var(--text-body-sm);
+      color: var(--brand-600);
 
-      &:hover {
-        color: #4c7eff;
-        transform: translateX(2px);
+      &:hover,
+      &:focus {
+        border-color: var(--brand-300);
+        background: var(--brand-50);
+        color: var(--brand-600);
       }
     }
-  }
-}
-
-@media (max-width: 768px) {
-  .order-search-bar {
-    padding: 12px 16px;
-    border-radius: 10px;
   }
 }
 </style>

@@ -2,8 +2,10 @@
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+import { Refresh, List } from '@element-plus/icons-vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
 import OrderSearchBar from './components/OrderSearchBar.vue'
 import OrderFilterBar from './components/OrderFilterBar.vue'
 import OrderCard from './components/OrderCard.vue'
@@ -317,10 +319,11 @@ watch(
 
 <template>
   <div class="orders-container">
-    <div class="page-header fade-in-up">
+    <!-- 页头：标准版，标题 --text-h1 + 上下 --space-6（DESIGN-BASELINE §4.7） -->
+    <header class="orders-header">
       <CommonBackButton />
-      <h2 style="margin-left: 15px">订单中心</h2>
-      <div style="flex: 1; text-align: right">
+      <h1 class="orders-header__title">订单中心</h1>
+      <div class="orders-header__actions">
         <el-button
           type="default"
           size="small"
@@ -338,24 +341,23 @@ watch(
           <span class="refresh-text">{{ refreshSuccess ? '完成' : '刷新' }}</span>
         </el-button>
       </div>
-    </div>
+    </header>
 
-    <!-- 搜索栏 -->
-    <OrderSearchBar
-      v-model:search-keyword="searchKeyword"
-      :filtered-count="sortedOrders.length"
-      @clear="clearSearch"
-      class="fade-in-up delay-100"
-    />
+    <!-- 搜索 + 筛选收进同一张 L1 卡，压缩工具区高度（DESIGN-BASELINE §3.4 / §4.1） -->
+    <AppCard class="orders-toolbar fade-in-up" :level="1">
+      <OrderSearchBar
+        v-model:search-keyword="searchKeyword"
+        :filtered-count="sortedOrders.length"
+        @clear="clearSearch"
+      />
 
-    <!-- 订单筛选 -->
-    <OrderFilterBar
-      v-model:active-status="activeStatus"
-      v-model:sort-by="sortBy"
-      :status-list="statusList"
-      :sort-options="sortOptions"
-      class="fade-in-up delay-200"
-    />
+      <OrderFilterBar
+        v-model:active-status="activeStatus"
+        v-model:sort-by="sortBy"
+        :status-list="statusList"
+        :sort-options="sortOptions"
+      />
+    </AppCard>
 
     <!-- 订单列表 -->
     <div
@@ -395,10 +397,12 @@ watch(
       @size-change="handleSizeChange"
     />
 
-    <!-- 空数据提示 -->
-    <el-empty
+    <!-- 空数据提示：§4.5 线性图标 + 一句中文说明 -->
+    <AppEmptyState
       v-if="sortedOrders.length === 0 && !loading"
+      class="order-empty"
       description="暂无订单记录，快去下单吧！"
+      :icon="List"
     />
 
     <!-- 再来一单弹窗 -->
@@ -411,42 +415,53 @@ watch(
 </template>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
 .orders-container {
-  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-  background: @nordic-bg;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
   min-height: calc(100vh - 80px);
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 
-  .page-header {
-    .nordic-card();
+  .orders-header {
     display: flex;
     align-items: center;
-    margin-bottom: @nordic-space-lg;
-    padding: @nordic-space-md @nordic-space-lg;
+    gap: var(--space-4);
+    padding: var(--space-6) 0;
+    margin-bottom: var(--space-6);
+    border-bottom: 1px solid var(--line);
   }
 
-  h2 {
-    font-size: @nordic-text-lg;
+  .orders-header__title {
     margin: 0;
-    color: @nordic-text;
-    font-weight: 600;
+    color: var(--ink-900);
+    font-size: var(--text-h1);
+    font-weight: var(--weight-semibold);
+    line-height: 32px;
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .orders-header__actions {
+    margin-left: auto;
+  }
+
+  .orders-toolbar {
+    margin-bottom: var(--card-gap);
   }
 
   .order-list {
     display: flex;
     flex-direction: column;
-    gap: @nordic-space-md;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: var(--card-gap);
 
-    /* 淡出动画 */
+    /* 刷新时的列表过渡（DESIGN-BASELINE §3.5：只动 opacity / transform） */
     &.list-fade-out {
-      animation: list-fade-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      animation: list-fade-out var(--duration-base) var(--ease-out) forwards;
     }
 
-    /* 淡入动画 */
     &.list-fade-in {
-      animation: list-fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      animation: list-fade-in var(--duration-base) var(--ease-out) forwards;
     }
   }
 
@@ -473,101 +488,67 @@ watch(
   }
 
   .order-pagination {
-    margin-top: @nordic-space-lg;
+    margin-top: var(--space-6);
     text-align: center;
 
     :deep(.el-pagination) {
       .btn-prev,
       .btn-next,
       .el-pager li {
-        border-radius: @nordic-radius-sm;
-        border: 1px solid @nordic-border;
-        background: @nordic-surface;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
 
         &:hover {
-          color: @nordic-blue;
-          border-color: @nordic-blue;
-          background: @nordic-blue-light;
+          color: var(--brand-600);
+          border-color: var(--brand-300);
+          background: var(--brand-50);
         }
 
         &.active {
-          background: @nordic-blue;
-          color: @nordic-white;
-          border-color: transparent;
+          background: var(--brand-500);
+          border-color: var(--brand-500);
+          color: var(--surface);
         }
       }
     }
   }
 
-  /* 刷新按钮动画优化 */
+  .order-empty {
+    margin-top: var(--space-6);
+  }
+
+  /* 刷新按钮的加载 / 成功反馈（DESIGN-BASELINE §4.6） */
   .refresh-btn {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-
-    /* 按钮内图标和文字的容器 */
-    :deep(.el-icon) {
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* 刷新文字动画 */
     .refresh-text {
       display: inline-block;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: color var(--duration-fast) var(--ease-out);
     }
 
-    /* 刷新中的状态 */
     &.is-refreshing {
-      background: linear-gradient(135deg, @nordic-blue-light 0%, fade(@nordic-blue, 20%) 100%) !important;
-      border-color: @nordic-blue !important;
-      color: @nordic-blue !important;
-      box-shadow: 0 2px 8px fade(@nordic-blue, 30%);
-
-      .refresh-text {
-        animation: text-pulse 1s ease-in-out infinite;
-      }
-
-      /* 添加脉冲波纹效果 */
-      &::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: fade(@nordic-blue, 30%);
-        transform: translate(-50%, -50%);
-        animation: ripple 1.5s ease-out infinite;
-      }
+      border-color: var(--brand-300);
+      background: var(--brand-50);
+      color: var(--brand-600);
     }
 
-    /* 刷新成功的状态 */
     &.is-success {
-      background: linear-gradient(135deg, @nordic-green-light 0%, fade(@nordic-green, 20%) 100%) !important;
-      border-color: @nordic-green !important;
-      color: @nordic-green !important;
-      box-shadow: 0 2px 8px fade(@nordic-green, 30%);
-
-      /* 成功时的缩放动画 */
-      animation: success-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      border-color: var(--success);
+      background: var(--success-bg);
+      color: var(--success);
 
       .refresh-text {
-        color: @nordic-green;
-        font-weight: 600;
+        color: var(--success);
+        font-weight: var(--weight-semibold);
       }
     }
   }
 
-  /* 刷新图标旋转动画 */
   .refresh-rotating {
-    animation: refresh-rotate 0.8s linear infinite;
+    animation: refresh-rotate var(--spin-duration) linear infinite;
   }
 
-  /* 刷新成功时的图标动画 */
   .refresh-success {
-    animation: success-check 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    color: @nordic-green;
+    color: var(--success);
   }
 
   @keyframes refresh-rotate {
@@ -578,80 +559,29 @@ watch(
       transform: rotate(360deg);
     }
   }
-
-  @keyframes text-pulse {
-    0%,
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.7;
-      transform: scale(0.95);
-    }
-  }
-
-  @keyframes ripple {
-    0% {
-      width: 0;
-      height: 0;
-      opacity: 0.6;
-    }
-    100% {
-      width: 200px;
-      height: 200px;
-      opacity: 0;
-    }
-  }
-
-  @keyframes success-bounce {
-    0% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.05);
-    }
-    100% {
-      transform: scale(1);
-    }
-  }
-
-  @keyframes success-check {
-    0% {
-      transform: scale(0) rotate(-180deg);
-      opacity: 0;
-    }
-    50% {
-      transform: scale(1.2) rotate(10deg);
-    }
-    100% {
-      transform: scale(1) rotate(0deg);
-      opacity: 1;
-    }
-  }
 }
 
 /* 响应式设计 */
-@media (max-width: @nordic-breakpoint-md) {
+@media (max-width: 768px) {
   .orders-container {
-    padding: 0 @nordic-space-md @nordic-space-md @nordic-space-md;
-    background: @nordic-bg;
+    padding: 0 var(--space-4) var(--space-6);
 
-    .page-header {
-      padding: 14px @nordic-space-md;
-      border-radius: 14px;
+    .orders-header {
+      padding: var(--space-4) 0;
+      margin-bottom: var(--space-4);
     }
 
-    h2 {
-      font-size: @nordic-text-md;
+    .orders-header__title {
+      font-size: var(--text-h2);
+      line-height: 28px;
     }
 
     .order-list {
-      gap: @nordic-space-md - 4px;
+      gap: var(--card-gap-compact);
     }
 
     .order-pagination {
-      margin-top: @nordic-space-lg - @nordic-space-xs;
+      margin-top: var(--space-4);
     }
   }
 }

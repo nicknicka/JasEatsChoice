@@ -41,6 +41,12 @@ const remainingCount = computed(() => {
   return props.dishCount - props.maxDisplay
 })
 
+// 缩略图缺失/失败时的占位首字，保证仍能识别菜品（DESIGN-BASELINE §4.2）
+function getItemInitial(item) {
+  const name = (item?.name || '菜').trim()
+  return name.charAt(0)
+}
+
 // 处理图片错误
 function handleImageError(item) {
   emit('image-error', item)
@@ -71,14 +77,10 @@ function handleItemClick(item) {
           @error="handleImageError(item)"
         >
           <template #error>
-            <div class="image-error">
-              <el-icon><Picture /></el-icon>
-            </div>
+            <div class="image-placeholder">{{ getItemInitial(item) }}</div>
           </template>
         </el-image>
-        <div v-else class="image-error">
-          <el-icon><Picture /></el-icon>
-        </div>
+        <div v-else class="image-placeholder">{{ getItemInitial(item) }}</div>
 
         <!-- 数量角标 -->
         <div v-if="item.quantity > 1" class="quantity-badge">
@@ -103,9 +105,7 @@ function handleItemClick(item) {
 
     <!-- 更多菜品提示 -->
     <div v-if="hasMore" class="more-items">
-      <el-text type="info" size="small">
-        还有 {{ remainingCount }} 个菜品...
-      </el-text>
+      还有 {{ remainingCount }} 个菜品...
     </div>
 
     <!-- 空状态 -->
@@ -121,36 +121,34 @@ function handleItemClick(item) {
 .order-items-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 
   .order-item {
     display: flex;
-    gap: 12px;
-    padding: 12px;
-    background: rgba(235, 244, 255, 0.2);
-    border-radius: 12px;
+    gap: var(--space-3);
+    padding: var(--space-2);
+    background: var(--canvas-sunken);
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color var(--duration-fast) var(--ease-out);
 
     &:hover {
-      background: rgba(235, 244, 255, 0.4);
-      transform: translateX(4px);
-      box-shadow: 0 2px 8px rgba(92, 142, 255, 0.15);
+      background: var(--brand-50);
     }
 
     .item-image {
       position: relative;
-      width: 80px;
-      height: 80px;
+      width: 64px;
+      height: 64px;
       flex-shrink: 0;
 
       .dish-image {
         width: 100%;
         height: 100%;
-        border-radius: 8px;
+        border-radius: var(--radius-sm);
         overflow: hidden;
 
         :deep(.el-image__inner) {
@@ -160,34 +158,35 @@ function handleItemClick(item) {
         }
       }
 
-      .image-error {
+      .image-placeholder {
         width: 100%;
         height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
-        border-radius: 8px;
-        color: #69c0ff;
-        font-size: 2.286rem /* 原值: 32px */;
+        background: var(--neutral-bg);
+        border-radius: var(--radius-sm);
+        color: var(--ink-500);
+        font-size: var(--text-h2);
+        font-weight: var(--weight-semibold);
       }
 
       .quantity-badge {
         position: absolute;
-        top: -6px;
-        right: -6px;
-        min-width: 24px;
-        height: 24px;
-        padding: 0 6px;
-        background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
-        color: white;
-        font-size: 0.857rem /* 原值: 12px */;
-        font-weight: 600;
-        border-radius: 12px;
+        top: calc(-1 * var(--space-1));
+        right: calc(-1 * var(--space-1));
+        min-width: 20px;
+        height: 20px;
+        padding: 0 var(--space-1);
+        background: var(--ink-700);
+        color: var(--surface);
+        font-family: var(--font-num);
+        font-size: var(--text-caption);
+        font-weight: var(--weight-medium);
+        border-radius: var(--radius-full);
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 6px rgba(255, 107, 107, 0.4);
       }
     }
 
@@ -196,52 +195,57 @@ function handleItemClick(item) {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      gap: 6px;
+      gap: var(--space-1);
+      min-width: 0;
 
       .item-name {
-        font-size: 1.071rem /* 原值: 15px */;
-        font-weight: 600;
-        color: #2c5282;
-        line-height: 1.4;
+        font-size: var(--text-body);
+        font-weight: var(--weight-medium);
+        color: var(--ink-900);
+        line-height: 22px;
       }
 
       .item-details {
         display: flex;
-        flex-direction: column;
-        gap: 4px;
-        font-size: 0.857rem /* 原值: 12px */;
+        flex-wrap: wrap;
+        gap: var(--space-1) var(--space-2);
+        font-size: var(--text-body-sm);
 
         .item-customization {
-          color: #5c8eff;
-          background: rgba(235, 244, 255, 0.6);
-          padding: 2px 8px;
-          border-radius: 4px;
+          color: var(--ink-500);
+          background: var(--canvas);
+          padding: 2px var(--space-2);
+          border-radius: var(--radius-sm);
           display: inline-block;
         }
 
         .item-note {
-          color: #718096;
+          color: var(--ink-500);
         }
       }
 
       .item-price {
-        font-size: 1.143rem /* 原值: 16px */;
-        font-weight: 700;
-        color: #e53e3e;
+        font-family: var(--font-num);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-body);
+        font-weight: var(--weight-medium);
+        color: var(--ink-700);
       }
     }
   }
 
   .more-items {
-    padding: 8px 12px;
+    padding: var(--space-2) var(--space-3);
     text-align: center;
-    background: rgba(235, 244, 255, 0.3);
-    border-radius: 8px;
+    background: var(--canvas-sunken);
+    border-radius: var(--radius-sm);
+    color: var(--ink-500);
+    font-size: var(--text-body-sm);
     cursor: pointer;
-    transition: all 0.3s;
+    transition: background-color var(--duration-fast) var(--ease-out);
 
     &:hover {
-      background: rgba(235, 244, 255, 0.5);
+      background: var(--brand-50);
     }
   }
 }
