@@ -117,7 +117,14 @@
 5. 审查 agent 独立看图通过，且不只看制作过程与代码。
 6. 不新增 ESLint error；warning 不强求。
 
-不引入自动视觉 diff——截图基线不入库，跑不通。
+不引入自动视觉 diff——逐页截图基线不入库，跑不通。
+
+**组件基准图是例外**：`docs/design/assets/l1/` 下的 L1 合规基准图入库，作为 L2 接活 agent 的对照物（不必起 dev server 就知道合规组件长什么样）。逐页 before/after 仍留在 gitignore 的 `output/`。
+
+**证据必须离开 worktree**：`gh pr merge --delete-branch` 会连带删除 worktree，其中 `output/`（gitignore）无法保留。实测已丢过一批验收图。规则：
+1. 组件类验收图 → 上传到对应 issue 评论，或落 `docs/design/assets/`；
+2. 逐页 before/after → PR 创建后立即把图附进 PR 评论；
+3. 任何需要跨轮次引用的图，先落到不随 worktree 消失的位置，再报告路径。
 
 ## 9. 收尾清理
 
