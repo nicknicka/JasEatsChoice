@@ -116,8 +116,14 @@ test.describe('模块九：个人中心与教程', () => {
       await page.goto('/user/home/consume-history')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
-      await expect(page.locator('.stat-value.balance-color')).toHaveText(`${user.wallet.balance}个`)
-      await expect(page.locator('.consume-history-container')).toContainText(records.data.records[0].description)
+      const balanceText = Number(user.wallet.balance || 0).toLocaleString('zh-CN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })
+      await expect(page.locator('.app-stat-card').first()).toContainText(`¥${balanceText}`)
+      await expect(page.locator('.consume-history-page')).toContainText(
+        records.data.records[0].description
+      )
       markPassed('9.5', `余额展示为 ${user.wallet.balance}，流水首条与接口一致`)
     } catch (e) {
       markFailed('9.5', e.message.slice(0, 50))
