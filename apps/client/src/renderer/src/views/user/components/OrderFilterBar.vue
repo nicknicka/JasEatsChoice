@@ -1,22 +1,21 @@
 <template>
   <div class="order-filter-bar">
-    <div class="filter-buttons">
-      <el-button
+    <div class="filter-buttons" role="group" aria-label="订单状态筛选">
+      <button
         v-for="status in statusList"
         :key="status.value"
-        type="primary"
-        :plain="activeStatus !== status.value"
-        size="small"
+        type="button"
+        :class="['filter-tag', { active: activeStatus === status.value }]"
         @click="handleStatusClick(status.value)"
       >
         {{ status.label }}
-      </el-button>
+      </button>
     </div>
 
     <!-- 排序选择器 -->
     <div class="sort-selector">
       <el-dropdown trigger="click" @command="handleSortChange">
-        <el-button type="default" size="small" class="sort-dropdown-btn">
+        <el-button size="small" class="sort-dropdown-btn">
           <el-icon class="sort-icon">
             <component :is="currentSortOption.icon" />
           </el-icon>
@@ -121,160 +120,117 @@ function handleSortChange(value) {
 <style scoped lang="less">
 .order-filter-bar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  padding: 12px 16px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  justify-content: space-between;
+  gap: var(--space-4);
   flex-wrap: wrap;
+}
 
-  .filter-buttons {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    flex: 1;
+.filter-buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.filter-tag {
+  appearance: none;
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink-700);
+  font: inherit;
+  font-size: var(--text-body-sm);
+  line-height: 26px;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.filter-tag:hover {
+  border-color: var(--brand-300);
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+
+.filter-tag:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+}
+
+/* 选中态用页面主色，与「商家查找」的筛选控件同一套规则 */
+.filter-tag.active {
+  border-color: var(--brand-500);
+  background: var(--brand-500);
+  color: var(--surface);
+}
+
+.sort-selector {
+  flex-shrink: 0;
+}
+
+.sort-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+
+  &:hover,
+  &:focus {
+    border-color: var(--brand-300);
+    background: var(--brand-50);
+    color: var(--brand-600);
   }
 
-  :deep(.el-button) {
-    border-radius: 20px;
-    border-color: rgba(179, 212, 252, 0.4);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    &.el-button--primary {
-      background: linear-gradient(135deg, #6ba4ff 0%, #5c8eff 100%);
-      border-color: transparent;
-      box-shadow: 0 2px 8px rgba(92, 142, 255, 0.3);
-
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(92, 142, 255, 0.4);
-      }
-    }
-
-    &.is-plain {
-      background: #ffffff;
-      color: #5c8eff;
-      border-color: #d9d9d9;
-
-      &:hover {
-        background: #f0f9ff;
-        border-color: #6ba4ff;
-        color: #4c7eff;
-      }
-    }
+  .sort-icon {
+    font-size: var(--text-body);
+    color: var(--brand-600);
   }
 
-  // 排序选择器样式
-  .sort-selector {
-    flex-shrink: 0;
+  .sort-label {
+    font-size: var(--text-body-sm);
+  }
 
-    .sort-dropdown-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      border: 1px solid #dee2e6;
-      color: #495057;
-      font-weight: 500;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-
-      &:hover {
-        background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
-        border-color: #adb5bd;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      }
-
-      .sort-icon {
-        font-size: 1.143rem /* 原值: 16px */;
-        color: #5c8eff;
-      }
-
-      .sort-label {
-        font-size: 0.929rem /* 原值: 13px */;
-      }
-
-      .el-icon {
-        font-size: 0.857rem /* 原值: 12px */;
-        transition: transform 0.3s ease;
-      }
-    }
-
-    :deep(.el-dropdown-menu__item) {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
-      border-radius: 8px;
-      margin: 4px 8px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-      &.is-active {
-        background: linear-gradient(135deg, #e7f5ff 0%, #d0ebff 100%);
-        color: #1971c2;
-        font-weight: 600;
-
-        .sort-option-icon {
-          transform: scale(1.1);
-        }
-      }
-
-      &:hover {
-        background: #f8f9fa;
-        transform: translateX(2px);
-      }
-
-      .sort-option-icon {
-        font-size: 1.143rem /* 原值: 16px */;
-        color: #5c8eff;
-        transition: transform 0.3s ease;
-      }
-
-      .sort-option-label {
-        flex: 1;
-        font-size: 0.929rem /* 原值: 13px */;
-      }
-
-      .check-icon {
-        color: #1971c2;
-        font-size: 1rem /* 原值: 14px */;
-        font-weight: bold;
-      }
-    }
+  .el-icon {
+    font-size: var(--text-caption);
   }
 }
 
-@media (max-width: 768px) {
-  .order-filter-bar {
-    padding: 10px 12px;
-    border-radius: 10px;
-    gap: 8px;
+:deep(.el-dropdown-menu__item) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-body-sm);
 
-    .filter-buttons {
-      gap: 6px;
+  &:hover {
+    background: var(--brand-50);
+  }
 
-      :deep(.el-button) {
-        font-size: 0.857rem /* 原值: 12px */;
-        padding: 6px 12px;
-      }
-    }
+  .sort-option-icon {
+    font-size: var(--text-body);
+    color: var(--brand-600);
+  }
 
-    .sort-selector {
-      .sort-dropdown-btn {
-        padding: 6px 12px;
+  .sort-option-label {
+    flex: 1;
+  }
 
-        .sort-label {
-          font-size: 0.857rem /* 原值: 12px */;
-        }
-      }
-    }
+  .check-icon {
+    color: var(--brand-600);
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
   }
 }
 </style>
