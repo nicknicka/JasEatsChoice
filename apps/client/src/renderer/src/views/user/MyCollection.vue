@@ -1,73 +1,49 @@
 <template>
-  <div class="my-collection-container">
-    <!-- 头部区域 -->
-    <div class="header fade-in-up">
-      <common-back-button />
-      <div class="header-content">
-        <h2>我的收藏</h2>
-        <div class="collection-stats">
-          <el-tag type="info" size="large"> 共 {{ filteredCollections.length }} 个收藏 </el-tag>
-          <el-button
-            type="primary"
-            circle
-            size="small"
-            :icon="Refresh"
-            :loading="loading"
-            @click="refreshCollections"
-            class="refresh-btn"
-            title="刷新"
-          />
-        </div>
-      </div>
-    </div>
+  <div class="my-collection-page">
+    <!-- 页头：标准版标题 --text-h1 + 上下 --space-6；返回统一收进右侧动作区（§4.7） -->
+    <AppPageHeader title="我的收藏" class="collection-header">
+      <template #actions>
+        <CommonBackButton type="default" size="default" />
+      </template>
+    </AppPageHeader>
 
-    <!-- 筛选工具栏 -->
-    <div class="filter-bar fade-in-up delay-100">
-      <div class="filter-left">
-        <!-- 搜索框 -->
+    <!-- 筛选工具栏：单行紧凑；收藏为空时整体收起（§4.5） -->
+    <div v-if="collections.length > 0" class="toolbar">
+      <div class="toolbar__filters">
         <el-input
           v-model="searchKeyword"
           placeholder="搜索收藏名称..."
-          class="search-input"
+          class="toolbar__search"
           clearable
           :prefix-icon="Search"
         />
 
-        <!-- 类型筛选 -->
         <el-select
           v-model="filterType"
           placeholder="筛选类型"
-          class="filter-select"
+          class="toolbar__select"
           @change="handleFilterChange"
         >
           <el-option label="全部" value="all">
-            <span class="option-label">
-              <el-icon><Grid /></el-icon>
-              全部
-            </span>
+            <span class="option-label"><el-icon><Grid /></el-icon>全部</span>
           </el-option>
           <el-option label="商家" value="merchant">
-            <span class="option-label">
-              <el-icon><Shop /></el-icon>
-              商家
-            </span>
+            <span class="option-label"><el-icon><Shop /></el-icon>商家</span>
           </el-option>
           <el-option label="菜品" value="dish">
-            <span class="option-label">
-              <el-icon><Food /></el-icon>
-              菜品
-            </span>
+            <span class="option-label"><el-icon><Food /></el-icon>菜品</span>
           </el-option>
           <el-option label="文章" value="article">
-            <span class="option-label">
-              <el-icon><Document /></el-icon>
-              文章
-            </span>
+            <span class="option-label"><el-icon><Document /></el-icon>文章</span>
           </el-option>
         </el-select>
 
-        <!-- 排序选择 -->
-        <el-select v-model="sortBy" placeholder="排序方式" class="sort-select" @change="handleSortChange">
+        <el-select
+          v-model="sortBy"
+          placeholder="排序方式"
+          class="toolbar__select"
+          @change="handleSortChange"
+        >
           <el-option label="按时间" value="date" />
           <el-option label="按类型" value="type" />
           <el-option label="按名称" value="name" />
@@ -75,155 +51,112 @@
 
         <el-button
           circle
-          size="small"
-          @click="toggleSortOrder"
+          :icon="sortOrder === 'desc' ? ArrowDown : ArrowUp"
           title="切换排序顺序"
-        >
-          <el-icon>
-            <ArrowDown v-if="sortOrder === 'desc'" />
-            <ArrowUp v-else />
-          </el-icon>
-        </el-button>
-
-        <div class="filter-summary">
-          <span v-if="filterType !== 'all' || searchKeyword" class="filter-active">
-            已筛选:
-            <el-tag v-if="filterType !== 'all'" size="small" closable @close="resetFilter">
-              {{ getFilterTypeName(filterType) }}
-            </el-tag>
-            <el-tag v-if="searchKeyword" size="small" closable @click="searchKeyword = ''">
-              搜索: {{ searchKeyword }}
-            </el-tag>
-          </span>
-        </div>
+          @click="toggleSortOrder"
+        />
+        <el-button
+          circle
+          :icon="Refresh"
+          :loading="loading"
+          title="刷新"
+          @click="refreshCollections"
+        />
       </div>
 
-      <div class="filter-right">
+      <div class="toolbar__actions">
+        <span class="collection-stats">共 {{ filteredCollections.length }} 个收藏</span>
         <el-button
-          type="default"
-          size="small"
-          @click="resetFilter"
+          :icon="RefreshLeft"
           :disabled="filterType === 'all' && !searchKeyword"
+          @click="resetFilter"
         >
-          <el-icon><Refresh /></el-icon>
           重置筛选
         </el-button>
-
-        <el-divider direction="vertical" />
-
         <el-button
           type="danger"
-          size="small"
-          @click="clearAll"
+          plain
+          :icon="Delete"
           :disabled="filteredCollections.length === 0"
+          @click="clearAll"
         >
-          <el-icon><Delete /></el-icon>
           清空全部
         </el-button>
       </div>
     </div>
 
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading-state">
+    <!-- 首屏用骨架，刷新用遮罩，不整页白屏（§4.6） -->
+    <div v-if="loading && collections.length === 0" class="loading-state">
       <el-skeleton :rows="3" animated />
     </div>
 
-    <!-- 收藏列表 -->
-    <div v-else-if="paginatedCollections.length > 0" class="collection-grid">
+    <!-- 收藏列表：同列卡片高度与图片比例一致（§4.2） -->
+    <div v-else-if="paginatedCollections.length > 0" v-loading="loading" class="collection-grid">
       <transition-group name="collection-fade">
-        <div v-for="item in paginatedCollections" :key="item.id" class="collection-card-wrapper stagger-item card-hover-effect">
-          <el-card class="collection-card" shadow="hover" @click="viewDetails(item)">
-            <!-- 类型标签和删除按钮 -->
-            <div class="card-header">
-              <div class="item-type-badge" :class="`type-${item.type}`">
-                <el-icon class="type-icon">
-                  <component :is="getTypeIcon(item.type)" />
-                </el-icon>
-                <span>{{ getTypeName(item.type) }}</span>
-              </div>
-              <el-button
-                type="danger"
-                :icon="Delete"
-                circle
-                size="small"
-                class="delete-btn"
-                @click.stop="removeCollection(item)"
-              />
+        <article
+          v-for="item in paginatedCollections"
+          :key="item.id"
+          class="collection-card"
+          @click="viewDetails(item)"
+        >
+          <div class="collection-card__media">
+            <img
+              v-if="item.image && !imageLoadErrors[item.id]"
+              :src="item.image"
+              :alt="item.title"
+              class="collection-image"
+              @error="handleImageError($event, item)"
+            />
+            <div v-else class="media-fallback">
+              <el-icon class="media-fallback__icon">
+                <component :is="getTypeIcon(item.type)" />
+              </el-icon>
+              <span class="media-fallback__char">{{ (item.title || '?').charAt(0) }}</span>
             </div>
+            <span class="type-chip">
+              <el-icon><component :is="getTypeIcon(item.type)" /></el-icon>
+              {{ getTypeName(item.type) }}
+            </span>
+          </div>
 
-            <!-- 卡片内容 -->
-            <div class="card-body">
-              <!-- 图片区域 -->
-              <div class="image-wrapper" :class="`gradient-${item.type}`">
-                <!-- 无图片时显示图标+首字组合 -->
-                <div v-if="!item.image || imageLoadErrors[item.id]" class="fallback-content">
-                  <div class="type-icon-bg">
-                    <el-icon class="type-fallback-icon">
-                      <component :is="getTypeIcon(item.type)" />
-                    </el-icon>
-                  </div>
-                  <div class="title-first-char">{{ item.title?.charAt(0) || '?' }}</div>
-                </div>
-                <!-- 有图片时显示图片 -->
-                <img
-                  v-if="item.image && !imageLoadErrors[item.id]"
-                  :src="item.image"
-                  :alt="item.title"
-                  class="collection-image"
-                  @error="handleImageError($event, item)"
-                />
-                <div class="image-overlay">
-                  <el-icon class="view-icon"><View /></el-icon>
-                  <span>点击查看</span>
-                </div>
-              </div>
-
-              <!-- 标题和描述 -->
-              <h3 class="collection-title" :title="item.title">{{ item.title }}</h3>
-              <p class="collection-description">{{ item.description }}</p>
-
-              <!-- 元信息 -->
-              <div class="collection-meta">
-                <div class="meta-item">
-                  <el-icon><Calendar /></el-icon>
-                  <span>收藏于 {{ item.date }}</span>
-                </div>
-              </div>
+          <div class="collection-card__body">
+            <h3 class="collection-title" :title="item.title">{{ item.title }}</h3>
+            <p class="collection-description">{{ item.description }}</p>
+            <div class="collection-meta">
+              <el-icon><Calendar /></el-icon>
+              <span>收藏于 {{ item.date }}</span>
             </div>
+          </div>
 
-            <!-- 卡片底部操作栏 -->
-            <div class="card-footer">
-              <el-button
-                type="primary"
-                size="small"
-                class="view-btn"
-                @click.stop="viewDetails(item)"
-              >
-                <el-icon><View /></el-icon>
-                查看详情
-              </el-button>
-            </div>
-          </el-card>
-        </div>
+          <div class="collection-card__footer">
+            <el-button link class="view-btn" @click.stop="viewDetails(item)">
+              <el-icon><View /></el-icon>
+              查看详情
+            </el-button>
+            <el-button
+              link
+              type="danger"
+              :icon="Delete"
+              class="delete-btn"
+              title="删除收藏"
+              aria-label="删除收藏"
+              @click.stop="removeCollection(item)"
+            />
+          </div>
+        </article>
       </transition-group>
     </div>
 
-    <!-- 空状态 -->
+    <!-- 空状态：图标 + 中文说明 + 替代动作（§4.5） -->
     <div v-else class="empty-state">
-      <div class="empty-content">
-        <el-icon class="empty-icon"><Star /></el-icon>
-        <h3 class="empty-title">{{ getEmptyTitle() }}</h3>
-        <p class="empty-description">{{ getEmptyDescription() }}</p>
-        <div class="empty-actions">
-          <el-button type="primary" @click="goToHome">
-            <el-icon><House /></el-icon>
-            去首页看看
-          </el-button>
-          <el-button v-if="filterType !== 'all'" @click="resetFilter">
-            <el-icon><RefreshLeft /></el-icon>
-            查看全部收藏
-          </el-button>
-        </div>
+      <el-icon class="empty-icon"><Star /></el-icon>
+      <h3 class="empty-title">{{ getEmptyTitle() }}</h3>
+      <p class="empty-description">{{ getEmptyDescription() }}</p>
+      <div class="empty-actions">
+        <el-button type="primary" :icon="House" @click="goToHome">去首页看看</el-button>
+        <el-button v-if="filterType !== 'all'" :icon="RefreshLeft" @click="resetFilter">
+          查看全部收藏
+        </el-button>
       </div>
     </div>
 
@@ -245,7 +178,6 @@
     <DishDetailDialog v-model="dishDialogVisible" :dish-data="selectedDish" />
   </div>
 </template>
-
 <script setup>
 import pinia from '../../store'
 import { useAuthStore } from '../../store/authStore'
@@ -271,6 +203,7 @@ import {
   ArrowUp
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import DishDetailDialog from '../../components/dish/DishDetailDialog.vue'
 import api from '../../utils/api'
@@ -279,10 +212,6 @@ const router = useRouter()
 
 // 加载状态
 const loading = ref(true)
-
-// 默认图片 - 使用更美观的设计
-const defaultImage =
-  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI0Y1RjVGNSIvPjxjaXJjbGUgY3g9IjEwMCIgY3k9Ijc1IiByPSIzMCIgZmlsbD0iI0U1RUFFNSIvPjxwYXRoIGQ9Ik0xMDAgNDVMMTMwIDc1SDEwMEw3MCA3NVoiIGZpbGw9IiNDQ0MiIvPjxwYXRoIGQ9Ik04NSA2NUwxMTUgMzVMMTAwIDMwTDg1IDM1WiIgZmlsbD0iIzk2QTIyMiIvPjx0ZXh0IHg9IjEwMCIgeT0iMTMwIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5Ij7lpKnnvaHmmL7lvIM8L3RleHQ+PC9zdmc+'
 
 // 收藏数据
 const collections = ref([])
@@ -586,12 +515,11 @@ const refreshCollections = async () => {
           return {
             id: item.id,
             collectableId: item.collectableId,
-            type: item.collectableType,
+            type: item.collectableType === 'recipe' ? 'article' : item.collectableType,
             date: formatDate(item.createdAt),
-            title: `${typeName} ${item.collectableId}`,
+            title: typeName,
             description: '信息加载失败',
-            image: item.collectableType === 'article' ? null : defaultImage,
-            firstChar: item.collectableType === 'article' ? typeName.charAt(0) : undefined
+            image: null
           }
         }
       })
@@ -635,10 +563,12 @@ const formatDate = (dateString) => {
 
 // 辅助函数：获取收藏项详情（优化版）
 const fetchCollectionItemDetails = async (item) => {
+  // 后端 collectable_type 为 merchant/dish/article/recipe；页面把 recipe（教程）并入「文章」展示
+  const normalizedType = item.collectableType === 'recipe' ? 'article' : item.collectableType
   const baseCollection = {
     id: item.id,
     collectableId: item.collectableId,
-    type: item.collectableType,
+    type: normalizedType,
     date: formatDate(item.createdAt)
   }
 
@@ -651,7 +581,7 @@ const fetchCollectionItemDetails = async (item) => {
           ...baseCollection,
           title: merchant.name || '未知商家',
           description: merchant.description || `这是${merchant.name || '商家'}的简介`,
-          image: merchant.image || defaultImage
+          image: merchant.image || null
         }
       }
     } else if (item.collectableType === 'dish') {
@@ -662,7 +592,7 @@ const fetchCollectionItemDetails = async (item) => {
           ...baseCollection,
           title: dish.name || '未知菜品',
           description: dish.description || `这是${dish.name || '菜品'}的简介`,
-          image: dish.image || defaultImage,
+          image: dish.image || null,
           dishData: {
             id: dish.id,
             name: dish.name,
@@ -673,31 +603,27 @@ const fetchCollectionItemDetails = async (item) => {
           }
         }
       }
-    } else if (item.collectableType === 'article') {
-      const articleTitle = `文章 ${item.collectableId}`
+    } else if (normalizedType === 'article') {
+      // 文章没有可用的标题字段，用中性文案代替原始 ID（issue 318 P0）
       return {
         ...baseCollection,
-        title: articleTitle,
+        title: '收藏的文章',
         description: '文章收藏功能正在开发中',
-        image: null,
-        firstChar: articleTitle.charAt(0)
+        image: null
       }
     }
   } catch (error) {
     console.warn(`加载${item.collectableType}详情失败 (ID: ${item.collectableId}):`, error.message)
   }
 
-  // 返回默认值（即使失败也显示基本信息）
+  // 详情接口失败时用类型名兜底，不再把原始 ID 当标题（issue 318 P0）
   const typeName = item.collectableType === 'merchant' ? '商家' : item.collectableType === 'dish' ? '菜品' : '文章'
-  const defaultTitle = `${typeName} ${item.collectableId}`
-  const isArticle = item.collectableType === 'article'
 
   return {
     ...baseCollection,
-    title: defaultTitle,
-    description: `这是${typeName}的描述`,
-    image: isArticle ? null : defaultImage,
-    firstChar: isArticle ? defaultTitle.charAt(0) : undefined
+    title: typeName,
+    description: '详情加载失败，请稍后重试',
+    image: null
   }
 }
 
@@ -744,12 +670,11 @@ onMounted(async () => {
           return {
             id: item.id,
             collectableId: item.collectableId,
-            type: item.collectableType,
+            type: item.collectableType === 'recipe' ? 'article' : item.collectableType,
             date: formatDate(item.createdAt),
-            title: `${typeName} ${item.collectableId}`,
+            title: typeName,
             description: '信息加载失败',
-            image: item.collectableType === 'article' ? null : defaultImage,
-            firstChar: item.collectableType === 'article' ? typeName.charAt(0) : undefined
+            image: null
           }
         }
       })
@@ -768,585 +693,344 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
+<style scoped>
+/* 页面颜色、间距、圆角、字阶与动效全部取自 tokens.css（§3、§7.1），无裸色值。 */
+.my-collection-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-12);
+  background: var(--canvas);
+}
 
-.my-collection-container {
-  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-  min-height: calc(100vh - 40px);
-  background: linear-gradient(135deg, @nordic-bg 0%, darken(@nordic-bg, 5%) 100%);
+/* 页头动作区控件统一 40px（§3.4、§4.7）。 */
+.collection-header :deep(.el-button) {
+  height: var(--control-height-md);
+}
 
-  .header {
-    display: flex;
-    align-items: center;
-    margin-bottom: @nordic-space-lg;
-    padding: @nordic-space-lg;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 2px 12px @nordic-shadow;
+/* 筛选工具栏：单行紧凑，次级/危险动作靠右（§3.4、§4.1）。 */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
 
-    .header-content {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-left: @nordic-space-lg;
+.toolbar__filters,
+.toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
 
-      h2 {
-        font-size: @nordic-text-xl;
-        margin: 0;
-        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-weight: 700;
-      }
+.toolbar__search {
+  width: 240px;
+}
 
-      .collection-stats {
-        display: flex;
-        align-items: center;
-        gap: 12px;
+.toolbar__select {
+  width: 148px;
+}
 
-        :deep(.el-tag) {
-          font-size: @nordic-text-base;
-          padding: @nordic-space-sm @nordic-space-md;
-          font-weight: 500;
-        }
+/* 工具条控件高度只用 --control-height-sm（§3.4）。 */
+.toolbar :deep(.el-input__wrapper),
+.toolbar :deep(.el-select__wrapper) {
+  min-height: var(--control-height-sm);
+  border-radius: var(--radius-md);
+}
 
-        .refresh-btn {
-          transition: all @nordic-transition-slow ease;
+.toolbar :deep(.el-button) {
+  height: var(--control-height-sm);
+}
 
-          &:hover {
-            transform: rotate(180deg);
-          }
-        }
-      }
-    }
+.toolbar :deep(.el-button.is-circle) {
+  width: var(--control-height-sm);
+  padding: 0;
+}
+
+/* 危险动作与普通动作之间留出 --space-6（§4.1）。 */
+.toolbar__actions :deep(.el-button--danger) {
+  margin-left: var(--space-3);
+}
+
+.option-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* 收藏总数：中性辅助文字（§3.2）。 */
+.collection-stats {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.loading-state {
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+/* 三列卡片流，间距取 --card-gap（§3.3）。 */
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--card-gap);
+  margin-bottom: var(--space-6);
+}
+
+/* 收藏卡：L2 浮起质感，可点击（§3.4、§4.2）。 */
+.collection-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.collection-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* 图片统一 4:3 裁切，同列表内比例一致（§4.2）。 */
+.collection-card__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--canvas-sunken);
+}
+
+.collection-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.collection-card:hover .collection-image {
+  transform: scale(1.03);
+}
+
+/* 无图/加载失败：中性底 + 线性图标 + 首字，不出现占位文字（§4.2）。 */
+.media-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: 100%;
+  color: var(--ink-400);
+}
+
+.media-fallback__icon {
+  font-size: 32px;
+}
+
+.media-fallback__char {
+  color: var(--ink-500);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+}
+
+/* 类型标签：分类只用中性标签表达，不用语义色（§3.1、§4.2）。 */
+.type-chip {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink-700);
+  font-size: var(--text-caption);
+  line-height: 18px;
+}
+
+.collection-card__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--card-padding);
+}
+
+.collection-title {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 24px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 描述固定两行高度，保证同列卡片等高（§4.2）。 */
+.collection-description {
+  display: -webkit-box;
+  margin: 0;
+  min-height: 40px;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.collection-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: auto;
+  color: var(--ink-400);
+  font-size: var(--text-caption);
+}
+
+.collection-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+/* 卡片次级动作统一 32px（§3.4）。 */
+.collection-card__footer :deep(.el-button) {
+  height: var(--control-height-sm);
+}
+
+/* 空状态：图标 + 中文说明 + 替代动作（§4.5）。 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 360px;
+  margin: var(--space-10) auto 0;
+  padding: var(--space-8) var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  text-align: center;
+}
+
+.empty-icon {
+  color: var(--ink-400);
+  font-size: 40px;
+}
+
+.empty-title {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+}
+
+.empty-description {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+}
+
+.empty-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.pagination-container :deep(.el-pager li.is-active) {
+  background: var(--brand-500);
+  color: var(--surface);
+}
+
+/* 列表进入/退出过渡，时长与曲线取 §3.5。 */
+.collection-fade-enter-active {
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+
+.collection-fade-leave-active {
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.collection-fade-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.collection-fade-leave-to {
+  opacity: 0;
+}
+
+@media (max-width: 960px) {
+  .toolbar__filters,
+  .toolbar__actions {
+    width: 100%;
   }
 
-  .filter-bar {
-    margin-bottom: @nordic-space-lg;
-    padding: @nordic-space-lg;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 2px 12px @nordic-shadow;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: @nordic-space-md;
-
-    .filter-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 1;
-      min-width: 300px;
-      flex-wrap: wrap;
-
-      .search-input {
-        width: 240px;
-        min-width: 200px;
-
-        :deep(.el-input__wrapper) {
-          border-radius: @nordic-radius-sm;
-        }
-      }
-
-      .filter-select {
-        width: 160px;
-
-        :deep(.el-input__wrapper) {
-          border-radius: @nordic-radius-sm;
-        }
-
-        .option-label {
-          display: flex;
-          align-items: center;
-          gap: @nordic-space-sm;
-
-          .el-icon {
-            font-size: @nordic-text-md;
-          }
-        }
-      }
-
-      .sort-select {
-        width: 140px;
-
-        :deep(.el-input__wrapper) {
-          border-radius: @nordic-radius-sm;
-        }
-      }
-
-      .filter-summary {
-        .filter-active {
-          display: flex;
-          align-items: center;
-          gap: @nordic-space-sm;
-          font-size: @nordic-text-base;
-          color: @nordic-text-secondary;
-          flex-wrap: wrap;
-        }
-      }
-    }
-
-    .filter-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-
-      :deep(.el-divider--vertical) {
-        height: 24px;
-        margin: 0;
-      }
-    }
+  .toolbar__search {
+    flex: 1;
+    width: auto;
+    min-width: 200px;
   }
+}
 
-  .loading-state {
-    padding: 40px @nordic-space-lg;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 2px 12px @nordic-shadow;
+@media (max-width: 640px) {
+  .my-collection-page {
+    padding: 0 var(--space-4) var(--space-8);
   }
 
   .collection-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: @nordic-space-lg;
-    margin-bottom: @nordic-space-lg;
-
-    // 列表动画
-    .collection-fade-enter-active,
-    .collection-fade-leave-active {
-      transition: all @nordic-transition-slow ease;
-    }
-
-    .collection-fade-enter-from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-
-    .collection-fade-leave-to {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-
-    .collection-card-wrapper {
-      height: 100%;
-
-      .collection-card {
-        height: 100%;
-        border-radius: @nordic-radius-lg;
-        border: none;
-        transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-        cursor: pointer;
-        overflow: hidden;
-
-        &:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 12px 40px fade(@nordic-accent, 25%);
-        }
-
-        :deep(.el-card__body) {
-          padding: 0;
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .card-header {
-          padding: @nordic-space-md;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-divider 100%);
-          border-bottom: 1px solid @nordic-border;
-
-          .item-type-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: @nordic-radius-pill;
-            font-size: @nordic-text-sm;
-            font-weight: 600;
-            color: @nordic-surface;
-            transition: all @nordic-transition-slow ease;
-
-            .type-icon {
-              font-size: @nordic-text-md;
-            }
-
-            &.type-merchant {
-              background: linear-gradient(135deg, @nordic-green 0%, darken(@nordic-green, 8%) 100%);
-            }
-
-            &.type-dish {
-              background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-            }
-
-            &.type-article {
-              background: linear-gradient(135deg, @nordic-blue 0%, darken(@nordic-blue, 8%) 100%);
-            }
-          }
-
-          .delete-btn {
-            opacity: 0;
-            transition: all @nordic-transition-slow ease;
-
-            &:hover {
-              transform: rotate(90deg) scale(1.1);
-            }
-          }
-        }
-
-        &:hover .delete-btn {
-          opacity: 1;
-        }
-
-        // 移动端优化：始终显示删除按钮
-        @media (max-width: @nordic-breakpoint-md) {
-          .delete-btn {
-            opacity: 1;
-          }
-        }
-
-        .card-body {
-          flex: 1;
-          padding: @nordic-space-md;
-          display: flex;
-          flex-direction: column;
-
-          .image-wrapper {
-            position: relative;
-            width: 100%;
-            height: 200px;
-            border-radius: @nordic-radius-lg;
-            overflow: hidden;
-            margin-bottom: @nordic-space-md;
-
-            // 类型渐变背景
-            &.gradient-merchant {
-              background: linear-gradient(135deg, @nordic-green 0%, lighten(@nordic-green, 15%) 100%);
-            }
-
-            &.gradient-dish {
-              background: linear-gradient(135deg, @nordic-accent 0%, lighten(@nordic-accent, 15%) 100%);
-            }
-
-            &.gradient-article {
-              background: linear-gradient(135deg, @nordic-blue 0%, lighten(@nordic-blue, 15%) 100%);
-            }
-
-            // 备用内容（图标+首字）
-            .fallback-content {
-              width: 100%;
-              height: 100%;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              gap: @nordic-space-md;
-              color: @nordic-surface;
-              position: relative;
-
-              .type-icon-bg {
-                width: 80px;
-                height: 80px;
-                border-radius: 50%;
-                background: rgba(255, 255, 255, 0.2);
-                backdrop-filter: blur(10px);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 8px 24px @nordic-shadow;
-                transition: transform @nordic-transition-slow ease;
-
-                .type-fallback-icon {
-                  font-size: 2.857rem /* 原值: 40px */;
-                }
-              }
-
-              .title-first-char {
-                font-size: 72px;
-                font-weight: 700;
-                text-shadow: 0 4px 12px @nordic-shadow;
-                line-height: 1;
-                margin: 0;
-              }
-            }
-
-            .collection-image {
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-              transition: transform @nordic-transition-slow ease;
-            }
-
-            .image-overlay {
-              position: absolute;
-              top: 0;
-              left: 0;
-              width: 100%;
-              height: 100%;
-              background: rgba(0, 0, 0, 0.5);
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              gap: @nordic-space-sm;
-              color: @nordic-surface;
-              opacity: 0;
-              transition: opacity @nordic-transition-slow ease;
-
-              .view-icon {
-                font-size: 2.286rem /* 原值: 32px */;
-              }
-
-              span {
-                font-size: @nordic-text-base;
-                font-weight: 500;
-              }
-            }
-          }
-
-          &:hover {
-            .collection-image {
-              transform: scale(1.1);
-            }
-
-            .fallback-content {
-              .type-icon-bg {
-                transform: scale(1.1) rotate(5deg);
-              }
-
-              .title-first-char {
-                transform: scale(1.05);
-              }
-            }
-
-            .image-overlay {
-              opacity: 1;
-            }
-          }
-
-          .collection-title {
-            font-size: @nordic-text-lg;
-            font-weight: 700;
-            margin: 0 0 12px 0;
-            color: @nordic-text;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-
-          .collection-description {
-            font-size: @nordic-text-base;
-            color: @nordic-text-secondary;
-            margin: 0 0 @nordic-space-md 0;
-            line-height: 1.6;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            min-height: 42px;
-          }
-
-          .collection-meta {
-            margin-top: auto;
-
-            .meta-item {
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              font-size: @nordic-text-sm;
-              color: @nordic-text-muted;
-              padding: @nordic-space-sm 12px;
-              background: @nordic-bg;
-              border-radius: @nordic-radius-sm;
-
-              .el-icon {
-                font-size: @nordic-text-base;
-              }
-            }
-          }
-        }
-
-        .card-footer {
-          padding: @nordic-space-md;
-          border-top: 1px solid @nordic-border;
-          background: linear-gradient(135deg, @nordic-bg 0%, @nordic-divider 100%);
-
-          .view-btn {
-            width: 100%;
-            border-radius: @nordic-radius-sm;
-            font-weight: 500;
-            transition: all @nordic-transition-slow ease;
-
-            &:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
-            }
-          }
-        }
-      }
-    }
+    grid-template-columns: 1fr;
   }
 
-  .empty-state {
-    padding: 80px @nordic-space-lg;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 2px 12px @nordic-shadow;
-    text-align: center;
-
-    .empty-content {
-      .empty-icon {
-        font-size: 120px;
-        color: @nordic-border;
-        margin-bottom: @nordic-space-lg;
-        animation: float 3s ease-in-out infinite;
-      }
-
-      .empty-title {
-        font-size: @nordic-text-lg;
-        font-weight: 600;
-        color: @nordic-text;
-        margin: 0 0 12px 0;
-      }
-
-      .empty-description {
-        font-size: @nordic-text-md;
-        color: @nordic-text-muted;
-        margin: 0 0 @nordic-space-xl 0;
-      }
-
-      .empty-actions {
-        display: flex;
-        justify-content: center;
-        gap: @nordic-space-md;
-      }
-    }
+  .toolbar__search,
+  .toolbar__select {
+    width: 100%;
   }
 
-  .pagination-container {
-    padding: @nordic-space-lg;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-lg;
-    box-shadow: 0 2px 12px @nordic-shadow;
-    display: flex;
-    justify-content: center;
-
-    :deep(.el-pagination) {
-      .btn-prev,
-      .btn-next,
-      .el-pager li {
-        border-radius: @nordic-radius-sm;
-        font-weight: 500;
-      }
-
-      .el-pager li.is-active {
-        background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-        color: @nordic-surface;
-      }
-    }
-  }
-}
-
-// 浮动动画
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
-}
-
-// 响应式设计
-@media (max-width: @nordic-breakpoint-md) {
-  .my-collection-container {
-    padding: 0 10px 10px 10px;
-
-    .header {
-      padding: @nordic-space-md;
-
-      .header-content {
-        margin-left: 12px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-
-        h2 {
-          font-size: 22px;
-        }
-      }
-    }
-
-    .filter-bar {
-      padding: @nordic-space-md;
-      flex-direction: column;
-      align-items: stretch;
-
-      .filter-left {
-        flex-direction: column;
-        align-items: stretch;
-        min-width: auto;
-
-        .search-input {
-          width: 100%;
-        }
-
-        .filter-select,
-        .sort-select {
-          width: 100%;
-        }
-      }
-
-      .filter-right {
-        flex-direction: column;
-        gap: @nordic-space-sm;
-
-        .el-button {
-          width: 100%;
-        }
-      }
-    }
-
-    .collection-grid {
-      grid-template-columns: 1fr;
-      gap: @nordic-space-md;
-    }
-
-    .empty-state {
-      padding: 40px @nordic-space-md;
-
-      .empty-content {
-        .empty-icon {
-          font-size: 80px;
-        }
-
-        .empty-title {
-          font-size: @nordic-text-lg;
-        }
-
-        .empty-description {
-          font-size: @nordic-text-base;
-        }
-
-        .empty-actions {
-          flex-direction: column;
-          gap: 12px;
-
-          .el-button {
-            width: 100%;
-          }
-        }
-      }
-    }
+  .toolbar__actions {
+    justify-content: space-between;
   }
 }
 </style>
