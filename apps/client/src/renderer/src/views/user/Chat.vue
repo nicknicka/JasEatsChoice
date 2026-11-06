@@ -2954,7 +2954,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         box-shadow: 0 4px 20px @nordic-shadow;
       }
       50% {
-        box-shadow: 0 4px 25px rgba(212, 132, 90, 0.15);
+        box-shadow: var(--shadow-lg);
       }
     }
 
@@ -3053,7 +3053,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
           @nordic-accent 60%,
           transparent 100%
         );
-        box-shadow: 0 0 12px rgba(212, 132, 90, 0.4);
+        box-shadow: var(--shadow-md);
         transition: none;
 
         &::before {
@@ -3083,7 +3083,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         font-size: @nordic-text-sm;
         font-weight: 500;
         white-space: nowrap;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        box-shadow: var(--shadow-md);
         animation: tooltip-fadein 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: none;
         z-index: 100;
@@ -3167,12 +3167,10 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
           padding: 48px 40px;
           border: 1px solid fade(@nordic-border, 92%);
           border-radius: 28px;
-          background:
-            radial-gradient(circle at top, rgba(212, 132, 90, 0.1) 0%, transparent 42%),
-            linear-gradient(180deg, #fffdfb 0%, #fbf7f2 100%);
+          background: @nordic-bg;
           box-shadow:
-            0 20px 36px rgba(105, 78, 57, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.84);
+            var(--shadow-lg),
+            inset 0 1px 0 var(--surface-highlight);
         }
 
         .empty-bowl {
@@ -3192,7 +3190,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
             border-top: none;
             border-bottom-left-radius: 52px 32px;
             border-bottom-right-radius: 52px 32px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(248, 236, 226, 0.9) 100%);
+            background: @nordic-bg;
           }
 
           &::after {
@@ -3275,7 +3273,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         border-radius: @nordic-radius-lg;
         background: @nordic-surface;
         border: 1px solid @nordic-border;
-        box-shadow: 0 8px 20px rgba(105, 78, 57, 0.06);
+        box-shadow: var(--shadow-md);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -3333,7 +3331,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       align-items: center;
       justify-content: center;
       gap: @nordic-space-md;
-      background: rgba(255, 255, 255, 0.85);
+      background: var(--surface-scrim);
       backdrop-filter: blur(4px);
       border-radius: @nordic-radius-sm;
       color: @nordic-accent-dark;
