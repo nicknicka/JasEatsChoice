@@ -1,10 +1,14 @@
 <template>
   <div class="settings-container">
-    <h2 class="fade-in-up">设置</h2>
+    <AppPageHeader title="设置" class="settings-header">
+      <template #actions>
+        <CommonBackButton type="default" size="default" />
+      </template>
+    </AppPageHeader>
 
-    <el-card class="settings-card">
+    <div class="settings-main">
       <div class="settings-section stagger-item">
-        <h3>🧑 用户设置</h3>
+        <h3>账号设置</h3>
         <div class="form-row">
           <div class="form-label">头像</div>
           <div class="form-content">
@@ -16,11 +20,7 @@
               style="display: none"
               @change="handleAvatarUpload"
             />
-            <el-button
-              type="primary"
-              size="small"
-              style="margin-left: 10px"
-              @click="handleAvatarClick"
+            <el-button type="default" size="small" class="row-action" @click="handleAvatarClick"
               >更换头像</el-button
             >
           </div>
@@ -29,8 +29,8 @@
         <div class="form-row">
           <div class="form-label">手机号</div>
           <div class="form-content">
-            <el-input :model-value="maskedPhone" readonly style="width: 200px" />
-            <el-button type="text" size="small" style="margin-left: 10px" @click="handleEditPhone"
+            <el-input :model-value="maskedPhone" readonly class="readonly-input" />
+            <el-button type="text" size="small" class="row-action" @click="handleEditPhone"
               >修改</el-button
             >
           </div>
@@ -39,8 +39,8 @@
         <div class="form-row">
           <div class="form-label">邮箱</div>
           <div class="form-content">
-            <el-input :model-value="maskedEmail" readonly style="width: 200px" />
-            <el-button type="text" size="small" style="margin-left: 10px" @click="handleEditEmail"
+            <el-input :model-value="maskedEmail" readonly class="readonly-input" />
+            <el-button type="text" size="small" class="row-action" @click="handleEditEmail"
               >修改</el-button
             >
           </div>
@@ -49,22 +49,16 @@
         <div class="form-row">
           <div class="form-label">密码</div>
           <div class="form-content">
-            <el-input type="password" placeholder="********" readonly style="width: 200px" />
-            <el-button
-              type="text"
-              size="small"
-              style="margin-left: 10px"
-              @click="handleEditPassword"
+            <el-input type="password" placeholder="********" readonly class="readonly-input" />
+            <el-button type="text" size="small" class="row-action" @click="handleEditPassword"
               >修改</el-button
             >
           </div>
         </div>
       </div>
 
-      <el-divider />
-
       <div class="settings-section stagger-item">
-        <h3>🔍 显示设置</h3>
+        <h3>显示设置</h3>
 
         <!-- TODO: 字体大小切换功能 -->
         <!-- ✅ 已实现：聊天、表单、按钮等主要内容区域可以随字体大小设置变化 -->
@@ -72,15 +66,13 @@
         <div class="form-row">
           <div class="form-label">字体大小</div>
           <div class="form-content">
-            <el-radio-group v-model="fontSize" style="margin-right: 20px">
+            <el-radio-group v-model="fontSize">
               <el-radio label="small">小</el-radio>
               <el-radio label="medium">中</el-radio>
               <el-radio label="large">大</el-radio>
               <el-radio label="extra-large">超大</el-radio>
             </el-radio-group>
-            <!-- <span style="margin-left: 10px; color: #909399; font-size: 0.857rem">
-              调整主要内容区域的字体大小
-            </span> -->
+            <!-- 字体大小说明文案占位（颜色取 token，不写裸色值） -->
           </div>
         </div>
 
@@ -97,18 +89,14 @@
           <div class="form-label">主题切换</div>
           <div class="form-content">
             <el-switch v-model="theme" active-text="深色" inactive-text="浅色" />
-            <span style="margin-left: 10px; color: #909399; font-size: 0.857rem">
-              切换应用的整体主题颜色
-            </span>
+            <span class="form-hint">切换应用的整体主题颜色</span>
           </div>
         </div>
         -->
       </div>
 
-      <el-divider />
-
       <div class="settings-section stagger-item">
-        <h3>🔔 通知设置</h3>
+        <h3>通知设置</h3>
 
         <div class="form-row">
           <div class="form-label">订单通知</div>
@@ -139,10 +127,8 @@
         </div>
       </div>
 
-      <el-divider />
-
       <div class="settings-section stagger-item">
-        <h3>🕶️ 隐私设置</h3>
+        <h3>隐私设置</h3>
 
         <div class="form-row">
           <div class="form-label">定位权限</div>
@@ -169,7 +155,7 @@
           <div class="form-label">AI个性化建议</div>
           <div class="form-content">
             <el-switch v-model="privacy.aiPersonalData" />
-            <span style="margin-left: 10px; color: #909399; font-size: 0.857rem /* 原值: 12px */">
+            <span class="form-hint">
               允许AI使用身高、体重、饮食记录等数据提供个性化建议
             </span>
           </div>
@@ -177,18 +163,14 @@
 
         <div class="form-row">
           <div class="form-content">
-            <el-button type="warning" size="small" style="margin-right: 10px" @click="clearCache"
-              >清除缓存</el-button
-            >
-            <el-button type="primary" size="small" @click="exportData">数据导出</el-button>
+            <el-button type="danger" plain size="small" @click="clearCache">清除缓存</el-button>
+            <el-button type="default" size="small" @click="exportData">数据导出</el-button>
           </div>
         </div>
       </div>
 
-      <el-divider />
-
       <div class="settings-section stagger-item">
-        <h3>📱 版本信息</h3>
+        <h3>版本信息</h3>
 
         <div class="form-row">
           <div class="form-label">当前版本</div>
@@ -197,21 +179,17 @@
 
         <div class="form-row">
           <div class="form-content">
-            <el-button type="text" size="small" style="margin-right: 10px" @click="checkUpdate"
-              >检查更新</el-button
-            >
-            <el-button type="text" size="small" @click="submitFeedback">反馈建议</el-button>
+            <el-button type="default" size="small" @click="checkUpdate">检查更新</el-button>
+            <el-button type="default" size="small" @click="submitFeedback">反馈建议</el-button>
           </div>
         </div>
       </div>
 
       <div class="settings-actions">
-        <el-button type="primary" @click="saveSettings">保存设置</el-button>
-        <el-button type="warning" style="margin-left: 10px" @click="resetSettings"
-          >重置默认</el-button
-        >
+        <el-button type="primary" :loading="isSaving" @click="saveSettings">保存设置</el-button>
+        <el-button type="default" :disabled="isSaving" @click="resetSettings">重置默认</el-button>
       </div>
-    </el-card>
+    </div>
 
     <!-- Edit Phone Dialog -->
     <el-dialog v-model="editPhoneDialogVisible" title="修改手机号" width="400px">
@@ -223,7 +201,7 @@
             maxlength="4"
             style="width: 150px"
           />
-          <div style="font-size: 0.857rem /* 原值: 12px */; color: #909399; margin-top: 4px;">
+          <div class="dialog-hint">
             您的原手机号：{{ maskedPhone }}，请输入中间4位数字进行验证
           </div>
         </el-form-item>
@@ -261,7 +239,7 @@
             placeholder="请输入原邮箱地址"
             style="width: 100%"
           />
-          <div style="font-size: 0.857rem /* 原值: 12px */; color: #909399; margin-top: 4px;">
+          <div class="dialog-hint">
             您的原邮箱：{{ maskedEmail }}，请输入完整的原邮箱地址进行验证
           </div>
         </el-form-item>
@@ -345,8 +323,8 @@
       <div class="update-content">
         <p>当前版本：1.0.0</p>
         <p>最新版本：{{ latestVersion }}</p>
-        <p v-if="hasUpdate" style="color: #409eff">有新版本可用，建议更新</p>
-        <p v-else style="color: #67c23a">当前已是最新版本</p>
+        <p v-if="hasUpdate" class="update-info">有新版本可用，建议更新</p>
+        <p v-else class="update-success">当前已是最新版本</p>
       </div>
       <template #footer>
         <div class="dialog-footer">
@@ -360,13 +338,15 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { ElMessage, ElDialog, ElInput, ElForm, ElFormItem } from 'element-plus'
+import { ElMessage, ElMessageBox, ElDialog, ElInput, ElForm, ElFormItem } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 import pinia from '../../store'
 import { useAuthStore } from '../../store/authStore'
 import { useUserStore } from '../../store/userStore'
 import { getAvatarUrl } from '@/utils/avatar'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
 
 const authStore = useAuthStore(pinia)
 const userStore = useUserStore(pinia)
@@ -426,6 +406,8 @@ const fontSize = ref(tempSettings.value.fontSize)
 // const theme = ref(tempSettings.value.theme)
 const theme = ref(false) // 默认浅色主题
 const notifications = ref({ ...tempSettings.value.notifications })
+// 保存中的即时反馈：按钮进入 loading 并禁止重复提交（§4.1、§4.6）
+const isSaving = ref(false)
 const privacy = ref({ ...tempSettings.value.privacy })
 
 // User info edit dialogs
@@ -518,6 +500,16 @@ onMounted(() => {
 
 // Handle save settings with localStorage persistence
 const saveSettings = async () => {
+  if (isSaving.value) return
+  isSaving.value = true
+  try {
+    await doSaveSettings()
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const doSaveSettings = async () => {
   // 将临时修改的设置同步到正式设置数据中
   const updatedSettings = {
     fontSize: fontSize.value,
@@ -560,7 +552,17 @@ const saveSettings = async () => {
 }
 
 // Handle reset settings
-const resetSettings = () => {
+const resetSettings = async () => {
+  try {
+    await ElMessageBox.confirm('重置后所有设置将恢复默认值，确定继续吗？', '重置默认设置', {
+      confirmButtonText: '重置',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+  } catch {
+    return
+  }
+
   // 默认设置值
   const defaultSettings = {
     fontSize: 'medium',
@@ -1270,76 +1272,136 @@ const submitFeedbackForm = async () => {
 </script>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
+/* 整页：单列居中 1200px 内取 --form-width-settings 的 720px 可读列；颜色/间距/圆角/字阶/动效全部来自 tokens.css（§3、§7.1）。 */
 .settings-container {
-  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-  background: @nordic-bg;
-  min-height: 100%;
+  box-sizing: border-box;
+  width: 100%;
+  /* 单列居中，列宽取 §3.3 --form-width-settings（720px），页头与设置卡同一左缘。 */
+  max-width: var(--form-width-settings);
+  margin-inline: auto;
+  padding: 0 var(--page-gutter) var(--space-12);
+}
 
-  h2 {
-    font-size: @nordic-text-xl;
-    font-weight: 700;
-    color: @nordic-text;
-    margin: 0 0 @nordic-space-lg 0;
-    letter-spacing: @nordic-letter-tight;
+/* 页头标准版（标题 --text-h1 + 上下 --space-6，§4.7）。 */
+.settings-header {
+  padding-inline: 0;
+}
+
+.settings-header :deep(.el-button) {
+  height: var(--control-height-md, 40px);
+  min-height: var(--control-height-md, 40px);
+}
+
+/* 设置主体：限宽到 §3.3 --form-width-settings（720px），居中，避免右侧大面积空白。 */
+.settings-main {
+  width: 100%;
+}
+
+/* 每个分组一张 L1 卡片（§3.4）：--surface 底 + 1px --line 描边 + 顶部内高光。 */
+.settings-section {
+  box-sizing: border-box;
+  padding: var(--card-padding);
+  margin-bottom: var(--card-gap);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  /* 区块标题从 h2 语义起，用 --text-h3 档位；与设置项之间留分组间距（§4.4、§4.7）。 */
+  h3 {
+    margin: 0 0 var(--space-6);
+    font-size: var(--text-h3);
+    line-height: 24px;
+    font-weight: var(--weight-semibold);
+    color: var(--ink-900);
   }
 
-  .settings-card {
-    padding: @nordic-space-lg;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-lg;
-    border: 1px solid @nordic-border;
-    box-shadow: 0 1px 4px @nordic-shadow;
+  .form-row:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-4);
+
+  .form-label {
+    width: 150px;
+    flex-shrink: 0;
+    font-weight: var(--weight-semibold);
+    color: var(--ink-500);
+    font-size: var(--text-body);
   }
 
-  .settings-section {
-    margin-bottom: @nordic-space-lg;
-
-    h3 {
-      font-size: @nordic-text-md;
-      margin: 0 0 @nordic-space-lg 0;
-      font-weight: 600;
-      color: @nordic-text;
-    }
-  }
-
-  .form-row {
+  .form-content {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    margin-bottom: 15px;
-
-    .form-label {
-      width: 150px;
-      font-weight: 600;
-      color: @nordic-text;
-      font-size: @nordic-text-base;
-    }
-
-    .form-content {
-      flex: 1;
-      color: @nordic-text-secondary;
-      font-size: @nordic-text-base;
-    }
+    gap: var(--space-3);
+    flex: 1;
+    min-width: 0;
+    color: var(--ink-700);
+    font-size: var(--text-body);
   }
+}
 
-  .settings-actions {
-    margin-top: @nordic-space-xl;
-    text-align: center;
-    padding-top: @nordic-space-lg;
-    border-top: 1px solid @nordic-divider;
-  }
+/* 同行内的次要说明文字：--text-body-sm / --ink-500（§3.2）。 */
+.form-hint {
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
+}
 
-  .user-avatar {
-    background-color: transparent;
-  }
+/* 只读输入：固定宽度沿用原布局，不占用整行。 */
+.readonly-input {
+  width: 200px;
+}
+
+.row-action {
+  margin-left: 0;
+}
+
+/* 底部保存区：与分组拉开，仅保留一个实心主按钮（§4.1）。 */
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--line);
+}
+
+.user-avatar {
+  background-color: transparent;
+}
+
+/* 弹窗说明文字：--text-caption / --ink-500（§3.2）。 */
+.dialog-hint {
+  margin-top: var(--space-1);
+  font-size: var(--text-caption);
+  line-height: 18px;
+  color: var(--ink-500);
+}
+
+/* 开关切换的即时反馈（§3.5：150ms --ease-out，只做颜色过渡，不改布局尺寸）。 */
+.settings-section :deep(.el-switch) {
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .update-content {
   p {
-    margin: 10px 0;
-    font-size: @nordic-text-base;
-    color: @nordic-text-secondary;
+    margin: var(--space-2) 0;
+    font-size: var(--text-body);
+    color: var(--ink-700);
+  }
+
+  /* 更新状态只做信息/成功语义，不写裸色值（§2、§7.1）。 */
+  .update-info {
+    color: var(--info);
+  }
+
+  .update-success {
+    color: var(--success);
   }
 }
 </style>
