@@ -27,6 +27,8 @@
   --surface:     #FFFFFF; /* 卡片、表格 */
   --canvas:      #FBF7F3; /* 页面底色，暖白 */
   --canvas-sunken: #F4EDE6; /* 页面底、工具条 */
+  --surface-highlight: rgba(255, 255, 255, 0.84); /* 卡片顶部内高光（§3.4 L1 微质感） */
+  --surface-scrim:     rgba(255, 255, 255, 0.85); /* 浅色遮罩/蒙层，配合 backdrop-filter */
   --overlay: rgba(31, 27, 24, 0.45);
 
   /* 语义色：只做标签、图标、反馈，不做整屏底色 */
