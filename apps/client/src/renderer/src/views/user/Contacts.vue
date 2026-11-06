@@ -1,28 +1,17 @@
 <template>
   <div class="contacts-container">
-    <!-- 页面头部 -->
-    <div class="contacts-header fade-in-up">
-      <div class="header-content">
-        <h2 class="page-title">
-          <span class="title-icon">👥</span>
-          通讯录
-        </h2>
-        <div class="header-stats">
-          <div class="stat-item">
-            <span class="stat-label">总好友</span>
-            <span class="stat-value">{{ totalCount }}</span>
-          </div>
-        </div>
-      </div>
-      <div class="header-actions">
+    <!-- 页面头部：标准版标题容器（DESIGN-BASELINE §4.7） -->
+    <AppPageHeader title="通讯录" :subtitle="`总好友 ${totalCount}`">
+      <template #actions>
         <el-button type="primary" :icon="Plus" @click="openAddFriendDialog">
           添加好友
         </el-button>
-      </div>
-    </div>
+      </template>
+    </AppPageHeader>
 
     <!-- 搜索和筛选区域 -->
-    <div class="search-filter-section fade-in-up delay-100">
+    <AppCard class="contacts-toolbar" :level="1" padding="md">
+      <div class="toolbar-row">
       <div class="search-box">
         <el-input
           v-model="searchQuery"
@@ -39,62 +28,62 @@
           <el-radio-button label="all">全部 ({{ totalCount }})</el-radio-button>
         </el-radio-group>
       </div>
-    </div>
+      </div>
+    </AppCard>
 
     <!-- 好友请求列表 -->
     <div v-if="friendRequests.length > 0" class="friend-requests-section">
-      <div class="section-header">
-        <h3 class="section-title">
-          <span class="title-icon">👋</span>
-          好友请求 ({{ friendRequests.length }})
-        </h3>
-        <el-button
-          type="text"
-          size="small"
-          @click="showFriendRequests = !showFriendRequests"
-        >
-          {{ showFriendRequests ? '收起' : '展开' }}
-          <el-icon :class="{ 'rotate-180': showFriendRequests }">
-            <component :is="ArrowDown" />
-          </el-icon>
-        </el-button>
-      </div>
-
-      <transition name="el-zoom-in-top">
-        <div v-show="showFriendRequests" class="requests-list">
-          <el-card
-            v-for="request in friendRequests"
-            :key="request.id"
-            class="request-card"
-            shadow="hover"
+      <AppCard :level="1" padding="md">
+        <div class="requests-header">
+          <h2 class="requests-title">好友请求 ({{ friendRequests.length }})</h2>
+          <el-button
+            text
+            size="small"
+            @click="showFriendRequests = !showFriendRequests"
           >
-            <div class="request-content">
-              <div class="requester-info">
-                <div class="requester-avatar">
-                  <img
-                    v-if="isImageAvatar(request.requesterInfo?.avatar)"
-                    :src="request.requesterInfo.avatar"
-                    alt="头像"
-                  />
-                  <span v-else class="avatar-emoji">
-                    {{ request.requesterInfo?.avatar || '👤' }}
-                  </span>
-                </div>
+            {{ showFriendRequests ? '收起' : '展开' }}
+            <el-icon :class="{ 'is-expanded': showFriendRequests }">
+              <component :is="ArrowDown" />
+            </el-icon>
+          </el-button>
+        </div>
 
-                <div class="requester-details">
-                  <h4 class="requester-name">
-                    {{ request.requesterInfo?.nickname || '未知用户' }}
-                  </h4>
-                  <p class="requester-id">用户ID: {{ request.requesterInfo?.id }}</p>
-                  <p v-if="request.createdAt" class="request-time">
-                    {{ request.createdAt }}
-                  </p>
-                </div>
+        <transition name="el-zoom-in-top">
+          <div v-show="showFriendRequests" class="requests-list">
+            <div
+              v-for="request in friendRequests"
+              :key="request.id"
+              class="request-row"
+            >
+              <div class="request-avatar">
+                <img
+                  v-if="
+                    shouldShowAvatarImage(
+                      request.requesterInfo?.avatar,
+                      `request-${request.userId ?? request.requesterInfo?.id ?? ''}`
+                    )
+                  "
+                  :src="request.requesterInfo.avatar"
+                  :alt="`${request.requesterInfo?.nickname || '未知用户'} 的头像`"
+                  @error="handleAvatarError(`request-${request.userId ?? request.requesterInfo?.id ?? ''}`)"
+                />
+                <el-icon v-else class="avatar-fallback"><User /></el-icon>
+              </div>
+
+              <div class="request-info">
+                <h3 class="request-name">
+                  {{ request.requesterInfo?.nickname || '未知用户' }}
+                </h3>
+                <p class="request-id">用户ID: {{ request.requesterInfo?.id }}</p>
+                <p v-if="request.createdAt" class="request-time">
+                  {{ request.createdAt }}
+                </p>
               </div>
 
               <div class="request-actions">
                 <el-button
                   type="primary"
+                  plain
                   size="default"
                   @click="handleAcceptRequest(request)"
                 >
@@ -107,86 +96,110 @@
                 </el-button>
               </div>
             </div>
-          </el-card>
-        </div>
-      </transition>
+          </div>
+        </transition>
+      </AppCard>
     </div>
 
     <!-- 内容区域：好友列表 + 字母索引 -->
     <div v-if="!loading && filteredFriends.length > 0" class="contacts-content">
-      <!-- 好友列表 -->
-      <div class="friends-list-wrapper">
-        <!-- 按字母分组的好友列表 -->
-        <div class="friends-list-scroll">
-          <div v-for="(group, letter) in groupedFriends" :key="letter" class="friend-group">
-            <!-- 字母标题 -->
-            <div class="group-letter" :data-letter="letter">{{ letter }}</div>
+      <AppCard class="contacts-list-card" :level="1" padding="none">
+        <div class="contacts-list-layout">
+          <div class="friends-list-wrapper">
+            <!-- 列表字段表头：明确列含义（DESIGN-BASELINE §4.3） -->
+            <div class="list-header">
+              <span class="list-header__field">联系人</span>
+              <span class="list-header__field">用户 ID</span>
+              <span class="list-header__field list-header__field--action">操作</span>
+            </div>
 
-            <!-- 该字母下的好友 -->
-            <div
-              v-for="friend in group"
-              :key="friend.id"
-              class="friend-item stagger-item card-hover-effect"
-              @click="startChat(friend)"
-              @contextmenu.prevent="showContextMenu($event, friend)"
-            >
-              <!-- 头像 -->
-              <div class="friend-avatar">
-                <img v-if="isImageAvatar(friend.avatar)" :src="friend.avatar" alt="头像" />
-                <span v-else class="avatar-emoji">{{ friend.avatar || '👤' }}</span>
-              </div>
+            <!-- 按字母分组的好友列表 -->
+            <div class="friends-list-scroll">
+              <div
+                v-for="(group, letter) in groupedFriends"
+                :key="letter"
+                class="friend-group"
+              >
+                <!-- 字母分组标题 -->
+                <div class="group-letter" :data-letter="letter">{{ letter }}</div>
 
-              <!-- 好友信息 -->
-              <div class="friend-info">
-                <div class="friend-name-row">
-                  <span class="friend-name">{{ friend.name }}</span>
+                <!-- 该字母下的好友 -->
+                <div
+                  v-for="friend in group"
+                  :key="friend.id"
+                  class="friend-item"
+                  role="button"
+                  tabindex="0"
+                  @click="startChat(friend)"
+                  @keydown.enter="startChat(friend)"
+                  @keydown.space.prevent="startChat(friend)"
+                  @contextmenu.prevent="showContextMenu($event, friend)"
+                >
+                  <div class="friend-identity">
+                    <div class="friend-avatar">
+                      <img
+                        v-if="shouldShowAvatarImage(friend.avatar, `friend-${friend.id}`)"
+                        :src="friend.avatar"
+                        :alt="`${friend.name} 的头像`"
+                        @error="handleAvatarError(`friend-${friend.id}`)"
+                      />
+                      <el-icon v-else class="avatar-fallback"><User /></el-icon>
+                    </div>
+                    <span class="friend-name">{{ friend.name }}</span>
+                  </div>
+
+                  <div class="friend-id">ID: {{ friend.id }}</div>
+
+                  <!-- 行操作：与行选中态绑定的操作区（DESIGN-BASELINE §4.1 / §4.6） -->
+                  <div class="friend-actions">
+                    <el-button
+                      class="chat-btn"
+                      :icon="ChatDotRound"
+                      size="small"
+                      @click.stop="startChat(friend)"
+                    >
+                      发消息
+                    </el-button>
+                  </div>
                 </div>
-                <div class="friend-id">ID: {{ friend.id }}</div>
-              </div>
-
-              <!-- 快捷操作按钮 -->
-              <div class="friend-quick-actions">
-                <el-button
-                  type="primary"
-                  :icon="ChatDotRound"
-                  circle
-                  size="small"
-                  class="chat-btn"
-                  @click.stop="startChat(friend)"
-                />
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- 字母索引导航 -->
-      <div class="alphabet-index">
-        <div
-          v-for="letter in availableLetters"
-          :key="letter"
-          class="alphabet-item"
-          :class="{ active: activeLetter === letter }"
-          @click="scrollToLetter(letter)"
-        >
-          {{ letter }}
+          <!-- 字母索引导航 -->
+          <div class="alphabet-index">
+            <button
+              v-for="letter in availableLetters"
+              :key="letter"
+              type="button"
+              class="alphabet-item"
+              :class="{ active: activeLetter === letter }"
+              @click="scrollToLetter(letter)"
+            >
+              {{ letter }}
+            </button>
+          </div>
         </div>
-      </div>
+      </AppCard>
     </div>
 
     <!-- 加载状态 -->
     <div v-else-if="loading" class="loading-container">
-      <el-skeleton :rows="5" animated />
+      <AppCard :level="1" padding="md">
+        <el-skeleton :rows="5" animated />
+      </AppCard>
     </div>
 
-    <!-- 空状态 -->
-    <div v-else class="empty-container" @click="handleEmptyClick">
-      <div class="empty-icon">👥</div>
-      <p class="empty-title">{{ emptyText }}</p>
-      <p v-if="!searchQuery && filterType === 'all'" class="empty-tip">点击此处或上方"添加好友"按钮</p>
-      <el-button v-if="searchQuery || filterType !== 'all'" type="primary" @click.stop="resetFilter">
-        清除筛选
-      </el-button>
+    <!-- 空状态：图标 + 中文说明 + 替代动作（DESIGN-BASELINE §4.5） -->
+    <div v-else class="empty-container">
+      <AppCard :level="1" padding="lg">
+        <AppEmptyState
+          :icon="User"
+          :description="emptyText"
+          :action-text="emptyActionText"
+          @action="handleEmptyAction"
+        />
+      </AppCard>
     </div>
 
     <!-- 右键菜单 -->
@@ -246,8 +259,13 @@
         <div v-if="searchResults.length > 0" class="search-results">
           <div v-for="user in searchResults" :key="user.id" class="result-item">
             <div class="user-avatar">
-              <img v-if="isImageAvatar(user.avatar)" :src="user.avatar" alt="" />
-              <span v-else>{{ user.avatar || '👤' }}</span>
+              <img
+                v-if="shouldShowAvatarImage(user.avatar, `search-${user.id}`)"
+                :src="user.avatar"
+                :alt="`${user.name} 的头像`"
+                @error="handleAvatarError(`search-${user.id}`)"
+              />
+              <el-icon v-else class="avatar-fallback"><User /></el-icon>
             </div>
             <div class="user-info">
               <div class="user-name">{{ user.name }}</div>
@@ -275,8 +293,13 @@
     >
       <div v-if="selectedFriend" class="friend-detail">
         <div class="detail-avatar">
-          <img v-if="isImageAvatar(selectedFriend.avatar)" :src="selectedFriend.avatar" alt="" />
-          <span v-else class="avatar-emoji">{{ selectedFriend.avatar || '👤' }}</span>
+          <img
+            v-if="shouldShowAvatarImage(selectedFriend.avatar, `detail-${selectedFriend.id}`)"
+            :src="selectedFriend.avatar"
+            :alt="`${selectedFriend.name} 的头像`"
+            @error="handleAvatarError(`detail-${selectedFriend.id}`)"
+          />
+          <el-icon v-else class="avatar-fallback"><User /></el-icon>
         </div>
         <div class="detail-info">
           <div class="info-item">
@@ -311,6 +334,9 @@ import {
   Close,
   ArrowDown
 } from '@element-plus/icons-vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
 import api from '../../utils/api'
 import { decodeJwt } from '../../utils/api'
 import { useAuthStore } from '../../store/authStore'
@@ -333,6 +359,10 @@ const activeLetter = ref('')
 const friendRequests = ref([])
 const loadingRequests = ref(false)
 const showFriendRequests = ref(false) // 控制是否显示好友请求列表
+
+// ========== 头像加载失败记录 ==========
+// 图片地址存在但实际 404 时，记录该 key 并回退到线性图标，避免碎图（DESIGN-BASELINE §4.2）
+const avatarErrors = ref({})
 
 // ========== 右键菜单状态 ==========
 const contextMenuVisible = ref(false)
@@ -416,6 +446,14 @@ const emptyText = computed(() => {
   return '还没有好友，快去添加吧'
 })
 
+// 空状态的替代动作：有筛选条件时先清筛选，否则去添加好友（DESIGN-BASELINE §4.5）
+const emptyActionText = computed(() => {
+  if (searchQuery.value.trim() || filterType.value !== 'all') {
+    return '清除筛选'
+  }
+  return '添加好友'
+})
+
 // ========== 获取用户ID ==========
 const getUserId = () => {
   if (authStore.token) {
@@ -431,6 +469,16 @@ const getUserId = () => {
 const isImageAvatar = (avatar) => {
   if (!avatar) return false
   return /^https?:\/\//.test(avatar) || /^data:image/.test(avatar)
+}
+
+// ========== 头像是否应渲染为图片 ==========
+const shouldShowAvatarImage = (avatar, key) => {
+  if (!isImageAvatar(avatar)) return false
+  return !avatarErrors.value[key]
+}
+
+const handleAvatarError = (key) => {
+  avatarErrors.value = { ...avatarErrors.value, [key]: true }
 }
 
 // ========== 手机号脱敏 ==========
@@ -454,9 +502,6 @@ const maskEmail = (email) => {
   }
   return email
 }
-
-// ========== 移除未使用的函数 ==========
-// formatRecentTime 函数已移除，因为不再显示最近联系时间
 
 // ========== 从本地存储加载好友列表 ==========
 const loadFriendsFromLocal = () => {
@@ -517,7 +562,7 @@ const fetchFriends = async () => {
               return /^https?:\/\//.test(avatar) || /^data:image/.test(avatar)
             }
 
-            const avatar = isValidAvatarUrl(userData.avatar) ? userData.avatar : '👤'
+            const avatar = isValidAvatarUrl(userData.avatar) ? userData.avatar : ''
 
             return {
               id: contact.targetId,
@@ -531,7 +576,7 @@ const fetchFriends = async () => {
             return {
               id: contact.targetId,
               name: '好友',
-              avatar: '👤',
+              avatar: '',
               createdAt: contact.createdAt
             }
           }
@@ -599,6 +644,15 @@ const resetFilter = () => {
   filterType.value = 'all'
 }
 
+// ========== 空状态替代动作 ==========
+const handleEmptyAction = () => {
+  if (searchQuery.value.trim() || filterType.value !== 'all') {
+    resetFilter()
+    return
+  }
+  openAddFriendDialog()
+}
+
 // ========== 格式化最近时间 ==========
 const formatRecentTime = (time) => {
   if (!time) return ''
@@ -653,13 +707,6 @@ const scrollToLetter = (letter) => {
   setTimeout(() => {
     activeLetter.value = ''
   }, 2000)
-}
-
-// ========== 空状态点击 ==========
-const handleEmptyClick = () => {
-  if (!searchQuery.value && filterType.value === 'all') {
-    openAddFriendDialog()
-  }
 }
 
 // ========== 查看好友详情 ==========
@@ -752,7 +799,7 @@ const handleFriendSearch = async () => {
       searchResults.value = (response.data || []).map(user => ({
         id: user.userId,
         name: user.nickname || user.username,
-        avatar: user.avatar || '👤',
+        avatar: user.avatar || '',
         phone: user.phone,
         email: user.email,
         adding: false,
@@ -873,7 +920,7 @@ const loadFriendRequests = async () => {
                 requesterInfo: {
                   id: userResponse.data.userId,
                   nickname: userResponse.data.nickname || '未知用户',
-                  avatar: isImageAvatar(userResponse.data.avatar) ? userResponse.data.avatar : '👤',
+                  avatar: isImageAvatar(userResponse.data.avatar) ? userResponse.data.avatar : '',
                   phone: userResponse.data.phone,
                   email: userResponse.data.email
                 }
@@ -889,7 +936,7 @@ const loadFriendRequests = async () => {
             requesterInfo: {
               id: request.userId,
               nickname: '未知用户',
-              avatar: '👤'
+              avatar: ''
             }
           }
         })
@@ -1010,1091 +1057,692 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
+/* 页面容器：单列居中，最大宽度 --page-max（DESIGN-BASELINE §3.3 / §4.7） */
 .contacts-container {
-  padding: @nordic-space-lg;
-  background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
-  min-height: calc(100vh - 100px);
-  position: relative;
-  overflow-x: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 20% 30%, rgba(212, 132, 90, 0.06) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(212, 132, 90, 0.06) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  > * {
-    position: relative;
-    z-index: 1;
-  }
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 }
 
-// 好友请求区域
+/* ===== 搜索 + 筛选工具条（§4.3：筛选条） ===== */
+.contacts-toolbar {
+  margin-bottom: var(--card-gap);
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.search-box {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-options {
+  flex-shrink: 0;
+}
+
+.search-box :deep(.el-input__wrapper) {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    outline-color var(--duration-fast) var(--ease-out);
+}
+
+.search-box :deep(.el-input__wrapper:hover) {
+  border-color: var(--line-strong);
+}
+
+.search-box :deep(.el-input__wrapper.is-focus) {
+  border-color: var(--brand-500);
+  box-shadow: none;
+  outline: 2px solid var(--brand-200);
+  outline-offset: 1px;
+}
+
+.search-box :deep(.el-input__inner) {
+  color: var(--ink-900);
+  font-size: var(--text-body);
+}
+
+.search-box :deep(.el-input__prefix),
+.search-box :deep(.el-input__suffix .el-icon) {
+  color: var(--ink-400);
+}
+
+/* 分段筛选：用品牌色浅底强调，不做第二个实心主按钮（§3.1 / §4.1） */
+.filter-options :deep(.el-radio-group),
+.search-type-selector :deep(.el-radio-group) {
+  gap: var(--space-2);
+}
+
+.filter-options :deep(.el-radio-button__inner),
+.search-type-selector :deep(.el-radio-button__inner) {
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  box-shadow: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.filter-options :deep(.el-radio-button__inner:hover),
+.search-type-selector :deep(.el-radio-button__inner:hover) {
+  border-color: var(--brand-300);
+  color: var(--brand-600);
+}
+
+.filter-options :deep(.el-radio-button.is-active .el-radio-button__inner),
+.search-type-selector :deep(.el-radio-button.is-active .el-radio-button__inner) {
+  background: var(--brand-50);
+  border-color: var(--brand-400);
+  color: var(--brand-700);
+  box-shadow: none;
+}
+
+/* ===== 好友请求 ===== */
 .friend-requests-section {
-  margin-bottom: 20px;
-  background: @nordic-surface;
-  border-radius: @nordic-radius-lg;
-  box-shadow: 0 4px 20px @nordic-shadow;
-  overflow: hidden;
-  transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-
-  &:hover {
-    box-shadow: 0 8px 30px rgba(212, 132, 90, 0.15);
-  }
-
-  .section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: @nordic-space-md @nordic-space-lg;
-    background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-light 100%);
-    border-bottom: 1px solid @nordic-border;
-
-    .section-title {
-      display: flex;
-      align-items: center;
-      margin: 0;
-      font-size: @nordic-text-md;
-      font-weight: 600;
-      color: @nordic-surface;
-
-      .title-icon {
-        margin-right: @nordic-space-sm;
-        font-size: @nordic-text-lg;
-      }
-    }
-
-    :deep(.el-button) {
-      color: @nordic-surface;
-      font-weight: 500;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-
-      .el-icon {
-        transition: transform @nordic-transition-slow ease;
-
-        &.rotate-180 {
-          transform: rotate(180deg);
-        }
-      }
-    }
-  }
-
-  .requests-list {
-    padding: @nordic-space-md;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
-
-    .request-card {
-      border-radius: @nordic-radius-md;
-      border: 2px solid @nordic-border;
-      transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(212, 132, 90, 0.15);
-        border-color: @nordic-accent;
-      }
-
-      :deep(.el-card__body) {
-        padding: @nordic-space-md;
-      }
-
-      .request-content {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-
-        .requester-info {
-          display: flex;
-          align-items: center;
-          gap: @nordic-space-md;
-          flex: 1;
-
-          .requester-avatar {
-            width: 56px;
-            height: 56px;
-            border-radius: @nordic-radius-md;
-            overflow: hidden;
-            background: @nordic-bg;
-            border: 2px solid @nordic-border;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-
-            img {
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-            }
-
-            .avatar-emoji {
-              font-size: 2.286rem;
-            }
-          }
-
-          .requester-details {
-            flex: 1;
-
-            .requester-name {
-              font-size: @nordic-text-md - 1px;
-              font-weight: 600;
-              color: @nordic-text;
-              margin: 0 0 6px 0;
-            }
-
-            .requester-id {
-              font-size: @nordic-text-xs;
-              color: @nordic-text-muted;
-              margin: 0 0 4px 0;
-            }
-
-            .request-time {
-              font-size: @nordic-text-xs;
-              color: @nordic-text-muted;
-              margin: 0;
-            }
-          }
-        }
-
-        .request-actions {
-          display: flex;
-          gap: 12px;
-          flex-shrink: 0;
-
-          :deep(.el-button) {
-            border-radius: @nordic-radius-sm;
-            padding: 10px 20px;
-            font-weight: 500;
-            transition: all @nordic-transition-slow ease;
-
-            &:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 4px 12px @nordic-shadow-hover;
-            }
-          }
-
-          .el-button--primary {
-            background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-light 100%);
-            border: none;
-          }
-        }
-      }
-    }
-  }
+  margin-bottom: var(--card-gap);
 }
 
-// 页面头部
-.contacts-header {
+.requests-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: @nordic-space-lg;
-  padding: 20px @nordic-space-lg;
-  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-light 100%);
-  border-radius: @nordic-radius-lg;
-  box-shadow: 0 8px 24px rgba(212, 132, 90, 0.35);
-  transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-
-  &:hover {
-    box-shadow: 0 12px 32px rgba(212, 132, 90, 0.45);
-    transform: translateY(-2px);
-  }
-
-  .header-content {
-    display: flex;
-    align-items: center;
-    gap: @nordic-space-xl;
-  }
-
-  .page-title {
-    display: flex;
-    align-items: center;
-    margin: 0;
-    color: @nordic-surface;
-    font-size: @nordic-text-xl;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-
-    .title-icon {
-      margin-right: 12px;
-      font-size: 2rem;
-      animation: icon-pulse 2s ease-in-out infinite;
-    }
-  }
-
-  .header-stats {
-    display: flex;
-    align-items: center;
-    gap: @nordic-space-md;
-    padding: @nordic-space-sm @nordic-space-md;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: @nordic-radius-sm;
-    backdrop-filter: blur(10px);
-
-    .stat-item {
-      display: flex;
-      align-items: center;
-      gap: @nordic-space-sm;
-
-      .stat-label {
-        font-size: @nordic-text-sm;
-        color: rgba(255, 255, 255, 0.9);
-        font-weight: 500;
-      }
-
-      .stat-value {
-        font-size: @nordic-text-lg;
-        font-weight: 700;
-        color: @nordic-surface;
-      }
-    }
-
-    .stat-divider {
-      width: 1px;
-      height: 24px;
-      background: rgba(255, 255, 255, 0.3);
-    }
-  }
-
-  .header-actions {
-    :deep(.el-button) {
-      background: rgba(255, 255, 255, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      color: @nordic-surface;
-      font-weight: 600;
-      padding: 12px @nordic-space-lg;
-      font-size: @nordic-text-base;
-      backdrop-filter: blur(10px);
-      transition: all @nordic-transition-slow cubic-bezier(0.4, 0, 0.2, 1);
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.35);
-        transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 4px 12px @nordic-shadow-hover;
-      }
-
-      &:active {
-        transform: translateY(0) scale(0.98);
-      }
-    }
-  }
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
 }
 
-@keyframes icon-pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+.requests-title {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
 }
 
-// 搜索和筛选区域
-.search-filter-section {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-
-  .search-box {
-    flex: 1;
-
-    :deep(.el-input) {
-      .el-input__wrapper {
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 2px solid #e4e7ed;
-        padding: 8px 16px;
-
-        &:hover {
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-          border-color: #c0c4cc;
-        }
-
-        &.is-focus {
-          border-color: #3b82f6;
-          box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
-        }
-      }
-    }
-  }
-
-  .filter-options {
-    :deep(.el-radio-group) {
-      display: flex;
-      gap: 10px;
-
-      .el-radio-button {
-        .el-radio-button__inner {
-          border-radius: 10px;
-          border: 2px solid #e2e8f0;
-          background: #fff;
-          color: #4a5568;
-          font-weight: 600;
-          padding: 12px 20px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-
-          &:hover {
-            border-color: #3b82f6;
-            color: #3b82f6;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15);
-          }
-        }
-
-        &.is-active {
-          .el-radio-button__inner {
-            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-            border-color: #3b82f6;
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
-            transform: translateY(-1px);
-          }
-        }
-      }
-    }
-  }
+.requests-header :deep(.el-icon) {
+  transition: transform var(--duration-base) var(--ease-out);
 }
 
-// 内容区域
-.contacts-content {
-  display: flex;
-  gap: 12px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  height: calc(100vh - 280px);
-  min-height: 400px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  &:hover {
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  }
-
-  .friends-list-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border-radius: 16px 0 0 16px;
-
-    .friends-list-scroll {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-
-      &::-webkit-scrollbar {
-        width: 8px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: #f5f7fa;
-        border-radius: 4px;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, #c0c4cc 0%, #dcdfe6 100%);
-        border-radius: 4px;
-        transition: all 0.3s ease;
-
-        &:hover {
-          background: linear-gradient(135deg, #909399 0%, #b0b4bc 100%);
-        }
-      }
-
-      .friend-group {
-        .group-letter {
-          padding: 12px 20px;
-          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-          color: #3b82f6;
-          font-size: 1.071rem /* 原值: 15px */;
-          font-weight: 700;
-          position: sticky;
-          top: 0;
-          z-index: 10;
-          border-bottom: 2px solid #bfdbfe;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          letter-spacing: 0.5px;
-
-          &.active {
-            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-            color: #fff;
-            animation: letter-highlight 0.5s ease;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-          }
-        }
-
-        .friend-item {
-          display: flex;
-          align-items: center;
-          padding: 14px 20px;
-          cursor: pointer;
-          border-bottom: 1px solid #f0f2f5;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-          background: #fff;
-
-          &:hover {
-            background: linear-gradient(90deg, #eff6ff 0%, #ffffff 100%);
-            transform: translateX(4px);
-            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.12);
-            border-left: 3px solid #3b82f6;
-          }
-
-          &:active {
-            transform: translateX(2px) scale(0.99);
-          }
-
-          .friend-avatar {
-            margin-right: 16px;
-            position: relative;
-            flex-shrink: 0;
-
-            img {
-              width: 48px;
-              height: 48px;
-              border-radius: 12px;
-              object-fit: cover;
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-              transition: all 0.3s ease;
-            }
-
-            .avatar-emoji {
-              width: 48px;
-              height: 48px;
-              border-radius: 12px;
-              background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 1.714rem /* 原值: 24px */;
-              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-            }
-          }
-
-          .friend-info {
-            flex: 1;
-            min-width: 0;
-
-            .friend-name-row {
-              display: flex;
-              align-items: center;
-              margin-bottom: 6px;
-
-              .friend-name {
-                font-size: 1.071rem /* 原值: 15px */;
-                font-weight: 600;
-                color: #303133;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                letter-spacing: 0.3px;
-              }
-            }
-
-            .friend-id {
-              font-size: 0.929rem /* 原值: 13px */;
-              color: #909399;
-              font-weight: 500;
-              letter-spacing: 0.3px;
-            }
-          }
-
-          .friend-quick-actions {
-            flex-shrink: 0;
-            opacity: 0;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: translateX(-10px);
-
-            .chat-btn {
-              background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-              border: none;
-              box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-              &:hover {
-                transform: scale(1.15) rotate(5deg);
-                box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45);
-              }
-            }
-          }
-
-          &:hover {
-            .friend-quick-actions {
-              opacity: 1;
-              transform: translateX(0);
-            }
-
-            .friend-avatar img {
-              transform: scale(1.05);
-              box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  .alphabet-index {
-    width: 50px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px 0;
-    background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
-    border-left: 2px solid #bfdbfe;
-    overflow-y: auto;
-    flex-shrink: 0;
-    border-radius: 0 16px 16px 0;
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: #dcdfe6;
-      border-radius: 2px;
-    }
-
-    .alphabet-item {
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.929rem /* 原值: 13px */;
-      font-weight: 600;
-      color: #606266;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      margin-bottom: 4px;
-      letter-spacing: 0.3px;
-
-      &:hover {
-        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-        color: #fff;
-        transform: scale(1.15);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-      }
-
-      &.active {
-        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-        color: #fff;
-        font-weight: 700;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        animation: letter-active 0.3s ease;
-        transform: scale(1.2);
-      }
-    }
-  }
+.requests-header :deep(.el-icon.is-expanded) {
+  transform: rotate(180deg);
 }
 
-// 加载状态
-.loading-container {
-  padding: 60px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  min-height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-// 空状态
-.empty-container {
-  padding: 80px 20px;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  text-align: center;
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 2px dashed #bfdbfe;
-  min-height: 400px;
+.requests-list {
   display: flex;
   flex-direction: column;
+  gap: var(--space-3);
+}
+
+.request-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.request-row:hover {
+  border-color: var(--line-strong);
+  background: var(--canvas);
+}
+
+.request-avatar {
+  display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-
-  &:hover {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border-color: #3b82f6;
-    transform: translateY(-4px);
-    box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
-
-    .empty-icon {
-      transform: scale(1.15) rotate(5deg);
-    }
-
-    .empty-title {
-      color: #3b82f6;
-    }
-
-    .empty-tip {
-      color: #60a5fa;
-    }
-  }
-
-  &:active {
-    transform: translateY(-2px);
-  }
-
-  .empty-icon {
-    font-size: 100px;
-    margin-bottom: 24px;
-    opacity: 0.9;
-    animation: float 3s ease-in-out infinite;
-    transition: transform 0.3s ease;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
-  }
-
-  .empty-title {
-    font-size: 1.429rem /* 原值: 20px */;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin: 0 0 12px 0;
-    transition: color 0.3s ease;
-    letter-spacing: 0.5px;
-  }
-
-  .empty-tip {
-    font-size: 1.071rem /* 原值: 15px */;
-    color: #666;
-    margin: 0 0 24px 0;
-    transition: color 0.3s ease;
-    line-height: 1.6;
-  }
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--canvas-sunken);
+  color: var(--ink-400);
 }
 
-// 右键菜单
+.request-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.request-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.request-name {
+  margin: 0 0 var(--space-1);
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+}
+
+.request-id,
+.request-time {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+}
+
+.request-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
+}
+
+.avatar-fallback {
+  color: var(--ink-400);
+  font-size: 20px;
+}
+
+/* ===== 好友列表 ===== */
+.contacts-list-card {
+  overflow: hidden;
+}
+
+.contacts-list-layout {
+  display: flex;
+  align-items: stretch;
+  height: calc(100vh - 300px);
+  min-height: 420px;
+}
+
+.friends-list-wrapper {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* 列表字段表头（§4.3：列头 → 数据行 → 行操作） */
+.list-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px 112px;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) var(--space-5);
+  background: var(--canvas-sunken);
+  border-bottom: 1px solid var(--line);
+}
+
+.list-header__field {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.list-header__field--action {
+  text-align: right;
+}
+
+.friends-list-scroll {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.friends-list-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.friends-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.friends-list-scroll::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: var(--radius-full);
+}
+
+.friends-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-400);
+}
+
+/* 字母分组分隔条：中性表面，只做分组，不冒充表头 */
+.group-letter {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: var(--space-2) var(--space-5);
+  background: var(--canvas);
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  border-bottom: 1px solid var(--line);
+}
+
+.friend-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px 112px;
+  gap: var(--space-4);
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 80px;
+  padding: var(--space-2) var(--space-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+/* 选中态统一用暖橙强调（§3.1 / §4.6） */
+.friend-item:hover {
+  background: var(--brand-50);
+}
+
+.friend-item:active {
+  background: var(--brand-100);
+}
+
+.friend-item:focus-visible {
+  background: var(--brand-50);
+  outline: 2px solid var(--brand-400);
+  outline-offset: -2px;
+}
+
+.friend-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.friend-avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--canvas-sunken);
+  color: var(--ink-400);
+}
+
+.friend-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.friend-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friend-id {
+  overflow: hidden;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friend-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 行操作：够大的点击区域 + 与行状态联动的反馈（§4.1 / §4.6） */
+.chat-btn {
+  --el-button-bg-color: transparent;
+  --el-button-border-color: transparent;
+  --el-button-text-color: var(--brand-600);
+  --el-button-hover-bg-color: var(--brand-50);
+  --el-button-hover-border-color: transparent;
+  --el-button-hover-text-color: var(--brand-700);
+  --el-button-active-bg-color: var(--brand-100);
+  --el-button-active-border-color: transparent;
+  --el-button-active-text-color: var(--brand-700);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  font-weight: var(--weight-medium);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+/* ===== 字母索引 ===== */
+.alphabet-index {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 56px;
+  padding: var(--space-3) 0;
+  overflow-y: auto;
+  background: var(--canvas-sunken);
+  border-left: 1px solid var(--line);
+}
+
+.alphabet-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.alphabet-item:hover {
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+
+.alphabet-item.active {
+  background: var(--brand-100);
+  color: var(--brand-700);
+  font-weight: var(--weight-semibold);
+}
+
+.alphabet-item:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 1px;
+}
+
+/* ===== 加载 / 空状态 ===== */
+.loading-container {
+  min-height: 400px;
+}
+
+.empty-container {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-container > * {
+  width: 100%;
+}
+
+/* ===== 右键菜单 ===== */
 .context-menu {
   position: fixed;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  padding: 8px 0;
+  z-index: 3000;
   min-width: 180px;
-  z-index: 9999;
-  animation: context-menu-fadein 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid #e4e7ed;
-  backdrop-filter: blur(10px);
-
-  .context-menu-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 18px;
-    font-size: 1rem /* 原值: 14px */;
-    color: #303133;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    font-weight: 500;
-
-    &:hover {
-      background: linear-gradient(90deg, #eff6ff 0%, #ffffff 100%);
-      color: #3b82f6;
-      transform: translateX(2px);
-    }
-
-    &:active {
-      transform: translateX(1px);
-    }
-
-    .el-icon {
-      font-size: 1.286rem /* 原值: 18px */;
-      transition: transform 0.2s ease;
-    }
-
-    &:hover .el-icon {
-      transform: scale(1.1);
-    }
-
-    &.danger {
-      &:hover {
-        background: linear-gradient(90deg, #fef0f0 0%, #ffffff 100%);
-        color: #f56c6c;
-      }
-    }
-  }
-
-  .context-menu-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, #e4e7ed 50%, transparent 100%);
-    margin: 8px 0;
-  }
+  padding: var(--space-2) 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  animation: menu-in var(--duration-base) var(--ease-out);
 }
 
-// 添加好友对话框
-.add-friend-content {
-  .search-type-selector {
-    margin-bottom: 12px;
-
-    :deep(.el-radio-group) {
-      display: flex;
-      gap: 12px;
-
-      .el-radio-button {
-        .el-radio-button__inner {
-          border-radius: 8px;
-          border: 2px solid #e2e8f0;
-          background: #fff;
-          color: #4a5568;
-          font-weight: 500;
-          transition: all 0.3s ease;
-
-          &:hover {
-            border-color: #3b82f6;
-            color: #3b82f6;
-          }
-        }
-
-        &.is-active {
-          .el-radio-button__inner {
-            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-            border-color: #3b82f6;
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-          }
-        }
-      }
-    }
-  }
-
-  .friend-search-input {
-    margin-bottom: 16px;
-
-    :deep(.el-input) {
-      .el-input__wrapper {
-        border-radius: 10px 0 0 10px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-        border: 2px solid transparent;
-        transition: all 0.3s ease;
-
-        &:hover,
-        &.is-focus {
-          border-color: #3b82f6;
-          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
-        }
-      }
-
-      .el-input__inner {
-        font-size: 1.071rem /* 原值: 15px */;
-      }
-
-      .el-input-group__append {
-        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-        border: none;
-        color: #fff;
-        border-radius: 0 10px 10px 0;
-        padding: 0 20px;
-
-        .el-button {
-          background: transparent;
-          border: none;
-          color: #fff;
-          font-weight: 500;
-
-          &:hover {
-            background: rgba(255, 255, 255, 0.1);
-          }
-        }
-      }
-    }
-  }
-
-  .search-results {
-    margin-top: 16px;
-    max-height: 400px;
-    overflow-y: auto;
-    padding-right: 4px;
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 3px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: linear-gradient(135deg, #c0c4cc 0%, #dcdfe6 100%);
-      border-radius: 3px;
-
-      &:hover {
-        background: linear-gradient(135deg, #909399 0%, #b0b4bc 100%);
-      }
-    }
-
-    .result-item {
-      display: flex;
-      align-items: center;
-      padding: 14px 16px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-      background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
-      transition: all 0.3s ease;
-      border: 2px solid #e2e8f0;
-      animation: fadeInUp 0.5s ease backwards;
-
-      &:hover {
-        background: #fff;
-        border-color: #3b82f6;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-        transform: translateX(4px);
-      }
-
-      .user-avatar {
-        width: 48px;
-        height: 48px;
-        margin-right: 14px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-        border-radius: 50%;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
-        overflow: hidden;
-
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        span {
-          font-size: 1.714rem /* 原值: 24px */;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-      }
-
-      .user-info {
-        flex: 1;
-        min-width: 0;
-
-        .user-name {
-          font-size: 1rem /* 原值: 14px */;
-          font-weight: 600;
-          color: #2d3748;
-          margin-bottom: 6px;
-        }
-
-        .user-detail {
-          font-size: 0.857rem /* 原值: 12px */;
-          color: #718096;
-        }
-      }
-
-      :deep(.el-button) {
-        border-radius: 8px;
-        padding: 10px 20px;
-        font-weight: 500;
-        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-        border: none;
-        flex-shrink: 0;
-        transition: all 0.3s ease;
-
-        &:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-
-        &:disabled {
-          background: #cbd5e0;
-          transform: none;
-          box-shadow: none;
-        }
-      }
-    }
-  }
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink-700);
+  font-size: var(--text-body);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
-@keyframes fadeInUp {
+.context-menu-item:hover {
+  background: var(--canvas);
+  color: var(--ink-900);
+}
+
+.context-menu-item.danger {
+  color: var(--danger);
+}
+
+.context-menu-item.danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.context-menu-divider {
+  height: 1px;
+  margin: var(--space-2) 0;
+  background: var(--line);
+}
+
+/* ===== 对话框 ===== */
+:deep(.el-dialog) {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+:deep(.el-dialog__header) {
+  padding: var(--space-5) var(--space-6);
+  margin: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+:deep(.el-dialog__title) {
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+}
+
+:deep(.el-dialog__headerbtn .el-dialog__close) {
+  color: var(--ink-500);
+}
+
+:deep(.el-dialog__headerbtn:hover .el-dialog__close) {
+  color: var(--brand-600);
+}
+
+:deep(.el-dialog__body) {
+  padding: var(--space-5) var(--space-6);
+  background: var(--surface);
+}
+
+:deep(.el-dialog__footer) {
+  padding: var(--space-4) var(--space-6);
+  background: var(--canvas);
+  border-top: 1px solid var(--line);
+}
+
+.add-friend-content .search-type-selector {
+  margin-bottom: var(--space-3);
+}
+
+.add-friend-content .friend-search-input {
+  margin-bottom: var(--space-4);
+}
+
+.friend-search-input :deep(.el-input__wrapper) {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.friend-search-input :deep(.el-input__wrapper.is-focus) {
+  border-color: var(--brand-500);
+  box-shadow: none;
+  outline: 2px solid var(--brand-200);
+  outline-offset: 1px;
+}
+
+.friend-search-input :deep(.el-input-group__append) {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.friend-search-input :deep(.el-input__inner) {
+  color: var(--ink-900);
+  font-size: var(--text-body);
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.result-item:hover {
+  border-color: var(--brand-200);
+  background: var(--brand-50);
+}
+
+.user-avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--canvas-sunken);
+  color: var(--ink-400);
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  margin-bottom: 2px;
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+}
+
+.user-detail {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+}
+
+/* ===== 好友详情 ===== */
+.friend-detail {
+  text-align: center;
+}
+
+.detail-avatar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-5);
+}
+
+.detail-avatar img,
+.detail-avatar .avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--canvas-sunken);
+  color: var(--ink-400);
+}
+
+.detail-avatar img {
+  object-fit: cover;
+}
+
+.detail-avatar .avatar-fallback {
+  font-size: 40px;
+}
+
+.detail-info {
+  text-align: left;
+}
+
+.info-item {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-body);
+}
+
+.info-item .label {
+  margin-right: var(--space-2);
+  color: var(--ink-500);
+}
+
+.info-item .value {
+  color: var(--ink-900);
+}
+
+@keyframes menu-in {
   from {
     opacity: 0;
-    transform: translateY(15px);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-// 好友详情对话框
-.friend-detail {
-  text-align: center;
-
-  .detail-avatar {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-
-    img,
-    .avatar-emoji {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    .avatar-emoji {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 60px;
-      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-    }
-  }
-
-  .detail-info {
-    text-align: left;
-    padding: 0 20px;
-
-    .info-item {
-      margin-bottom: 16px;
-      font-size: 1.071rem /* 原值: 15px */;
-
-      .label {
-        font-weight: 600;
-        color: #4a5568;
-        margin-right: 8px;
-      }
-
-      .value {
-        color: #718096;
-      }
-    }
-  }
-}
-
-// 对话框样式
-:deep(.el-dialog) {
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-}
-
-:deep(.el-dialog__header) {
-  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-  padding: 20px 24px;
-  margin: 0;
-
-  .el-dialog__title {
-    color: #fff;
-    font-weight: 600;
-    font-size: 17px;
-  }
-
-  .el-dialog__headerbtn {
-    top: 20px;
-    right: 20px;
-
-    .el-dialog__close {
-      color: #fff;
-      font-size: 1.429rem /* 原值: 20px */;
-
-      &:hover {
-        color: #f0f0f0;
-      }
-    }
-  }
-}
-
-:deep(.el-dialog__body) {
-  padding: 20px 24px;
-  background: linear-gradient(to bottom, #eff6ff 0%, #ffffff 100%);
-}
-
-:deep(.el-dialog__footer) {
-  padding: 16px 24px;
-  background-color: #eff6ff;
-  border-top: 1px solid #dbeafe;
-}
-
-// 动画
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-  }
-  50% {
-    transform: scale(1.08);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-12px);
-  }
-}
-
-@keyframes letter-highlight {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-  }
-  50% {
-    transform: scale(1.03);
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.45);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-  }
-}
-
-@keyframes letter-active {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.25);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes context-menu-fadein {
-  from {
-    opacity: 0;
-    transform: scale(0.92) translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
   }
 }
 </style>
