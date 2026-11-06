@@ -1,100 +1,107 @@
 <template>
-  <div class="payment-password-setup-container">
-    <common-back-button
-      type="default"
-      size="small"
-      @click="goBack"
-      :use-router-back="false"
-      style="margin-bottom: 20px"
-    />
+  <div class="payment-password-setup-page">
+    <!-- 页头：标准版标题容器，「返回」并入右侧动作区（§4.7） -->
+    <AppPageHeader :title="pageTitle">
+      <template #actions>
+        <CommonBackButton type="default" :use-router-back="false" @click="goBack" />
+      </template>
+    </AppPageHeader>
 
-    <h2 class="page-title">{{ hasPassword ? '修改支付密码' : '设置支付密码' }}</h2>
+    <!-- 认证类单列窄列：宽度只取 --form-width-auth，水平居中（§3.3、§4.4） -->
+    <div class="payment-password-column">
+      <!-- 安全提示：表单上方的辅助说明，中性底 + 线性图标，不与主操作抢权重（§3.1、§4.4） -->
+      <div class="security-note">
+        <el-icon class="security-note__icon"><InfoFilled /></el-icon>
+        <div class="security-note__body">
+          <p class="security-note__title">安全提示</p>
+          <ul class="security-tips">
+            <li>支付密码用于钱包充值、提现、支付等敏感操作</li>
+            <li>请设置6位数字密码，不要与登录密码相同</li>
+            <li>请勿向任何人透露您的支付密码</li>
+          </ul>
+        </div>
+      </div>
 
-    <!-- 安全提示 -->
-    <el-alert title="安全提示" type="info" :closable="false" show-icon style="margin-bottom: 20px">
-      <ul class="security-tips">
-        <li>支付密码用于钱包充值、提现、支付等敏感操作</li>
-        <li>请设置6位数字密码，不要与登录密码相同</li>
-        <li>请勿向任何人透露您的支付密码</li>
-      </ul>
-    </el-alert>
+      <AppFormContainer variant="auth">
+        <el-form
+          ref="passwordFormRef"
+          :model="passwordForm"
+          :rules="passwordRules"
+          label-position="top"
+          class="password-form"
+          @submit.prevent
+        >
+          <!-- 旧密码（仅修改时显示） -->
+          <el-form-item v-if="hasPassword" label="旧支付密码" prop="oldPassword">
+            <el-input
+              v-model="passwordForm.oldPassword"
+              type="password"
+              placeholder="请输入旧支付密码"
+              maxlength="6"
+              show-password
+              clearable
+            >
+              <template #prefix>
+                <el-icon><Lock /></el-icon>
+              </template>
+            </el-input>
+          </el-form-item>
 
-    <!-- 密码设置表单 -->
-    <el-card class="password-card" shadow="hover">
-      <el-form
-        ref="passwordFormRef"
-        :model="passwordForm"
-        :rules="passwordRules"
-        label-width="120px"
-        class="password-form"
-      >
-        <!-- 旧密码（仅修改时显示） -->
-        <el-form-item v-if="hasPassword" label="旧支付密码" prop="oldPassword">
-          <el-input
-            v-model="passwordForm.oldPassword"
-            type="password"
-            placeholder="请输入旧支付密码"
-            maxlength="6"
-            show-password
-            clearable
-          >
-            <template #prefix>
-              <el-icon><Lock /></el-icon>
-            </template>
-          </el-input>
-        </el-form-item>
+          <!-- 新密码 -->
+          <el-form-item label="支付密码" prop="newPassword">
+            <el-input
+              v-model="passwordForm.newPassword"
+              type="password"
+              placeholder="请输入6位数字支付密码"
+              maxlength="6"
+              show-password
+              clearable
+            >
+              <template #prefix>
+                <el-icon><Lock /></el-icon>
+              </template>
+            </el-input>
+          </el-form-item>
 
-        <!-- 新密码 -->
-        <el-form-item label="支付密码" prop="newPassword">
-          <el-input
-            v-model="passwordForm.newPassword"
-            type="password"
-            placeholder="请输入6位数字支付密码"
-            maxlength="6"
-            show-password
-            clearable
-          >
-            <template #prefix>
-              <el-icon><Lock /></el-icon>
-            </template>
-          </el-input>
-        </el-form-item>
+          <!-- 确认密码 -->
+          <el-form-item label="确认密码" prop="confirmPassword">
+            <el-input
+              v-model="passwordForm.confirmPassword"
+              type="password"
+              placeholder="请再次输入支付密码"
+              maxlength="6"
+              show-password
+              clearable
+            >
+              <template #prefix>
+                <el-icon><Lock /></el-icon>
+              </template>
+            </el-input>
+          </el-form-item>
 
-        <!-- 确认密码 -->
-        <el-form-item label="确认密码" prop="confirmPassword">
-          <el-input
-            v-model="passwordForm.confirmPassword"
-            type="password"
-            placeholder="请再次输入支付密码"
-            maxlength="6"
-            show-password
-            clearable
-          >
-            <template #prefix>
-              <el-icon><Lock /></el-icon>
-            </template>
-          </el-input>
-        </el-form-item>
+          <!-- 提交动作：主按钮取 md、次级动作取 sm（§3.4） -->
+          <div class="form-actions">
+            <el-button
+              class="submit-btn"
+              type="primary"
+              :loading="submitting"
+              @click="submitPassword"
+            >
+              {{ hasPassword ? '确认修改' : '确认设置' }}
+            </el-button>
+            <el-button class="reset-btn" @click="clearPasswordForm">重置</el-button>
+          </div>
+        </el-form>
+      </AppFormContainer>
 
-        <!-- 提交按钮 -->
-        <el-form-item>
-          <el-button type="primary" size="large" :loading="submitting" @click="submitPassword">
-            {{ hasPassword ? '确认修改' : '确认设置' }}
-          </el-button>
-          <el-button size="large" @click="clearPasswordForm">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 忘记密码（仅已设置密码时显示） -->
-    <el-card v-if="hasPassword" class="forgot-card" shadow="hover">
-      <div class="forgot-content">
+      <!-- 忘记密码：并入同一列的次级入口（仅已设置密码时显示） -->
+      <div v-if="hasPassword" class="forgot-card">
         <span class="forgot-text">忘记支付密码？</span>
-        <el-button type="primary" link @click="showResetDialog = true">
+        <el-button class="forgot-link" type="primary" link @click="showResetDialog = true">
           通过手机验证码重置
         </el-button>
       </div>
-    </el-card>
+    </div>
 
     <!-- 重置密码对话框 -->
     <el-dialog v-model="showResetDialog" title="重置支付密码" width="400px" center>
@@ -142,10 +149,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Lock } from '@element-plus/icons-vue'
+import { Lock, InfoFilled } from '@element-plus/icons-vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppFormContainer from '../../components/common/AppFormContainer.vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import paymentApi from '../../api/payment'
 import userApi from '../../api/user'
@@ -158,6 +167,9 @@ const authStore = useAuthStore()
 // 是否已设置支付密码
 const hasPassword = ref(false)
 const userPhone = ref('')
+
+// 页面标题：设置 / 修改随密码状态切换（§4.7 每页唯一 h1）
+const pageTitle = computed(() => (hasPassword.value ? '修改支付密码' : '设置支付密码'))
 
 // 密码表单
 const passwordFormRef = ref()
@@ -398,63 +410,116 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
+/* 页面颜色、间距、圆角、字阶与动效均取自 tokens.css（§3、§7.1），不写裸色值。 */
 
-.payment-password-setup-container {
-  padding: 0 @nordic-space-lg @nordic-space-lg @nordic-space-lg;
-  min-height: 100vh;
-  background: @nordic-bg;
+/* 单列居中，最大宽度 --page-max；页头用标准版（§3.3、§4.7）。 */
+.payment-password-setup-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 }
 
-.page-title {
-  font-size: @nordic-text-xl;
-  margin: 0 0 25px 0;
-  color: @nordic-text;
-  font-weight: 700;
+/* 认证类窄列：宽度只取 --form-width-auth，水平居中（§3.3、§4.4）。 */
+.payment-password-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+  width: min(100%, var(--form-width-auth));
+  margin-inline: auto;
+}
+
+/* 安全提示降级为表单上方的辅助说明：中性底 + 线性图标（§3.1、§4.4）。 */
+.security-note {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--canvas-sunken);
+}
+
+.security-note__icon {
+  flex: 0 0 auto;
+  font-size: var(--text-h3);
+  color: var(--info);
+}
+
+.security-note__body {
+  min-width: 0;
+}
+
+.security-note__title {
+  margin: 0;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-700);
 }
 
 .security-tips {
-  margin: 0;
-  padding-left: @nordic-space-lg;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
 }
 
 .security-tips li {
-  line-height: 1.8;
-  color: @nordic-text-secondary;
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+  color: var(--ink-500);
 }
 
-.password-card {
-  border-radius: @nordic-radius-lg;
-  border: none;
-  max-width: 600px;
+/* 字段间距 --space-4、错误提示 --danger / 12px（§4.4）。 */
+.payment-password-column :deep(.el-form-item) {
+  margin-bottom: var(--space-4);
 }
 
-.password-form {
-  max-width: 500px;
+.payment-password-column :deep(.el-form-item__error) {
+  font-size: var(--text-caption);
+  color: var(--danger);
 }
 
+/* 提交动作：主按钮 --control-height-md、次级动作 --control-height-sm（§3.4）。 */
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.form-actions .el-button {
+  width: 100%;
+  margin-left: 0;
+}
+
+.submit-btn {
+  height: var(--control-height-md);
+}
+
+.reset-btn {
+  height: var(--control-height-sm);
+}
+
+/* 忘记密码：并入同一列的次级入口（§4.6）。 */
 .forgot-card {
-  border-radius: @nordic-radius-lg;
-  border: none;
-  max-width: 600px;
-  margin-top: @nordic-space-lg;
-}
-
-.forgot-content {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--space-1);
 }
 
 .forgot-text {
-  color: @nordic-text-secondary;
-  font-size: @nordic-text-base;
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
 }
 
 .verification-code-wrapper {
   display: flex;
-  gap: 10px;
+  gap: var(--space-2);
   width: 100%;
 }
 

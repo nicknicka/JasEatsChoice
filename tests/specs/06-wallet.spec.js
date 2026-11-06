@@ -132,7 +132,7 @@ test.describe('模块六：钱包与支付', () => {
       await page.goto('/user/home/payment-password-setup')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
-      await expect(page.locator('.page-title')).toHaveText(passwordStatus.hasPaymentPassword ? '修改支付密码' : '设置支付密码')
+      await expect(page.locator('.app-page-header__title')).toHaveText(passwordStatus.hasPaymentPassword ? '修改支付密码' : '设置支付密码')
       const passwordInputs = page.locator('.password-form input[type="password"]')
       await expect(passwordInputs).toHaveCount(passwordStatus.hasPaymentPassword ? 3 : 2)
       await expect(page.locator('.password-form button').filter({ hasText: passwordStatus.hasPaymentPassword ? '确认修改' : '确认设置' })).toBeVisible()
