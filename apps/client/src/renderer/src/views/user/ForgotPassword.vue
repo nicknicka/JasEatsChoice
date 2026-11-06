@@ -7,139 +7,142 @@
     <!-- 自定义标题栏 -->
     <WindowTitleBar />
 
-    <!-- 标题 -->
-    <div class="forgot-header">
-      <h1 class="forgot-title">重置密码</h1>
-      <div class="steps-indicator">
-        <div class="step" :class="{ active: currentStep >= 1, done: currentStep > 1 }">
-          <div class="step-dot">
-            <span v-if="currentStep > 1">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            </span>
-            <span v-else>1</span>
+    <!-- 内容 panel：WindowTitleBar 与光球留在根容器，仅内容参与垂直居中 -->
+    <main class="forgot-panel">
+      <!-- 标题 -->
+      <div class="forgot-header">
+        <h1 class="forgot-title">重置密码</h1>
+        <div class="steps-indicator">
+          <div class="step" :class="{ active: currentStep >= 1, done: currentStep > 1 }">
+            <div class="step-dot">
+              <span v-if="currentStep > 1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span v-else>1</span>
+            </div>
+            <span class="step-label">验证手机号</span>
           </div>
-          <span class="step-label">验证手机号</span>
-        </div>
-        <div class="step-line" :class="{ filled: currentStep > 1 }"></div>
-        <div class="step" :class="{ active: currentStep >= 2, done: currentStep > 2 }">
-          <div class="step-dot">
-            <span v-if="currentStep > 2">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            </span>
-            <span v-else>2</span>
+          <div class="step-line" :class="{ filled: currentStep > 1 }"></div>
+          <div class="step" :class="{ active: currentStep >= 2, done: currentStep > 2 }">
+            <div class="step-dot">
+              <span v-if="currentStep > 2">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span v-else>2</span>
+            </div>
+            <span class="step-label">设置新密码</span>
           </div>
-          <span class="step-label">设置新密码</span>
         </div>
       </div>
-    </div>
 
-    <!-- 表单卡片 -->
-    <div class="glass-card">
-      <el-form ref="formRef" :model="formData" :rules="formRules" @submit.prevent>
-        <transition name="slide" mode="out-in">
-          <!-- 步骤1：验证手机号 -->
-          <div v-if="currentStep === 1" key="step1" class="step-content">
-            <el-form-item prop="phone">
-              <el-input
-                v-model="formData.phone"
-                placeholder="注册时使用的手机号"
-                autocomplete="off"
-              >
-                <template #prefix>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <rect x="5" y="2" width="14" height="20" rx="2"/>
-                    <line x1="12" y1="18" x2="12" y2="18.01"/>
-                  </svg>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item prop="code">
-              <div class="code-row">
+      <!-- 表单卡片 -->
+      <div class="glass-card">
+        <el-form ref="formRef" :model="formData" :rules="formRules" @submit.prevent>
+          <transition name="slide" mode="out-in">
+            <!-- 步骤1：验证手机号 -->
+            <div v-if="currentStep === 1" key="step1" class="step-content">
+              <el-form-item prop="phone">
                 <el-input
-                  v-model="formData.code"
-                  placeholder="短信验证码"
+                  v-model="formData.phone"
+                  placeholder="注册时使用的手机号"
+                  autocomplete="off"
                 >
                   <template #prefix>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                      <path d="M2 17l10 5 10-5"/>
-                      <path d="M2 12l10 5 10-5"/>
+                      <rect x="5" y="2" width="14" height="20" rx="2"/>
+                      <line x1="12" y1="18" x2="12" y2="18.01"/>
                     </svg>
                   </template>
                 </el-input>
-                <button
-                  class="code-btn"
-                  :disabled="codeCooldown > 0 || isSendingCode"
-                  @click.prevent="sendSmsCode"
-                >
-                  {{ codeCooldown > 0 ? `${codeCooldown}s` : '获取验证码' }}
-                </button>
-              </div>
-            </el-form-item>
+              </el-form-item>
 
-            <button class="step-btn next-btn" @click="nextStep">
-              <span>下一步</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            </button>
-          </div>
+              <el-form-item prop="code">
+                <div class="code-row">
+                  <el-input
+                    v-model="formData.code"
+                    placeholder="短信验证码"
+                  >
+                    <template #prefix>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                      </svg>
+                    </template>
+                  </el-input>
+                  <button
+                    class="code-btn"
+                    :disabled="codeCooldown > 0 || isSendingCode"
+                    @click.prevent="sendSmsCode"
+                  >
+                    {{ codeCooldown > 0 ? `${codeCooldown}s` : '获取验证码' }}
+                  </button>
+                </div>
+              </el-form-item>
 
-          <!-- 步骤2：设置新密码 -->
-          <div v-else key="step2" class="step-content">
-            <el-form-item prop="newPassword">
-              <el-input
-                v-model="formData.newPassword"
-                type="password"
-                placeholder="新密码（6-32位）"
-                show-password
-              >
-                <template #prefix>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <rect x="3" y="11" width="18" height="11" rx="2"/>
-                    <path d="M7 11V7a5 5 0 0110 0v4"/>
-                  </svg>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item prop="confirmPassword">
-              <el-input
-                v-model="formData.confirmPassword"
-                type="password"
-                placeholder="确认新密码"
-                show-password
-              >
-                <template #prefix>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  </svg>
-                </template>
-              </el-input>
-            </el-form-item>
-
-            <div class="btn-row">
-              <button class="step-btn back-btn" @click="prevStep">
+              <button class="step-btn next-btn" @click="nextStep">
+                <span>下一步</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="15 18 9 12 15 6"/>
+                  <polyline points="9 18 15 12 9 6"/>
                 </svg>
-                <span>返回</span>
-              </button>
-              <button class="step-btn submit-btn" @click="submitReset" :disabled="isSubmitting">
-                <span>{{ isSubmitting ? '重置中...' : '确认重置' }}</span>
               </button>
             </div>
-          </div>
-        </transition>
-      </el-form>
 
-      <!-- 底部链接：收进同一列并紧跟表单 -->
-      <div class="bottom-links">
-        <span>想起密码了？</span>
-        <a class="link" @click="toLogin">返回登录</a>
+            <!-- 步骤2：设置新密码 -->
+            <div v-else key="step2" class="step-content">
+              <el-form-item prop="newPassword">
+                <el-input
+                  v-model="formData.newPassword"
+                  type="password"
+                  placeholder="新密码（6-32位）"
+                  show-password
+                >
+                  <template #prefix>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/>
+                      <path d="M7 11V7a5 5 0 0110 0v4"/>
+                    </svg>
+                  </template>
+                </el-input>
+              </el-form-item>
+
+              <el-form-item prop="confirmPassword">
+                <el-input
+                  v-model="formData.confirmPassword"
+                  type="password"
+                  placeholder="确认新密码"
+                  show-password
+                >
+                  <template #prefix>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                  </template>
+                </el-input>
+              </el-form-item>
+
+              <div class="btn-row">
+                <button class="step-btn back-btn" @click="prevStep">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"/>
+                  </svg>
+                  <span>返回</span>
+                </button>
+                <button class="step-btn submit-btn" @click="submitReset" :disabled="isSubmitting">
+                  <span>{{ isSubmitting ? '重置中...' : '确认重置' }}</span>
+                </button>
+              </div>
+            </div>
+          </transition>
+        </el-form>
+
+        <!-- 底部链接：收进同一列并紧跟表单 -->
+        <div class="bottom-links">
+          <span>想起密码了？</span>
+          <a class="link" @click="toLogin">返回登录</a>
+        </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -320,7 +323,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   position: relative;
   overflow: hidden;
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -347,6 +349,16 @@ onUnmounted(() => {
   background: radial-gradient(circle, rgba(255, 154, 118, 0.18) 0%, transparent 70%);
   bottom: 40px;
   right: -40px;
+}
+
+.forgot-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-block: auto;
+  position: relative;
+  z-index: 2;
 }
 
 .forgot-header {
