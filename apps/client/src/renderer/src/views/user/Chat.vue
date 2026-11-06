@@ -1,7 +1,14 @@
 <template>
   <div class="chat-container" @click="handleGlobalClick">
-    <!-- 使用新的头部组件 -->
-    <ChatHeader @open-action-panel="openActionPanelWithTab" />
+    <!-- 页头：标准版标题 --text-h1 + 上下 --space-6，唯一主操作「新建」（DESIGN-BASELINE §4.1、§4.7） -->
+    <AppPageHeader title="聊天消息">
+      <template #actions>
+        <el-button type="primary" size="large" class="chat-new-btn" @click="openActionPanelWithTab">
+          <el-icon class="chat-new-btn__icon"><Plus /></el-icon>
+          <span>新建</span>
+        </el-button>
+      </template>
+    </AppPageHeader>
 
     <div class="chat-content fade-in-up" :class="{ 'is-resizing': isResizing }">
       <!-- 左侧会话列表 -->
@@ -61,13 +68,6 @@
           @show-group-detail="openGroupDetail"
         />
 
-        <!-- 悬浮订单按钮 -->
-        <GroupOrderFloatingButton
-          v-if="selectedConversation.type === 'group' && hasGroupOrder && isCurrentUserInGroup"
-          :item-count="groupOrderItemsCount"
-          @click="orderDrawerVisible = true"
-        />
-
         <!-- 消息搜索结果面板 -->
         <MessageSearchPanel
           :visible="isSearching"
@@ -123,6 +123,19 @@
           </div>
         </div>
 
+        <!-- 群订单入口：改为输入区之上的内联条，不再浮动遮挡聊天区（§4.1、§4.7）
+             保留 .floating-order-btn 类名以兼容既有 04-order 用例的选择器 -->
+        <button
+          v-if="selectedConversation.type === 'group' && hasGroupOrder && isCurrentUserInGroup"
+          type="button"
+          class="floating-order-btn chat-order-entry"
+          @click="orderDrawerVisible = true"
+        >
+          <el-icon class="chat-order-entry__icon"><ShoppingCart /></el-icon>
+          <span>查看群订单</span>
+          <span v-if="groupOrderItemsCount > 0" class="chat-order-entry__count">{{ groupOrderItemsCount }}</span>
+        </button>
+
         <!-- 消息输入框区域 -->
         <div class="message-input-wrapper slide-in-left delay-200">
           <MessageInput
@@ -145,13 +158,17 @@
         </div>
       </div>
 
-      <!-- 空选择提示 -->
-      <div v-else class="empty-select" @click="openActionPanelWithTab">
+      <!-- 空选择提示：图标 + 说明 + 替代动作，提供「开始聊天」入口（§4.2、§5.5） -->
+      <div v-else class="empty-select">
         <div class="empty-icon">
-          <span class="plate-core">🍽</span>
+          <el-icon><ChatDotRound /></el-icon>
         </div>
         <p class="empty-title">挑一个会话，开始这一餐的交流</p>
         <p class="empty-tip">点这里新建聊天，和朋友或群聊继续沟通</p>
+        <el-button type="primary" size="large" class="empty-select__cta" @click="openActionPanelWithTab">
+          <el-icon class="empty-select__cta-icon"><Plus /></el-icon>
+          <span>开始新聊天</span>
+        </el-button>
       </div>
     </div>
 
@@ -235,7 +252,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading, Warning } from '@element-plus/icons-vue'
+import { Loading, Warning, Plus, ChatDotRound, ShoppingCart } from '@element-plus/icons-vue'
 
 // ========== 面板宽度控制 ==========
 const leftPanelWidth = ref(280) // 左侧面板默认宽度
@@ -310,13 +327,12 @@ import { useMessageActions } from '../../composables/useMessageActions'
 import { useConversations } from '../../composables/useConversations'
 
 // Components
-import ChatHeader from '../../components/chat/ChatHeader.vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
 import ChatAreaHeader from '../../components/chat/ChatAreaHeader.vue'
 import ConversationList from '../../components/chat/ConversationList.vue'
 import ConversationContextMenu from '../../components/chat/ConversationContextMenu.vue'
 import MessageItem from '../../components/chat/MessageItem.vue'
 import MessageInput from '../../components/chat/MessageInput.vue'
-import GroupOrderFloatingButton from '../../components/chat/GroupOrderFloatingButton.vue'
 import MessageSearchPanel from '../../components/chat/MessageSearchPanel.vue'
 
 // Dialog Components
@@ -2824,10 +2840,66 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
 <style scoped lang="less">
 @import '../../assets/css/nordic-theme.less';
 
+// 页头主操作：与页头标题同一基准（§4.1、§4.7）
+.chat-new-btn {
+  border-radius: var(--radius-md);
+
+  .chat-new-btn__icon {
+    margin-right: var(--space-1);
+  }
+}
+
+// 群订单入口：非浮动的内联条，贴在输入区上方、右对齐，不再遮挡消息（§4.1、§4.7）
+.chat-order-entry {
+  align-self: flex-end;
+  margin: 0 var(--space-2) var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--brand-600);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+
+  &:hover {
+    background: var(--brand-50);
+    border-color: var(--brand-200);
+    color: var(--brand-600);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  .chat-order-entry__count {
+    min-width: 20px;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-full);
+    background: var(--brand-500);
+    color: var(--surface);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-caption);
+    line-height: 20px;
+    text-align: center;
+  }
+}
+
 .chat-container {
   padding: @nordic-space-md;
   background-color: @nordic-bg;
-  height: 85vh;
+  // 预留全局顶栏(60px)与页头(约 92px)，让两栏在 1440x900 内完整落下、不裁切会话列表
+  height: calc(100vh - 152px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -2882,7 +2954,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         box-shadow: 0 4px 20px @nordic-shadow;
       }
       50% {
-        box-shadow: 0 4px 25px rgba(212, 132, 90, 0.15);
+        box-shadow: var(--shadow-lg);
       }
     }
 
@@ -2981,7 +3053,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
           @nordic-accent 60%,
           transparent 100%
         );
-        box-shadow: 0 0 12px rgba(212, 132, 90, 0.4);
+        box-shadow: var(--shadow-md);
         transition: none;
 
         &::before {
@@ -3011,7 +3083,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
         font-size: @nordic-text-sm;
         font-weight: 500;
         white-space: nowrap;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        box-shadow: var(--shadow-md);
         animation: tooltip-fadein 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: none;
         z-index: 100;
@@ -3095,12 +3167,10 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
           padding: 48px 40px;
           border: 1px solid fade(@nordic-border, 92%);
           border-radius: 28px;
-          background:
-            radial-gradient(circle at top, rgba(212, 132, 90, 0.1) 0%, transparent 42%),
-            linear-gradient(180deg, #fffdfb 0%, #fbf7f2 100%);
+          background: @nordic-bg;
           box-shadow:
-            0 20px 36px rgba(105, 78, 57, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.84);
+            var(--shadow-lg),
+            inset 0 1px 0 var(--surface-highlight);
         }
 
         .empty-bowl {
@@ -3120,7 +3190,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
             border-top: none;
             border-bottom-left-radius: 52px 32px;
             border-bottom-right-radius: 52px 32px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(248, 236, 226, 0.9) 100%);
+            background: @nordic-bg;
           }
 
           &::after {
@@ -3186,57 +3256,36 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: @nordic-space-sm;
       border: 1px solid @nordic-border;
       border-radius: @nordic-radius-sm;
       background: linear-gradient(135deg, @nordic-bg 0%, @nordic-surface 100%);
       color: @nordic-text-secondary;
       padding: 60px 20px;
       min-height: 400px;
-      cursor: pointer;
       user-select: none;
-      transition: all @nordic-transition-base ease;
 
-      &:hover {
-        border-color: @nordic-accent;
-        box-shadow: 0 4px 16px rgba(212, 132, 90, 0.15);
-        transform: translateY(-2px);
-
-        .empty-icon {
-          transform: scale(1.1);
-        }
-      }
-
-      &:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 8px rgba(212, 132, 90, 0.2);
-      }
-
+      // 图标：线性图标 + 中性浅底，替代结构性 emoji（§4.9、§5.6）
       .empty-icon {
-        width: 112px;
-        height: 112px;
-        margin-bottom: 24px;
-        border-radius: 36px;
-        background:
-          radial-gradient(circle at 32% 32%, #fffefb 0%, #f4eadf 62%, #edd9ca 100%);
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.84),
-          0 18px 34px rgba(105, 78, 57, 0.1);
+        width: 88px;
+        height: 88px;
+        margin-bottom: @nordic-space-md;
+        border-radius: @nordic-radius-lg;
+        background: @nordic-surface;
+        border: 1px solid @nordic-border;
+        box-shadow: var(--shadow-md);
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: transform @nordic-transition-base ease;
-
-        .plate-core {
-          font-size: 46px;
-          line-height: 1;
-        }
+        color: @nordic-accent;
+        font-size: 40px;
       }
 
       .empty-title {
         font-size: @nordic-text-lg;
-        font-weight: 500;
+        font-weight: 600;
         color: @nordic-text;
-        margin: 0 0 @nordic-space-sm 0;
+        margin: 0;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -3245,18 +3294,30 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       .empty-tip {
         font-size: @nordic-text-base;
         color: @nordic-text-secondary;
-        margin: 0;
+        margin: 0 0 @nordic-space-2sm 0;
         line-height: 1.6;
         display: flex;
         align-items: center;
         justify-content: center;
       }
 
+      // 替代动作：唯一主按钮，明确「开始聊天」入口（§4.1、§5.5）
+      .empty-select__cta {
+        border-radius: @nordic-radius-md;
+        font-weight: 600;
+
+        .empty-select__cta-icon {
+          margin-right: @nordic-space-xs;
+        }
+      }
     }
 
-    // 消息输入框包裹容器
+    // 消息输入框包裹容器：与消息区之间加安全分隔，避免输入区贴着消息（§3.3、§4.4）
     .message-input-wrapper {
       position: relative;
+      background: @nordic-surface;
+      border-top: 1px solid @nordic-border;
+      padding: @nordic-space-2sm @nordic-space-sm @nordic-space-sm;
     }
 
     // 输入框遮罩层提示
@@ -3270,7 +3331,7 @@ const fetchMerchantProducts = async (merchantId, silent = false) => {
       align-items: center;
       justify-content: center;
       gap: @nordic-space-md;
-      background: rgba(255, 255, 255, 0.85);
+      background: var(--surface-scrim);
       backdrop-filter: blur(4px);
       border-radius: @nordic-radius-sm;
       color: @nordic-accent-dark;

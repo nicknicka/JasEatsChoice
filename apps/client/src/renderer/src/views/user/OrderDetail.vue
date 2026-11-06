@@ -392,8 +392,8 @@ const getActiveStep = () => {
   <div class="order-detail-container">
     <!-- 页面头部 -->
     <AppPageHeader class="page-header" title="订单详情">
-      <template #extra>
-        <CommonBackButton />
+      <template #actions>
+        <CommonBackButton type="default" />
       </template>
     </AppPageHeader>
 
@@ -666,10 +666,6 @@ const getActiveStep = () => {
 
   .page-header {
     margin-bottom: var(--space-6);
-
-    :deep(.app-page-header__extra) {
-      order: -1;
-    }
   }
 
   .loading-container {

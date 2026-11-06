@@ -1,18 +1,20 @@
 <script setup>
 import pinia from '../../store'
 import { useAuthStore } from '../../store/authStore'
-import { inject } from 'vue'
+import { inject, ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete, Bell, Notification, Promotion, Lock, ShoppingCart } from '@element-plus/icons-vue'
+import api from '../../utils/api.js'
+import { API_CONFIG } from '../../config/index.js'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
+import StatusTag from '../../components/common/StatusTag.vue'
 
 const authStore = useAuthStore(pinia)
 
 // 注入父组件提供的刷新方法
 const refreshUnreadCount = inject('refreshUnreadCount', null)
-
-import { ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Bell, Notification, Promotion, Lock, ShoppingCart } from '@element-plus/icons-vue'
-import api from '../../utils/api.js'
-import { API_CONFIG } from '../../config/index.js'
 
 // 用户ID
 const userId = ref(parseInt(String(authStore.userId || 1) || '1', 10))
@@ -55,17 +57,6 @@ const loadNotifications = async () => {
   }
 }
 
-// 当前选中的标签
-const activeTab = ref('all')
-
-// 筛选通知
-const filteredNotifications = computed(() => {
-  if (activeTab.value === 'all') {
-    return notifications.value
-  }
-  return notifications.value.filter((n) => n.type === activeTab.value)
-})
-
 // 未读数量
 const unreadCount = computed(() => {
   return notifications.value.filter((n) => !n.read).length
@@ -85,6 +76,49 @@ const loadUnreadCount = async () => {
     console.error('获取未读数量失败:', error)
   }
 }
+
+// ========== 日期分组 ==========
+// 单条时间统一 YYYY-MM-DD HH:mm（§4.3、§6.1，去掉 ISO 的 T）
+const formatDateTime = (time) => {
+  const d = new Date(time)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+const dateKey = (time) => {
+  const d = new Date(time)
+  if (Number.isNaN(d.getTime())) return 'unknown'
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+// 分组标题：今天 / 昨天 / YYYY-MM-DD（§4.3）
+const groupLabel = (time) => {
+  const d = new Date(time)
+  if (Number.isNaN(d.getTime())) return '更早'
+  const startOfDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const diff = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86400000)
+  if (diff === 0) return '今天'
+  if (diff === 1) return '昨天'
+  return dateKey(time)
+}
+
+// 按日期分组，保持后端返回的时间倒序
+const groupedNotifications = computed(() => {
+  const groups = []
+  const index = new Map()
+  notifications.value.forEach((notification) => {
+    const key = dateKey(notification.time)
+    if (!index.has(key)) {
+      const group = { key, label: groupLabel(notification.time), items: [] }
+      index.set(key, group)
+      groups.push(group)
+    }
+    index.get(key).items.push(notification)
+  })
+  return groups
+})
 
 // ========== 通知详情 ==========
 const detailNotification = ref(null)
@@ -140,12 +174,13 @@ const handleSelect = (notification, checked) => {
   } else {
     selectedIds.value = selectedIds.value.filter((id) => id !== notification.id)
   }
-  selectAll.value = selectedIds.value.length === filteredNotifications.value.length && filteredNotifications.value.length > 0
+  selectAll.value =
+    selectedIds.value.length === notifications.value.length && notifications.value.length > 0
 }
 
 const handleSelectAll = (checked) => {
   if (checked) {
-    selectedIds.value = filteredNotifications.value.map((n) => n.id)
+    selectedIds.value = notifications.value.map((n) => n.id)
   } else {
     selectedIds.value = []
   }
@@ -233,7 +268,7 @@ const handleDeleteFromDetail = async (id) => {
 
 // ========== 辅助方法 ==========
 
-// 获取通知类型配置
+// 通知类型配置：标签语义色 + 线性图标（§3.1 状态表、§4.9）
 const getTypeConfig = (type) => {
   const configs = {
     system: { icon: Notification, label: '系统公告', color: 'primary' },
@@ -243,118 +278,78 @@ const getTypeConfig = (type) => {
   }
   return configs[type] || configs.system
 }
-
-// 获取通知图标
-const getTypeIcon = (type) => {
-  const icons = {
-    system: '📢',
-    promotion: '🎉',
-    security: '🔒',
-    order: '📦'
-  }
-  return icons[type] || '📢'
-}
-
-// 获取空状态配置
-const getEmptyConfig = () => {
-  const configs = {
-    all: { icon: '📭', text: '暂无通知' },
-    system: { icon: '📢', text: '暂无系统公告' },
-    promotion: { icon: '🎉', text: '暂无活动通知' },
-    security: { icon: '🔒', text: '暂无安全提醒' },
-    order: { icon: '📦', text: '暂无订单更新' }
-  }
-  return configs[activeTab.value] || configs.all
-}
-
-// 标签页配置
-const tabs = [
-  { name: 'all', label: '全部通知', icon: Bell },
-  { name: 'system', label: '系统公告', icon: Notification },
-  { name: 'promotion', label: '活动通知', icon: Promotion },
-  { name: 'security', label: '安全提醒', icon: Lock },
-  { name: 'order', label: '订单更新', icon: ShoppingCart }
-]
 </script>
 
 <template>
-  <div class="notification-container">
-    <!-- 页面头部 -->
-    <header class="page-header fade-in-up">
-      <div class="header-left">
-        <h2>系统通知</h2>
-        <p class="header-subtitle">管理您的系统消息和提醒</p>
-      </div>
-      <div v-if="unreadCount > 0" class="unread-badge">
-        <span class="badge-icon">🔔</span>
-        <span class="badge-text">{{ unreadCount }} 条未读</span>
-      </div>
-    </header>
+  <div class="system-notification-page">
+    <!-- 页头：标准版，标题 --text-h1 + 上下 --space-6（§4.7） -->
+    <AppPageHeader title="系统通知" subtitle="管理您的系统消息和提醒">
+      <template #extra>
+        <span v-if="unreadCount > 0" class="unread-chip">
+          <el-icon><Bell /></el-icon>{{ unreadCount }} 条未读
+        </span>
+      </template>
+      <template #actions>
+        <el-button type="primary" :disabled="unreadCount === 0" @click="markAllAsRead">
+          全部标记已读
+        </el-button>
+      </template>
+    </AppPageHeader>
 
-    <!-- 筛选标签页 -->
-    <nav class="tab-nav slide-in-left delay-100">
-      <div class="tab-nav-track">
-        <button
-          v-for="tab in tabs"
-          :key="tab.name"
-          class="tab-btn"
-          :class="{ active: activeTab === tab.name }"
-          @click="activeTab = tab.name"
+    <!-- 统一消息列表：单列表 + 日期分组，去掉重复的灰色 tab（P0，§4.2） -->
+    <AppCard class="notice-card" padding="none">
+      <div class="notice-toolbar">
+        <el-checkbox
+          v-model="selectAll"
+          :disabled="notifications.length === 0"
+          @change="handleSelectAll"
         >
-          <el-icon :size="16"><component :is="tab.icon" /></el-icon>
-          <span>{{ tab.label }}</span>
-          <el-badge
-            v-if="tab.name === 'all' && unreadCount > 0"
-            :value="unreadCount"
-            class="tab-badge"
-          />
-        </button>
+          全选
+        </el-checkbox>
+        <el-button
+          type="danger"
+          plain
+          size="small"
+          :disabled="selectedIds.length === 0"
+          @click="deleteSelected"
+        >
+          <el-icon><Delete /></el-icon>
+          批量删除 ({{ selectedIds.length }})
+        </el-button>
       </div>
-    </nav>
 
-    <!-- 通知列表区域 -->
-    <div class="notification-content slide-in-left delay-200">
-      <!-- 操作工具栏 -->
-      <transition name="toolbar-fade">
-        <div v-if="selectedIds.length > 0 || unreadCount > 0" class="action-toolbar">
-          <el-checkbox v-model="selectAll" @change="handleSelectAll">全选</el-checkbox>
-          <div class="toolbar-actions">
-            <el-button
-              type="danger"
-              plain
-              :disabled="selectedIds.length === 0"
-              @click="deleteSelected"
+      <div v-loading="loading" class="notice-list">
+        <template v-if="groupedNotifications.length > 0">
+          <section v-for="group in groupedNotifications" :key="group.key" class="notice-group">
+            <h2 class="notice-group__title">{{ group.label }}</h2>
+
+            <article
+              v-for="notification in group.items"
+              :key="notification.id"
+              class="notice-row"
+              :class="{
+                'is-unread': !notification.read,
+                'is-selected': isSelected(notification.id)
+              }"
             >
-              <el-icon><Delete /></el-icon>
-              批量删除 ({{ selectedIds.length }})
-            </el-button>
-            <el-button type="primary" plain :disabled="unreadCount === 0" @click="markAllAsRead">
-              全部标记已读
-            </el-button>
-          </div>
-        </div>
-      </transition>
-
-      <!-- 通知列表 -->
-      <div class="notification-list">
-        <transition-group name="list" tag="div">
-          <div
-            v-for="notification in filteredNotifications"
-            :key="notification.id"
-            class="notification-card"
-            :class="{ unread: !notification.read, selected: isSelected(notification.id) }"
-          >
-            <div class="card-checkbox">
               <el-checkbox
+                class="notice-row__check"
                 :model-value="isSelected(notification.id)"
                 @change="handleSelect(notification, $event)"
               />
-            </div>
 
-            <div class="card-main" @click="viewNotification(notification)">
-              <div class="card-header">
-                <div class="type-indicator">
-                  <span class="type-icon">{{ getTypeIcon(notification.type) }}</span>
+              <div class="notice-row__icon">
+                <el-icon><component :is="getTypeConfig(notification.type).icon" /></el-icon>
+              </div>
+
+              <div
+                class="notice-row__main"
+                role="button"
+                tabindex="0"
+                @click="viewNotification(notification)"
+                @keydown.enter="viewNotification(notification)"
+              >
+                <div class="notice-row__head">
                   <el-tag
                     :type="getTypeConfig(notification.type).color"
                     size="small"
@@ -362,42 +357,44 @@ const tabs = [
                   >
                     {{ getTypeConfig(notification.type).label }}
                   </el-tag>
+                  <h3 class="notice-row__title">{{ notification.title }}</h3>
+                  <StatusTag v-if="!notification.read" status="unread" size="sm" />
                 </div>
-                <span class="card-time">{{ notification.time }}</span>
+                <p class="notice-row__content">{{ notification.content }}</p>
+                <time class="notice-row__time">{{ formatDateTime(notification.time) }}</time>
               </div>
 
-              <h3 class="card-title">{{ notification.title }}</h3>
-              <p class="card-content">{{ notification.content }}</p>
-            </div>
+              <div class="notice-row__actions">
+                <el-button
+                  type="primary"
+                  text
+                  size="small"
+                  @click.stop="viewNotification(notification)"
+                >
+                  查看详情
+                </el-button>
+                <el-button
+                  type="danger"
+                  text
+                  size="small"
+                  @click.stop="deleteNotification(notification.id)"
+                >
+                  删除
+                </el-button>
+              </div>
+            </article>
+          </section>
+        </template>
 
-            <div class="card-actions">
-              <el-button type="primary" text size="small" @click.stop="viewNotification(notification)">
-                查看详情
-              </el-button>
-              <el-button type="danger" text size="small" @click.stop="deleteNotification(notification.id)">
-                删除
-              </el-button>
-            </div>
-          </div>
-        </transition-group>
-
-        <!-- 空状态 -->
-        <transition name="empty-fade" mode="out-in">
-          <div v-if="filteredNotifications.length === 0 && !loading" class="empty-state">
-            <div class="empty-icon-wrapper">
-              <span class="empty-icon">{{ getEmptyConfig().icon }}</span>
-            </div>
-            <p class="empty-text">{{ getEmptyConfig().text }}</p>
-          </div>
-        </transition>
-
-        <!-- 加载状态 -->
-        <div v-if="loading" class="loading-state">
-          <el-icon class="loading-icon" :size="32"><Loading /></el-icon>
-          <p>加载中...</p>
-        </div>
+        <AppEmptyState
+          v-else-if="!loading"
+          icon="Bell"
+          description="暂无通知"
+          action-text="重新加载"
+          @action="loadNotifications"
+        />
       </div>
-    </div>
+    </AppCard>
 
     <!-- 通知详情模态框 -->
     <el-dialog
@@ -409,7 +406,7 @@ const tabs = [
       <template #header>
         <div class="detail-header">
           <div class="detail-icon-wrapper">
-            <span class="detail-icon">{{ getTypeIcon(detailNotification?.type) }}</span>
+            <el-icon><component :is="getTypeConfig(detailNotification?.type).icon" /></el-icon>
           </div>
           <div class="detail-title-section">
             <h3 class="detail-title">{{ detailNotification?.title }}</h3>
@@ -421,7 +418,7 @@ const tabs = [
               >
                 {{ getTypeConfig(detailNotification?.type).label }}
               </el-tag>
-              <span class="detail-time">{{ detailNotification?.time }}</span>
+              <span class="detail-time">{{ formatDateTime(detailNotification?.time) }}</span>
             </div>
           </div>
         </div>
@@ -448,548 +445,236 @@ const tabs = [
   </div>
 </template>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
-// 列表动画
-.list-enter-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.list-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
-  position: absolute;
-  width: calc(100% - 48px);
-}
-
-.list-enter-from {
-  opacity: 0;
-  transform: translateY(12px);
-}
-
-.list-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
-}
-
-.list-move {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-// 工具栏动画
-.toolbar-fade-enter-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.toolbar-fade-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
-}
-
-.toolbar-fade-enter-from,
-.toolbar-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
-// 空状态动画
-.empty-fade-enter-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.empty-fade-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
-}
-
-.empty-fade-enter-from {
-  opacity: 0;
-  transform: scale(0.9) translateY(15px);
-}
-
-.empty-fade-leave-to {
-  opacity: 0;
-  transform: scale(0.95) translateY(-5px);
-}
-
-.notification-container {
-  padding: @nordic-space-lg;
-  background: @nordic-bg;
+<style scoped>
+/* 页面颜色、间距、圆角、字阶与动效均取自 tokens.css（§3、§7.1），无裸色值。 */
+.system-notification-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--page-max);
   min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: @nordic-space-lg;
-
-  // 页面头部
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: @nordic-space-lg;
-
-    .header-left {
-      h2 {
-        font-size: @nordic-text-xl;
-        font-weight: 700;
-        color: @nordic-text;
-        margin: 0 0 6px 0;
-        letter-spacing: -0.5px;
-      }
-
-      .header-subtitle {
-        font-size: @nordic-text-base;
-        color: @nordic-text-muted;
-        margin: 0;
-      }
-    }
-
-    .unread-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-      border-radius: @nordic-radius-pill;
-      box-shadow: 0 4px 12px fade(@nordic-accent, 30%);
-
-      .badge-icon {
-        font-size: @nordic-text-lg;
-        animation: bellRing 2s ease-in-out infinite;
-      }
-
-      .badge-text {
-        font-size: @nordic-text-sm;
-        font-weight: 600;
-        color: @nordic-surface;
-      }
-    }
-  }
-
-  // 标签导航
-  .tab-nav {
-    .tab-nav-track {
-      display: inline-flex;
-      background: @nordic-border;
-      border-radius: @nordic-radius-lg;
-      padding: 4px;
-      gap: 4px;
-    }
-
-    .tab-btn {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 10px 18px;
-      border: none;
-      background: transparent;
-      color: @nordic-text-secondary;
-      font-size: @nordic-text-sm;
-      font-weight: 500;
-      cursor: pointer;
-      border-radius: @nordic-radius-md;
-      transition: all 0.25s ease;
-      font-family: inherit;
-
-      &:hover:not(.active) {
-        color: @nordic-text;
-        background: fade(@nordic-surface, 50%);
-      }
-
-      &.active {
-        background: @nordic-surface;
-        color: @nordic-text;
-        box-shadow: 0 1px 4px @nordic-shadow;
-      }
-
-      .tab-badge {
-        margin-left: 4px;
-
-        :deep(.el-badge__content) {
-          background: @nordic-red;
-          border-color: @nordic-red;
-        }
-      }
-    }
-  }
-
-  // 内容区域
-  .notification-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: @nordic-space-md;
-    min-height: 0;
-
-    // 操作工具栏
-    .action-toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      background: linear-gradient(135deg, @nordic-blue 0%, darken(@nordic-blue, 10%) 100%);
-      border-radius: @nordic-radius-lg;
-      box-shadow: 0 4px 12px fade(@nordic-blue, 25%);
-
-      :deep(.el-checkbox__label) {
-        color: @nordic-surface;
-        font-weight: 500;
-      }
-
-      :deep(.el-checkbox__inner) {
-        background: fade(@nordic-surface, 20%);
-        border-color: fade(@nordic-surface, 40%);
-      }
-
-      :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-        background: @nordic-surface;
-        border-color: @nordic-surface;
-
-        &::after {
-          border-color: @nordic-blue;
-        }
-      }
-
-      .toolbar-actions {
-        display: flex;
-        gap: 12px;
-      }
-    }
-
-    // 通知列表
-    .notification-list {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: @nordic-space-md;
-      padding-right: 8px;
-
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: transparent;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: @nordic-border;
-        border-radius: 3px;
-
-        &:hover {
-          background: @nordic-text-muted;
-        }
-      }
-    }
-  }
-
-  // 通知卡片
-  .notification-card {
-    .nordic-card();
-    display: flex;
-    align-items: flex-start;
-    gap: @nordic-space-md;
-    padding: @nordic-space-lg;
-    cursor: pointer;
-    position: relative;
-
-    &.unread {
-      border-left: 4px solid @nordic-blue;
-
-      &::before {
-        content: '';
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        width: 8px;
-        height: 8px;
-        background: @nordic-blue;
-        border-radius: 50%;
-        animation: pulse 2s ease-in-out infinite;
-      }
-    }
-
-    &.selected {
-      background: @nordic-blue-light;
-      border-color: @nordic-blue;
-    }
-
-    .card-checkbox {
-      flex-shrink: 0;
-      margin-top: 4px;
-    }
-
-    .card-main {
-      flex: 1;
-      min-width: 0;
-
-      .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-
-        .type-indicator {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-
-          .type-icon {
-            font-size: @nordic-text-lg;
-          }
-        }
-
-        .card-time {
-          font-size: @nordic-text-xs;
-          color: @nordic-text-muted;
-        }
-      }
-
-      .card-title {
-        font-size: @nordic-text-md;
-        font-weight: 600;
-        color: @nordic-text;
-        margin: 0 0 6px 0;
-        line-height: 1.4;
-      }
-
-      .card-content {
-        font-size: @nordic-text-base;
-        color: @nordic-text-secondary;
-        margin: 0;
-        line-height: 1.6;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-    }
-
-    .card-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-  }
-
-  // 空状态
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px @nordic-space-lg;
-
-    .empty-icon-wrapper {
-      width: 100px;
-      height: 100px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, @nordic-bg 0%, @nordic-border 100%);
-      border-radius: 50%;
-      margin-bottom: @nordic-space-lg;
-      animation: float 3s ease-in-out infinite;
-      box-shadow: 0 8px 24px @nordic-shadow;
-
-      .empty-icon {
-        font-size: 48px;
-      }
-    }
-
-    .empty-text {
-      font-size: @nordic-text-md;
-      color: @nordic-text-muted;
-      margin: 0;
-    }
-  }
-
-  // 加载状态
-  .loading-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px @nordic-space-lg;
-    color: @nordic-text-muted;
-
-    .loading-icon {
-      animation: spin 1s linear infinite;
-      margin-bottom: @nordic-space-md;
-    }
-
-    p {
-      margin: 0;
-      font-size: @nordic-text-base;
-    }
-  }
+  margin: 0 auto;
+  padding: 0 var(--page-gutter) var(--space-10);
+  background: var(--canvas);
 }
 
-// 详情模态框
-:deep(.detail-dialog) {
-  border-radius: @nordic-radius-lg;
+/* 页头未读计数：辅助信息，不动用主色（§3.1、§4.7） */
+.unread-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--canvas-sunken);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+}
+
+/* 列表面板：L1 微质感 */
+.notice-card {
   overflow: hidden;
+}
 
-  .el-dialog__header {
-    padding: 0;
-    margin: 0;
-  }
+/* 批量操作条：中性表面 + 唯一主按钮已在页头（§4.1、§3.4） */
+.notice-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--card-padding);
+  background: var(--canvas-sunken);
+  border-bottom: 1px solid var(--line);
+}
 
-  .el-dialog__body {
-    padding: @nordic-space-lg;
-  }
+.notice-list {
+  min-height: 240px;
+}
 
-  .el-dialog__footer {
-    padding: @nordic-space-md @nordic-space-lg;
-    border-top: 1px solid @nordic-border;
-  }
+/* 日期分组标题：分区标题从 h2 起（§4.7） */
+.notice-group__title {
+  margin: 0;
+  padding: var(--space-3) var(--card-padding) var(--space-2);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  line-height: 20px;
+  background: var(--canvas-sunken);
+  border-bottom: 1px solid var(--line);
+}
+
+/* 通知行：统一消息行骨架（§4.2） */
+.notice-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--card-padding);
+  border-bottom: 1px solid var(--line);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.notice-row:last-child {
+  border-bottom: none;
+}
+
+.notice-row:hover {
+  background: var(--canvas-sunken);
+}
+
+.notice-row.is-selected {
+  background: var(--canvas-sunken);
+}
+
+.notice-row.is-unread .notice-row__title {
+  color: var(--ink-900);
+  font-weight: var(--weight-semibold);
+}
+
+.notice-row__check {
+  flex-shrink: 0;
+  margin-top: var(--space-1);
+}
+
+.notice-row__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--canvas-sunken);
+  color: var(--ink-500);
+  font-size: var(--text-h3);
+}
+
+.notice-row__main {
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.notice-row__main:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+}
+
+.notice-row__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+  min-width: 0;
+}
+
+.notice-row__title {
+  overflow: hidden;
+  margin: 0;
+  color: var(--ink-700);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notice-row__content {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+}
+
+.notice-row__time {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--ink-400);
+  font-family: var(--font-num);
+  font-size: var(--text-caption);
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.notice-row__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* 详情弹层 */
+.detail-dialog :deep(.el-dialog__body) {
+  padding: var(--space-5) var(--space-6);
 }
 
 .detail-header {
   display: flex;
   align-items: center;
-  gap: @nordic-space-md;
-  padding: @nordic-space-lg;
-  background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
-  margin: -20px -20px 0 -20px;
-
-  .detail-icon-wrapper {
-    width: 52px;
-    height: 52px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: fade(@nordic-surface, 25%);
-    border-radius: @nordic-radius-lg;
-    backdrop-filter: blur(10px);
-
-    .detail-icon {
-      font-size: @nordic-text-xl;
-    }
-  }
-
-  .detail-title-section {
-    flex: 1;
-
-    .detail-title {
-      font-size: @nordic-text-lg;
-      font-weight: 600;
-      color: @nordic-surface;
-      margin: 0 0 8px 0;
-      line-height: 1.3;
-    }
-
-    .detail-meta {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-
-      .detail-time {
-        font-size: @nordic-text-sm;
-        color: fade(@nordic-surface, 90%);
-      }
-    }
-  }
+  gap: var(--space-3);
 }
 
-.detail-body {
-  .detail-content {
-    font-size: 15px;
-    line-height: 1.8;
-    color: @nordic-text;
-    margin: 0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
+.detail-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--canvas-sunken);
+  color: var(--ink-500);
+  font-size: var(--text-h3);
+}
+
+.detail-title-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-title {
+  margin: 0 0 var(--space-1);
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 24px;
+}
+
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.detail-time {
+  color: var(--ink-400);
+  font-family: var(--font-num);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-content {
+  margin: 0;
+  color: var(--ink-700);
+  font-size: var(--text-body);
+  line-height: 24px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .detail-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-// 动画关键帧
-@keyframes bellRing {
-  0%, 100% {
-    transform: rotate(0deg);
-  }
-  10%, 30% {
-    transform: rotate(-12deg);
-  }
-  20%, 40% {
-    transform: rotate(12deg);
-  }
-  50% {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(0.8);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-8px) scale(1.02);
-  }
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-// 入场动画
-.fade-in-up {
-  animation: fadeInUp 0.5s ease-out both;
-}
-
-.slide-in-left {
-  animation: slideInLeft 0.5s ease-out both;
-
-  &.delay-100 {
-    animation-delay: 0.1s;
-  }
-
-  &.delay-200 {
-    animation-delay: 0.2s;
-  }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
+/* 无障碍：减少动态偏好下不播放过渡（§3.5） */
+@media (prefers-reduced-motion: reduce) {
+  .notice-row {
+    transition: none;
   }
 }
 </style>
