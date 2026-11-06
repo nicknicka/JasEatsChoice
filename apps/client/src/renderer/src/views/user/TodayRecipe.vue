@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Box } from '@element-plus/icons-vue'
 import { API_CONFIG } from '../../config'
 import axios from 'axios'
 import { useAuthStore } from '../../store/authStore'
@@ -13,6 +14,8 @@ import ImportMerchantDish from '../../components/ImportMerchantDish.vue'
 import AddRecipe from '../../components/recipe/AddRecipe.vue'
 import ReplaceDish from '../../components/ReplaceDish.vue'
 import RecipeCard from '../../components/RecipeCard.vue'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
 
 // 获取认证信息
 const authStore = useAuthStore()
@@ -898,13 +901,11 @@ const filteredRecipes = computed(() => {
 <template>
   <div class="today-recipe-wrapper">
     <div class="nordic-today-recipe">
-    <!-- 页面标题 -->
-    <div class="nordic-page-header">
-      <h2>今日食谱</h2>
-    </div>
+    <!-- 页面标题：标准版页头，标题 --text-h1 + 上下 --space-6（§4.7） -->
+    <AppPageHeader title="今日食谱" />
 
-    <!-- 营养摄入概览 -->
-    <div class="nutrition-overview">
+    <!-- 营养摄入概览：列表为空时收起无效统计（§4.5） -->
+    <div v-if="todayRecipes.length > 0" class="nutrition-overview">
       <div class="nutri-stat">
         <span class="nutri-val">{{ nutritionData.calories }}</span>
         <span class="nutri-unit">kcal</span>
@@ -912,27 +913,27 @@ const filteredRecipes = computed(() => {
       </div>
       <div class="nutri-divider"></div>
       <div class="nutri-stat">
-        <span class="nutri-val green">{{ nutritionData.protein }}</span>
+        <span class="nutri-val">{{ nutritionData.protein }}</span>
         <span class="nutri-unit">g</span>
         <span class="nutri-label">蛋白质</span>
       </div>
       <div class="nutri-divider"></div>
       <div class="nutri-stat">
-        <span class="nutri-val blue">{{ nutritionData.carbs }}</span>
+        <span class="nutri-val">{{ nutritionData.carbs }}</span>
         <span class="nutri-unit">g</span>
         <span class="nutri-label">碳水</span>
       </div>
       <div class="nutri-divider"></div>
       <div class="nutri-stat">
-        <span class="nutri-val amber">{{ nutritionData.fat }}</span>
+        <span class="nutri-val">{{ nutritionData.fat }}</span>
         <span class="nutri-unit">g</span>
         <span class="nutri-label">脂肪</span>
       </div>
     </div>
 
-    <!-- 餐型筛选 -->
-    <div class="meal-filter-row">
-      <div class="meal-chips">
+    <!-- 餐型筛选 + 操作 -->
+    <div class="meal-filter-row" :class="{ 'is-empty': todayRecipes.length === 0 }">
+      <div v-if="todayRecipes.length > 0" class="meal-chips">
         <button
           class="meal-chip"
           :class="{ active: filters.mealType === 'all' }"
@@ -960,7 +961,11 @@ const filteredRecipes = computed(() => {
         >加餐</button>
       </div>
       <div class="action-btns">
-        <button class="nordic-btn accent" @click="addRecipeVisible = true">+ 添加食谱</button>
+        <button
+          v-if="filteredRecipes.length > 0"
+          class="nordic-btn accent"
+          @click="addRecipeVisible = true"
+        >+ 添加食谱</button>
         <button class="nordic-btn" @click="importOrderVisible = true">从订单导入</button>
         <button
           class="nordic-btn ghost"
@@ -977,8 +982,14 @@ const filteredRecipes = computed(() => {
 
     <!-- 食谱列表 -->
     <div class="recipe-list" :class="layoutType">
+      <!-- 空状态：图标 32px --ink-400 + 一句说明 + 一个替代动作 + 可选次动作（§4.5） -->
       <div v-if="filteredRecipes.length === 0" class="empty-recipes">
-        <el-empty description="今日没有食谱数据"></el-empty>
+        <el-icon class="empty-recipes__icon" aria-hidden="true"><Box /></el-icon>
+        <p class="empty-recipes__desc">今日没有食谱数据</p>
+        <div class="empty-recipes__actions">
+          <button class="nordic-btn accent" @click="addRecipeVisible = true">添加食谱</button>
+          <CommonBackButton type="default" size="default" />
+        </div>
       </div>
       <div v-else class="recipe-cards">
         <RecipeCard
@@ -1042,7 +1053,7 @@ const filteredRecipes = computed(() => {
           :label="`订单号: ${order.orderNo} - 总价: ${order.totalPrice}元`"
           :value="order"
         >
-          <template #default>
+          <template v-slot:default>
             <div>
               <div style="margin-bottom: 6px;">订单号: {{ order.orderNo }} - 总价: {{ order.totalPrice }}元</div>
               <div style="display: flex; gap: 6px; flex-wrap: wrap;">
@@ -1068,163 +1079,185 @@ const filteredRecipes = computed(() => {
 </template>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-
+// 颜色/间距/圆角/字阶/动效全部取自 tokens.css（DESIGN-BASELINE §3）。
 .today-recipe-wrapper {
   display: contents;
 }
 
-.nordic-today-recipe {
-  .nordic-page-container();
-  max-width: 900px;
-  margin: 0 auto;
-
-  // --- 页面标题 ---
-  .nordic-page-header {
-    margin-bottom: @nordic-space-lg;
-
-    h2 {
-      font-size: @nordic-text-xl;
-      font-weight: 700;
-      color: @nordic-text;
-      margin: 0;
-      letter-spacing: -0.5px;
-    }
+// 分区首次进入：opacity + translateY(4px)，只播一次（§3.5）
+@keyframes today-recipe-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-  // --- 营养概览 ---
+.nordic-today-recipe {
+  box-sizing: border-box;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--space-6);
+  background: var(--canvas);
+  min-height: 100%;
+
+  // --- 营养概览：数值统一 --font-num / --text-h1 / tabular-nums（§4.8）---
   .nutrition-overview {
     display: flex;
     align-items: center;
     justify-content: space-around;
-    padding: @nordic-space-lg;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-lg;
-    border: 1px solid @nordic-border;
-    margin-bottom: @nordic-space-lg;
-    .nordic-animate-fade();
+    padding: var(--space-5) var(--space-6);
+    margin-bottom: var(--space-6);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    animation: today-recipe-enter var(--duration-base) var(--ease-out) both;
 
     .nutri-stat {
-      text-align: center;
       flex: 1;
+      text-align: center;
+    }
 
-      .nutri-val {
-        display: block;
-        font-size: @nordic-text-2xl;
-        font-weight: 700;
-        color: @nordic-accent;
-        letter-spacing: -1px;
-        line-height: 1;
+    .nutri-val {
+      display: block;
+      font-family: var(--font-num);
+      font-size: var(--text-h1);
+      font-weight: var(--weight-semibold);
+      line-height: 32px;
+      color: var(--ink-900);
+      font-variant-numeric: tabular-nums;
+    }
 
-        &.green { color: @nordic-green; }
-        &.blue { color: @nordic-blue; }
-        &.amber { color: @nordic-yellow; }
-      }
+    .nutri-unit {
+      font-size: var(--text-caption);
+      color: var(--ink-500);
+    }
 
-      .nutri-unit {
-        font-size: @nordic-text-xs;
-        color: @nordic-text-muted;
-      }
-
-      .nutri-label {
-        display: block;
-        font-size: @nordic-text-xs;
-        color: @nordic-text-muted;
-        margin-top: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
+    .nutri-label {
+      display: block;
+      margin-top: var(--space-1);
+      font-size: var(--text-caption);
+      color: var(--ink-500);
     }
 
     .nutri-divider {
       width: 1px;
       height: 40px;
-      background: @nordic-border;
+      background: var(--line);
     }
   }
 
   // --- 筛选与操作 ---
   .meal-filter-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: @nordic-space-md;
-    margin-bottom: @nordic-space-lg;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
     flex-wrap: wrap;
+
+    // 列表为空时筛选已收起，操作区右对齐（§4.5）
+    &.is-empty {
+      justify-content: flex-end;
+    }
 
     .meal-chips {
       display: flex;
-      gap: 6px;
+      gap: var(--space-2);
     }
 
     .meal-chip {
-      padding: 6px 18px;
-      border: 1px solid @nordic-border;
-      background: @nordic-surface;
-      border-radius: @nordic-radius-pill;
-      font-size: @nordic-text-sm;
-      color: @nordic-text-secondary;
+      padding: 6px var(--space-4);
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: var(--radius-full);
+      font-size: var(--text-body-sm);
+      font-weight: var(--weight-medium);
+      color: var(--ink-500);
       cursor: pointer;
-      transition: all 0.2s;
-      font-weight: 500;
+      transition:
+        background var(--duration-fast) var(--ease-out),
+        border-color var(--duration-fast) var(--ease-out),
+        color var(--duration-fast) var(--ease-out);
 
       &:hover {
-        border-color: @nordic-accent;
-        color: @nordic-accent;
+        border-color: var(--brand-300);
+        color: var(--brand-600);
       }
 
+      // 选中态用浅底胶囊，不与主按钮争实心层级（§4.1）
       &.active {
-        background: @nordic-accent;
-        border-color: @nordic-accent;
-        color: #fff;
+        background: var(--brand-50);
+        border-color: var(--brand-300);
+        color: var(--brand-700);
+        font-weight: var(--weight-semibold);
       }
     }
 
     .action-btns {
       display: flex;
-      gap: 8px;
+      gap: var(--space-2);
       flex-wrap: wrap;
     }
   }
 
-  // --- 北欧按钮 ---
+  // --- 按钮层级：主/次/文字三级（§4.1）---
   .nordic-btn {
-    padding: 6px 16px;
-    border: 1px solid @nordic-border;
-    background: @nordic-surface;
-    border-radius: @nordic-radius-md;
-    font-size: @nordic-text-sm;
-    color: @nordic-text-secondary;
+    padding: 6px var(--space-4);
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    font-size: var(--text-body-sm);
+    font-weight: var(--weight-medium);
+    color: var(--ink-700);
     cursor: pointer;
-    transition: all 0.2s;
-    font-weight: 500;
+    transition:
+      background var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
 
     &:hover:not(:disabled) {
-      border-color: @nordic-text-secondary;
+      border-color: var(--ink-400);
     }
 
+    // 主按钮：--brand-500 实心 + --surface 文字，每屏唯一
     &.accent {
-      background: @nordic-accent;
-      border-color: @nordic-accent;
-      color: #fff;
-
-      &:hover {
-        background: darken(@nordic-accent, 8%);
-      }
-    }
-
-    &.ghost {
-      border-color: transparent;
-      color: @nordic-text-muted;
+      border-color: var(--brand-500);
+      background: var(--brand-500);
+      color: var(--surface);
 
       &:hover:not(:disabled) {
-        color: @nordic-text-secondary;
-        border-color: @nordic-border;
+        border-color: var(--brand-600);
+        background: var(--brand-600);
+        box-shadow: var(--shadow-sm);
       }
     }
 
-    &:disabled {
-      opacity: 0.4;
+    // 文字级动作：批量操作等第三层级
+    &.ghost {
+      border-color: transparent;
+      background: transparent;
+      color: var(--ink-500);
+
+      &:hover:not(:disabled) {
+        border-color: var(--line-strong);
+        background: var(--surface);
+        color: var(--ink-700);
+      }
+    }
+
+    // 禁用态：--ink-400 文字 + --neutral-bg 底（§4.1）
+    &:disabled,
+    &.ghost:disabled,
+    &.accent:disabled {
+      border-color: transparent;
+      background: var(--neutral-bg);
+      color: var(--ink-400);
       cursor: not-allowed;
     }
   }
@@ -1234,21 +1267,44 @@ const filteredRecipes = computed(() => {
     .recipe-cards {
       display: flex;
       flex-direction: column;
-      gap: @nordic-space-md;
+      gap: var(--space-4);
     }
   }
 
-  // --- 空状态 ---
+  // --- 空状态：图标 + 说明 + 一个替代动作 + 可选次动作（§4.5）---
   .empty-recipes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-8) var(--space-6);
     text-align: center;
-    padding: 60px 20px;
+
+    .empty-recipes__icon {
+      font-size: 32px;
+      color: var(--ink-400);
+    }
+
+    .empty-recipes__desc {
+      margin: 0;
+      font-size: var(--text-body);
+      line-height: 22px;
+      color: var(--ink-500);
+    }
+
+    .empty-recipes__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-2);
+    }
   }
 
   // --- 导入订单面板 ---
   .import-order-panel {
-    padding: @nordic-space-lg;
-    background: @nordic-bg;
-    border-radius: @nordic-radius-md;
+    padding: var(--space-4);
+    background: var(--canvas-sunken);
+    border-radius: var(--radius-md);
   }
 }
 </style>
