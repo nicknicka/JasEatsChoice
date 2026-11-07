@@ -1,6 +1,6 @@
 <template>
-  <div class="settings-container">
-    <AppPageHeader title="设置" class="settings-header">
+  <div class="settings-container" :class="{ 'settings-container--merchant': isMerchant }">
+    <AppPageHeader title="设置" :compact="isMerchant" class="settings-header">
       <template #actions>
         <CommonBackButton type="default" size="default" />
       </template>
@@ -8,11 +8,11 @@
 
     <div class="settings-main">
       <div class="settings-section stagger-item">
-        <h3>账号设置</h3>
+        <h2><el-icon class="section-icon"><User /></el-icon>账号设置</h2>
         <div class="form-row">
           <div class="form-label">头像</div>
           <div class="form-content">
-            <el-avatar :size="60" class="user-avatar" :src="getAvatarUrl(userInfo.avatar)">👤</el-avatar>
+            <el-avatar :size="60" class="user-avatar" :src="getAvatarUrl(userInfo.avatar)"><el-icon><User /></el-icon></el-avatar>
             <input
               id="avatar-upload"
               type="file"
@@ -39,7 +39,12 @@
         <div class="form-row">
           <div class="form-label">邮箱</div>
           <div class="form-content">
-            <el-input :model-value="maskedEmail" readonly class="readonly-input" />
+            <el-input
+              :model-value="maskedEmail"
+              :placeholder="maskedEmail ? '' : '未绑定'"
+              readonly
+              class="readonly-input"
+            />
             <el-button type="text" size="small" class="row-action" @click="handleEditEmail"
               >修改</el-button
             >
@@ -58,7 +63,7 @@
       </div>
 
       <div class="settings-section stagger-item">
-        <h3>显示设置</h3>
+        <h2><el-icon class="section-icon"><Monitor /></el-icon>显示设置</h2>
 
         <!-- TODO: 字体大小切换功能 -->
         <!-- ✅ 已实现：聊天、表单、按钮等主要内容区域可以随字体大小设置变化 -->
@@ -96,7 +101,7 @@
       </div>
 
       <div class="settings-section stagger-item">
-        <h3>通知设置</h3>
+        <h2><el-icon class="section-icon"><Bell /></el-icon>通知设置</h2>
 
         <div class="form-row">
           <div class="form-label">订单通知</div>
@@ -128,7 +133,7 @@
       </div>
 
       <div class="settings-section stagger-item">
-        <h3>隐私设置</h3>
+        <h2><el-icon class="section-icon"><Lock /></el-icon>隐私设置</h2>
 
         <div class="form-row">
           <div class="form-label">定位权限</div>
@@ -170,7 +175,7 @@
       </div>
 
       <div class="settings-section stagger-item">
-        <h3>版本信息</h3>
+        <h2><el-icon class="section-icon"><InfoFilled /></el-icon>版本信息</h2>
 
         <div class="form-row">
           <div class="form-label">当前版本</div>
@@ -186,6 +191,7 @@
       </div>
 
       <div class="settings-actions">
+        <span v-if="hasUnsavedChanges" class="save-hint" role="status">有未保存的修改</span>
         <el-button type="primary" :loading="isSaving" @click="saveSettings">保存设置</el-button>
         <el-button type="default" :disabled="isSaving" @click="resetSettings">重置默认</el-button>
       </div>
@@ -338,7 +344,9 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, ElDialog, ElInput, ElForm, ElFormItem } from 'element-plus'
+import { User, Monitor, Bell, Lock, InfoFilled } from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 import pinia from '../../store'
@@ -350,6 +358,9 @@ import CommonBackButton from '../../components/common/CommonBackButton.vue'
 
 const authStore = useAuthStore(pinia)
 const userStore = useUserStore(pinia)
+
+const route = useRoute()
+const isMerchant = computed(() => route.path.startsWith('/merchant'))
 
 // 使用userStore中的用户信息（计算属性，避免undefined错误）
 const userInfo = computed(() => userStore.userInfo || { phone: '', email: '', avatar: '', userId: '' })
@@ -409,6 +420,15 @@ const notifications = ref({ ...tempSettings.value.notifications })
 // 保存中的即时反馈：按钮进入 loading 并禁止重复提交（§4.1、§4.6）
 const isSaving = ref(false)
 const privacy = ref({ ...tempSettings.value.privacy })
+
+const hasUnsavedChanges = computed(() => {
+  const official = officialSettings.value
+  return (
+    fontSize.value !== official.fontSize ||
+    JSON.stringify(notifications.value) !== JSON.stringify(official.notifications) ||
+    JSON.stringify(privacy.value) !== JSON.stringify(official.privacy)
+  )
+})
 
 // User info edit dialogs
 const editPhoneDialogVisible = ref(false)
@@ -1282,7 +1302,6 @@ const submitFeedbackForm = async () => {
   padding: 0 var(--page-gutter) var(--space-12);
 }
 
-/* 页头标准版（标题 --text-h1 + 上下 --space-6，§4.7）。 */
 .settings-header {
   padding-inline: 0;
 }
@@ -1308,7 +1327,10 @@ const submitFeedbackForm = async () => {
   box-shadow: inset 0 1px 0 var(--surface-highlight);
 
   /* 区块标题从 h2 语义起，用 --text-h3 档位；与设置项之间留分组间距（§4.4、§4.7）。 */
-  h3 {
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
     margin: 0 0 var(--space-6);
     font-size: var(--text-h3);
     line-height: 24px;
@@ -1316,8 +1338,24 @@ const submitFeedbackForm = async () => {
     color: var(--ink-900);
   }
 
+  .section-icon {
+    font-size: var(--text-h3);
+    color: var(--ink-500);
+  }
+
   .form-row:last-child {
     margin-bottom: 0;
+  }
+}
+
+.settings-container--merchant {
+  .settings-section {
+    padding: var(--card-padding-compact);
+    margin-bottom: var(--card-gap-compact);
+
+    h2 {
+      margin-bottom: var(--space-4);
+    }
   }
 }
 
@@ -1361,14 +1399,34 @@ const submitFeedbackForm = async () => {
   margin-left: 0;
 }
 
+.settings-main :deep(.el-button) {
+  border-radius: var(--radius-md);
+}
+
+.settings-main :deep(.el-button--small) {
+  height: var(--control-height-sm);
+}
+
 /* 底部保存区：与分组拉开，仅保留一个实心主按钮（§4.1）。 */
 .settings-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
   margin-top: var(--space-8);
   padding-top: var(--space-6);
   border-top: 1px solid var(--line);
+
+  .el-button--primary {
+    height: var(--control-height-md);
+    min-height: var(--control-height-md);
+  }
+
+  .save-hint {
+    margin-right: auto;
+    font-size: var(--text-body-sm);
+    color: var(--warning);
+  }
 }
 
 .user-avatar {
