@@ -1,35 +1,27 @@
 <template>
   <div class="merchant-audit-container">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>商家审核</h1>
-      <p class="subtitle">审核商家注册申请</p>
-    </div>
+    <AppPageHeader title="商家审核" :compact="true" class="audit-page-header">
+      <template #actions>
+        <el-button type="primary" @click="fetchPendingList">刷新</el-button>
+      </template>
+    </AppPageHeader>
 
     <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-card class="stat-card">
-        <el-statistic title="待审核" :value="stats.pending" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="今日已审核" :value="stats.todayApproved" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="本周通过率" :value="stats.approvalRate" suffix="%" />
-      </el-card>
+    <div class="stats-section">
+      <AppStatCard label="待审核" :value="stats.pending" icon="Clock" />
+      <AppStatCard label="今日已审核" :value="stats.todayApproved" icon="Checked" />
+      <AppStatCard label="本周通过率" :value="stats.approvalRate + '%'" icon="TrendCharts" />
     </div>
 
     <!-- 待审核列表 -->
     <el-card class="table-card" shadow="never">
       <template #header>
-        <div class="card-header">
-          <span>待审核商家列表</span>
-          <el-button type="primary" :icon="Refresh" @click="fetchPendingList">刷新</el-button>
-        </div>
+        <div class="card-header">待审核商家列表</div>
       </template>
 
       <el-table :data="pendingList" v-loading="loading" stripe>
-        <el-table-column prop="merchantId" label="商家ID" width="100" />
+        <el-table-column prop="merchantId" label="商家 ID" width="100" />
         <el-table-column prop="name" label="商家名称" min-width="180" />
         <el-table-column prop="phone" label="联系电话" width="140" />
         <el-table-column prop="address" label="地址" min-width="200" show-overflow-tooltip />
@@ -69,7 +61,7 @@
         <el-descriptions-item label="地址" :span="2">{{ currentMerchant.address }}</el-descriptions-item>
       </el-descriptions>
 
-      <el-form :model="auditForm" label-width="80px" style="margin-top: 20px">
+      <el-form :model="auditForm" label-width="80px" style="margin-top: var(--space-5)">
         <el-form-item label="本次操作">
           <el-tag :type="auditForm.status === 'APPROVED' ? 'success' : 'danger'">
             {{ auditForm.status === 'APPROVED' ? '确认通过' : '确认拒绝' }}
@@ -98,7 +90,9 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+import { Clock, Checked, TrendCharts } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/AppPageHeader.vue'
+import AppStatCard from '@/components/AppStatCard.vue'
 import { getPendingMerchants, auditMerchant } from '../../api/admin'
 
 const loading = ref(false)
@@ -136,7 +130,6 @@ const resetPendingStats = () => {
 const fetchPendingList = async () => {
   loading.value = true
   try {
-    // 调用实际的待审核商家API
     const response = await getPendingMerchants({
       page: pagination.page,
       pageSize: pagination.pageSize
@@ -204,44 +197,34 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '@/assets/css/nordic-theme.less';
+
 .merchant-audit-container {
-  .page-header {
-    margin-bottom: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
+  .audit-page-header {
+    margin-bottom: var(--space-6);
   }
 
-  .stats-cards {
+  .stats-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-
-    .stat-card {
-      text-align: center;
-    }
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
   }
 
   .table-card {
     .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-weight: bold;
+      font-weight: 600;
     }
 
     .pagination-container {
-      margin-top: 20px;
+      margin-top: var(--space-5);
       display: flex;
       justify-content: flex-end;
     }
