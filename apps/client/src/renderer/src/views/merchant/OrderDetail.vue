@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import {
   CircleCheck,
   CircleCheckFilled,
@@ -13,26 +13,38 @@ import {
   User,
   Clock,
   Document,
-  ArrowLeft,
   Refresh,
   Printer,
-  Star
+  Notebook,
+  Money,
+  Coin
 } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { API_CONFIG } from '../../config/index.js'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import StatusTag from '../../components/common/StatusTag.vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 
 const route = useRoute()
-const router = useRouter()
 const loading = ref(false)
 
 // 订单状态映射（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
+// 状态色按 DESIGN-BASELINE §3.1 状态表：待处理=warning、进行中=info、已完成=success、已取消=danger
 const orderStatusMap = {
-  0: { text: '待支付', type: 'info', color: '#909399', icon: '💳' },
-  1: { text: '待接单', type: 'danger', color: '#f56c6c', icon: '⏰' },
-  2: { text: '制作中', type: 'warning', color: '#e6a23c', icon: '🍳' },
-  3: { text: '已完成', type: 'success', color: '#67c23a', icon: '✅' },
-  4: { text: '已取消', type: 'info', color: '#c0c4cc', icon: '❌' }
+  0: { text: '待支付', type: 'warning' },
+  1: { text: '待接单', type: 'warning' },
+  2: { text: '制作中', type: 'info' },
+  3: { text: '已完成', type: 'success' },
+  4: { text: '已取消', type: 'danger' }
+}
+
+// StatusTag 词典键（§3.1、§4.6）；与 02 订单列表同一套映射，保证同一状态跨页同色
+const statusTagKeyMap = {
+  0: 'pendingpayment',
+  1: 'pendingaccept',
+  2: 'preparing',
+  3: 'completed',
+  4: 'cancelled'
 }
 
 // 订单详情数据
@@ -113,7 +125,10 @@ const loadOrderDetail = async () => {
 
     console.log('✨ [订单详情] 订单详情已完整组装:', orderDetail.value)
     console.log('✅ [订单详情] 菜品数量:', orderDetail.value?.orderDishes?.length || 0)
-    console.log('👤 [订单详情] 用户信息:', { user: orderDetail.value.user, phone: orderDetail.value.phone })
+    console.log('👤 [订单详情] 用户信息:', {
+      user: orderDetail.value.user,
+      phone: orderDetail.value.phone
+    })
     console.log('📝 [订单详情] 订单备注:', orderDetail.value.remark)
   } catch (error) {
     console.error('❌ [订单详情] 加载失败:', error)
@@ -174,16 +189,35 @@ const getItemSubtotal = (item) => {
   return (item.price || 0) * (item.quantity || 0)
 }
 
-// 获取状态进度（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
-const getStatusProgress = () => {
-  const status = orderDetail.value.status
-  if (status === 0) return 0    // 待支付
-  if (status === 1) return 1    // 待接单
-  if (status === 2) return 2    // 制作中
-  if (status === 3) return 3    // 已完成
-  if (status === 4) return -1   // 已取消
-  return 0
+// 状态标签词典键（§3.1、§4.6）
+const statusTagKey = computed(() => statusTagKeyMap[orderDetail.value.status] || 'unknown')
+
+// 四步进度节点（§4.6）：节点配色走状态语义色，不新造颜色
+const progressSteps = [
+  { key: 'pending-payment', label: '待支付', icon: Document },
+  { key: 'pending-accept', label: '待接单', icon: Clock },
+  { key: 'preparing', label: '制作中', icon: Goods },
+  { key: 'completed', label: '已完成', icon: CircleCheckFilled }
+]
+
+// 状态 → 进度索引（-1 表示已取消，不表达推进）
+const STATUS_PROGRESS = { 0: 0, 1: 1, 2: 2, 3: 3, 4: -1 }
+
+const progressIndex = computed(() => {
+  const index = STATUS_PROGRESS[orderDetail.value.status]
+  return index === undefined ? 0 : index
+})
+
+// 节点状态：done=成功绿、current=当前状态语义色、todo=中性灰
+const stepState = (index) => {
+  if (progressIndex.value < 0) return 'todo'
+  if (index < progressIndex.value) return 'done'
+  if (index === progressIndex.value) return 'current'
+  return 'todo'
 }
+
+// 连线段：已走过的段与已完成节点同色（评审 P0）
+const isLineDone = (index) => progressIndex.value > index
 
 // 页面加载时获取订单详情
 onMounted(() => {
@@ -193,32 +227,28 @@ onMounted(() => {
 
 <template>
   <div class="order-detail-container">
-    <!-- 头部 -->
-    <div class="detail-header">
-      <div class="header-left">
-        <div class="page-title">
-          <el-icon class="title-icon"><Document /></el-icon>
-          <span>订单详情</span>
-        </div>
-        <div class="order-no">{{ orderDetail.orderNo || '--' }}</div>
-      </div>
-      <div class="header-right">
-        <el-button size="small" :loading="loading" @click="refreshOrder">
+    <!-- 页头：merchant 紧凑版；订单号与标题同行对照，刷新/打印降为次按钮，返回在右侧动作区（§4.1、§4.7） -->
+    <AppPageHeader title="订单详情" :compact="true">
+      <template #extra>
+        <span class="order-no">{{ orderDetail.orderNo || '--' }}</span>
+      </template>
+      <template #actions>
+        <el-button :loading="loading" @click="refreshOrder">
           <el-icon><Refresh /></el-icon>
           <span>刷新</span>
         </el-button>
-        <el-button size="small" @click="printOrder">
+        <el-button @click="printOrder">
           <el-icon><Printer /></el-icon>
           <span>打印</span>
         </el-button>
-        <common-back-button type="default" />
-      </div>
-    </div>
+        <CommonBackButton type="default" />
+      </template>
+    </AppPageHeader>
 
     <div v-loading="loading" class="detail-content">
-      <!-- 订单状态卡片 -->
+      <!-- 状态卡：状态标签与四步进度合并为一张紧凑卡（评审 P1）；已完成=成功绿、进行中=信息蓝（§3.1、§4.6） -->
       <div class="status-card" :class="'status-' + orderDetail.status">
-        <div class="status-header">
+        <div class="status-head">
           <div class="status-info">
             <span class="status-icon">
               <el-icon v-if="orderDetail.status === 0"><Document /></el-icon>
@@ -228,57 +258,36 @@ onMounted(() => {
               <el-icon v-else-if="orderDetail.status === 4"><CircleClose /></el-icon>
               <el-icon v-else><Document /></el-icon>
             </span>
-            <span class="status-text">{{ orderStatusMap[orderDetail.status]?.text }}</span>
+            <StatusTag
+              class="status-text"
+              :status="statusTagKey"
+              :text="orderStatusMap[orderDetail.status]?.text"
+            />
           </div>
           <div class="status-actions">
-            <el-button
-              v-if="orderDetail.status === 1"
-              type="success"
-              size="small"
-              @click="updateOrderStatus(2)"
+            <el-button v-if="orderDetail.status === 1" type="primary" @click="updateOrderStatus(2)"
+              ><el-icon><CircleCheck /></el-icon><span>接单</span></el-button
             >
-              <el-icon><CircleCheck /></el-icon>
-              接单
-            </el-button>
-            <el-button
-              v-if="orderDetail.status === 2"
-              type="primary"
-              size="small"
-              @click="updateOrderStatus(3)"
+            <el-button v-if="orderDetail.status === 2" type="primary" @click="updateOrderStatus(3)"
+              ><el-icon><CircleCheckFilled /></el-icon><span>完成订单</span></el-button
             >
-              <el-icon><CircleCheckFilled /></el-icon>
-              完成订单
-            </el-button>
           </div>
         </div>
+
         <div class="status-progress">
-          <div class="progress-step" :class="{ active: getStatusProgress() >= 0 }">
-            <div class="step-icon">
-              <el-icon><Document /></el-icon>
+          <template v-for="(step, index) in progressSteps" :key="step.key">
+            <div class="progress-step" :class="'is-' + stepState(index)">
+              <span class="step-icon">
+                <el-icon><component :is="step.icon" /></el-icon>
+              </span>
+              <span class="step-text">{{ step.label }}</span>
             </div>
-            <div class="step-text">待支付</div>
-          </div>
-          <div class="progress-line" :class="{ active: getStatusProgress() >= 1 }"></div>
-          <div class="progress-step" :class="{ active: getStatusProgress() >= 1 }">
-            <div class="step-icon">
-              <el-icon><Clock /></el-icon>
-            </div>
-            <div class="step-text">待接单</div>
-          </div>
-          <div class="progress-line" :class="{ active: getStatusProgress() >= 2 }"></div>
-          <div class="progress-step" :class="{ active: getStatusProgress() >= 2 }">
-            <div class="step-icon">
-              <el-icon><Goods /></el-icon>
-            </div>
-            <div class="step-text">制作中</div>
-          </div>
-          <div class="progress-line" :class="{ active: getStatusProgress() >= 3 }"></div>
-          <div class="progress-step" :class="{ active: getStatusProgress() >= 3 }">
-            <div class="step-icon">
-              <el-icon><CircleCheckFilled /></el-icon>
-            </div>
-            <div class="step-text">已完成</div>
-          </div>
+            <div
+              v-if="index < progressSteps.length - 1"
+              class="progress-line"
+              :class="{ 'is-done': isLineDone(index) }"
+            ></div>
+          </template>
         </div>
       </div>
 
@@ -336,7 +345,7 @@ onMounted(() => {
           </div>
           <div class="info-card full-width remark-card">
             <div class="info-label">
-              <span>📝</span>
+              <el-icon><Notebook /></el-icon>
               <span>订单备注</span>
             </div>
             <div class="info-value">{{ orderDetail.remark || '无' }}</div>
@@ -353,10 +362,12 @@ onMounted(() => {
         <div class="info-grid">
           <div v-if="orderDetail.paidAmount" class="info-card">
             <div class="info-label">
-              <span>💰</span>
+              <el-icon><Money /></el-icon>
               <span>已支付金额</span>
             </div>
-            <div class="info-value payment-amount">¥{{ orderDetail.paidAmount?.toFixed(2) || '0.00' }}</div>
+            <div class="info-value payment-amount">
+              ¥{{ orderDetail.paidAmount?.toFixed(2) || '0.00' }}
+            </div>
           </div>
           <div v-if="orderDetail.paymentTime" class="info-card">
             <div class="info-label">
@@ -365,9 +376,16 @@ onMounted(() => {
             </div>
             <div class="info-value">{{ orderDetail.paymentTime || '--' }}</div>
           </div>
-          <div v-if="orderDetail.totalAmount && orderDetail.paidAmount && orderDetail.totalAmount !== orderDetail.paidAmount" class="info-card full-width">
+          <div
+            v-if="
+              orderDetail.totalAmount &&
+              orderDetail.paidAmount &&
+              orderDetail.totalAmount !== orderDetail.paidAmount
+            "
+            class="info-card full-width"
+          >
             <div class="info-label">
-              <span>📊</span>
+              <el-icon><Coin /></el-icon>
               <span>金额差异</span>
             </div>
             <div class="info-value amount-diff">
@@ -381,7 +399,7 @@ onMounted(() => {
       <!-- 订单商品 -->
       <div class="items-section">
         <div class="section-title">
-          <span>🍽️</span>
+          <el-icon><Dish /></el-icon>
           <span>订单商品</span>
         </div>
         <div class="items-list">
@@ -409,573 +427,437 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
+/* 本页颜色、间距、圆角、字阶、动效全部取自 tokens.css 的 CSS 变量（§3、§7.1），无裸色值。 */
 .order-detail-container {
-  padding: 0 20px 20px 20px;
+  box-sizing: border-box;
+  padding: 0 var(--space-6) var(--space-6);
+}
 
-  .detail-header {
+/* 页头动作区控件高度取 --control-height-md（§3.4、§4.7） */
+.order-detail-container :deep(.app-page-header__actions .el-button) {
+  height: var(--control-height-md);
+}
+
+/* 订单号与标题同行对照：等宽数字 + 中性芯片，不再落成小字副标题（评审 P0；§3.2、§4.7） */
+.order-no {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--canvas-sunken);
+  color: var(--ink-500);
+  font-family: var(--font-num);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+  letter-spacing: var(--tracking-wide);
+}
+
+.detail-content {
+  /* 状态卡：状态标签与四步进度同卡，去掉彩色左边框（§4.6、评审 P1） */
+  .status-card {
+    margin-bottom: var(--card-gap-compact);
+    padding: var(--card-padding-compact);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
+  }
+
+  .status-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 24px;
-    background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-    border-radius: 16px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 16px rgba(74, 122, 77, 0.3);
-
-    .header-left {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-
-      .page-title {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 1.714rem;
-        font-weight: 700;
-        color: @merchant-surface;
-        margin: 0;
-
-        .title-icon {
-          font-size: 2rem;
-        }
-      }
-
-      .order-no {
-        font-size: 1rem;
-        color: rgba(255, 255, 255, 0.9);
-        font-family: 'Consolas', 'Monaco', monospace;
-        font-weight: 500;
-      }
-    }
-
-    .header-right {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-
-      :deep(.el-button) {
-        height: 32px;
-        padding: 6px 14px;
-        font-size: 0.929rem;
-        font-weight: 500;
-        white-space: nowrap;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        background: rgba(255, 255, 255, 0.1);
-        color: @merchant-surface;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-        &:hover {
-          background: rgba(255, 255, 255, 0.2);
-          transform: translateY(-1px);
-          box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-        }
-      }
-    }
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
   }
 
-  .detail-content {
-    .status-card {
-      background: @merchant-surface;
-      border-radius: 16px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 12px @merchant-shadow;
-      border: 2px solid @merchant-border;
-      position: relative;
-      overflow: hidden;
-
-      &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        background: @merchant-border;
-        transition: all 0.3s ease;
-      }
-
-      &.status-0::before {
-        background: linear-gradient(180deg, @merchant-text-muted 0%, lighten(@merchant-text-muted, 10%) 100%);
-      }
-      &.status-1::before {
-        background: linear-gradient(180deg, @merchant-error 0%, lighten(@merchant-error, 10%) 100%);
-      }
-      &.status-2::before {
-        background: linear-gradient(180deg, @merchant-status-pending 0%, lighten(@merchant-status-pending, 8%) 100%);
-      }
-      &.status-3::before {
-        background: linear-gradient(180deg, @merchant-success 0%, lighten(@merchant-success, 10%) 100%);
-      }
-      &.status-4::before {
-        background: linear-gradient(180deg, @merchant-status-cancelled 0%, lighten(@merchant-status-cancelled, 8%) 100%);
-      }
-
-      .status-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid @merchant-divider;
-
-        .status-info {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-
-          .status-icon {
-            font-size: 28px;
-            color: @merchant-info;
-          }
-
-          .status-text {
-            font-size: 1.286rem;
-            font-weight: 600;
-            color: @merchant-text;
-          }
-        }
-
-        .status-actions {
-          display: flex;
-          gap: 8px;
-          justify-content: flex-end;
-
-          :deep(.el-button) {
-            height: 32px;
-            padding: 6px 14px;
-            font-size: 0.929rem;
-            font-weight: 500;
-            white-space: nowrap;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 6px;
-
-            &:hover {
-              transform: translateY(-1px);
-              box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-            }
-
-            &.el-button--success {
-              background: linear-gradient(135deg, @merchant-success 0%, lighten(@merchant-success, 8%) 100%);
-              border-color: transparent;
-              box-shadow: 0 2px 6px rgba(90, 143, 94, 0.25);
-
-              &:hover {
-                box-shadow: 0 4px 10px rgba(90, 143, 94, 0.35);
-              }
-            }
-
-            &.el-button--warning {
-              background: linear-gradient(135deg, @merchant-warning 0%, lighten(@merchant-warning, 10%) 100%);
-              border-color: transparent;
-              box-shadow: 0 2px 6px rgba(212, 168, 85, 0.25);
-
-              &:hover {
-                box-shadow: 0 4px 10px rgba(212, 168, 85, 0.35);
-              }
-            }
-
-            &.el-button--primary {
-              background: linear-gradient(135deg, @merchant-info 0%, lighten(@merchant-info, 8%) 100%);
-              border-color: transparent;
-              box-shadow: 0 2px 6px rgba(91, 139, 210, 0.25);
-
-              &:hover {
-                box-shadow: 0 4px 10px rgba(91, 139, 210, 0.35);
-              }
-            }
-          }
-        }
-      }
-
-      .status-progress {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 16px;
-        gap: 4px;
-
-        .progress-step {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 6px;
-          flex: 1;
-          opacity: 0.4;
-          transition: all 0.3s ease;
-          min-width: 0;
-
-          &.active {
-            opacity: 1;
-
-            .step-icon {
-              color: @merchant-info;
-              background: @merchant-primary-light;
-            }
-          }
-
-          .step-icon {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border-radius: 50%;
-            font-size: 18px;
-            color: @merchant-text-muted;
-            transition: all 0.3s ease;
-          }
-
-          .step-text {
-            font-size: 0.786rem;
-            color: @merchant-text-muted;
-            font-weight: 500;
-          }
-        }
-
-        .progress-line {
-          flex: 1;
-          height: 1px;
-          background: @merchant-divider;
-          margin: 0 4px;
-          position: relative;
-          top: -16px;
-          transition: all 0.3s ease;
-
-          &.active {
-            background: @merchant-info;
-          }
-        }
-      }
-    }
-
-    .info-section {
-      background: @merchant-surface;
-      border-radius: 16px;
-      padding: 24px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 12px @merchant-shadow;
-      border: 2px solid @merchant-border;
-
-      .section-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 1.143rem;
-        font-weight: 600;
-        color: @merchant-text;
-        margin-bottom: 20px;
-        padding-bottom: 12px;
-        border-bottom: 2px solid @merchant-divider;
-
-        .el-icon {
-          font-size: 1.286rem;
-          color: @merchant-primary;
-        }
-      }
-
-      .info-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 16px;
-
-        .info-card {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          padding: 16px;
-          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
-          border-radius: 12px;
-          border: 1px solid @merchant-border;
-          transition: all 0.3s ease;
-
-          &:hover {
-            box-shadow: 0 2px 12px @merchant-shadow;
-            transform: translateY(-2px);
-          }
-
-          &.full-width {
-            grid-column: 1 / -1;
-          }
-
-          &.remark-card {
-            background: linear-gradient(135deg, @merchant-warning-light 0%, lighten(@merchant-warning-light, 2%) 100%);
-            border-color: @merchant-warning;
-
-            .info-label span {
-              color: darken(@merchant-warning, 15%);
-            }
-
-            .info-value {
-              color: darken(@merchant-warning, 25%);
-              font-style: italic;
-            }
-          }
-
-          .info-label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.929rem;
-            color: @merchant-text-muted;
-            font-weight: 500;
-
-            .el-icon {
-              font-size: 1rem;
-            }
-          }
-
-          .info-value {
-            font-size: 1.071rem;
-            color: @merchant-text;
-            font-weight: 500;
-
-            &.payment-amount {
-              color: @merchant-success;
-              font-size: 1.286rem;
-              font-weight: 700;
-            }
-
-            &.amount-diff {
-              color: @merchant-status-pending;
-              font-weight: 600;
-
-              .diff-hint {
-                font-size: 0.857rem;
-                color: @merchant-text-muted;
-                font-weight: 400;
-                margin-left: 8px;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    .items-section {
-      background: @merchant-surface;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 2px 12px @merchant-shadow;
-      border: 2px solid @merchant-border;
-
-      .section-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 1.143rem;
-        font-weight: 600;
-        color: @merchant-text;
-        margin-bottom: 20px;
-        padding-bottom: 12px;
-        border-bottom: 2px solid @merchant-divider;
-      }
-
-      .items-list {
-        margin-bottom: 20px;
-
-        .item-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px;
-          margin-bottom: 12px;
-          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
-          border-radius: 12px;
-          border: 1px solid @merchant-border;
-          transition: all 0.3s ease;
-
-          &:last-child {
-            margin-bottom: 0;
-          }
-
-          &:hover {
-            box-shadow: 0 2px 12px @merchant-shadow;
-            transform: translateX(4px);
-          }
-
-          .item-info {
-            flex: 1;
-
-            .item-name {
-              font-size: 1.071rem;
-              font-weight: 600;
-              color: @merchant-text;
-              margin-bottom: 4px;
-            }
-
-            .item-customization {
-              font-size: 0.857rem;
-              color: @merchant-status-pending;
-              font-style: italic;
-            }
-          }
-
-          .item-details {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-
-            .item-price {
-              font-size: 1rem;
-              color: @merchant-text-sec;
-              min-width: 60px;
-              text-align: right;
-            }
-
-            .item-quantity {
-              font-size: 1rem;
-              color: @merchant-text-sec;
-              min-width: 50px;
-              text-align: center;
-            }
-
-            .item-subtotal {
-              font-size: 1.143rem;
-              font-weight: 600;
-              color: @merchant-error;
-              min-width: 80px;
-              text-align: right;
-            }
-          }
-        }
-      }
-
-      .order-total {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        padding: 20px;
-        background: linear-gradient(135deg, @merchant-bg 0%, @merchant-surface 100%);
-        border-radius: 12px;
-        border: 2px solid @merchant-border;
-
-        .total-label {
-          font-size: 1.143rem;
-          color: @merchant-text-sec;
-          margin-right: 16px;
-          font-weight: 500;
-        }
-
-        .total-value {
-          font-size: 2rem;
-          font-weight: 700;
-          color: @merchant-error;
-          font-family: 'Consolas', 'Monaco', monospace;
-        }
-      }
-    }
-  }
-}
-
-// 响应式设计
-@media (max-width: 768px) {
-  .order-detail-container {
-    padding: 12px;
-
-    .detail-header {
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-    }
-
-    .detail-content {
-      .status-card {
-        padding: 16px;
-
-        .status-header {
-          flex-direction: column;
-          gap: 16px;
-          align-items: stretch;
-
-          .status-actions {
-            justify-content: center;
-          }
-        }
-
-        .status-progress {
-          padding: 0 4px;
-          gap: 2px;
-
-          .progress-step {
-            gap: 4px;
-
-            .step-text {
-              font-size: 10px;
-            }
-
-            .step-icon {
-              width: 24px;
-              height: 24px;
-              font-size: 14px;
-            }
-          }
-
-          .progress-line {
-            height: 1px;
-            margin: 0 2px;
-            top: -14px;
-          }
-        }
-      }
-
-      .info-section {
-        padding: 16px;
-
-        .info-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      .items-section {
-        padding: 16px;
-
-        .items-list {
-          .item-row {
-            flex-direction: column;
-            gap: 12px;
-
-            .item-details {
-              width: 100%;
-              justify-content: space-between;
-            }
-          }
-        }
-
-        .order-total {
-          flex-direction: column;
-          gap: 12px;
-          align-items: center;
-          text-align: center;
-
-          .total-value {
-            font-size: 1.714rem;
-          }
-        }
-      }
-    }
-  }
-}
-
-// 打印样式
-@media print {
-  .detail-header {
-    background: @merchant-surface !important;
-    box-shadow: none !important;
+  .status-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
   }
 
-  .header-right {
-    display: none !important;
+  .status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-500);
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  /* 状态语义色（§3.1 状态表）：待支付/待接单=警示、制作中=信息、已完成=成功、已取消=危险 */
+  .status-0 .status-icon,
+  .status-1 .status-icon {
+    color: var(--warning);
+  }
+
+  .status-2 .status-icon {
+    color: var(--info);
+  }
+
+  .status-3 .status-icon {
+    color: var(--success);
+  }
+
+  .status-4 .status-icon {
+    color: var(--danger);
   }
 
   .status-actions {
+    display: flex;
+    flex-shrink: 0;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+
+  /* 接单/完成订单是本页唯一实心主按钮，高度取 --control-height-md（§4.1、§3.4） */
+  .status-actions :deep(.el-button) {
+    height: var(--control-height-md);
+  }
+
+  /* 四步进度：节点与连线段都用状态语义色，不新造颜色（评审 P0；§4.6） */
+  .status-progress {
+    display: flex;
+    align-items: flex-start;
+    padding-top: var(--space-1);
+  }
+
+  .progress-step {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    width: 88px;
+  }
+
+  .step-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--ink-400);
+    font-size: 18px;
+    background: var(--canvas-sunken);
+    border-radius: var(--radius-full);
+    transition:
+      background-color var(--duration-base) var(--ease-standard),
+      color var(--duration-base) var(--ease-standard);
+  }
+
+  .step-text {
+    color: var(--ink-500);
+    font-size: var(--text-body-sm);
+    line-height: 20px;
+    font-weight: var(--weight-medium);
+  }
+
+  .progress-line {
+    flex: 1;
+    height: 2px;
+    margin-top: 15px;
+    background: var(--line);
+    transition: background-color var(--duration-base) var(--ease-standard);
+  }
+
+  .progress-line.is-done {
+    background: var(--success);
+  }
+
+  .progress-step.is-done .step-icon {
+    color: var(--success);
+    background: var(--success-bg);
+  }
+
+  .progress-step.is-done .step-text {
+    color: var(--ink-700);
+  }
+
+  /* 当前节点按当前状态语义色高亮，状态切换走 200ms 过渡（评审 P2；§3.5） */
+  .progress-step.is-current .step-text {
+    color: var(--ink-900);
+    font-weight: var(--weight-semibold);
+  }
+
+  .status-0 .progress-step.is-current .step-icon,
+  .status-1 .progress-step.is-current .step-icon {
+    color: var(--warning);
+    background: var(--warning-bg);
+  }
+
+  .status-2 .progress-step.is-current .step-icon {
+    color: var(--info);
+    background: var(--info-bg);
+  }
+
+  .status-3 .progress-step.is-current .step-icon {
+    color: var(--success);
+    background: var(--success-bg);
+  }
+
+  /* 信息卡与明细卡：L1 微质感，内边距 --card-padding-compact，卡片间距 --card-gap-compact（§3.4、§4.2） */
+  .info-section,
+  .items-section {
+    margin-bottom: var(--card-gap-compact);
+    padding: var(--card-padding-compact);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
+  }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-2);
+    color: var(--ink-900);
+    font-size: var(--text-h3);
+    line-height: 24px;
+    font-weight: var(--weight-semibold);
+    border-bottom: 1px solid var(--line);
+
+    .el-icon {
+      color: var(--brand-500);
+      font-size: 18px;
+    }
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+
+    .info-card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--canvas-sunken);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+
+      &.full-width {
+        grid-column: 1 / -1;
+      }
+
+      .info-label {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        color: var(--ink-500);
+        font-size: var(--text-body-sm);
+        line-height: 20px;
+        font-weight: var(--weight-medium);
+
+        .el-icon {
+          font-size: 16px;
+        }
+      }
+
+      .info-value {
+        color: var(--ink-900);
+        font-size: var(--text-h3);
+        line-height: 24px;
+        font-weight: var(--weight-medium);
+        word-break: break-word;
+      }
+
+      /* 金额不染色，只用中性深色 + 等宽数字（§3.1、§5.2） */
+      .info-value.payment-amount {
+        font-family: var(--font-num);
+        font-weight: var(--weight-semibold);
+      }
+
+      .info-value.amount-diff {
+        color: var(--ink-700);
+        font-family: var(--font-num);
+        font-size: var(--text-body);
+        line-height: 22px;
+      }
+
+      .diff-hint {
+        margin-left: var(--space-2);
+        color: var(--ink-500);
+        font-family: var(--font-sans);
+        font-size: var(--text-caption);
+        font-weight: var(--weight-regular);
+      }
+    }
+  }
+
+  .items-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      background: var(--canvas-sunken);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+
+      .item-info {
+        flex: 1;
+        min-width: 0;
+
+        .item-name {
+          color: var(--ink-900);
+          font-size: var(--text-body);
+          line-height: 22px;
+          font-weight: var(--weight-semibold);
+        }
+
+        .item-customization {
+          margin-top: var(--space-1);
+          color: var(--ink-500);
+          font-size: var(--text-body-sm);
+          line-height: 20px;
+        }
+      }
+
+      .item-details {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        gap: var(--space-4);
+
+        .item-price,
+        .item-quantity {
+          color: var(--ink-500);
+          font-size: var(--text-body);
+        }
+
+        .item-price {
+          min-width: 60px;
+          text-align: right;
+        }
+
+        .item-quantity {
+          min-width: 50px;
+          text-align: center;
+        }
+
+        .item-subtotal {
+          min-width: 80px;
+          color: var(--ink-900);
+          font-family: var(--font-num);
+          font-size: var(--text-h3);
+          font-weight: var(--weight-semibold);
+          text-align: right;
+        }
+      }
+    }
+  }
+
+  .order-total {
+    display: flex;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--canvas-sunken);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+
+    .total-label {
+      color: var(--ink-500);
+      font-size: var(--text-body);
+      font-weight: var(--weight-medium);
+    }
+
+    .total-value {
+      color: var(--ink-900);
+      font-family: var(--font-num);
+      font-size: var(--text-h2);
+      font-weight: var(--weight-semibold);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .order-detail-container {
+    padding: 0 var(--space-4) var(--space-4);
+  }
+
+  .detail-content {
+    .status-head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .status-actions {
+      justify-content: flex-start;
+    }
+
+    .status-progress {
+      .progress-step {
+        width: auto;
+        flex: 1;
+
+        .step-text {
+          font-size: var(--text-caption);
+        }
+
+        .step-icon {
+          width: 28px;
+          height: 28px;
+          font-size: 16px;
+        }
+      }
+
+      .progress-line {
+        margin-top: 13px;
+      }
+    }
+
+    .info-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .items-list .item-row {
+      flex-direction: column;
+      align-items: stretch;
+
+      .item-details {
+        justify-content: space-between;
+      }
+    }
+
+    .order-total {
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-1);
+    }
+  }
+}
+
+/* 打印：隐藏动作区，保留状态与明细信息（§4.7） */
+@media print {
+  .order-detail-container {
+    padding: 0;
+  }
+
+  .status-actions,
+  .order-detail-container :deep(.app-page-header__actions) {
     display: none !important;
+  }
+
+  .status-card,
+  .info-section,
+  .items-section {
+    box-shadow: none !important;
   }
 }
 </style>
