@@ -1,12 +1,13 @@
 <template>
   <div class="wish-list-audit-page">
-    <div class="page-header">
-      <h2>想吃列表审核</h2>
-      <el-button @click="loadItems" :loading="loading">
-        <el-icon><Refresh /></el-icon>
-        刷新
-      </el-button>
-    </div>
+    <AppPageHeader title="想吃列表审核" compact>
+      <template #actions>
+        <el-button class="refresh-action" :loading="loading" @click="loadItems">
+          <el-icon><Refresh /></el-icon>
+          刷新
+        </el-button>
+      </template>
+    </AppPageHeader>
 
     <!-- 审核组件 -->
     <wish-list-audit />
@@ -16,6 +17,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import WishListAudit from '@/components/WishListAudit.vue'
 
 const loading = ref(false)
@@ -33,24 +35,20 @@ onMounted(() => {
 })
 </script>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
+<style scoped>
 .wish-list-audit-page {
-  padding: 20px;
+  box-sizing: border-box;
+  padding: 0 var(--space-6) var(--space-6);
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+.refresh-action {
+  height: var(--control-height-md);
+  border-radius: var(--radius-md);
+}
 
-  h2 {
-    margin: 0;
-    font-size: 1.714rem /* 原值: 24px */;
-    font-weight: 600;
+@media (max-width: 1280px) {
+  .wish-list-audit-page {
+    padding: 0 var(--space-4) var(--space-4);
   }
 }
 </style>
