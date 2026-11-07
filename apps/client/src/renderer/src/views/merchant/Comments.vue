@@ -15,10 +15,14 @@ import {
   Refresh,
   Promotion,
   Ticket,
-  Food,
-  InfoFilled
+  Food
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../store/authStore'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
+import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import StatusTag from '../../components/common/StatusTag.vue'
 import reviewApi from '../../api/review'
 
 const authStore = useAuthStore()
@@ -27,12 +31,6 @@ const authStore = useAuthStore()
 const merchantId = authStore.merchantId
   ? String(authStore.merchantId)
   : localStorage.getItem('auth_merchantId')
-
-// 页面加载时调试信息
-console.log('📋 Comments页面加载')
-console.log('- authStore.merchantId:', authStore.merchantId, '(类型:', typeof authStore.merchantId, ')')
-console.log('- localStorage.auth_merchantId:', localStorage.getItem('auth_merchantId'))
-console.log('- 最终使用的merchantId:', merchantId, '(类型:', typeof merchantId, ')')
 
 // 快捷回复模板
 const quickReplies = ref([
@@ -62,36 +60,6 @@ const filterRatingOptions = [
   { label: '2星', value: '2' },
   { label: '1星', value: '1' }
 ]
-
-// 获取评分对应的颜色
-const getRatingColor = (rating) => {
-  const colors = {
-    5: '#67C23A',
-    4: '#95d475',
-    3: '#E6A23C',
-    2: '#F56C6C',
-    1: '#f78989'
-  }
-  return colors[rating] || '@merchant-text-muted'
-}
-
-// 评价评分对应文本
-const ratingTextMap = {
-  5: '✨ 非常满意',
-  4: '👍 满意',
-  3: '😐 一般',
-  2: '👎 不满意',
-  1: '💢 非常不满意'
-}
-
-// 评价标签样式
-const ratingTagTypeMap = {
-  5: 'success',
-  4: 'success',
-  3: 'warning',
-  2: 'danger',
-  1: 'danger'
-}
 
 // 评价数据
 const comments = ref([])
@@ -130,6 +98,21 @@ const replyRate = computed(() => {
   return ((commentsStats.value.repliedCount / commentsStats.value.total) * 100).toFixed(1)
 })
 
+// 评分柱宽度：无数据时为 0，首帧到实值之间由 CSS transition 形成生长动效（§3.5）
+const ratingPercent = (rating) => {
+  const { total, ratingCounts } = commentsStats.value
+  if (!total) return '0%'
+  return `${((ratingCounts[rating] || 0) / total) * 100}%`
+}
+
+// 清空全部筛选条件（空状态的替代动作，§4.5）
+const clearFilters = () => {
+  activeStatusFilter.value = 'all'
+  activeRatingFilter.value = 'all'
+  searchKeyword.value = ''
+  updateFilter()
+}
+
 // 加载评价列表
 const loadComments = async () => {
   if (!merchantId) {
@@ -148,26 +131,10 @@ const loadComments = async () => {
       params.keyword = searchKeyword.value
     }
 
-    // 调试信息
-    console.log('🔍 调试信息:')
-    console.log('- merchantId类型:', typeof merchantId)
-    console.log('- merchantId值:', merchantId)
-    console.log('- merchantId === 7638432224340229:', merchantId === 7638432224340229)
-    console.log('- merchantId === "7638432224340229":', merchantId === '7638432224340229')
-    console.log('- String(merchantId):', String(merchantId))
-    console.log('- 请求参数:', params)
-
     const response = await reviewApi.getMerchantReviews(merchantId, params)
-    console.log('- API返回完整响应:', response)
-    console.log('- response.data:', response.data)
-    console.log('- response.status:', response.status)
 
     // 后端返回的数据在 response.data 中
     if (response.data) {
-      console.log('- response.data.success:', response.data.success)
-      console.log('- response.data.data:', response.data.data)
-      console.log('- 评价列表长度:', response.data.data?.length || 0)
-
       if (response.data.success) {
         comments.value = response.data.data || []
         // 对每个评论的回复按时间升序排序（早的在上，新的在下）
@@ -221,7 +188,6 @@ const loadStatistics = async () => {
     const response = await reviewApi.getMerchantStatistics(merchantId)
     if (response.data && response.data.success) {
       commentsStats.value = response.data.data
-      console.log('评价统计数据:', response.data.data)
     }
   } catch (error) {
     console.error('加载评价统计失败:', error)
@@ -314,354 +280,241 @@ onMounted(() => {
 
 <template>
   <div class="merchant-comments-container">
-    <!-- 页面标题 -->
-    <div class="comments-header">
-      <div class="header-left">
-        <h3 class="page-title">
-          <el-icon class="title-icon"><ChatLineRound /></el-icon>
-          评价中心
-        </h3>
+    <!-- 页头：merchant 紧凑版，「返回」「刷新」收右侧动作区且均为次级（§4.1、§4.7） -->
+    <AppPageHeader title="评价中心" subtitle="查看评分表现并回复用户评价" compact>
+      <template #actions>
+        <CommonBackButton type="default" />
+        <el-button :loading="loading" :icon="Refresh" @click="refreshData">刷新</el-button>
+      </template>
+    </AppPageHeader>
+
+    <!-- KPI：4 卡闭合等宽，图标统一品牌浅底线性图标，数值统一中性色（§4.8、§5.6） -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-icon"><el-icon><Star /></el-icon></div>
+        <div class="stat-value">{{ commentsStats.avgRating.toFixed(1) }}</div>
+        <div class="stat-label">平均评分</div>
       </div>
-      <div class="header-right">
-        <el-button type="primary" :loading="loading" @click="refreshData" :icon="Refresh">
-          刷新数据
-        </el-button>
+      <div class="stat-card">
+        <div class="stat-icon"><el-icon><TrendCharts /></el-icon></div>
+        <div class="stat-value">{{ commentsStats.total }}</div>
+        <div class="stat-label">总评价数</div>
       </div>
-    </div>
-
-    <!-- 评价统计概览 -->
-    <div class="overview-section">
-      <el-row :gutter="20">
-        <el-col :span="6">
-          <div class="stat-card stat-card-primary">
-            <div class="stat-row-first">
-              <div class="stat-icon">
-                <el-icon><Star /></el-icon>
-              </div>
-              <div class="stat-value">{{ commentsStats.avgRating.toFixed(1) }}</div>
-            </div>
-            <div class="stat-label">平均评分</div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card stat-card-success">
-            <div class="stat-row-first">
-              <div class="stat-icon">
-                <el-icon><TrendCharts /></el-icon>
-              </div>
-              <div class="stat-value">{{ commentsStats.total }}</div>
-            </div>
-            <div class="stat-label">总评价数</div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card stat-card-info">
-            <div class="stat-row-first">
-              <div class="stat-icon">
-                <el-icon><Check /></el-icon>
-              </div>
-              <div class="stat-value">{{ commentsStats.repliedCount }}</div>
-            </div>
-            <div class="stat-label">已回复 ({{ replyRate }}%)</div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card stat-card-warning">
-            <div class="stat-row-first">
-              <div class="stat-icon">
-                <el-icon><Clock /></el-icon>
-              </div>
-              <div class="stat-value">{{ commentsStats.unrepliedCount }}</div>
-            </div>
-            <div class="stat-label">待回复</div>
-          </div>
-        </el-col>
-      </el-row>
-
-      <!-- 评分分布和好评率 -->
-      <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="16">
-          <div class="overview-card">
-            <div class="overview-header">
-              <h4 class="overview-title">
-                <el-icon><TrendCharts /></el-icon>
-                评分分布
-              </h4>
-            </div>
-            <div class="overview-content">
-              <div class="rating-bars">
-                <div v-for="rating in [5, 4, 3, 2, 1]" :key="rating" class="rating-bar-item">
-                  <div class="rating-label">
-                    <span class="rating-text">{{ rating }}星</span>
-                  </div>
-                  <el-progress
-                    :percentage="
-                      (commentsStats.ratingCounts[rating] / commentsStats.total) * 100 || 0
-                    "
-                    :stroke-width="12"
-                    :color="getRatingColor(rating)"
-                    :show-text="false"
-                  />
-                  <div class="rating-count">{{ commentsStats.ratingCounts[rating] }}</div>
-                </div>
-              </div>
-              <div class="rating-note">
-                <el-icon><InfoFilled /></el-icon>
-                <span>半星评分已向上取整统计</span>
-              </div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="overview-card">
-            <div class="overview-header">
-              <h4 class="overview-title">
-                <el-icon><TrendCharts /></el-icon>
-                数据概览
-              </h4>
-            </div>
-            <div class="overview-content">
-              <div class="overview-stats">
-                <div class="overview-stat-item">
-                  <span class="stat-item-label">好评率</span>
-                  <span class="stat-item-value stat-item-success">{{ positiveRate }}%</span>
-                </div>
-                <div class="overview-stat-item">
-                  <span class="stat-item-label">回复率</span>
-                  <span class="stat-item-value stat-item-primary">{{ replyRate }}%</span>
-                </div>
-                <div class="overview-stat-item">
-                  <span class="stat-item-label">平均评分</span>
-                  <span class="stat-item-value stat-item-warning">
-                    {{ commentsStats.avgRating.toFixed(1) }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-col>
-      </el-row>
-    </div>
-
-    <!-- 评价筛选和搜索 -->
-    <div class="filter-section">
-      <div class="filter-group">
-        <div class="filter-row">
-          <div class="filter-item">
-            <div class="filter-label">
-              <el-icon><Check /></el-icon>
-              状态筛选
-            </div>
-            <el-tag
-              v-for="status in filterStatusOptions"
-              :key="status.value"
-              :type="activeStatusFilter === status.value ? 'primary' : 'info'"
-              effect="plain"
-              @click="
-                () => {
-                  activeStatusFilter = status.value
-                  updateFilter()
-                }
-              "
-              class="filter-tag"
-            >
-              {{ status.label }}
-            </el-tag>
-          </div>
-          <div class="filter-item">
-            <div class="filter-label">
-              <el-icon><Star /></el-icon>
-              评分筛选
-            </div>
-            <el-tag
-              v-for="rating in filterRatingOptions"
-              :key="rating.value"
-              :type="activeRatingFilter === rating.value ? 'primary' : 'info'"
-              effect="plain"
-              @click="
-                () => {
-                  activeRatingFilter = rating.value
-                  updateFilter()
-                }
-              "
-              class="filter-tag"
-            >
-              {{ rating.label }}
-            </el-tag>
-          </div>
-          <div class="filter-item search-item">
-            <el-input
-              v-model="searchKeyword"
-              placeholder="搜索订单号/用户名称/菜品名称..."
-              clearable
-              @input="updateFilter"
-              class="search-input"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
-          </div>
-        </div>
+      <div class="stat-card">
+        <div class="stat-icon"><el-icon><Check /></el-icon></div>
+        <div class="stat-value">{{ commentsStats.repliedCount }}</div>
+        <div class="stat-label">已回复 ({{ replyRate }}%)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><el-icon><Clock /></el-icon></div>
+        <div class="stat-value">{{ commentsStats.unrepliedCount }}</div>
+        <div class="stat-label">待回复</div>
       </div>
     </div>
 
-    <!-- 评价列表 -->
-    <div class="comments-section">
-      <el-card class="comments-card">
-        <template #header>
-          <div class="comments-list-header">
-            <div class="header-title">
-              <el-icon><ChatLineRound /></el-icon>
-              <span>用户评价列表</span>
-            </div>
-            <div class="header-actions">
-              <el-tag type="info" size="small">
-                共 {{ filteredComments.length }} 条评价
-              </el-tag>
-            </div>
-          </div>
-        </template>
-
-        <div class="comments-list" v-loading="loading">
-          <div
-            v-for="(comment, index) in filteredComments"
-            :key="comment.id"
-            class="comment-item"
-            :style="{ animationDelay: `${index * 0.05}s` }"
+    <!-- 筛选工具条：状态 / 评分 chip + 搜索 + 结果数，规范取 Orders 页同款 chip（§3.3、§4.3） -->
+    <AppCard class="toolbar-card" padding="md">
+      <div class="toolbar">
+        <div class="filter-group">
+          <span class="filter-label">状态</span>
+          <button
+            v-for="status in filterStatusOptions"
+            :key="status.value"
+            type="button"
+            class="filter-chip"
+            :class="{ 'is-active': activeStatusFilter === status.value }"
+            @click="
+              () => {
+                activeStatusFilter = status.value
+                updateFilter()
+              }
+            "
           >
-            <div class="comment-header">
-              <div class="user-info">
-                <div class="user-avatar">
-                  <el-avatar :size="48">{{ comment.userName.charAt(0) }}</el-avatar>
-                </div>
-                <div class="user-details">
-                  <div class="user-name">{{ comment.userName }}</div>
-                  <div class="order-info">
-                    <span class="order-no">
-                      <el-icon><Ticket /></el-icon>
-                      {{ comment.orderNo }}
-                    </span>
-                    <span class="time">
-                      <el-icon><Clock /></el-icon>
-                      {{ comment.time }}
-                    </span>
-                  </div>
-                </div>
-              </div>
+            {{ status.label }}
+          </button>
+        </div>
 
-              <div class="rating-info">
-                <el-rate :model-value="comment.rating" disabled show-score />
-                <el-tag
-                  v-if="comment.status === 'unreplied'"
-                  type="warning"
-                  size="small"
-                  effect="plain"
-                >
-                  待回复
-                </el-tag>
-                <el-tag v-else type="success" size="small" effect="plain">
-                  已回复
-                </el-tag>
-              </div>
-            </div>
+        <div class="filter-group">
+          <span class="filter-label">评分</span>
+          <button
+            v-for="rating in filterRatingOptions"
+            :key="rating.value"
+            type="button"
+            class="filter-chip"
+            :class="{ 'is-active': activeRatingFilter === rating.value }"
+            @click="
+              () => {
+                activeRatingFilter = rating.value
+                updateFilter()
+              }
+            "
+          >
+            {{ rating.label }}
+          </button>
+        </div>
 
-            <div class="comment-content">
-              <div class="comment-dishes">
-                <span class="dish-label">
-                  <el-icon><Food /></el-icon>
-                  菜品：
+        <div class="toolbar-right">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索订单号/用户名称/菜品名称"
+            clearable
+            size="small"
+            class="search-input"
+            @input="updateFilter"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          <span class="result-count">共 <strong>{{ filteredComments.length }}</strong> 条评价</span>
+        </div>
+      </div>
+    </AppCard>
+
+    <!-- 评价列表：主角，位于 KPI 之后、首屏可见（§4.8 统计卡不抢首屏） -->
+    <div class="comments-list" v-loading="loading">
+      <article
+        v-for="(comment, index) in filteredComments"
+        :key="comment.id"
+        class="comment-item"
+        :style="{ animationDelay: `${Math.min(index, 8) * 0.05}s` }"
+      >
+        <header class="comment-header">
+          <div class="user-info">
+            <el-avatar :size="40" class="user-avatar">{{ comment.userName.charAt(0) }}</el-avatar>
+            <div class="user-details">
+              <span class="user-name">{{ comment.userName }}</span>
+              <div class="order-info">
+                <span class="order-no">
+                  <el-icon><Ticket /></el-icon>
+                  {{ comment.orderNo }}
                 </span>
-                <el-tag
-                  v-for="dish in comment.dishes"
-                  :key="dish"
-                  size="small"
-                  type="info"
-                  effect="plain"
-                  class="dish-tag"
-                >
-                  {{ dish }}
-                </el-tag>
+                <span class="time">
+                  <el-icon><Clock /></el-icon>
+                  {{ comment.time }}
+                </span>
               </div>
-
-              <div class="comment-text">
-                <div class="comment-label">
-                  <el-icon><ChatLineRound /></el-icon>
-                  用户评价
-                </div>
-                <div class="comment-value">{{ comment.content }}</div>
-              </div>
-
-              <!-- 所有回复（商家回复 + 用户追评混合，按时间排序） -->
-              <div v-if="comment.replies && comment.replies.length > 0">
-                <div class="all-replies">
-                  <div
-                    v-for="(reply, index) in isReplyExpanded[comment.id]
-                      ? comment.replies
-                      : comment.replies.slice(0, 3)"
-                    :key="reply.id || index"
-                    class="comment-reply"
-                    :class="reply.isMerchant ? '' : 'comment-reply-followup'"
-                  >
-                    <div class="reply-label">
-                      <el-icon><ChatDotRound /></el-icon>
-                      <span>{{ reply.isMerchant ? '商家回复' : '追评' }}</span>
-                      <span class="reply-time">({{ reply.time }})</span>
-                    </div>
-                    <div class="reply-value">{{ reply.content }}</div>
-                  </div>
-                  <div
-                    v-if="comment.replies.length > 3"
-                    class="reply-expand-btn"
-                    @click="isReplyExpanded[comment.id] = !isReplyExpanded[comment.id]"
-                  >
-                    <span class="btn-text">{{
-                      isReplyExpanded[comment.id]
-                        ? '收起'
-                        : `查看所有 ${comment.replies.length} 条回复`
-                    }}</span>
-                    <el-icon class="arrow-icon">
-                      <ArrowDown v-if="!isReplyExpanded[comment.id]" />
-                      <ArrowUp v-else />
-                    </el-icon>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="comment-actions">
-              <el-button type="primary" size="default" @click="openReplyDialog(comment)">
-                <el-icon><Edit /></el-icon>
-                {{ comment.status === 'unreplied' ? '回复评价' : '追加回复' }}
-              </el-button>
             </div>
           </div>
 
-          <!-- 空数据提示 -->
-          <div v-if="filteredComments.length === 0 && !loading" class="empty-comments">
-            <el-empty
-              :image-size="120"
-              description="暂无评价数据"
+          <div class="rating-info">
+            <el-rate :model-value="comment.rating" disabled show-score />
+            <StatusTag :status="comment.status" size="sm" />
+          </div>
+        </header>
+
+        <div class="comment-body">
+          <div v-if="comment.dishes && comment.dishes.length" class="comment-dishes">
+            <span class="dish-label"><el-icon><Food /></el-icon>菜品</span>
+            <el-tag
+              v-for="dish in comment.dishes"
+              :key="dish"
+              size="small"
+              type="info"
+              effect="plain"
+              class="dish-tag"
             >
-              <el-button
-                type="primary"
-                @click="
-                  () => {
-                    activeStatusFilter = 'all'
-                    activeRatingFilter = 'all'
-                    searchKeyword = ''
-                    updateFilter()
-                  }
-                "
-              >
-                <el-icon><Refresh /></el-icon>
-                清除筛选条件
-              </el-button>
-            </el-empty>
+              {{ dish }}
+            </el-tag>
+          </div>
+
+          <div class="comment-text">
+            <div class="comment-label">
+              <el-icon><ChatLineRound /></el-icon>
+              用户评价
+            </div>
+            <p class="comment-value">{{ comment.content }}</p>
+          </div>
+
+          <!-- 所有回复（商家回复 + 用户追评混合，按时间排序） -->
+          <div v-if="comment.replies && comment.replies.length > 0" class="comment-replies">
+            <div
+              v-for="(reply, replyIndex) in isReplyExpanded[comment.id]
+                ? comment.replies
+                : comment.replies.slice(0, 3)"
+              :key="reply.id || replyIndex"
+              class="comment-reply"
+              :class="{ 'comment-reply--followup': !reply.isMerchant }"
+            >
+              <div class="reply-label">
+                <el-icon><ChatDotRound /></el-icon>
+                <span>{{ reply.isMerchant ? '商家回复' : '追评' }}</span>
+                <span class="reply-time">（{{ reply.time }}）</span>
+              </div>
+              <p class="reply-value">{{ reply.content }}</p>
+            </div>
+
+            <button
+              v-if="comment.replies.length > 3"
+              type="button"
+              class="reply-expand"
+              @click="isReplyExpanded[comment.id] = !isReplyExpanded[comment.id]"
+            >
+              <span>{{
+                isReplyExpanded[comment.id] ? '收起' : `查看全部 ${comment.replies.length} 条回复`
+              }}</span>
+              <el-icon>
+                <ArrowUp v-if="isReplyExpanded[comment.id]" />
+                <ArrowDown v-else />
+              </el-icon>
+            </button>
           </div>
         </div>
-      </el-card>
+
+        <footer class="comment-actions">
+          <el-button type="primary" link :icon="Edit" @click="openReplyDialog(comment)">
+            {{ comment.status === 'unreplied' ? '回复评价' : '追加回复' }}
+          </el-button>
+        </footer>
+      </article>
+
+      <!-- 空状态：中文说明 + 替代动作（§4.5） -->
+      <AppEmptyState
+        v-if="filteredComments.length === 0 && !loading"
+        description="当前筛选条件下没有评价，清除筛选可查看全部"
+        action-text="清除筛选条件"
+        @action="clearFilters"
+      />
     </div>
+
+    <!-- 分析卡：评分分布 + 数据概览合并为一张（P1），柱色按星级取语义色阶（§3.1、§5.3） -->
+    <AppCard class="overview-section" padding="md">
+      <header class="analysis-header">
+        <h2 class="analysis-title">评分分析</h2>
+      </header>
+
+      <div class="analysis-body">
+        <div class="rating-bars">
+          <div v-for="rating in [5, 4, 3, 2, 1]" :key="rating" class="rating-bar-item">
+            <span class="rating-label">{{ rating }}星</span>
+            <div class="rating-track">
+              <div
+                class="rating-fill"
+                :class="`rating-fill--${rating}`"
+                :style="{ width: ratingPercent(rating) }"
+              ></div>
+            </div>
+            <span class="rating-count">{{ commentsStats.ratingCounts[rating] }}</span>
+          </div>
+          <p class="rating-note">半星评分已向上取整统计</p>
+        </div>
+
+        <dl class="overview-stats">
+          <div class="overview-stat-item">
+            <dt class="stat-item-label">好评率</dt>
+            <dd class="stat-item-value">{{ positiveRate }}%</dd>
+          </div>
+          <div class="overview-stat-item">
+            <dt class="stat-item-label">回复率</dt>
+            <dd class="stat-item-value">{{ replyRate }}%</dd>
+          </div>
+          <div class="overview-stat-item">
+            <dt class="stat-item-label">平均评分</dt>
+            <dd class="stat-item-value">{{ commentsStats.avgRating.toFixed(1) }}</dd>
+          </div>
+        </dl>
+      </div>
+    </AppCard>
 
     <!-- 回复对话框 -->
     <el-dialog
@@ -673,7 +526,7 @@ onMounted(() => {
       <div class="dialog-content">
         <!-- 快捷回复 -->
         <div class="quick-replies">
-          <div class="quick-replies-label">快捷回复：</div>
+          <div class="quick-replies-label">快捷回复</div>
           <div class="quick-replies-list">
             <el-tag
               v-for="(reply, index) in quickReplies"
@@ -700,9 +553,8 @@ onMounted(() => {
 
       <template #footer>
         <div class="dialog-footer">
-          <el-button @click="showReplyDialog = false" size="default">取消</el-button>
-          <el-button type="primary" :loading="submitLoading" @click="submitReply" size="default">
-            <el-icon><Promotion /></el-icon>
+          <el-button @click="showReplyDialog = false">取消</el-button>
+          <el-button type="primary" :loading="submitLoading" :icon="Promotion" @click="submitReply">
             提交回复
           </el-button>
         </div>
@@ -711,817 +563,528 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
+<style scoped>
+/* 本页颜色、间距、圆角、字阶、动效全部取自 tokens.css 的 CSS 变量（§3、§7.1），无裸色值。 */
 .merchant-comments-container {
-  padding: 20px;
-  background: @merchant-bg;
-  min-height: 100vh;
-
-  // 页面头部
-  .comments-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding: 20px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-
-    .page-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 1.714rem;
-      font-weight: 600;
-      margin: 0;
-      color: @merchant-text;
-
-      .title-icon {
-        font-size: 2rem;
-        color: @merchant-info;
-      }
-    }
-
-    .header-right {
-      :deep(.el-button) {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 10px 20px;
-        font-size: 0.929rem;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: all 0.3s ease;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-        }
-      }
-    }
-  }
-
-  // 概览卡片
-  .overview-section {
-    margin-bottom: 20px;
-
-    // 统计卡片样式
-    .stat-card {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      padding: 20px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s ease;
-      cursor: default;
-      min-height: 120px;
-
-      &:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-      }
-
-      // 第一行：图标 + 数值
-      .stat-row-first {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex: 1;
-
-        .stat-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 48px;
-          height: 48px;
-          border-radius: 10px;
-          font-size: 1.5rem;
-          color: white;
-          flex-shrink: 0;
-        }
-
-        .stat-value {
-          font-size: 2rem;
-          font-weight: 700;
-          color: @merchant-text;
-          line-height: 1;
-          flex: 1;
-        }
-      }
-
-      // 第二行：描述
-      .stat-label {
-        font-size: 0.929rem;
-        color: @merchant-text-muted;
-        text-align: center;
-      }
-
-      &.stat-card-primary {
-        .stat-icon {
-          background: linear-gradient(135deg, @merchant-secondary 0%, @merchant-secondary 100%);
-        }
-        .stat-value {
-          background: linear-gradient(135deg, @merchant-secondary 0%, @merchant-secondary 100%);
-          background-clip: text;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-      }
-
-      &.stat-card-success {
-        .stat-icon {
-          background: linear-gradient(135deg, @merchant-success-light 0%, lighten(@merchant-success-light, 5%) 100%);
-        }
-        .stat-value {
-          color: @merchant-success;
-        }
-      }
-
-      &.stat-card-info {
-        .stat-icon {
-          background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 5%) 100%);
-        }
-        .stat-value {
-          color: @merchant-info;
-        }
-      }
-
-      &.stat-card-warning {
-        .stat-icon {
-          background: linear-gradient(135deg, @merchant-warning-light 0%, lighten(@merchant-warning-light, 5%) 100%);
-        }
-        .stat-value {
-          color: @merchant-warning;
-        }
-      }
-    }
-
-    .overview-card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      overflow: hidden;
-      transition: all 0.3s ease;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-
-      &:hover {
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-      }
-
-      .overview-header {
-        padding: 20px;
-        border-bottom: 1px solid @merchant-border;
-        background: @merchant-surface-alt;
-
-        .overview-title {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin: 0;
-          font-size: 1.143rem;
-          font-weight: 600;
-          color: @merchant-text;
-
-          .el-icon {
-            font-size: 1.286rem;
-            color: @merchant-info;
-          }
-        }
-      }
-
-      .overview-content {
-        padding: 24px;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-
-        .overview-stats {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-
-          .overview-stat-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: @merchant-surface-alt;
-            border-radius: 8px;
-
-            .stat-item-label {
-              font-size: 1rem;
-              color: @merchant-text-sec;
-              font-weight: 500;
-            }
-
-            .stat-item-value {
-              font-size: 1.286rem;
-              font-weight: 700;
-
-              &.stat-item-success {
-                color: @merchant-success;
-              }
-
-              &.stat-item-primary {
-                color: @merchant-info;
-              }
-
-              &.stat-item-warning {
-                color: @merchant-warning;
-              }
-            }
-          }
-        }
-
-        .rating-bars {
-          .rating-bar-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 16px;
-
-            &:last-child {
-              margin-bottom: 0;
-            }
-
-            .rating-label {
-              width: 80px;
-              flex-shrink: 0;
-              display: flex;
-              align-items: center;
-              gap: 4px;
-
-              .rating-text {
-                font-size: 1rem;
-                font-weight: 600;
-                color: @merchant-text-sec;
-              }
-
-              :deep(.el-rate) {
-                .el-rate__icon {
-                  font-size: 18px;
-                }
-              }
-            }
-
-            :deep(.el-progress) {
-              flex: 1;
-              margin: 0 16px;
-
-              .el-progress-bar__outer {
-                border-radius: 6px;
-                background-color: @merchant-surface-alt;
-              }
-
-              .el-progress-bar__inner {
-                border-radius: 6px;
-                transition: all 0.3s ease;
-              }
-            }
-
-            .rating-count {
-              width: 40px;
-              text-align: right;
-              font-size: 1rem;
-              font-weight: 600;
-              color: @merchant-text;
-            }
-          }
-        }
-
-        .rating-note {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-top: 20px;
-          padding: 10px 14px;
-          background: @merchant-info-light;
-          border-left: 3px solid @merchant-info;
-          border-radius: 4px;
-          font-size: 0.857rem;
-          color: @merchant-text-sec;
-
-          .el-icon {
-            color: @merchant-info;
-            font-size: 1rem;
-          }
-        }
-      }
-    }
-  }
-
-  // 筛选区域
-  .filter-section {
-    margin-bottom: 20px;
-
-    .filter-group {
-      padding: 20px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-
-      .filter-row {
-        display: flex;
-        flex-direction: row;
-        gap: 24px;
-        align-items: center;
-        flex-wrap: wrap;
-
-        .filter-item {
-          display: flex;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 12px;
-
-          .filter-label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 600;
-            font-size: 1rem;
-            color: @merchant-text;
-            white-space: nowrap;
-
-            .el-icon {
-              color: @merchant-info;
-            }
-          }
-
-          .filter-tag {
-            cursor: pointer;
-            transition: all 0.3s ease;
-            padding: 8px 16px;
-            font-size: 0.929rem;
-
-            &:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
-            }
-          }
-        }
-
-        .search-item {
-          flex: 1;
-          min-width: 280px;
-          margin-left: auto;
-
-          .search-input {
-            :deep(.el-input__wrapper) {
-              border-radius: 24px;
-              padding: 8px 16px;
-              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-              transition: all 0.3s ease;
-
-              &:hover,
-              &.is-focus {
-                box-shadow: 0 4px 16px rgba(64, 158, 255, 0.15);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 评价列表区域
-  .comments-section {
-    .comments-card {
-      border-radius: 12px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-
-      :deep(.el-card__header) {
-        background: @merchant-surface-alt;
-        border-bottom: 1px solid @merchant-border;
-        padding: 16px 24px;
-
-        .comments-list-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-
-          .header-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1.143rem;
-            font-weight: 600;
-            color: @merchant-text;
-
-            .el-icon {
-              color: @merchant-info;
-              font-size: 1.286rem;
-            }
-          }
-        }
-      }
-
-      .comments-list {
-        padding: 16px;
-
-        .comment-item {
-          padding: 24px;
-          border: 1px solid @merchant-border;
-          border-radius: 12px;
-          margin-bottom: 16px;
-          background: white;
-          transition: all 0.3s ease;
-          animation: slideInUp 0.5s ease-out forwards;
-          opacity: 0;
-
-          &:last-child {
-            margin-bottom: 0;
-          }
-
-          &:hover {
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            transform: translateY(-3px);
-            border-color: @merchant-info;
-          }
-
-          .comment-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-
-            .user-info {
-              display: flex;
-              gap: 16px;
-
-              .user-avatar {
-                :deep(.el-avatar) {
-                  background: linear-gradient(135deg, @merchant-secondary 0%, @merchant-secondary 100%);
-                  font-weight: 600;
-                  font-size: 1.286rem;
-                }
-              }
-
-              .user-details {
-                .user-name {
-                  font-weight: 600;
-                  font-size: 1.143rem;
-                  margin-bottom: 8px;
-                  color: @merchant-text;
-                }
-
-                .order-info {
-                  display: flex;
-                  gap: 20px;
-                  font-size: 0.857rem;
-                  color: @merchant-text-muted;
-
-                  .order-no,
-                  .time {
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-
-                    .el-icon {
-                      font-size: 1rem;
-                    }
-                  }
-                }
-              }
-            }
-
-            .rating-info {
-              display: flex;
-              flex-direction: column;
-              align-items: flex-end;
-              gap: 8px;
-
-              :deep(.el-rate) {
-                .el-rate__icon {
-                  font-size: 20px;
-                }
-              }
-            }
-          }
-
-          .comment-content {
-            margin-bottom: 16px;
-
-            .comment-dishes {
-              display: flex;
-              align-items: center;
-              flex-wrap: wrap;
-              gap: 10px;
-              margin-bottom: 16px;
-              padding: 12px;
-              background: @merchant-surface-alt;
-              border-radius: 8px;
-
-              .dish-label {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-weight: 600;
-                font-size: 1rem;
-                color: @merchant-text;
-
-                .el-icon {
-                  color: @merchant-warning;
-                }
-              }
-
-              .dish-tag {
-                margin: 2px 0;
-                border-radius: 6px;
-              }
-            }
-
-            .comment-text,
-            .comment-reply {
-              margin-bottom: 16px;
-
-              .comment-label,
-              .reply-label {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-weight: 600;
-                font-size: 1rem;
-                margin-bottom: 10px;
-                color: @merchant-text;
-
-                .el-icon {
-                  color: @merchant-info;
-                }
-              }
-
-              .comment-value,
-              .reply-value {
-                font-size: 1rem;
-                color: @merchant-text;
-                line-height: 1.8;
-                padding: 16px;
-                border-radius: 8px;
-                transition: all 0.3s ease;
-              }
-
-              .comment-value {
-                background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-border 100%);
-                border-left: 4px solid @merchant-info;
-              }
-
-              .reply-value {
-                background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 5%) 100%);
-                color: @merchant-info;
-                border-left: 4px solid @merchant-info;
-              }
-            }
-
-            // 商家回复样式（蓝色系 - 专业商务）
-            .comment-reply {
-              .reply-label {
-                .el-icon {
-                  color: @merchant-info;
-                }
-              }
-
-              .reply-value {
-                background: linear-gradient(135deg, @merchant-info-light 0%, lighten(@merchant-info-light, 5%) 100%);
-                color: @merchant-info;
-                border-left: 4px solid @merchant-info;
-              }
-            }
-
-            // 用户追评样式（橙色系 - 醒目突出）
-            .comment-reply-followup {
-              margin-top: 16px;
-              margin-bottom: 16px;
-
-              .reply-label {
-                .el-icon {
-                  color: @merchant-warning;
-                }
-                color: @merchant-warning;
-              }
-
-              .reply-value {
-                background: linear-gradient(135deg, @merchant-warning-light 0%, lighten(@merchant-warning-light, 5%) 100%);
-                color: @merchant-secondary;
-                border-left: 4px solid @merchant-warning;
-              }
-            }
-
-            .reply-expand-btn {
-              display: inline-flex;
-              align-items: center;
-              gap: 6px;
-              padding: 8px 16px;
-              margin-top: 12px;
-              cursor: pointer;
-              color: @merchant-info;
-              font-size: 0.929rem;
-              border-radius: 6px;
-              transition: all 0.3s ease;
-
-              &:hover {
-                background: rgba(64, 158, 255, 0.1);
-              }
-
-              .arrow-icon {
-                transition: transform 0.3s ease;
-              }
-            }
-          }
-
-          .comment-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-
-            :deep(.el-button) {
-              border-radius: 8px;
-              padding: 10px 20px;
-              font-weight: 500;
-              transition: all 0.3s ease;
-
-              &:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-              }
-            }
-          }
-        }
-      }
-
-      .empty-comments {
-        padding: 60px 0;
-        text-align: center;
-      }
-    }
-  }
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap-compact);
+  padding: 0 var(--space-6) var(--space-6);
 }
 
-// 回复对话框
-.reply-dialog {
-  :deep(.el-dialog__header) {
-    padding: 20px 24px;
-    border-bottom: 1px solid @merchant-border;
-  }
-
-  :deep(.el-dialog__body) {
-    padding: 24px;
-  }
-
-  .dialog-content {
-    .quick-replies {
-      margin-bottom: 20px;
-      padding: 16px;
-      background: @merchant-surface-alt;
-      border-radius: 8px;
-
-      .quick-replies-label {
-        font-weight: 600;
-        font-size: 1rem;
-        color: @merchant-text;
-        margin-bottom: 12px;
-      }
-
-      .quick-replies-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-
-        .quick-reply-tag {
-          cursor: pointer;
-          transition: all 0.3s ease;
-          max-width: 100%;
-          white-space: normal;
-          height: auto;
-          padding: 8px 14px;
-          line-height: 1.5;
-
-          &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
-            background: rgba(64, 158, 255, 0.1);
-          }
-        }
-      }
-    }
-
-    :deep(.el-textarea) {
-      .el-textarea__inner {
-        border-radius: 8px;
-        border: 2px solid @merchant-border;
-        padding: 12px;
-        font-size: 1rem;
-        line-height: 1.6;
-        transition: all 0.3s ease;
-
-        &:focus {
-          border-color: @merchant-info;
-          box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.1);
-        }
-      }
-    }
-  }
-
-  :deep(.el-dialog__footer) {
-    padding: 16px 24px;
-    border-top: 1px solid @merchant-border;
-  }
-
-  .dialog-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-
-    :deep(.el-button) {
-      border-radius: 8px;
-      padding: 10px 24px;
-      font-weight: 500;
-    }
-  }
+.merchant-comments-container :deep(.app-page-header__actions .el-button) {
+  height: var(--control-height-md);
 }
 
-// 动画定义
-@keyframes slideInUp {
+/* ---------- KPI（§4.8：浅底 + 统一线性图标，禁止彩色渐变图标块） ---------- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--card-gap-compact);
+}
+
+.stat-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-3);
+  padding: var(--card-padding-compact);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+}
+
+.stat-icon {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--brand-50);
+  color: var(--brand-500);
+  font-size: var(--text-h2);
+}
+
+.stat-value {
+  grid-column: 2;
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+  line-height: normal;
+}
+
+.stat-label {
+  grid-column: 2;
+  margin-top: var(--space-1);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: normal;
+}
+
+/* ---------- 筛选工具条（§3.3 间距、§4.3 筛选条） ---------- */
+.toolbar-card {
+  margin: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.filter-label {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+/* chip 规范与 merchant/02-orders 同款（§4.1 次级动作、§4.6 四态） */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-500);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.filter-chip:hover {
+  border-color: var(--brand-400);
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+
+.filter-chip:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+}
+
+.filter-chip.is-active {
+  border-color: var(--brand-500);
+  background: var(--brand-500);
+  color: var(--surface);
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.result-count {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  white-space: nowrap;
+}
+
+.result-count strong {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 评价列表（主角） ---------- */
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap-compact);
+  min-height: 120px;
+}
+
+.comment-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--card-padding-compact);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+  animation: comment-enter var(--duration-base) var(--ease-standard) both;
+}
+
+@keyframes comment-enter {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+.comment-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
-// 响应式布局
-@media (max-width: 1200px) {
-  .merchant-comments-container {
-    .overview-section {
-      .el-col {
-        margin-bottom: 16px;
-      }
-    }
-  }
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
-@media (max-width: 768px) {
-  .merchant-comments-container {
-    padding: 12px;
+.user-avatar {
+  flex-shrink: 0;
+  background: var(--brand-100);
+  color: var(--brand-700);
+  font-weight: var(--weight-semibold);
+}
 
-    .comments-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
-    }
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
 
-    .filter-section {
-      .filter-group {
-        .filter-row {
-          flex-direction: column;
-          align-items: stretch;
+.user-name {
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  line-height: 22px;
+}
 
-          .filter-item {
-            flex-wrap: wrap;
+.order-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
+}
 
-            .search-item {
-              width: 100%;
-              margin-left: 0;
-            }
-          }
-        }
-      }
-    }
+.order-no,
+.time {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
 
-    .comments-section {
-      .comments-card {
-        .comment-item {
-          .comment-header {
-            flex-direction: column;
-            gap: 16px;
+.rating-info {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-3);
+}
 
-            .rating-info {
-              align-items: flex-start;
-            }
-          }
-        }
-      }
-    }
+.comment-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.comment-dishes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dish-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+}
+
+/* 菜品标签是中性信息而非状态，覆盖 Element 的 info 蓝为中性地暖色（§3.1、§5.3） */
+.comment-dishes :deep(.el-tag.dish-tag.el-tag--info) {
+  --el-tag-bg-color: var(--neutral-bg);
+  --el-tag-border-color: var(--line);
+  --el-tag-text-color: var(--ink-700);
+}
+
+.dish-tag {
+  margin: 0;
+}
+
+.comment-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.comment-label,
+.reply-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+}
+
+.comment-value,
+.reply-value {
+  margin: 0;
+  color: var(--ink-700);
+  font-size: var(--text-body);
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+.comment-replies {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--canvas-sunken);
+}
+
+.comment-reply {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.comment-reply--followup .reply-label {
+  color: var(--ink-400);
+}
+
+.reply-time {
+  color: var(--ink-400);
+}
+
+.reply-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand-600);
+  font-family: inherit;
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.reply-expand:hover {
+  color: var(--brand-700);
+}
+
+.reply-expand:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+}
+
+.comment-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ---------- 分析卡：评分分布 + 数据概览（P1 合并） ---------- */
+.overview-section {
+  margin: 0;
+}
+
+.analysis-header {
+  margin-bottom: var(--space-4);
+}
+
+.analysis-title {
+  margin: 0;
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 24px;
+}
+
+.analysis-body {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-8);
+}
+
+.rating-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rating-bar-item {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rating-label {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  white-space: nowrap;
+}
+
+.rating-track {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--neutral-bg);
+  overflow: hidden;
+}
+
+.rating-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width var(--duration-slow) var(--ease-out);
+}
+
+/* 评分柱按星级取语义色阶：好评绿 → 一般黄 → 差评红（§3.1、§5.3） */
+.rating-fill--5,
+.rating-fill--4 {
+  background: var(--success);
+}
+
+.rating-fill--3 {
+  background: var(--warning);
+}
+
+.rating-fill--2,
+.rating-fill--1 {
+  background: var(--danger);
+}
+
+.rating-count {
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-body-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.rating-note {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-400);
+  font-size: var(--text-caption);
+  line-height: 18px;
+}
+
+/* 概览数值统一中性色，仅在阈值告警时才着语义色（§5.2、§5.3） */
+.overview-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding-left: var(--space-8);
+  border-left: 1px solid var(--line);
+}
+
+.overview-stat-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.stat-item-label {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+}
+
+.stat-item-value {
+  margin: 0;
+  color: var(--ink-900);
+  font-family: var(--font-num);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 回复对话框 ---------- */
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.quick-replies {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.quick-replies-label {
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+}
+
+.quick-replies-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.quick-reply-tag {
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.quick-reply-tag:hover {
+  border-color: var(--brand-400);
+  background: var(--brand-50);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 1024px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analysis-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .overview-stats {
+    padding-left: 0;
+    border-left: 0;
   }
 }
 </style>
