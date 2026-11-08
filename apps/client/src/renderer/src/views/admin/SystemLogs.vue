@@ -1,257 +1,182 @@
 <template>
   <div class="system-logs-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <h1>
-            <el-icon class="header-icon"><Document /></el-icon>
-            系统日志
-          </h1>
-          <p class="subtitle">查看和分析管理员操作日志</p>
-        </div>
-        <div class="header-actions">
-          <el-button type="primary" :icon="Refresh" @click="handleRefresh" :loading="loading">
-            刷新
-          </el-button>
-        </div>
-      </div>
+    <!-- 页头：统一标题容器 + 右侧动作区，刷新为次级、清理日志为危险动作（§4.1、§4.7） -->
+    <AppPageHeader title="系统日志" subtitle="查看和分析管理员操作日志" :compact="true">
+      <template #actions>
+        <el-button type="default" :icon="Refresh" :loading="loading" @click="handleRefresh">
+          刷新
+        </el-button>
+        <el-button
+          type="danger"
+          plain
+          :icon="Delete"
+          class="danger-action"
+          @click="handleCleanLogs"
+        >
+          清理日志
+        </el-button>
+      </template>
+    </AppPageHeader>
+
+    <!-- 概览卡：线性图标 + 数值 + 标签，统一同源色（§4.8、§7.1） -->
+    <div class="stats-section">
+      <AppStatCard label="总日志数" :value="statistics.totalLogs || 0" icon="Document" />
+      <AppStatCard
+        label="登录操作"
+        :value="statistics.operationStats?.LOGIN || 0"
+        icon="User"
+      />
+      <AppStatCard
+        label="创建操作"
+        :value="statistics.operationStats?.CREATE || 0"
+        icon="CirclePlus"
+      />
+      <AppStatCard
+        label="更新操作"
+        :value="statistics.operationStats?.UPDATE || 0"
+        icon="Edit"
+      />
+      <AppStatCard
+        label="删除操作"
+        :value="statistics.operationStats?.DELETE || 0"
+        icon="Delete"
+      />
+      <AppStatCard
+        label="查询操作"
+        :value="statistics.operationStats?.QUERY || 0"
+        icon="Search"
+      />
     </div>
 
-    <!-- 搜索栏 -->
+    <!-- 筛选条（§4.3） -->
     <el-card class="search-card" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span class="card-title">
-            <el-icon><Search /></el-icon>
-            筛选条件
-          </span>
-          <el-button text type="primary" @click="toggleExpand">
-            {{ isExpanded ? '收起' : '展开' }}
-            <el-icon class="ml-1">
-              <ArrowUp v-if="isExpanded" />
-              <ArrowDown v-else />
-            </el-icon>
-          </el-button>
-        </div>
-      </template>
-      <el-collapse-transition>
-        <div v-show="isExpanded">
-          <el-form :model="searchForm" class="search-form" label-width="80px">
-            <div class="search-grid">
-              <el-form-item label="操作类型">
-                <el-select v-model="searchForm.operationType" placeholder="全部" clearable style="width: 100%">
-                  <el-option label="登录" value="LOGIN" />
-                  <el-option label="退出" value="LOGOUT" />
-                  <el-option label="创建" value="CREATE" />
-                  <el-option label="更新" value="UPDATE" />
-                  <el-option label="删除" value="DELETE" />
-                  <el-option label="查询" value="QUERY" />
-                  <el-option label="导出" value="EXPORT" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="模块名称">
-                <el-select v-model="searchForm.module" placeholder="全部" clearable style="width: 100%">
-                  <el-option label="用户管理" value="USER" />
-                  <el-option label="商家管理" value="MERCHANT" />
-                  <el-option label="订单管理" value="ORDER" />
-                  <el-option label="菜品管理" value="DISH" />
-                  <el-option label="财务管理" value="FINANCE" />
-                  <el-option label="系统管理" value="SYSTEM" />
-                  <el-option label="角色管理" value="ROLE" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="操作人">
-                <el-input
-                  v-model="searchForm.operatorName"
-                  placeholder="输入操作人姓名"
-                  clearable
-                  :prefix-icon="User"
-                />
-              </el-form-item>
-              <el-form-item label="状态">
-                <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 100%">
-                  <el-option label="成功" value="SUCCESS" />
-                  <el-option label="失败" value="FAILED" />
-                  <el-option label="部分成功" value="PARTIAL" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="日期范围" class="date-range-item">
-                <el-date-picker
-                  v-model="searchForm.dateRange"
-                  type="datetimerange"
-                  range-separator="至"
-                  start-placeholder="开始时间"
-                  end-placeholder="结束时间"
-                  clearable
-                  style="width: 100%"
-                  value-format="YYYY-MM-DD HH:mm:ss"
-                />
-              </el-form-item>
-              <el-form-item label=" " class="action-col">
-                <el-button type="primary" :icon="Search" @click="handleSearch">
-                  搜索
-                </el-button>
-                <el-button :icon="RefreshLeft" @click="handleReset">
-                  重置
-                </el-button>
-                <el-button type="danger" :icon="Delete" @click="handleCleanLogs">
-                  清理日志
-                </el-button>
-              </el-form-item>
-            </div>
-          </el-form>
-        </div>
-      </el-collapse-transition>
+      <el-form :inline="true" :model="searchForm" class="search-form">
+        <el-form-item label="操作类型">
+          <el-select v-model="searchForm.operationType" placeholder="全部" clearable style="width: 130px">
+            <el-option label="登录" value="LOGIN" />
+            <el-option label="退出" value="LOGOUT" />
+            <el-option label="创建" value="CREATE" />
+            <el-option label="更新" value="UPDATE" />
+            <el-option label="删除" value="DELETE" />
+            <el-option label="查询" value="QUERY" />
+            <el-option label="导出" value="EXPORT" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="模块名称">
+          <el-select v-model="searchForm.module" placeholder="全部" clearable style="width: 130px">
+            <el-option label="用户管理" value="USER" />
+            <el-option label="商家管理" value="MERCHANT" />
+            <el-option label="订单管理" value="ORDER" />
+            <el-option label="菜品管理" value="DISH" />
+            <el-option label="财务管理" value="FINANCE" />
+            <el-option label="系统管理" value="SYSTEM" />
+            <el-option label="角色管理" value="ROLE" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="操作人">
+          <el-input
+            v-model="searchForm.operatorName"
+            placeholder="输入操作人姓名"
+            clearable
+            :prefix-icon="User"
+            style="width: 180px"
+          />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 130px">
+            <el-option label="成功" value="SUCCESS" />
+            <el-option label="失败" value="FAILED" />
+            <el-option label="部分成功" value="PARTIAL" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="日期范围">
+          <el-date-picker
+            v-model="searchForm.dateRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            clearable
+            style="width: 360px"
+            value-format="YYYY-MM-DD HH:mm:ss"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+          <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
     </el-card>
 
-    <!-- 统计卡片 -->
-    <el-row :gutter="16" class="stats-row">
-      <el-col :xs="12" :sm="8" :md="6" :lg="4">
-        <div class="stat-card stat-primary">
-          <div class="stat-icon">
-            <el-icon :size="24"><Document /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ statistics.totalLogs || 0 }}</div>
-            <div class="stat-label">总日志数</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :xs="12" :sm="8" :md="6" :lg="4">
-        <div class="stat-card stat-success">
-          <div class="stat-icon">
-            <el-icon :size="24"><CircleCheck /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ statistics.operationStats?.LOGIN || 0 }}</div>
-            <div class="stat-label">登录操作</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :xs="12" :sm="8" :md="6" :lg="4">
-        <div class="stat-card stat-info">
-          <div class="stat-icon">
-            <el-icon :size="24"><Plus /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ statistics.operationStats?.CREATE || 0 }}</div>
-            <div class="stat-label">创建操作</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :xs="12" :sm="8" :md="6" :lg="4">
-        <div class="stat-card stat-warning">
-          <div class="stat-icon">
-            <el-icon :size="24"><Edit /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ statistics.operationStats?.UPDATE || 0 }}</div>
-            <div class="stat-label">更新操作</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :xs="12" :sm="8" :md="6" :lg="4">
-        <div class="stat-card stat-danger">
-          <div class="stat-icon">
-            <el-icon :size="24"><Delete /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ statistics.operationStats?.DELETE || 0 }}</div>
-            <div class="stat-label">删除操作</div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :xs="12" :sm="8" :md="6" :lg="4">
-        <div class="stat-card stat-default">
-          <div class="stat-icon">
-            <el-icon :size="24"><Search /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ statistics.operationStats?.QUERY || 0 }}</div>
-            <div class="stat-label">查询操作</div>
-          </div>
-        </div>
-      </el-col>
-    </el-row>
-
-    <!-- 日志列表 -->
+    <!-- 日志列表（§4.3、§5.4） -->
     <el-card class="table-card" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span class="card-title">
-            <el-icon><List /></el-icon>
-            日志列表
-          </span>
-          <div class="card-extra">
-            <span class="record-count">共 {{ pagination.total }} 条记录</span>
-          </div>
+      <!-- 空数据：紧凑中文空状态替换表体，并提供重置筛选的替代动作（§4.3、§5.5） -->
+      <AppEmptyState
+        v-if="!loading && logList.length === 0"
+        compact
+        icon="Document"
+        description="没有符合条件的操作日志，换个筛选条件或清空后重试"
+        action-text="重置筛选"
+        @action="handleReset"
+      />
+
+      <template v-else>
+        <el-table :data="logList" v-loading="loading" stripe>
+          <!-- ID：单行省略 + 悬浮完整内容，不折行（§4.3、§5.4） -->
+          <el-table-column prop="logId" label="ID" width="100" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="cell-num">{{ row.logId }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="operatorName" label="操作人" width="90" show-overflow-tooltip />
+          <!-- 操作类型是分类而非状态，统一走中性标签，不用语义色（§3.1、§7.1） -->
+          <el-table-column label="操作类型" width="80" align="center">
+            <template #default="{ row }">
+              <StatusTag status="neutral" :text="getOperationTypeText(row.operationType)" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="module" label="模块" width="76" align="center" />
+          <el-table-column prop="description" label="操作描述" min-width="130" show-overflow-tooltip />
+          <el-table-column prop="method" label="方法" width="100" show-overflow-tooltip />
+          <el-table-column prop="ip" label="IP地址" width="110" show-overflow-tooltip />
+          <el-table-column label="状态" width="82" align="center">
+            <template #default="{ row }">
+              <StatusTag :status="getStatusMeta(row.status).key" :text="getStatusMeta(row.status).text" />
+            </template>
+          </el-table-column>
+          <!-- 耗时：无衬线等宽数字 + 中性深色，不按阈值染色（§4.3、§5.2） -->
+          <el-table-column label="耗时" width="70" align="right">
+            <template #default="{ row }">
+              <span class="cell-num">{{ row.executeTime }}ms</span>
+            </template>
+          </el-table-column>
+          <!-- 时间统一 YYYY-MM-DD HH:mm，去掉 ISO 的 T，单行不折行（§4.3） -->
+          <el-table-column label="操作时间" width="152">
+            <template #default="{ row }">
+              <span class="cell-num">{{ formatTime(row.createdAt) }}</span>
+            </template>
+          </el-table-column>
+          <!-- 查看详情：先弹对话框再提交，保持可见（#441；每行最多 2 个可见动作） -->
+          <el-table-column label="操作" width="76" fixed="right">
+            <template #default="{ row }">
+              <RowActions :primary="{ text: '详情', onClick: () => handleViewDetail(row) }" :items="[]" />
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 分页：空数据时不渲染，合计用实际记录数兜底（§4.3、§5.4；后端分页缺陷见 #433） -->
+        <div v-if="logList.length > 0" class="pagination-container">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="fetchLogList"
+            @current-change="fetchLogList"
+          />
         </div>
       </template>
-      <el-table
-        :data="logList"
-        v-loading="loading"
-        stripe
-        class="log-table"
-        :row-class-name="getRowClassName"
-      >
-        <el-table-column prop="logId" label="ID" width="100" align="center" />
-        <el-table-column prop="operatorName" label="操作人" width="110" show-overflow-tooltip>
-          <template #default="{ row }">
-            <div class="operator-cell">
-              <el-icon class="operator-icon"><User /></el-icon>
-              <span>{{ row.operatorName }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作类型" width="95" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getOperationTypeColor(row.operationType)" size="small">
-              {{ getOperationTypeText(row.operationType) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="module" label="模块" width="90" align="center" />
-        <el-table-column prop="description" label="操作描述" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="method" label="方法" width="130" show-overflow-tooltip />
-        <el-table-column prop="ip" label="IP地址" width="130" show-overflow-tooltip />
-        <el-table-column label="状态" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getStatusColor(row.status)" size="small">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="executeTime" label="耗时" width="80" align="center">
-          <template #default="{ row }">
-            <span :class="getExecuteTimeClass(row.executeTime)">
-              {{ row.executeTime }}ms
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" label="操作时间" width="165" />
-        <el-table-column label="操作" width="80" align="center" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleViewDetail(row)">
-              详情
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchLogList"
-          @current-change="fetchLogList"
-          background
-        />
-      </div>
     </el-card>
 
     <!-- 日志详情对话框 -->
@@ -263,7 +188,6 @@
       class="detail-dialog"
     >
       <div v-if="currentLog" class="detail-content">
-        <!-- 基本信息卡片 -->
         <div class="detail-section">
           <div class="section-title">
             <el-icon><InfoFilled /></el-icon>
@@ -271,7 +195,7 @@
           </div>
           <el-descriptions :column="2" border class="detail-descriptions">
             <el-descriptions-item label="日志ID">
-              <el-tag type="info" size="small">#{{ currentLog.logId }}</el-tag>
+              <span class="cell-num">#{{ currentLog.logId }}</span>
             </el-descriptions-item>
             <el-descriptions-item label="操作人">
               <div class="operator-info">
@@ -280,16 +204,14 @@
               </div>
             </el-descriptions-item>
             <el-descriptions-item label="操作类型">
-              <el-tag :type="getOperationTypeColor(currentLog.operationType)">
-                {{ getOperationTypeText(currentLog.operationType) }}
-              </el-tag>
+              <StatusTag status="neutral" :text="getOperationTypeText(currentLog.operationType)" />
             </el-descriptions-item>
             <el-descriptions-item label="模块名称">
-              <el-tag type="info">{{ currentLog.module }}</el-tag>
+              <span>{{ currentLog.module || '-' }}</span>
             </el-descriptions-item>
             <el-descriptions-item label="角色">{{ currentLog.operatorRole || '-' }}</el-descriptions-item>
             <el-descriptions-item label="IP地址">
-              <span class="ip-address">{{ currentLog.ip }}</span>
+              <span class="cell-num">{{ currentLog.ip }}</span>
             </el-descriptions-item>
             <el-descriptions-item label="操作描述" :span="2">
               {{ currentLog.description }}
@@ -297,7 +219,6 @@
           </el-descriptions>
         </div>
 
-        <!-- 执行信息卡片 -->
         <div class="detail-section">
           <div class="section-title">
             <el-icon><Operation /></el-icon>
@@ -308,17 +229,13 @@
               <code class="method-code">{{ currentLog.method }}</code>
             </el-descriptions-item>
             <el-descriptions-item label="执行时长">
-              <el-tag :type="getExecuteTimeTagType(currentLog.executeTime)">
-                {{ currentLog.executeTime }} ms
-              </el-tag>
+              <span class="cell-num">{{ currentLog.executeTime }} ms</span>
             </el-descriptions-item>
             <el-descriptions-item label="状态">
-              <el-tag :type="getStatusColor(currentLog.status)">
-                {{ getStatusText(currentLog.status) }}
-              </el-tag>
+              <StatusTag :status="getStatusMeta(currentLog.status).key" :text="getStatusMeta(currentLog.status).text" />
             </el-descriptions-item>
             <el-descriptions-item label="操作时间" :span="2">
-              {{ currentLog.createdAt }}
+              {{ formatTime(currentLog.createdAt) }}
             </el-descriptions-item>
             <el-descriptions-item label="浏览器">
               <span class="env-info">{{ currentLog.browser || '-' }}</span>
@@ -329,7 +246,6 @@
           </el-descriptions>
         </div>
 
-        <!-- 请求参数 -->
         <div v-if="currentLog.params" class="detail-section">
           <div class="section-title">
             <el-icon><Document /></el-icon>
@@ -340,7 +256,6 @@
           </div>
         </div>
 
-        <!-- 返回结果 -->
         <div v-if="currentLog.result" class="detail-section">
           <div class="section-title">
             <el-icon><Check /></el-icon>
@@ -351,7 +266,6 @@
           </div>
         </div>
 
-        <!-- 错误信息 -->
         <div v-if="currentLog.errorMessage" class="detail-section">
           <div class="section-title error-title">
             <el-icon><Warning /></el-icon>
@@ -376,17 +290,21 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Search, Refresh, Delete, Document, CircleCheck, Plus, Edit,
-  ArrowUp, ArrowDown, RefreshLeft, User, List, InfoFilled,
-  Operation, Check, Warning
+  Search, Refresh, Delete, Document, User,
+  InfoFilled, Operation, Check, Warning
 } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
+import RowActions from '@/components/common/RowActions.vue'
+import { formatTime } from '@/utils/formatters'
 import { getLogList, getLogStatistics, cleanExpiredLogs } from '@/api/admin'
 
 const loading = ref(false)
 const logList = ref([])
 const currentLog = ref(null)
 const detailDialogVisible = ref(false)
-const isExpanded = ref(true)
 const statistics = ref({
   totalLogs: 0,
   operationStats: {}
@@ -406,12 +324,33 @@ const pagination = reactive({
   total: 0
 })
 
+// 状态 → StatusTag 词典键（§3.1 状态表，语义色只做状态）
+const STATUS_META = Object.freeze({
+  SUCCESS: { key: 'success', text: '成功' },
+  FAILED: { key: 'failed', text: '失败' },
+  PARTIAL: { key: 'warning', text: '部分成功' }
+})
+
+const getStatusMeta = (status) => STATUS_META[status] || { key: 'neutral', text: '未知' }
+
+// 操作类型文本（分类，不含语义色）
+const getOperationTypeText = (type) => {
+  const texts = {
+    LOGIN: '登录',
+    LOGOUT: '退出',
+    CREATE: '创建',
+    UPDATE: '更新',
+    DELETE: '删除',
+    QUERY: '查询',
+    EXPORT: '导出'
+  }
+  return texts[type] || '未知'
+}
+
 // 获取日志列表
 const fetchLogList = async () => {
   loading.value = true
   try {
-    console.log('[系统日志] 获取日志列表')
-
     const params = {
       page: pagination.page,
       pageSize: pagination.pageSize,
@@ -421,19 +360,17 @@ const fetchLogList = async () => {
       status: searchForm.status || undefined
     }
 
-    // 处理日期范围
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
       params.startTime = searchForm.dateRange[0]
       params.endTime = searchForm.dateRange[1]
     }
 
     const response = await getLogList(params)
-    console.log('[系统日志] API响应:', response)
 
     if (response && response.success) {
       logList.value = response.records || []
-      pagination.total = response.total || 0
-      console.log('[系统日志] 获取日志列表成功, 总数:', pagination.total)
+      // #433：后端分页 total 恒为 0，用当前记录数兜底
+      pagination.total = response.total || logList.value.length
     } else {
       logList.value = []
       pagination.total = 0
@@ -451,90 +388,13 @@ const fetchLogList = async () => {
 // 获取统计数据
 const fetchStatistics = async () => {
   try {
-    console.log('[系统日志] 获取统计数据')
     const response = await getLogStatistics()
-    console.log('[系统日志] 统计数据响应:', response)
-
     if (response && response.success && response.data) {
       statistics.value = response.data
     }
   } catch (error) {
     console.error('[系统日志] 获取统计数据失败:', error)
   }
-}
-
-// 获取操作类型颜色
-const getOperationTypeColor = (type) => {
-  const colors = {
-    'LOGIN': 'success',
-    'LOGOUT': 'info',
-    'CREATE': 'primary',
-    'UPDATE': 'warning',
-    'DELETE': 'danger',
-    'QUERY': 'info',
-    'EXPORT': 'primary'
-  }
-  return colors[type] || 'info'
-}
-
-// 获取操作类型文本
-const getOperationTypeText = (type) => {
-  const texts = {
-    'LOGIN': '登录',
-    'LOGOUT': '退出',
-    'CREATE': '创建',
-    'UPDATE': '更新',
-    'DELETE': '删除',
-    'QUERY': '查询',
-    'EXPORT': '导出'
-  }
-  return texts[type] || '未知'
-}
-
-// 获取状态颜色
-const getStatusColor = (status) => {
-  const colors = {
-    'SUCCESS': 'success',
-    'FAILED': 'danger',
-    'PARTIAL': 'warning'
-  }
-  return colors[status] || 'info'
-}
-
-// 获取状态文本
-const getStatusText = (status) => {
-  const texts = {
-    'SUCCESS': '成功',
-    'FAILED': '失败',
-    'PARTIAL': '部分成功'
-  }
-  return texts[status] || '未知'
-}
-
-// 获取执行时间样式类
-const getExecuteTimeClass = (time) => {
-  if (time >= 1000) return 'execute-time-slow'
-  if (time >= 500) return 'execute-time-medium'
-  return 'execute-time-fast'
-}
-
-// 获取执行时间标签类型
-const getExecuteTimeTagType = (time) => {
-  if (time >= 1000) return 'danger'
-  if (time >= 500) return 'warning'
-  return 'success'
-}
-
-// 获取表格行类名
-const getRowClassName = ({ row }) => {
-  if (row.status === 'FAILED') return 'error-row'
-  if (row.executeTime >= 1000) return 'slow-row'
-  return ''
-}
-
-// 切换展开/收起
-const toggleExpand = () => {
-  isExpanded.value = !isExpanded.value
 }
 
 // 刷新
@@ -571,7 +431,7 @@ const handleReset = () => {
   fetchLogList()
 }
 
-// 清理日志
+// 清理日志：危险动作，二次确认由 ElMessageBox 承担（§4.1、§4.6）
 const handleCleanLogs = async () => {
   try {
     await ElMessageBox.confirm(
@@ -584,7 +444,6 @@ const handleCleanLogs = async () => {
       }
     )
 
-    console.log('[系统日志] 清理过期日志')
     const response = await cleanExpiredLogs(90)
 
     if (response && response.success) {
@@ -616,323 +475,70 @@ onMounted(() => {
 
 <style scoped lang="less">
 .system-logs-container {
-  padding: 20px;
-  background: #f5f7fa;
-  min-height: calc(100vh - 40px);
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-  // 页面标题
-  .page-header {
-    margin-bottom: 16px;
-
-    .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      .header-left {
-        h1 {
-          font-size: 22px;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0 0 6px 0;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-
-          .header-icon {
-            color: #409eff;
-          }
-        }
-
-        .subtitle {
-          color: #6b7280;
-          margin: 0;
-          font-size: 0.929rem /* 原值: 13px */;
-        }
-      }
-    }
+  /* 危险动作与普通动作留出 --space-6 间距（§4.1） */
+  .danger-action {
+    margin-left: var(--space-6);
   }
 
-  // 搜索卡片
+  /* 六张概览卡排成 3×2，网格闭合、无 4+1 空位（§4.8） */
+  .stats-section {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
+  }
+
   .search-card {
-    margin-bottom: 16px;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-
-    :deep(.el-card__header) {
-      padding: 12px 16px;
-      border-bottom: 1px solid #e5e7eb;
-      background: #fafafa;
-    }
-
-    :deep(.el-card__body) {
-      padding: 16px;
-      overflow: visible;
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      .card-title {
-        font-weight: 500;
-        color: #374151;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .ml-1 {
-        margin-left: 4px;
-      }
-    }
+    margin-bottom: var(--space-8);
 
     .search-form {
-      .search-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        align-items: start;
-        width: 100%;
-      }
-
-      .date-range-item {
-        grid-column: span 2;
-      }
-
-      .action-col {
-        grid-column: span 2;
-        display: flex;
-        justify-content: flex-end;
-        align-items: flex-end;
-
-        .el-button {
-          margin-left: 8px;
-
-          &:first-child {
-            margin-left: 0;
-          }
-        }
-      }
-
-      .el-form-item {
-        margin-bottom: 0;
-
-        &:last-child {
-          margin-bottom: 0;
-        }
-      }
+      margin-bottom: 0;
     }
   }
 
-  // 统计卡片行
-  .stats-row {
-    margin-top: 20px;
-    margin-bottom: 16px;
-
-    .stat-card {
-      background: white;
-      border-radius: 8px;
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-      transition: all 0.3s ease;
-      border: 1px solid #e5e7eb;
-      cursor: pointer;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      }
-
-      .stat-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-
-      .stat-content {
-        flex: 1;
-        min-width: 0;
-
-        .stat-value {
-          font-size: 22px;
-          font-weight: 600;
-          line-height: 1.2;
-          margin-bottom: 4px;
-        }
-
-        .stat-label {
-          font-size: 0.857rem /* 原值: 12px */;
-          color: #6b7280;
-        }
-      }
-
-      &.stat-primary {
-        .stat-icon {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-        }
-        .stat-value {
-          color: #667eea;
-        }
-      }
-
-      &.stat-success {
-        .stat-icon {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          color: white;
-        }
-        .stat-value {
-          color: #10b981;
-        }
-      }
-
-      &.stat-info {
-        .stat-icon {
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-          color: white;
-        }
-        .stat-value {
-          color: #3b82f6;
-        }
-      }
-
-      &.stat-warning {
-        .stat-icon {
-          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-          color: white;
-        }
-        .stat-value {
-          color: #f59e0b;
-        }
-      }
-
-      &.stat-danger {
-        .stat-icon {
-          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-          color: white;
-        }
-        .stat-value {
-          color: #ef4444;
-        }
-      }
-
-      &.stat-default {
-        .stat-icon {
-          background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-          color: white;
-        }
-        .stat-value {
-          color: #6b7280;
-        }
-      }
-    }
-  }
-
-  // 表格卡片
   .table-card {
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-
-    :deep(.el-card__header) {
-      padding: 12px 16px;
-      border-bottom: 1px solid #e5e7eb;
-      background: #fafafa;
-    }
-
-    :deep(.el-card__body) {
-      padding: 0;
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      .card-title {
-        font-weight: 500;
-        color: #374151;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .card-extra {
-        .record-count {
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #6b7280;
-        }
-      }
-    }
-
-    .log-table {
-      :deep(.el-table__header) {
-        th {
-          background: #f9fafb;
-          color: #374151;
-          font-weight: 500;
-        }
-      }
-
-      :deep(.error-row) {
-        background: #fef2f2 !important;
-      }
-
-      :deep(.slow-row) {
-        background: #fffbeb !important;
-      }
-
-      .operator-cell {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-
-        .operator-icon {
-          color: #9ca3af;
-        }
-      }
-
-      .execute-time-fast {
-        color: #10b981;
-        font-weight: 500;
-      }
-
-      .execute-time-medium {
-        color: #f59e0b;
-        font-weight: 500;
-      }
-
-      .execute-time-slow {
-        color: #ef4444;
-        font-weight: 500;
-      }
-    }
-
     .pagination-container {
-      padding: 16px;
+      margin-top: var(--space-5);
       display: flex;
       justify-content: flex-end;
-      border-top: 1px solid #e5e7eb;
-      background: #fafafa;
+    }
+
+    /* 长表滚动时表头可辨：浅底色 + 中量字重（§4.3） */
+    :deep(.el-table__header th) {
+      background-color: var(--canvas-sunken);
+      color: var(--ink-500);
+      font-weight: var(--weight-semibold);
+    }
+
+    /* 行 hover 高亮，避免横向读串行（§3.5 高频微交互用 CSS transition） */
+    :deep(.el-table__body tr:hover > td) {
+      background-color: var(--canvas-sunken);
+      transition: background-color var(--duration-fast) var(--ease-out);
     }
   }
 
-  // 详情对话框
+  /* ID / 时间 / 数值：单行不折行 + 等宽数字（§4.3、§5.4） */
+  .cell-num {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* 详情对话框 */
   .detail-dialog {
     .detail-content {
       max-height: 60vh;
       overflow-y: auto;
 
       .detail-section {
-        margin-bottom: 20px;
+        margin-bottom: var(--space-5);
 
         &:last-child {
           margin-bottom: 0;
@@ -941,76 +547,71 @@ onMounted(() => {
         .section-title {
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 1rem /* 原值: 14px */;
-          font-weight: 500;
-          color: #374151;
-          margin-bottom: 10px;
-          padding: 8px 12px;
-          background: #f3f4f6;
-          border-radius: 6px;
+          gap: var(--space-2);
+          font-size: var(--text-body);
+          font-weight: var(--weight-medium);
+          color: var(--ink-700);
+          margin-bottom: var(--space-2);
+          padding: var(--space-2) var(--space-3);
+          background: var(--canvas-sunken);
+          border-radius: var(--radius-sm);
 
           &.error-title {
-            background: #fef2f2;
-            color: #dc2626;
+            background: var(--danger-bg);
+            color: var(--danger);
           }
         }
 
         .detail-descriptions {
           :deep(.el-descriptions__label) {
-            background: #f9fafb !important;
-            font-weight: 500;
+            background: var(--canvas-sunken) !important;
+            font-weight: var(--weight-medium);
           }
         }
 
         .operator-info {
           display: flex;
           align-items: center;
-          gap: 6px;
-        }
-
-        .ip-address {
-          font-family: 'Courier New', monospace;
-          font-size: 0.929rem /* 原值: 13px */;
+          gap: var(--space-2);
         }
 
         .method-code {
-          font-family: 'Courier New', monospace;
-          font-size: 0.857rem /* 原值: 12px */;
-          background: #f3f4f6;
+          font-family: var(--font-num);
+          font-size: var(--text-caption);
+          background: var(--canvas-sunken);
           padding: 4px 8px;
-          border-radius: 4px;
+          border-radius: var(--radius-sm);
         }
 
         .env-info {
-          color: #6b7280;
-          font-size: 0.929rem /* 原值: 13px */;
+          color: var(--ink-500);
+          font-size: var(--text-body-sm);
         }
 
         .code-box {
-          border: 1px solid #e5e7eb;
-          border-radius: 6px;
+          border: 1px solid var(--line);
+          border-radius: var(--radius-md);
           overflow: hidden;
 
           &.error-box {
-            border-color: #fecaca;
+            border-color: var(--danger);
           }
 
           .json-content,
           .error-content {
             margin: 0;
-            padding: 12px;
-            background: #f9fafb;
-            font-size: 0.857rem /* 原值: 12px */;
+            padding: var(--space-3);
+            background: var(--canvas-sunken);
+            font-size: var(--text-caption);
             line-height: 1.6;
             max-height: 250px;
             overflow: auto;
-            font-family: 'Courier New', monospace;
+            font-family: var(--font-num);
           }
 
           .error-content {
-            background: #fef2f2;
-            color: #dc2626;
+            background: var(--danger-bg);
+            color: var(--danger);
           }
         }
       }
@@ -1019,74 +620,21 @@ onMounted(() => {
     .dialog-footer {
       display: flex;
       justify-content: flex-end;
-      gap: 10px;
+      gap: var(--space-2);
     }
   }
 }
 
-// 响应式设计
+/* 窄屏下概览卡换行显示，避免六卡硬挤一行（§4.8） */
 @media (max-width: 1200px) {
-  .system-logs-container {
-    .search-form {
-      .search-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-
-      .date-range-item,
-      .action-col {
-        grid-column: span 3;
-      }
-    }
+  .system-logs-container .stats-section {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
-  .system-logs-container {
-    padding: 12px;
-
-    .page-header {
-      .header-content {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-      }
-    }
-
-    .search-form {
-      .search-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .date-range-item,
-      .action-col {
-        grid-column: span 2;
-      }
-    }
-
-    .stats-row {
-      :deep(.el-col) {
-        margin-bottom: 12px;
-      }
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .system-logs-container {
-    .search-form {
-      .search-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .date-range-item,
-      .action-col {
-        grid-column: span 1;
-      }
-
-      .action-col {
-        justify-content: flex-start;
-      }
-    }
+  .system-logs-container .stats-section {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>
