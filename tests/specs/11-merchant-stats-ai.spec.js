@@ -122,18 +122,21 @@ test.describe('模块十一：商家端-经营与AI', () => {
 
       const data = await apiRequest(page, request, '/v1/wish-list/merchant/pending')
       const pendingCount = data.filter(item => item.auditStatus === 0).length
-      await expect(page.locator('.stat-card').filter({ hasText: '待审核' }).locator('.stat-number'))
-        .toHaveText(String(pendingCount))
 
-      const cards = page.locator('.wish-card')
-      await expect(cards).toHaveCount(data.length, { timeout: 10000 })
-      if (data.length > 0) {
-        await expect(cards.first()).toContainText(data[0].dishName)
+      if (data.length === 0) {
+        // 统计卡外层是 v-if="items.length > 0"，空数据时只应出现当前空态。
+        await expect(page.locator('.app-stat-card')).toHaveCount(0)
+        await expect(page.locator('.audit-empty')).toBeVisible()
+        markPassed('11.3', '当前无待审核数据，空态可见')
       } else {
-        await expect(page.locator('.el-empty')).toBeVisible()
-      }
+        await expect(page.locator('.app-stat-card').filter({ hasText: '待审核' }).locator('.app-stat-card__value'))
+          .toHaveText(String(pendingCount))
 
-      markPassed('11.3', `待审核数 ${pendingCount}，列表行数与接口一致`)
+        const cards = page.locator('.wish-card')
+        await expect(cards).toHaveCount(data.length, { timeout: 10000 })
+        await expect(cards.first()).toContainText(data[0].dishName)
+        markPassed('11.3', `待审核数 ${pendingCount}，列表行数与接口一致`)
+      }
     } catch (e) { markFailed('11.3', e.message.slice(0, 50)); throw e }
   })
 
@@ -142,7 +145,7 @@ test.describe('模块十一：商家端-经营与AI', () => {
     try {
       await page.goto('/merchant/home/ai')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      await page.locator('#merchant-tab-insight').click()
+      await page.getByRole('tab', { name: '经营洞察' }).click()
 
       const merchantId = await getMerchantId(page)
       const metrics = await apiRequest(page, request, `/v1/merchant/insight/${merchantId}/metrics?timeRange=today`)
@@ -168,7 +171,7 @@ test.describe('模块十一：商家端-经营与AI', () => {
     try {
       await page.goto('/merchant/home/ai')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      await page.locator('#merchant-tab-insight').click()
+      await page.getByRole('tab', { name: '经营洞察' }).click()
 
       const merchantId = await getMerchantId(page)
       const rating = await apiRequest(page, request, `/v1/merchant/insight/${merchantId}/rating-distribution`)

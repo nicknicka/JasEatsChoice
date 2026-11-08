@@ -1,7 +1,7 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { getAddress } = require('../utils/real-data')
 const { TEST_API_BASE } = require('../utils/api')
-const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, markSkippedEnv, updateSummary } = require('../utils/progress')
 
 const USER_ID = '3384650106421960'
 // CI 不注入 AMAP_API_KEY，后端 /v1/location/cascader 按设计返回空列表。
@@ -100,6 +100,27 @@ async function stubAiCapabilities(page, capabilities) {
       }
     })
   }))
+}
+
+// 未配置流式模型时，食谱 tab 必须处于禁用降级态；这段断言不能因 skip 而丢失。
+async function assertRecipeGateUnavailable(page) {
+  await page.goto('/user/home/ai')
+  await expect(page.locator('.status-badge')).not.toHaveText('检测中', { timeout: 10000 })
+  const recipeTab = page.locator('#tab-btn-recipe')
+  await expect(recipeTab).toBeDisabled()
+  await expect(recipeTab).toHaveAttribute('title', '食谱优化暂未开放')
+  await expect(recipeTab).toContainText('暂未开放')
+}
+
+// 可用时返回并继续跑真实流式场景；不可用时先覆盖门控，再按环境条件显式跳过。
+async function gateRecipeScenario(page, caseId) {
+  const capabilities = await getAiCapabilities()
+  if (capabilities.streaming === true) return
+
+  await assertRecipeGateUnavailable(page)
+  const reason = `AI 未配置或未启用流式模型（/v1/ai/capabilities available=${capabilities.available}, streaming=${capabilities.streaming}）`
+  markSkippedEnv(caseId, reason)
+  test.skip(true, reason)
 }
 
 // 打开食谱优化 tab 并等待懒加载组件就绪。
@@ -312,6 +333,7 @@ test.describe('模块八：AI助手与地址管理', () => {
   })
 
   test('8.3b 食谱优化流式成功', async ({ page }) => {
+    await gateRecipeScenario(page, '8.3b')
     markRunning('8.3b')
     const input = '[normal] 番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。'
     try {
@@ -332,6 +354,7 @@ test.describe('模块八：AI助手与地址管理', () => {
   })
 
   test('8.3c 食谱优化失败保留输入', async ({ page }) => {
+    await gateRecipeScenario(page, '8.3c')
     markRunning('8.3c')
     const input = '[error] 番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。'
     try {
@@ -349,6 +372,7 @@ test.describe('模块八：AI助手与地址管理', () => {
   })
 
   test('8.3d 食谱优化超时提示', async ({ page }) => {
+    await gateRecipeScenario(page, '8.3d')
     markRunning('8.3d')
     const input = '[stall] 番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。'
     try {
@@ -365,6 +389,7 @@ test.describe('模块八：AI助手与地址管理', () => {
   })
 
   test('8.3e 食谱优化可取消', async ({ page }) => {
+    await gateRecipeScenario(page, '8.3e')
     markRunning('8.3e')
     const input = '[stall] 番茄炒蛋：准备鸡蛋2个、番茄2个，调味后出锅。'
     try {

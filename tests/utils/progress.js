@@ -41,6 +41,15 @@ function markSkipped(id, blocker, msg = '已确认产品缺口') {
   updateProgress(id, 'SKIPPED', `blocked by ${blocker}：${msg}`)
 }
 
+// 环境门控跳过没有可指向的 blocker issue，理由必须完整描述环境条件。
+// 产品缺口仍必须走 markSkipped(id, '#issue', ...)，避免产生孤儿跳过说明。
+function markSkippedEnv(id, reason) {
+  if (!reason || !reason.trim()) {
+    throw new Error(`markSkippedEnv 必须提供跳过理由；用例 ${id}`)
+  }
+  updateProgress(id, 'SKIPPED', reason)
+}
+
 function updateSummary() {
   const lines = readLines()
   const body = lines.filter(line => /^\[(PENDING|RUNNING|PASSED|FAILED|SKIPPED)\] /.test(line))
@@ -73,4 +82,4 @@ function updateSummary() {
   fs.writeFileSync(PROGRESS_FILE, remaining.join('\n'), 'utf-8')
 }
 
-module.exports = { markRunning, markPassed, markFailed, markSkipped, updateSummary }
+module.exports = { markRunning, markPassed, markFailed, markSkipped, markSkippedEnv, updateSummary }
