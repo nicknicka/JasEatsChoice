@@ -104,13 +104,16 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
       if (dishes.length > 0) {
         await expect(rows.first()).toContainText(String(dishes[0].dishId))
         await expect(rows.first()).toContainText(dishes[0].dishName)
-        await rows.first().locator('button:has-text("查看")').click()
+        await rows.first().locator('button:has-text("详情")').click()
         const dialog = page.locator('.el-dialog').filter({ hasText: '菜品详情' })
         await expect(dialog).toBeVisible({ timeout: 10000 })
         await expect(dialog).toContainText(String(dishes[0].dishId))
       } else {
-        await expect(page.locator('.el-table__empty-block')).toBeVisible()
-        await expect(page.locator('.el-table__empty-block')).toContainText('No Data')
+        // 空数据用全站统一的中文空状态，且隐藏无意义的分页条（DESIGN-BASELINE §4.3 §4.5 §5.5）
+        const empty = page.locator('.app-empty-state')
+        await expect(empty).toBeVisible({ timeout: 10000 })
+        await expect(empty).toContainText('当前没有待审核的菜品')
+        await expect(page.locator('.pagination-container')).toHaveCount(0)
       }
 
       markPassed('13.4', `菜品审核接口 ${dishes.length} 条，列表与真实响应一致`)
