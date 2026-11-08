@@ -1,39 +1,33 @@
 <template>
   <div class="merchant-audit-container">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>商家审核</h1>
-      <p class="subtitle">审核商家注册申请</p>
-    </div>
+    <AppPageHeader title="商家审核" subtitle="审核商家注册申请" :compact="true">
+      <template #actions>
+        <el-button type="primary" :loading="loading" @click="fetchPendingList">刷新</el-button>
+      </template>
+    </AppPageHeader>
 
     <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-card class="stat-card">
-        <el-statistic title="待审核" :value="stats.pending" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="今日已审核" :value="stats.todayApproved" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="本周通过率" :value="stats.approvalRate" suffix="%" />
-      </el-card>
+    <div class="stats-section">
+      <AppStatCard class="stat-card-pending" label="待审核" :value="stats.pending" icon="Clock" />
+      <AppStatCard label="今日已审核" :value="stats.todayApproved" icon="Checked" />
+      <AppStatCard label="本周通过率" :value="stats.approvalRate" suffix="%" icon="TrendCharts" />
     </div>
 
     <!-- 待审核列表 -->
     <el-card class="table-card" shadow="never">
       <template #header>
-        <div class="card-header">
-          <span>待审核商家列表</span>
-          <el-button type="primary" :icon="Refresh" @click="fetchPendingList">刷新</el-button>
-        </div>
+        <div class="card-header">待审核商家列表</div>
       </template>
 
       <el-table :data="pendingList" v-loading="loading" stripe>
-        <el-table-column prop="merchantId" label="商家ID" width="100" />
+        <el-table-column prop="merchantId" label="商家 ID" min-width="180" show-overflow-tooltip />
         <el-table-column prop="name" label="商家名称" min-width="180" />
         <el-table-column prop="phone" label="联系电话" width="140" />
         <el-table-column prop="address" label="地址" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="createdAt" label="申请时间" width="180" />
+        <el-table-column label="申请时间" width="180">
+          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="success" size="small" link @click="handleAudit(row, 'APPROVED')">通过</el-button>
@@ -69,13 +63,13 @@
         <el-descriptions-item label="地址" :span="2">{{ currentMerchant.address }}</el-descriptions-item>
       </el-descriptions>
 
-      <el-form :model="auditForm" label-width="80px" style="margin-top: 20px">
+      <el-form :model="auditForm" label-width="80px" class="audit-form">
         <el-form-item label="本次操作">
           <el-tag :type="auditForm.status === 'APPROVED' ? 'success' : 'danger'">
             {{ auditForm.status === 'APPROVED' ? '确认通过' : '确认拒绝' }}
           </el-tag>
         </el-form-item>
-        <el-form-item label="审核意见" v-if="auditForm.status === 'REJECTED'">
+        <el-form-item v-if="auditForm.status === 'REJECTED'" label="审核意见" required>
           <el-input
             v-model="auditForm.reason"
             type="textarea"
@@ -86,8 +80,8 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="auditDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitAudit">
+        <el-button :disabled="submitting" @click="auditDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitAudit">
           {{ auditForm.status === 'APPROVED' ? '确认通过' : '确认拒绝' }}
         </el-button>
       </template>
@@ -97,11 +91,14 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import { formatTime } from '../../utils/formatters'
 import { getPendingMerchants, auditMerchant } from '../../api/admin'
 
 const loading = ref(false)
+const submitting = ref(false)
 const pendingList = ref([])
 const currentMerchant = ref(null)
 const auditDialogVisible = ref(false)
@@ -136,7 +133,6 @@ const resetPendingStats = () => {
 const fetchPendingList = async () => {
   loading.value = true
   try {
-    // 调用实际的待审核商家API
     const response = await getPendingMerchants({
       page: pagination.page,
       pageSize: pagination.pageSize
@@ -144,13 +140,14 @@ const fetchPendingList = async () => {
 
     if (response?.records) {
       pendingList.value = response.records
-      pagination.total = response.total || 0
+      // 后端分页插件缺失时会返回 total=0 与全量记录，此时以实际记录数兜底
+      pagination.total = response.total || response.records.length
       stats.pending = pagination.total
       stats.todayApproved = response.todayApproved || 0
       stats.approvalRate = response.approvalRate || 0
     } else if (response?.code === '200' || response?.code === 200) {
       pendingList.value = response.data?.records || response.data?.list || response.data || []
-      pagination.total = response.data?.total || pendingList.value.length || 0
+      pagination.total = response.data?.total || pendingList.value.length
       stats.pending = pagination.total
       stats.todayApproved = response.data?.todayApproved || 0
       stats.approvalRate = response.data?.approvalRate || 0
@@ -179,6 +176,29 @@ const handleAudit = (row, status) => {
 
 // 提交审核
 const submitAudit = async () => {
+  if (auditForm.status === 'REJECTED' && !auditForm.reason.trim()) {
+    ElMessage.warning('请填写拒绝原因')
+    return
+  }
+
+  if (auditForm.status === 'REJECTED') {
+    try {
+      await ElMessageBox.confirm(
+        `确认拒绝「${currentMerchant.value?.name || '该商家'}」的注册申请？`,
+        '拒绝确认',
+        {
+          type: 'warning',
+          confirmButtonText: '确认拒绝',
+          cancelButtonText: '取消',
+          confirmButtonClass: 'el-button--danger'
+        }
+      )
+    } catch {
+      return
+    }
+  }
+
+  submitting.value = true
   try {
     const response = await auditMerchant(auditForm.merchantId, {
       status: auditForm.status,
@@ -186,15 +206,24 @@ const submitAudit = async () => {
     })
 
     if (response.success) {
-      ElMessage.success('审核完成')
+      const auditedId = auditForm.merchantId
       auditDialogVisible.value = false
-      fetchPendingList()
+      // 行内即时反馈：先就地移除该行，再同步计数
+      pendingList.value = pendingList.value.filter((item) => item.merchantId !== auditedId)
+      pagination.total = Math.max(0, pagination.total - 1)
+      stats.pending = Math.max(0, stats.pending - 1)
+      if (auditForm.status === 'APPROVED') {
+        stats.todayApproved += 1
+      }
+      ElMessage.success(auditForm.status === 'APPROVED' ? '已通过该商家' : '已拒绝该商家')
     } else {
       ElMessage.error(response.message || '审核失败')
     }
   } catch (error) {
     console.error('审核失败:', error)
-    ElMessage.error('审核失败')
+    ElMessage.error(error?.response?.data?.message || '审核失败')
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -204,44 +233,39 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '@/assets/css/nordic-theme.less';
+
 .merchant-audit-container {
-  .page-header {
-    margin-bottom: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
-  }
-
-  .stats-cards {
+  .stats-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
+  }
 
-    .stat-card {
-      text-align: center;
-    }
+  /* 待审核是待办入口，按 §3.1 语义色给警示黄强调（§4.8） */
+  .stat-card-pending :deep(.app-stat-card__icon) {
+    color: var(--warning);
+  }
+
+  .audit-form {
+    margin-top: var(--space-5);
   }
 
   .table-card {
     .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-weight: bold;
+      font-weight: 600;
     }
 
     .pagination-container {
-      margin-top: 20px;
+      margin-top: var(--space-5);
       display: flex;
       justify-content: flex-end;
     }
