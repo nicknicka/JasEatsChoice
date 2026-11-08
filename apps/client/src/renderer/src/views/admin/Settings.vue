@@ -1117,17 +1117,6 @@ onMounted(async () => {
 .admin-settings-container {
   padding: 20px;
 
-  .header {
-    h3 {
-      margin: 0;
-      font-size: 1.429rem /* 原值: 20px */;
-      color: var(--ink-900);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-  }
-
   h4 {
     font-size: 1.143rem /* 原值: 16px */;
       color: var(--ink-900);
