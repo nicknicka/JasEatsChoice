@@ -221,11 +221,10 @@ const fetchPendingTutorials = async () => {
     console.log('待审核教程列表响应:', response)
     if (response && response.records) {
       pendingTutorials.value = response.records.map(normalizeTutorial)
-      // 后端分页插件缺失时返回 total=0，此处以实际记录数兜底
-      pagination.value.total = response.total || pendingTutorials.value.length
+      pagination.value.total = response.total ?? 0
     } else if (response && response.data && response.data.records) {
       pendingTutorials.value = response.data.records.map(normalizeTutorial)
-      pagination.value.total = response.data.total || pendingTutorials.value.length
+      pagination.value.total = response.data.total ?? 0
     } else if (Array.isArray(response)) {
       pendingTutorials.value = response.map(normalizeTutorial)
       pagination.value.total = response.length

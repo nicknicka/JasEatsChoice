@@ -226,8 +226,7 @@ const fetchMerchantList = async () => {
 
     if (response) {
       merchantList.value = response.records || []
-      // 后端分页插件缺失时返回 total=0 与全量记录，此处以实际记录数兜底
-      pagination.total = response.total || merchantList.value.length
+      pagination.total = response.total ?? 0
 
       // 更新统计数据
       stats.total = pagination.total

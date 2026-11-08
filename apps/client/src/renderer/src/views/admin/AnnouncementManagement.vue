@@ -622,7 +622,7 @@ const fetchAnnouncements = async () => {
 
     if (response?.records) {
       announcements.value = response.records
-      pagination.total = response.total || response.records.length
+      pagination.total = response.total ?? 0
     } else if (Array.isArray(response)) {
       announcements.value = response
       pagination.total = response.length

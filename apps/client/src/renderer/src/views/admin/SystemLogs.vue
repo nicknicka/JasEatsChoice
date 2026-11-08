@@ -164,7 +164,7 @@
           </el-table-column>
         </el-table>
 
-        <!-- 分页：空数据时不渲染，合计用实际记录数兜底（§4.3、§5.4；后端分页缺陷见 #433） -->
+        <!-- 分页：空数据时不渲染（§4.3、§5.4） -->
         <div v-if="logList.length > 0" class="pagination-container">
           <el-pagination
             v-model:current-page="pagination.page"
@@ -369,8 +369,7 @@ const fetchLogList = async () => {
 
     if (response && response.success) {
       logList.value = response.records || []
-      // #433：后端分页 total 恒为 0，用当前记录数兜底
-      pagination.total = response.total || logList.value.length
+      pagination.total = response.total ?? 0
     } else {
       logList.value = []
       pagination.total = 0

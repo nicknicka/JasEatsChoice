@@ -209,8 +209,7 @@ const fetchDishList = async () => {
     if (response) {
       const records = response.records || []
       dishList.value = records
-      // 后端分页插件缺失时 total 恒为 0，此处以实际记录数兜底（§4.3）
-      pagination.total = response.total || records.length
+      pagination.total = response.total ?? 0
 
       // 更新统计数据
       stats.total = pagination.total

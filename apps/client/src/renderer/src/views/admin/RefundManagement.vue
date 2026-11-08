@@ -296,7 +296,7 @@ const fetchRefundList = async () => {
 
     if (response) {
       refundList.value = response.records || []
-      pagination.total = response.total || response.records?.length || 0
+      pagination.total = response.total ?? 0
     }
   } catch (error) {
     console.error('获取退款列表失败:', error)

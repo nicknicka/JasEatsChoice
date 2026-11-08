@@ -231,8 +231,7 @@ const fetchRechargeList = async () => {
 
     if (response) {
       rechargeList.value = (response.records || []).map(normalizeRechargeRecord)
-      // 后端分页插件缺失时返回 total=0 与全量记录，此处以实际记录数兜底（§5.4）
-      pagination.total = response.total || rechargeList.value.length
+      pagination.total = response.total ?? 0
     }
   } catch (error) {
     console.error('获取充值记录失败:', error)
