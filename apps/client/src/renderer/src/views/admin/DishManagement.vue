@@ -1,28 +1,17 @@
 <template>
   <div class="dish-management-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>菜品管理</h1>
-      <p class="subtitle">管理系统所有菜品</p>
+    <!-- 页面标题（§4.7 统一页头容器，admin 用紧凑版） -->
+    <AppPageHeader title="菜品管理" subtitle="管理系统所有菜品" :compact="true" />
+
+    <!-- 统计卡片（§4.8 线性图标 + 数值 + 标签，四卡一行） -->
+    <div class="stats-section">
+      <AppStatCard label="菜品总数" :value="stats.total" icon="Dish" />
+      <AppStatCard label="已上架" :value="stats.active" icon="CircleCheck" />
+      <AppStatCard label="已下架" :value="stats.inactive" icon="CircleClose" />
+      <AppStatCard label="待审核" :value="stats.pending" icon="Clock" />
     </div>
 
-    <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-card class="stat-card">
-        <el-statistic title="菜品总数" :value="stats.total" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="已上架" :value="stats.active" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="已下架" :value="stats.inactive" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="待审核" :value="stats.pending" />
-      </el-card>
-    </div>
-
-    <!-- 搜索栏 -->
+    <!-- 搜索栏：关键词 + 分类 + 状态 + 搜索/重置 单行排布（§4.3 筛选条） -->
     <el-card class="search-card" shadow="never">
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="关键词">
@@ -59,51 +48,66 @@
 
     <!-- 菜品列表 -->
     <el-card class="table-card" shadow="never">
-      <el-table :data="dishList" v-loading="loading" stripe>
-        <el-table-column prop="dishId" label="菜品ID" width="100" />
-        <el-table-column prop="dishName" label="菜品名称" min-width="150" />
-        <el-table-column prop="merchantName" label="商家名称" min-width="150" />
-        <el-table-column prop="category" label="分类" width="100" />
-        <el-table-column prop="price" label="价格" width="100">
-          <template #default="{ row }">
-            <span style="color: #f56c6c; font-weight: bold">¥{{ row.price }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
-        <el-table-column label="操作" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
-            <el-button
-              :type="isActiveStatus(row.status, row.statusCode) ? 'warning' : 'success'"
-              size="small"
-              link
-              @click="handleToggleStatus(row)"
-            >
-              {{ isActiveStatus(row.status, row.statusCode) ? '下架' : '上架' }}
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <AppEmptyState
+        v-if="!loading && dishList.length === 0"
+        compact
+        icon="Dish"
+        description="没有符合条件的菜品，换个关键词或清空筛选试试"
+        action-text="重置筛选"
+        @action="handleReset"
+      />
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchDishList"
-          @current-change="fetchDishList"
-        />
-      </div>
+      <template v-else>
+        <el-table :data="dishList" v-loading="loading" stripe>
+          <!-- ID 单行完整，不折行（§4.3、§5.4） -->
+          <el-table-column prop="dishId" label="菜品ID" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="dishName" label="菜品名称" min-width="150" />
+          <el-table-column prop="merchantName" label="商家名称" min-width="140" />
+          <el-table-column prop="category" label="分类" width="90" />
+          <!-- 价格：中性色 + 无衬线等宽数字，不带红绿蓝（§4.3） -->
+          <el-table-column label="价格" width="90" align="right">
+            <template #default="{ row }">
+              <span class="amount">¥{{ row.price }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <StatusTag :status="getDishStatusKey(row)" />
+            </template>
+          </el-table-column>
+          <!-- 时间统一 YYYY-MM-DD HH:mm，去掉 ISO 的 T（§4.3） -->
+          <el-table-column label="创建时间" width="150">
+            <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="150" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
+              <el-button
+                :type="isActiveStatus(row.status, row.statusCode) ? 'warning' : 'success'"
+                size="small"
+                link
+                :loading="togglingId === row.dishId"
+                @click="handleToggleStatus(row)"
+              >
+                {{ isActiveStatus(row.status, row.statusCode) ? '下架' : '上架' }}
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 分页：空数据时不渲染（§4.3） -->
+        <div v-if="dishList.length > 0" class="pagination-container">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="fetchDishList"
+            @current-change="fetchDishList"
+          />
+        </div>
+      </template>
     </el-card>
 
     <!-- 菜品详情对话框 -->
@@ -119,18 +123,16 @@
         <el-descriptions-item label="商家名称">{{ currentDish.merchantName }}</el-descriptions-item>
         <el-descriptions-item label="分类">{{ currentDish.category || '-' }}</el-descriptions-item>
         <el-descriptions-item label="价格">
-          <span style="color: #f56c6c; font-weight: bold">¥{{ currentDish.price }}</span>
+          <span class="amount">¥{{ currentDish.price }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="getStatusType(currentDish.status)">
-            {{ getStatusText(currentDish.status) }}
-          </el-tag>
+          <StatusTag :status="getDishStatusKey(currentDish)" />
         </el-descriptions-item>
         <el-descriptions-item label="热量">{{ currentDish.calories || '-' }} kcal</el-descriptions-item>
         <el-descriptions-item label="库存">{{ currentDish.stock || '不限量' }}</el-descriptions-item>
         <el-descriptions-item label="销量">{{ currentDish.sales || 0 }}</el-descriptions-item>
         <el-descriptions-item label="评分">{{ currentDish.rating || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间" :span="2">{{ currentDish.createdAt }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间" :span="2">{{ formatTime(currentDish.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="菜品描述" :span="2">{{ currentDish.description || '-' }}</el-descriptions-item>
         <el-descriptions-item label="菜品图片" :span="2">
           <el-image
@@ -148,6 +150,7 @@
         <el-button @click="detailDialogVisible = false">关闭</el-button>
         <el-button
           :type="currentDish?.status === 'ACTIVE' ? 'warning' : 'success'"
+          :loading="togglingId === currentDish?.dishId"
           @click="handleToggleStatus(currentDish)"
         >
           {{ currentDish?.status === 'ACTIVE' ? '下架' : '上架' }}
@@ -161,12 +164,19 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
+import { formatTime } from '@/utils/formatters'
 import { getDishList, getDishDetail, updateDishStatus } from '@/api/admin'
 
 const loading = ref(false)
 const dishList = ref([])
 const currentDish = ref(null)
 const detailDialogVisible = ref(false)
+// 正在切换状态的菜品 ID，用于行内 loading 与防重复点击（§4.6）
+const togglingId = ref(null)
 
 const stats = reactive({
   total: 0,
@@ -201,14 +211,16 @@ const fetchDishList = async () => {
     })
 
     if (response) {
-      dishList.value = response.records || []
-      pagination.total = response.total || 0
+      const records = response.records || []
+      dishList.value = records
+      // 后端分页插件缺失时 total 恒为 0，此处以实际记录数兜底（§4.3）
+      pagination.total = response.total || records.length
 
       // 更新统计数据
       stats.total = pagination.total
-      stats.active = dishList.value.filter(d => d.status === 'ACTIVE').length
-      stats.inactive = dishList.value.filter(d => d.status === 'INACTIVE').length
-      stats.pending = dishList.value.filter(d => d.status === 'PENDING').length
+      stats.active = records.filter(d => d.status === 'ACTIVE' || d.statusCode === 'ACTIVE').length
+      stats.inactive = records.filter(d => d.status === 'INACTIVE' || d.statusCode === 'INACTIVE').length
+      stats.pending = records.filter(d => d.status === 'PENDING' || d.statusCode === 'PENDING').length
       console.log('[菜品管理] 获取菜品列表成功, 总数:', pagination.total)
     }
   } catch (error) {
@@ -219,37 +231,22 @@ const fetchDishList = async () => {
   }
 }
 
-// 获取状态类型
-const getStatusType = (status) => {
-  // 如果是Boolean类型，转换为状态代码
-  if (typeof status === 'boolean') {
-    return status ? 'success' : 'info'
-  }
-
-  // 如果是String类型，使用映射
-  const types = {
-    'ACTIVE': 'success',
-    'INACTIVE': 'info',
-    'PENDING': 'warning'
-  }
-  return types[status] || 'info'
+// 状态词典键：交给 StatusTag 按 §3.1 状态表取色（已上架 info / 已下架 neutral / 待审核 warning）
+const DISH_STATUS_KEYS = {
+  'ACTIVE': 'onshelf',
+  'INACTIVE': 'offline',
+  'PENDING': 'pendingreview'
 }
 
-// 获取状态文本
-const getStatusText = (status) => {
-  // 如果是Boolean类型，转换为文本
-  if (typeof status === 'boolean') {
-    return status ? '已上架' : '已下架'
-  }
-
-  // 如果是String类型，使用映射
-  const texts = {
-    'ACTIVE': '已上架',
-    'INACTIVE': '已下架',
-    'PENDING': '待审核'
-  }
-  return texts[status] || '未知'
+// 兼容 statusCode（字符串）与 status（布尔）两种字段形态
+const getDishStatusCode = (row) => {
+  if (!row) return ''
+  if (row.statusCode) return row.statusCode
+  if (typeof row.status === 'boolean') return row.status ? 'ACTIVE' : 'INACTIVE'
+  return row.status || ''
 }
+
+const getDishStatusKey = (row) => DISH_STATUS_KEYS[getDishStatusCode(row)] || 'unknown'
 
 // 判断是否为上架状态（支持Boolean和String两种类型）
 const isActiveStatus = (status, statusCode) => {
@@ -300,9 +297,8 @@ const handleView = async (row) => {
   }
 }
 
-// 切换状态
+// 切换状态：二次确认 + 行内 loading + 结果反馈（§4.1、§4.6）
 const handleToggleStatus = async (row) => {
-  // 判断是否为上架状态（支持Boolean和String两种类型）
   const isActive = isActiveStatus(row.status, row.statusCode)
   const actionText = isActive ? '下架' : '上架'
 
@@ -316,12 +312,13 @@ const handleToggleStatus = async (row) => {
     const newStatus = isActive ? 'INACTIVE' : 'ACTIVE'
     console.log('[菜品管理] 修改菜品状态, 菜品ID:', row.dishId, '新状态:', newStatus)
 
+    togglingId.value = row.dishId
     const response = await updateDishStatus(row.dishId, newStatus)
 
     if (response.success) {
       ElMessage.success(`${actionText}成功`)
       detailDialogVisible.value = false
-      fetchDishList()
+      await fetchDishList()
       console.log('[菜品管理] 修改菜品状态成功')
     } else {
       ElMessage.error(response.message || `${actionText}失败`)
@@ -331,6 +328,8 @@ const handleToggleStatus = async (row) => {
       console.error('[菜品管理] 修改菜品状态失败:', error)
       ElMessage.error(`${actionText}失败: ` + (error.message || '网络错误'))
     }
+  } finally {
+    togglingId.value = null
   }
 }
 
@@ -341,35 +340,22 @@ onMounted(() => {
 
 <style scoped lang="less">
 .dish-management-container {
-  .page-header {
-    margin-bottom: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
-  }
-
-  .stats-cards {
+  .stats-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-
-    .stat-card {
-      text-align: center;
-    }
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
   }
 
   .search-card {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-8);
 
     .search-form {
       margin-bottom: 0;
@@ -378,10 +364,18 @@ onMounted(() => {
 
   .table-card {
     .pagination-container {
-      margin-top: 20px;
+      margin-top: var(--space-5);
       display: flex;
       justify-content: flex-end;
     }
+  }
+
+  /* 金额/价格：无衬线 + 等宽数字 + 中性色，不带红绿蓝（§4.3） */
+  .amount {
+    color: var(--ink-900);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-semibold);
   }
 }
 </style>
