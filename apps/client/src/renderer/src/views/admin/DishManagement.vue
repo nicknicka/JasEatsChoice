@@ -81,16 +81,11 @@
           </el-table-column>
           <el-table-column label="操作" width="150" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
-              <el-button
-                :type="isActiveStatus(row.status, row.statusCode) ? 'warning' : 'success'"
-                size="small"
-                link
-                :loading="togglingId === row.dishId"
-                @click="handleToggleStatus(row)"
-              >
-                {{ isActiveStatus(row.status, row.statusCode) ? '下架' : '上架' }}
-              </el-button>
+              <RowActions
+                :primary="{ text: '查看', onClick: () => handleView(row) }"
+                :items="rowActions(row)"
+                :max-visible="1"
+              />
             </template>
           </el-table-column>
         </el-table>
@@ -168,6 +163,7 @@ import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppStatCard from '@/components/common/AppStatCard.vue'
 import AppEmptyState from '@/components/common/AppEmptyState.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
+import RowActions from '@/components/common/RowActions.vue'
 import { formatTime } from '@/utils/formatters'
 import { getDishList, getDishDetail, updateDishStatus } from '@/api/admin'
 
@@ -297,17 +293,31 @@ const handleView = async (row) => {
   }
 }
 
-// 切换状态：二次确认 + 行内 loading + 结果反馈（§4.1、§4.6）
-const handleToggleStatus = async (row) => {
+// 行操作：查看 + 更多（§4.3）
+// 「下架」是点一下即生效的破坏性动作，进「更多」并由 RowActions 承担危险色与二次确认；
+// 「上架」非破坏性，保持可见，确认仍由本页负责。
+const rowActions = (row) => {
+  const isActive = isActiveStatus(row.status, row.statusCode)
+  return [
+    isActive
+      ? { text: '下架', danger: true, onClick: () => handleToggleStatus(row, { confirmed: true }) }
+      : { text: '上架', onClick: () => handleToggleStatus(row) }
+  ]
+}
+
+// 切换状态：二次确认 + loading + 结果反馈（§4.1、§4.6）
+const handleToggleStatus = async (row, { confirmed = false } = {}) => {
   const isActive = isActiveStatus(row.status, row.statusCode)
   const actionText = isActive ? '下架' : '上架'
 
   try {
-    await ElMessageBox.confirm(`确定要${actionText}该菜品吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+    if (!confirmed) {
+      await ElMessageBox.confirm(`确定要${actionText}该菜品吗？`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+    }
 
     const newStatus = isActive ? 'INACTIVE' : 'ACTIVE'
     console.log('[菜品管理] 修改菜品状态, 菜品ID:', row.dishId, '新状态:', newStatus)

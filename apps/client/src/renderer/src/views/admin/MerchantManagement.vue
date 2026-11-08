@@ -59,17 +59,11 @@
         </el-table-column>
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
-            <el-button
-              v-if="getMerchantDisplayStatus(row) === 'PENDING'"
-              type="warning"
-              size="small"
-              link
-              @click="handleAudit(row)"
-            >
-              审核
-            </el-button>
-            <el-button type="info" size="small" link @click="handleEditStatus(row)" v-else>状态</el-button>
+            <RowActions
+              :primary="{ text: '查看', onClick: () => handleView(row) }"
+              :items="rowActions(row)"
+              :max-visible="1"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -160,6 +154,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppStatCard from '@/components/common/AppStatCard.vue'
+import RowActions from '@/components/common/RowActions.vue'
 import { formatTime } from '../../utils/formatters'
 import { getMerchantList, auditMerchant, updateMerchantStatus } from '@/api/admin'
 
@@ -286,6 +281,14 @@ const handleReset = () => {
   pagination.page = 1
   fetchMerchantList()
 }
+
+// 行操作：查看 + 审核/状态（§4.3）
+// 「审核」与「状态」都先弹对话框，二次确认由对话框自身承担，故保持可见、不进「更多」。
+const rowActions = (row) => [
+  getMerchantDisplayStatus(row) === 'PENDING'
+    ? { text: '审核', onClick: () => handleAudit(row) }
+    : { text: '状态', onClick: () => handleEditStatus(row) }
+]
 
 // 查看商家详情
 const handleView = (row) => {
