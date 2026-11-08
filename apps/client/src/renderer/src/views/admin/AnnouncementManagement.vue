@@ -1,36 +1,25 @@
 <template>
   <div class="announcement-management-container">
-    <!-- 统计卡片 -->
-    <el-row :gutter="20" class="stats-row">
-      <el-col :xs="12" :sm="12" :md="6" v-for="(stat, index) in statsConfig" :key="index">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-item">
-            <div class="stat-icon" :style="{ background: stat.bgColor }">
-              <el-icon :size="24" :color="stat.iconColor">
-                <component :is="stat.icon" />
-              </el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ statistics[stat.key] || 0 }}</div>
-              <div class="stat-label">{{ stat.label }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <!-- 页头：标题 + 唯一实心主操作（§4.1、§4.7） -->
+    <AppPageHeader title="公告管理" subtitle="管理系统所有公告" :compact="true">
+      <template #actions>
+        <el-button type="primary" :icon="Plus" @click="showCreateDialog">发布公告</el-button>
+      </template>
+    </AppPageHeader>
+
+    <!-- 统计卡片：四卡一行，线性图标 + 数值 + 标签（§4.8） -->
+    <div class="stats-section">
+      <AppStatCard
+        v-for="stat in statsConfig"
+        :key="stat.key"
+        :label="stat.label"
+        :value="statistics[stat.key] || 0"
+        :icon="stat.icon"
+      />
+    </div>
 
     <!-- 主内容卡片 -->
     <el-card shadow="never" class="main-card">
-      <template #header>
-        <div class="card-header">
-          <h3>系统公告管理</h3>
-          <el-button type="primary" @click="showCreateDialog">
-            <el-icon><Plus /></el-icon>
-            发布公告
-          </el-button>
-        </div>
-      </template>
-
       <!-- 搜索筛选 -->
       <div class="filter-section">
         <el-form :inline="true" :model="filters" class="filter-form">
@@ -75,7 +64,12 @@
             </el-select>
           </el-form-item>
           <el-form-item label="目标群体">
-            <el-select v-model="filters.targetAudience" placeholder="全部" clearable style="width: 130px">
+            <el-select
+              v-model="filters.targetAudience"
+              placeholder="全部"
+              clearable
+              style="width: 130px"
+            >
               <el-option
                 v-for="item in targetAudienceOptions"
                 :key="item.value"
@@ -97,7 +91,7 @@
             />
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="handleSearch">
+            <el-button @click="handleSearch">
               <el-icon><Search /></el-icon>
               查询
             </el-button>
@@ -111,25 +105,21 @@
 
       <!-- 批量操作 -->
       <div v-if="selectedRows.length > 0" class="batch-actions">
-        <el-alert
-          :title="`已选择 ${selectedRows.length} 项`"
-          type="info"
-          :closable="false"
-        >
+        <el-alert :title="`已选择 ${selectedRows.length} 项`" type="info" :closable="false">
           <template #default>
-            <el-button size="small" type="primary" @click="batchPublish">
+            <el-button size="small" link type="primary" @click="batchPublish">
               <el-icon><Promotion /></el-icon>
               批量发布
             </el-button>
-            <el-button size="small" type="warning" @click="batchOffline">
+            <el-button size="small" link type="warning" @click="batchOffline">
               <el-icon><RemoveFilled /></el-icon>
               批量下线
             </el-button>
-            <el-button size="small" type="danger" @click="batchDelete">
+            <el-button size="small" link type="danger" @click="batchDelete">
               <el-icon><Delete /></el-icon>
               批量删除
             </el-button>
-            <el-button size="small" @click="clearSelection">
+            <el-button size="small" link @click="clearSelection">
               <el-icon><Close /></el-icon>
               取消选择
             </el-button>
@@ -137,150 +127,111 @@
         </el-alert>
       </div>
 
-      <!-- 表格 -->
-      <el-table
-        ref="tableRef"
-        v-loading="loading"
-        :data="announcements"
-        stripe
-        @selection-change="handleSelectionChange"
-        @row-dblclick="handleEdit"
-        class="announcement-table"
-      >
-        <el-table-column type="selection" width="55" fixed="left" />
-        <el-table-column label="优先级" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag
-              v-if="row.priority"
-              :type="priorityTagType(row.priority)"
-              size="small"
-              effect="plain"
-            >
-              {{ priorityLabel(row.priority) }}
-            </el-tag>
-            <span v-else style="color: #c0c4cc;">-</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="类型" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="typeTagType(row.type)" size="small">
-              {{ typeLabel(row.type) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="title" label="公告标题" min-width="200" show-overflow-tooltip />
-        <el-table-column label="公告内容" min-width="280" show-overflow-tooltip>
-          <template #default="{ row }">
-            <div class="content-preview">{{ row.content }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="目标群体" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag size="small" type="info" effect="plain">
-              {{ targetAudienceLabel(row.target_audience) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="阅读统计" width="110" align="center">
-          <template #default="{ row }">
-            <div class="read-stats" v-if="row.read_count !== undefined">
-              <el-tooltip :content="`阅读人数: ${row.read_users || 0}`" placement="top">
-                <div class="stat-item-inline">
-                  <el-icon :size="14"><View /></el-icon>
-                  <span>{{ formatNumber(row.read_count) }}</span>
-                </div>
-              </el-tooltip>
-            </div>
-            <span v-else style="color: #c0c4cc;">-</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)" size="small">
-              {{ statusLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="生效时间" width="160" align="center">
-          <template #default="{ row }">
-            <div class="time-range" v-if="row.start_time || row.end_time">
-              <div>{{ formatDate(row.start_time) }}</div>
-              <div class="time-separator">↓</div>
-              <div>{{ formatDate(row.end_time) }}</div>
-            </div>
-            <el-tag v-else size="small" type="info" effect="plain">永久</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="创建时间" width="155" align="center">
-          <template #default="{ row }">
-            {{ formatDateTime(row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right" align="center">
-          <template #default="{ row }">
-            <el-button-group class="action-buttons">
-              <el-tooltip content="查看详情" placement="top">
-                <el-button size="small" @click.stop="handleView(row)">
-                  <el-icon><View /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="预览效果" placement="top">
-                <el-button size="small" @click.stop="handlePreview(row)">
-                  <el-icon><Monitor /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="编辑" placement="top">
-                <el-button size="small" @click.stop="handleEdit(row)">
-                  <el-icon><Edit /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-dropdown @command="(cmd) => handleDropdownCommand(cmd, row)" trigger="click">
-                <el-button size="small">
-                  <el-icon><MoreFilled /></el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item
-                      :command="row.status === 'active' ? 'offline' : 'publish'"
-                      :icon="row.status === 'active' ? RemoveFilled : Promotion"
-                    >
-                      {{ row.status === 'active' ? '下线公告' : '发布公告' }}
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      command="copy"
-                      :icon="DocumentCopy"
-                      v-if="row.status === 'draft'"
-                    >
-                      复制为新公告
-                    </el-dropdown-item>
-                    <el-dropdown-item
-                      command="delete"
-                      :icon="Delete"
-                      divided
-                      style="color: #f56c6c;"
-                    >
-                      删除公告
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </el-button-group>
-          </template>
-        </el-table-column>
-      </el-table>
+      <!-- 表格：紧凑列组合，保证 1440 宽度内所有表头完整可读（§4.3、§5.4） -->
+      <AppEmptyState
+        v-if="!loading && announcements.length === 0"
+        compact
+        :icon="Document"
+        description="没有符合条件的公告，换个关键词或清空筛选试试"
+        action-text="重置筛选"
+        @action="resetFilters"
+      />
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.size"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handlePageChange"
-          @current-change="handlePageChange"
-        />
-      </div>
+      <template v-else>
+        <el-table
+          ref="tableRef"
+          v-loading="loading"
+          :data="announcements"
+          stripe
+          class="announcement-table"
+          @selection-change="handleSelectionChange"
+          @row-dblclick="handleEdit"
+        >
+          <el-table-column type="selection" width="44" fixed="left" />
+          <el-table-column label="公告" min-width="260">
+            <template #default="{ row }">
+              <div class="announcement-cell">
+                <div class="announcement-title">{{ row.title }}</div>
+                <div class="content-preview">{{ row.content }}</div>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="分类" width="140">
+            <template #default="{ row }">
+              <div class="tag-stack">
+                <StatusTag
+                  v-if="row.priority"
+                  :status="priorityStatus(row.priority)"
+                  :text="priorityLabel(row.priority)"
+                />
+                <StatusTag :status="typeStatus(row.type)" :text="typeLabel(row.type)" />
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="目标群体" width="88">
+            <template #default="{ row }">
+              <StatusTag status="neutral" :text="targetAudienceLabel(row.targetAudience)" />
+            </template>
+          </el-table-column>
+          <el-table-column label="阅读" width="80">
+            <template #default="{ row }">
+              <div v-if="row.readCount !== undefined" class="read-stats">
+                <el-tooltip :content="`阅读人数: ${row.readUsers || 0}`" placement="top">
+                  <div class="stat-item-inline">
+                    <el-icon :size="14"><View /></el-icon>
+                    <span>{{ formatNumber(row.readCount) }}</span>
+                  </div>
+                </el-tooltip>
+              </div>
+              <span v-else class="muted">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="72">
+            <template #default="{ row }">
+              <StatusTag :status="statusKey(row.status)" />
+            </template>
+          </el-table-column>
+          <el-table-column label="时间" width="208">
+            <template #default="{ row }">
+              <div class="time-cell">
+                <div>
+                  <span class="time-label">生效</span>
+                  <span v-if="row.startTime || row.endTime">
+                    {{ formatDate(row.startTime) }} 至 {{ formatDate(row.endTime) }}
+                  </span>
+                  <span v-else>永久</span>
+                </div>
+                <div>
+                  <span class="time-label">创建</span>
+                  <span>{{ formatDateTime(row.createdAt) }}</span>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="176" fixed="right">
+            <template #default="{ row }">
+              <RowActions
+                :primary="{ text: '查看', onClick: () => handleView(row) }"
+                :items="rowActions(row)"
+                :max-visible="1"
+              />
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 分页：合计与实际记录数一致，空数据时隐藏（§4.3） -->
+        <div v-if="announcements.length > 0" class="pagination-container">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.size"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handlePageChange"
+            @current-change="handlePageChange"
+          />
+        </div>
+      </template>
     </el-card>
 
     <!-- 创建/编辑对话框 -->
@@ -288,10 +239,10 @@
       v-model="showDialog"
       :title="dialogMode === 'create' ? '发布公告' : '编辑公告'"
       width="800px"
-      @close="resetForm"
       :close-on-click-modal="false"
+      @close="resetForm"
     >
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="110px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="公告标题" prop="title">
@@ -330,7 +281,11 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="目标群体" prop="targetAudience">
-              <el-select v-model="form.targetAudience" placeholder="请选择目标群体" style="width: 100%">
+              <el-select
+                v-model="form.targetAudience"
+                placeholder="请选择目标群体"
+                style="width: 100%"
+              >
                 <el-option
                   v-for="item in targetAudienceOptions"
                   :key="item.value"
@@ -354,7 +309,7 @@
           </el-col>
           <el-col :span="24">
             <el-form-item label="生效时间">
-              <div style="display: flex; gap: 12px; align-items: center; width: 100%;">
+              <div style="display: flex; gap: 12px; align-items: center; width: 100%">
                 <el-date-picker
                   ref="startDatePickerRef"
                   v-model="form.startTime"
@@ -362,10 +317,10 @@
                   placeholder="开始时间（可选）"
                   format="YYYY-MM-DD HH:mm:ss"
                   value-format="YYYY-MM-DDTHH:mm:ss"
-                  style="flex: 1;"
+                  style="flex: 1"
                   @change="handleStartDateChange"
                 />
-                <span style="color: #909399;">至</span>
+                <span class="dialog-separator">至</span>
                 <el-date-picker
                   ref="endDatePickerRef"
                   v-model="form.endTime"
@@ -373,7 +328,7 @@
                   placeholder="结束时间（可选）"
                   format="YYYY-MM-DD HH:mm:ss"
                   value-format="YYYY-MM-DDTHH:mm:ss"
-                  style="flex: 1;"
+                  style="flex: 1"
                 />
               </div>
             </el-form-item>
@@ -391,59 +346,52 @@
 
       <template #footer>
         <el-button @click="showDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">
-          确定
-        </el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit"> 确定 </el-button>
       </template>
     </el-dialog>
 
     <!-- 查看详情对话框 -->
-    <el-dialog
-      v-model="showViewDialog"
-      title="公告详情"
-      width="700px"
-    >
-      <div class="announcement-detail" v-if="currentAnnouncement">
+    <el-dialog v-model="showViewDialog" title="公告详情" width="700px">
+      <div v-if="currentAnnouncement" class="announcement-detail">
         <h3 class="detail-title">{{ currentAnnouncement.title }}</h3>
         <el-divider />
         <div class="detail-meta">
           <el-space wrap>
-            <el-tag :type="typeTagType(currentAnnouncement.type)" size="small">
-              {{ typeLabel(currentAnnouncement.type) }}
-            </el-tag>
-            <el-tag
+            <StatusTag
+              :status="typeStatus(currentAnnouncement.type)"
+              :text="typeLabel(currentAnnouncement.type)"
+            />
+            <StatusTag
               v-if="currentAnnouncement.priority"
-              :type="priorityTagType(currentAnnouncement.priority)"
-              size="small"
-            >
-              {{ priorityLabel(currentAnnouncement.priority) }}
-            </el-tag>
-            <el-tag :type="statusTagType(currentAnnouncement.status)" size="small">
-              {{ statusLabel(currentAnnouncement.status) }}
-            </el-tag>
-            <el-tag type="info" size="small" effect="plain">
-              {{ targetAudienceLabel(currentAnnouncement.target_audience) }}
-            </el-tag>
+              :status="priorityStatus(currentAnnouncement.priority)"
+              :text="priorityLabel(currentAnnouncement.priority)"
+            />
+            <StatusTag :status="statusKey(currentAnnouncement.status)" />
+            <StatusTag
+              status="neutral"
+              :text="targetAudienceLabel(currentAnnouncement.targetAudience)"
+            />
           </el-space>
         </div>
         <el-divider />
         <div class="detail-info">
           <div class="info-row">
             <span class="label">生效时间：</span>
-            <span v-if="currentAnnouncement.start_time || currentAnnouncement.end_time">
-              {{ formatDateTime(currentAnnouncement.start_time) }} 至 {{ formatDateTime(currentAnnouncement.end_time) }}
+            <span v-if="currentAnnouncement.startTime || currentAnnouncement.endTime">
+              {{ formatDateTime(currentAnnouncement.startTime) }} 至
+              {{ formatDateTime(currentAnnouncement.endTime) }}
             </span>
-            <span v-else style="color: #909399;">永久有效</span>
+            <span v-else class="muted">永久有效</span>
           </div>
           <div class="info-row">
             <span class="label">创建时间：</span>
-            <span>{{ formatDateTime(currentAnnouncement.created_at) }}</span>
+            <span>{{ formatDateTime(currentAnnouncement.createdAt) }}</span>
           </div>
-          <div class="info-row" v-if="currentAnnouncement.read_count !== undefined">
+          <div v-if="currentAnnouncement.readCount !== undefined" class="info-row">
             <span class="label">阅读统计：</span>
             <span>
-              阅读量 {{ formatNumber(currentAnnouncement.read_count) }} 次，
-              阅读人数 {{ formatNumber(currentAnnouncement.read_users || 0) }} 人
+              阅读量 {{ formatNumber(currentAnnouncement.readCount) }} 次， 阅读人数
+              {{ formatNumber(currentAnnouncement.readUsers || 0) }} 人
             </span>
           </div>
         </div>
@@ -455,32 +403,30 @@
       </div>
 
       <template #footer>
-        <el-button @click="handleEdit(currentAnnouncement)" type="primary">编辑</el-button>
+        <el-button type="primary" @click="handleEdit(currentAnnouncement)">编辑</el-button>
         <el-button @click="showViewDialog = false">关闭</el-button>
       </template>
     </el-dialog>
 
     <!-- 用户端预览对话框 -->
-    <el-dialog
-      v-model="showPreviewDialog"
-      title="用户端预览"
-      width="500px"
-    >
-      <div class="announcement-preview" v-if="previewAnnouncement">
+    <el-dialog v-model="showPreviewDialog" title="用户端预览" width="500px">
+      <div v-if="previewAnnouncement" class="announcement-preview">
         <div class="preview-header">
-          <el-tag
+          <StatusTag
             v-if="previewAnnouncement.priority"
-            :type="priorityTagType(previewAnnouncement.priority)"
-            size="small"
-          >
-            {{ priorityLabel(previewAnnouncement.priority) }}
-          </el-tag>
-          <span class="preview-date">{{ formatDateTime(previewAnnouncement.created_at) }}</span>
+            :status="priorityStatus(previewAnnouncement.priority)"
+            :text="priorityLabel(previewAnnouncement.priority)"
+          />
+          <span class="preview-date">{{ formatDateTime(previewAnnouncement.createdAt) }}</span>
         </div>
         <h3 class="preview-title">{{ previewAnnouncement.title }}</h3>
         <div class="preview-content">{{ previewAnnouncement.content }}</div>
-        <div class="preview-footer" v-if="previewAnnouncement.start_time || previewAnnouncement.end_time">
-          有效期：{{ formatDate(previewAnnouncement.start_time) }} ~ {{ formatDate(previewAnnouncement.end_time) }}
+        <div
+          v-if="previewAnnouncement.startTime || previewAnnouncement.endTime"
+          class="preview-footer"
+        >
+          有效期：{{ formatDate(previewAnnouncement.startTime) }} ~
+          {{ formatDate(previewAnnouncement.endTime) }}
         </div>
       </div>
       <template #footer>
@@ -494,13 +440,27 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Document, SuccessFilled, CircleClose, Calendar, Plus, Search, RefreshLeft,
-  Edit, Delete, View, Monitor, MoreFilled, RemoveFilled, Promotion,
-  DocumentCopy, Close
+  Document,
+  SuccessFilled,
+  CircleClose,
+  Calendar,
+  Plus,
+  Search,
+  RefreshLeft,
+  Delete,
+  View,
+  RemoveFilled,
+  Promotion,
+  Close
 } from '@element-plus/icons-vue'
 import { debounce } from 'lodash-es'
 import dayjs from 'dayjs'
 import api from '../../utils/api.js'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
+import RowActions from '@/components/common/RowActions.vue'
 import { API_CONFIG } from '../../config/index.js'
 
 // ============ 常量配置 ============
@@ -524,10 +484,10 @@ const targetAudienceOptions = [
 ]
 
 const statsConfig = [
-  { key: 'totalCount', label: '总公告数', icon: Document, bgColor: '#ecf5ff', iconColor: '#409eff' },
-  { key: 'activeCount', label: '已发布', icon: SuccessFilled, bgColor: '#f0f9ff', iconColor: '#67c23a' },
-  { key: 'draftCount', label: '草稿箱', icon: CircleClose, bgColor: '#fef0f0', iconColor: '#909399' },
-  { key: 'todayNewCount', label: '今日新增', icon: Calendar, bgColor: '#fdf6ec', iconColor: '#e6a23c' }
+  { key: 'totalCount', label: '总公告数', icon: Document },
+  { key: 'activeCount', label: '已发布', icon: SuccessFilled },
+  { key: 'draftCount', label: '草稿箱', icon: CircleClose },
+  { key: 'todayNewCount', label: '今日新增', icon: Calendar }
 ]
 
 // ============ 工具函数 ============
@@ -555,35 +515,32 @@ const formatDate = (date) => {
 
 // 标签获取函数
 const typeLabel = (type) => {
-  return announcementTypes.find(t => t.value === type)?.label || '未知'
+  return announcementTypes.find((t) => t.value === type)?.label || '未知'
 }
 
-const typeTagType = (type) => {
+const typeStatus = (type) => {
   const map = { system: 'info', activity: 'warning', urgent: 'danger', update: 'success' }
-  return map[type] || 'info'
+  return map[type] || 'neutral'
 }
 
+// 线上数据里既有 normal/important/urgent，也有 low/high，展示层都要认
 const priorityLabel = (priority) => {
-  return priorityOptions.find(p => p.value === priority)?.label || '-'
+  const map = { low: '低', normal: '普通', high: '高', important: '重要', urgent: '紧急' }
+  return map[priority] || '-'
 }
 
-const priorityTagType = (priority) => {
-  const map = { normal: 'info', important: 'warning', urgent: 'danger' }
-  return map[priority] || 'info'
+const priorityStatus = (priority) => {
+  const map = { low: 'neutral', normal: 'neutral', high: 'warning', important: 'warning', urgent: 'danger' }
+  return map[priority] || 'neutral'
 }
 
-const statusLabel = (status) => {
-  const map = { active: '已发布', draft: '草稿', inactive: '已下线' }
-  return map[status] || '未知'
-}
-
-const statusTagType = (status) => {
-  const map = { active: 'success', draft: 'info', inactive: 'info' }
-  return map[status] || 'info'
+const statusKey = (status) => {
+  const map = { active: 'active', draft: 'draft', inactive: 'offline' }
+  return map[status] || 'unknown'
 }
 
 const targetAudienceLabel = (audience) => {
-  return targetAudienceOptions.find(t => t.value === audience)?.label || '全部'
+  return targetAudienceOptions.find((t) => t.value === audience)?.label || '全部'
 }
 
 // ============ 数据状态 ============
@@ -665,7 +622,7 @@ const fetchAnnouncements = async () => {
 
     if (response?.records) {
       announcements.value = response.records
-      pagination.total = response.total || 0
+      pagination.total = response.total || response.records.length
     } else if (Array.isArray(response)) {
       announcements.value = response
       pagination.total = response.length
@@ -759,33 +716,44 @@ const handleEdit = (row) => {
     content: row.content,
     type: row.type || 'system',
     priority: row.priority || 'normal',
-    targetAudience: row.target_audience || 'all',
-    startTime: row.start_time || null,
-    endTime: row.end_time || null,
+    targetAudience: row.targetAudience || 'all',
+    startTime: row.startTime || null,
+    endTime: row.endTime || null,
     status: row.status
   })
   showDialog.value = true
 }
 
-const handleDropdownCommand = (command, row) => {
-  const actions = {
-    offline: () => handleToggleStatus(row, 'inactive'),
-    publish: () => handleToggleStatus(row, 'active'),
-    copy: () => copyAnnouncement(row),
-    delete: () => handleDelete(row)
+const rowActions = (row) => {
+  const items = [
+    {
+      text: row.status === 'active' ? '下线公告' : '发布公告',
+      danger: row.status === 'active',
+      onClick: () => handleToggleStatus(row, row.status === 'active' ? 'inactive' : 'active')
+    },
+    { text: '预览', onClick: () => handlePreview(row) },
+    { text: '编辑', onClick: () => handleEdit(row) }
+  ]
+
+  if (row.status === 'draft') {
+    items.push({ text: '复制为新公告', onClick: () => copyAnnouncement(row) })
   }
-  actions[command]?.()
+
+  items.push({ text: '删除公告', danger: true, onClick: () => handleDelete(row) })
+  return items
 }
 
 const handleToggleStatus = async (row, newStatus) => {
   const action = newStatus === 'active' ? '发布' : '下线'
 
   try {
-    await ElMessageBox.confirm(`确定要${action}该公告吗？`, '提示', {
-      type: 'warning',
-      confirmButtonText: '确定',
-      cancelButtonText: '取消'
-    })
+    if (newStatus === 'active') {
+      await ElMessageBox.confirm(`确定要${action}该公告吗？`, '提示', {
+        type: 'warning',
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      })
+    }
 
     const response = await api.put(`${API_CONFIG.admin.announcementUpdateStatus}/${row.id}`, {
       status: newStatus
@@ -821,7 +789,9 @@ const handleSubmit = async () => {
 
   try {
     const isCreate = dialogMode.value === 'create'
-    const url = isCreate ? API_CONFIG.admin.announcementCreate : `${API_CONFIG.admin.announcementUpdate}/${form.id}`
+    const url = isCreate
+      ? API_CONFIG.admin.announcementCreate
+      : `${API_CONFIG.admin.announcementUpdate}/${form.id}`
     const method = isCreate ? 'post' : 'put'
 
     const response = await api[method](url, data)
@@ -842,13 +812,6 @@ const handleSubmit = async () => {
 
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要删除该公告吗？此操作不可恢复！', '删除确认', {
-      type: 'warning',
-      confirmButtonText: '确定删除',
-      cancelButtonText: '取消',
-      confirmButtonClass: 'el-button--danger'
-    })
-
     const response = await api.delete(`${API_CONFIG.admin.announcementDelete}/${row.id}`)
 
     if (response?.success !== false) {
@@ -871,7 +834,7 @@ const copyAnnouncement = (row) => {
     content: row.content,
     type: row.type || 'system',
     priority: row.priority || 'normal',
-    targetAudience: row.target_audience || 'all',
+    targetAudience: row.targetAudience || 'all',
     startTime: null,
     endTime: null,
     status: 'draft'
@@ -890,7 +853,7 @@ const clearSelection = () => {
 }
 
 const batchPublish = async () => {
-  const activeItems = selectedRows.value.filter(row => row.status !== 'active')
+  const activeItems = selectedRows.value.filter((row) => row.status !== 'active')
   if (activeItems.length === 0) {
     ElMessage.warning('选中的公告中没有可以发布的项')
     return
@@ -901,7 +864,7 @@ const batchPublish = async () => {
       type: 'warning'
     })
 
-    const promises = activeItems.map(row =>
+    const promises = activeItems.map((row) =>
       api.put(`${API_CONFIG.admin.announcementUpdateStatus}/${row.id}`, { status: 'active' })
     )
 
@@ -917,7 +880,7 @@ const batchPublish = async () => {
 }
 
 const batchOffline = async () => {
-  const activeItems = selectedRows.value.filter(row => row.status === 'active')
+  const activeItems = selectedRows.value.filter((row) => row.status === 'active')
   if (activeItems.length === 0) {
     ElMessage.warning('选中的公告中没有可以下线的项')
     return
@@ -928,7 +891,7 @@ const batchOffline = async () => {
       type: 'warning'
     })
 
-    const promises = activeItems.map(row =>
+    const promises = activeItems.map((row) =>
       api.put(`${API_CONFIG.admin.announcementUpdateStatus}/${row.id}`, { status: 'inactive' })
     )
 
@@ -955,7 +918,7 @@ const batchDelete = async () => {
       }
     )
 
-    const ids = selectedRows.value.map(item => item.id)
+    const ids = selectedRows.value.map((item) => item.id)
     const response = await api.delete(API_CONFIG.admin.announcementBatchDelete, { data: ids })
 
     if (response?.success !== false) {
@@ -981,78 +944,36 @@ onMounted(() => {
 
 <style scoped lang="less">
 .announcement-management-container {
-  padding: 20px;
-  background: #f5f7fa;
-  min-height: calc(100vh - 40px);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1440px;
+  min-height: calc(100vh - 100px);
+  margin: 0 auto;
+  padding: var(--card-padding-compact) var(--page-gutter) var(--space-8);
+  background: var(--canvas);
 
-  .stats-row {
-    margin-bottom: 20px;
-
-    .stat-card {
-      .stat-item {
-        display: flex;
-        align-items: center;
-
-        .stat-icon {
-          width: 56px;
-          height: 56px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-right: 16px;
-          flex-shrink: 0;
-        }
-
-        .stat-content {
-          flex: 1;
-          min-width: 0;
-
-          .stat-value {
-            font-size: 2rem /* 原值: 28px */;
-            font-weight: 700;
-            color: #303133;
-            line-height: 1;
-            margin-bottom: 6px;
-          }
-
-          .stat-label {
-            font-size: 0.929rem /* 原值: 13px */;
-            color: #909399;
-          }
-        }
-      }
-    }
+  .stats-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
   }
 
   .main-card {
-    border-radius: 8px;
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      h3 {
-        margin: 0;
-        font-size: 1.286rem /* 原值: 18px */;
-        font-weight: 600;
-        color: #303133;
-      }
-    }
+    border-radius: var(--radius-lg);
 
     .filter-section {
-      margin-bottom: 20px;
-      padding: 16px;
-      background: #fafafa;
-      border-radius: 6px;
+      margin-bottom: var(--space-5);
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      background: var(--canvas-sunken);
 
       .filter-form {
         margin: 0;
 
         :deep(.el-form-item) {
-          margin-bottom: 12px;
-          margin-right: 16px;
+          margin-right: var(--space-4);
+          margin-bottom: var(--space-3);
         }
 
         :deep(.el-form-item:last-child) {
@@ -1062,182 +983,193 @@ onMounted(() => {
     }
 
     .batch-actions {
-      margin-bottom: 16px;
+      margin-bottom: var(--space-4);
 
       :deep(.el-alert__content) {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: var(--space-2);
+        flex-wrap: wrap;
       }
     }
 
     .announcement-table {
-      border-radius: 8px;
       overflow: hidden;
+      border-radius: var(--radius-md);
+
+      .announcement-cell {
+        min-width: 0;
+      }
+
+      .announcement-title {
+        overflow: hidden;
+        color: var(--ink-900);
+        font-weight: var(--weight-medium);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
 
       .content-preview {
         overflow: hidden;
+        color: var(--ink-500);
+        font-size: var(--text-body-sm);
+        line-height: 20px;
         text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        line-height: 1.6;
-        color: #606266;
+        white-space: nowrap;
       }
 
-      .read-stats {
-        .stat-item-inline {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 0.929rem /* 原值: 13px */;
-          color: #606266;
+      .tag-stack {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+      }
+
+      .read-stats .stat-item-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        color: var(--ink-700);
+        font-size: var(--text-body-sm);
+      }
+
+      .time-cell {
+        color: var(--ink-700);
+        font-size: var(--text-caption);
+        line-height: 18px;
+        white-space: nowrap;
+
+        .time-label {
+          margin-right: var(--space-1);
+          color: var(--ink-500);
         }
       }
 
-      .time-range {
-        font-size: 0.857rem /* 原值: 12px */;
-        line-height: 1.4;
-        color: #606266;
-
-        .time-separator {
-          color: #c0c4cc;
-          text-align: center;
-          margin: 2px 0;
-        }
-      }
-
-      .action-buttons {
-        :deep(.el-button) {
-          padding: 5px 8px;
-        }
+      .muted,
+      .dialog-separator {
+        color: var(--ink-400);
       }
 
       :deep(.el-table__row) {
         cursor: pointer;
+      }
 
-        &:hover {
-          background-color: #f5f7fa;
-        }
+      :deep(.el-table__row:hover > td.el-table__cell) {
+        background-color: var(--canvas-sunken);
+        transition: background-color var(--duration-fast) var(--ease-out);
       }
     }
 
     .pagination-container {
-      margin-top: 20px;
       display: flex;
       justify-content: flex-end;
+      margin-top: var(--space-5);
     }
   }
 
   .announcement-detail {
     .detail-title {
-      margin: 0 0 16px 0;
-      font-size: 1.429rem /* 原值: 20px */;
-      font-weight: 600;
-      color: #303133;
-      line-height: 1.5;
+      margin: 0 0 var(--space-4);
+      color: var(--ink-900);
+      font-size: var(--text-h2);
+      font-weight: var(--weight-semibold);
+      line-height: 28px;
     }
 
     .detail-meta {
-      margin-bottom: 8px;
+      margin-bottom: var(--space-2);
     }
 
     .detail-info {
       .info-row {
         display: flex;
         align-items: center;
-        margin-bottom: 12px;
-        font-size: 1rem /* 原值: 14px */;
+        margin-bottom: var(--space-3);
+        color: var(--ink-700);
+        font-size: var(--text-body);
 
         &:last-child {
           margin-bottom: 0;
         }
 
         .label {
-          color: #909399;
-          margin-right: 8px;
           min-width: 80px;
+          margin-right: var(--space-2);
+          color: var(--ink-500);
         }
       }
     }
 
     .content-detail {
       .detail-label {
-        font-weight: 600;
-        margin-bottom: 12px;
-        color: #303133;
-        font-size: 1.071rem /* 原值: 15px */;
+        margin-bottom: var(--space-3);
+        color: var(--ink-900);
+        font-size: var(--text-h3);
+        font-weight: var(--weight-semibold);
       }
 
       .content-text {
-        padding: 16px 20px;
-        background: #f5f7fa;
-        border-radius: 6px;
+        padding: var(--space-4) var(--space-5);
+        border-radius: var(--radius-md);
+        background: var(--canvas-sunken);
+        color: var(--ink-700);
+        font-size: var(--text-body);
         line-height: 1.8;
         white-space: pre-wrap;
         word-break: break-word;
-        color: #606266;
-        font-size: 1rem /* 原值: 14px */;
       }
     }
   }
 
   .announcement-preview {
-    background: #fff;
-    border-radius: 8px;
-    padding: 24px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
 
     .preview-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #ebeef5;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--line);
 
       .preview-date {
-        font-size: 0.929rem /* 原值: 13px */;
-        color: #909399;
+        color: var(--ink-500);
+        font-size: var(--text-body-sm);
       }
     }
 
     .preview-title {
-      margin: 0 0 16px 0;
-      font-size: 1.429rem /* 原值: 20px */;
-      font-weight: 600;
-      color: #303133;
-      line-height: 1.5;
+      margin: 0 0 var(--space-4);
+      color: var(--ink-900);
+      font-size: var(--text-h2);
+      font-weight: var(--weight-semibold);
+      line-height: 28px;
     }
 
     .preview-content {
-      margin-bottom: 20px;
+      margin-bottom: var(--space-5);
+      color: var(--ink-700);
       line-height: 1.8;
-      color: #606266;
       white-space: pre-wrap;
       word-break: break-word;
     }
 
     .preview-footer {
-      padding-top: 12px;
-      border-top: 1px solid #ebeef5;
-      font-size: 0.929rem /* 原值: 13px */;
-      color: #909399;
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--line);
+      color: var(--ink-500);
+      font-size: var(--text-body-sm);
       text-align: center;
     }
   }
 }
 
-// 响应式设计
 @media (max-width: 768px) {
   .announcement-management-container {
-    padding: 12px;
-
-    .stats-row {
-      :deep(.el-col) {
-        margin-bottom: 12px;
-      }
-    }
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
 
     .main-card {
       .filter-section {
@@ -1245,7 +1177,7 @@ onMounted(() => {
           :deep(.el-form-item) {
             display: block;
             margin-right: 0;
-            margin-bottom: 16px;
+            margin-bottom: var(--space-4);
 
             .el-form-item__content {
               width: 100% !important;
