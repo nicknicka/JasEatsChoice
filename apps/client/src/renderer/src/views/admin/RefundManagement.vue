@@ -1,28 +1,14 @@
 <template>
   <div class="refund-management-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>退款管理</h1>
-      <p class="subtitle">处理用户退款申请</p>
+    <AppPageHeader title="退款管理" subtitle="处理用户退款申请" :compact="true" />
+
+    <div class="stats-section">
+      <AppStatCard label="待处理" :value="stats.pending" icon="Clock" />
+      <AppStatCard label="今日已退款" :value="formatMoney(stats.todayApproved, true)" icon="Money" />
+      <AppStatCard label="今日已拒绝" :value="stats.todayRejected" icon="CircleClose" />
+      <AppStatCard label="本月退款总额" :value="formatMoney(stats.monthTotal, true)" icon="Wallet" />
     </div>
 
-    <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-card class="stat-card">
-        <el-statistic title="待处理" :value="stats.pending" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="今日已退款" :value="stats.todayApproved" :precision="2" prefix="¥" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="今日已拒绝" :value="stats.todayRejected" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="本月退款总额" :value="stats.monthTotal" :precision="2" prefix="¥" />
-      </el-card>
-    </div>
-
-    <!-- 搜索栏 -->
     <el-card class="search-card" shadow="never">
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="关键词">
@@ -30,7 +16,8 @@
             v-model="searchForm.keyword"
             placeholder="搜索用户名、订单号"
             clearable
-            style="width: 250px"
+            style="width: 240px"
+            @keyup.enter="handleSearch"
           />
         </el-form-item>
         <el-form-item label="退款状态">
@@ -60,57 +47,69 @@
       </el-form>
     </el-card>
 
-    <!-- 退款列表 -->
     <el-card class="table-card" shadow="never">
-      <el-table :data="refundList" v-loading="loading" stripe>
-        <el-table-column prop="refundId" label="退款ID" width="120" />
-        <el-table-column prop="orderId" label="订单ID" width="120" />
-        <el-table-column prop="username" label="用户名" width="150" />
-        <el-table-column prop="refundAmount" label="退款金额" width="120">
-          <template #default="{ row }">
-            <span style="color: #f56c6c; font-weight: bold">¥{{ row.refundAmount }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="reason" label="退款原因" min-width="150" show-overflow-tooltip />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="applyTime" label="申请时间" width="180" />
-        <el-table-column label="操作" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-if="row.status === 'PENDING'"
-              type="primary"
-              size="small"
-              link
-              @click="handleProcess(row)"
-            >
-              处理
-            </el-button>
-            <el-button type="info" size="small" link @click="handleView(row)">详情</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <AppEmptyState
+        v-if="!loading && refundList.length === 0"
+        compact
+        icon="Tickets"
+        description="没有符合条件的退款记录，换个关键词或清空筛选试试"
+        action-text="重置筛选"
+        @action="handleReset"
+      />
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchRefundList"
-          @current-change="fetchRefundList"
-        />
-      </div>
+      <template v-else>
+        <el-table :data="refundList" v-loading="loading" stripe>
+          <el-table-column label="退款ID" width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="cell-id">{{ row.refundId }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="订单ID" width="125">
+            <template #default="{ row }">
+              <span class="cell-num">{{ row.orderId }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="username" label="用户名" width="120" show-overflow-tooltip />
+          <el-table-column label="退款金额" width="95" align="right">
+            <template #default="{ row }">
+              <span class="amount">¥{{ formatMoney(row.refundAmount) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="reason" label="退款原因" min-width="130" show-overflow-tooltip />
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <StatusTag :status="getStatusTagKey(row.status)" :text="getStatusText(row.status)" />
+            </template>
+          </el-table-column>
+          <el-table-column label="申请时间" width="160" align="center">
+            <template #default="{ row }">
+              <span class="cell-date">{{ formatDateTime(row.applyTime) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="135" fixed="right" align="center">
+            <template #default="{ row }">
+              <RowActions
+                :primary="{ text: '详情', onClick: () => handleView(row) }"
+                :items="rowActions(row)"
+              />
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div v-if="refundList.length > 0" class="pagination-container">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="fetchRefundList"
+            @current-change="fetchRefundList"
+          />
+        </div>
+      </template>
     </el-card>
 
-    <!-- 处理退款对话框 -->
     <el-dialog
       v-model="processDialogVisible"
       title="处理退款申请"
@@ -123,19 +122,19 @@
           <el-descriptions-item label="订单ID">{{ currentRefund.orderId }}</el-descriptions-item>
           <el-descriptions-item label="用户名">{{ currentRefund.username }}</el-descriptions-item>
           <el-descriptions-item label="退款金额">
-            <span style="color: #f56c6c; font-weight: bold; font-size: 1.286rem /* 原值: 18px */">¥{{ currentRefund.refundAmount }}</span>
+            <span class="amount amount--lg">¥{{ formatMoney(currentRefund.refundAmount) }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="退款原因" :span="2">{{ currentRefund.reason }}</el-descriptions-item>
-          <el-descriptions-item label="申请说明" :span="2">{{ currentRefund.description || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="申请时间" :span="2">{{ currentRefund.applyTime }}</el-descriptions-item>
+          <el-descriptions-item label="申请说明" :span="2">{{ currentRefund.reasonDescription || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="申请时间" :span="2">{{ formatDateTime(currentRefund.applyTime) }}</el-descriptions-item>
         </el-descriptions>
 
         <el-divider>处理操作</el-divider>
         <el-form :model="processForm" label-width="80px">
           <el-form-item label="处理结果">
             <el-radio-group v-model="processForm.decision">
-              <el-radio label="approve">批准退款</el-radio>
-              <el-radio label="reject">拒绝退款</el-radio>
+              <el-radio label="APPROVE">批准退款</el-radio>
+              <el-radio label="REJECT">拒绝退款</el-radio>
             </el-radio-group>
           </el-form-item>
           <el-form-item label="处理意见">
@@ -155,7 +154,6 @@
       </template>
     </el-dialog>
 
-    <!-- 详情对话框 -->
     <el-dialog
       v-model="detailDialogVisible"
       title="退款详情"
@@ -167,17 +165,15 @@
         <el-descriptions-item label="订单ID">{{ currentRefund.orderId }}</el-descriptions-item>
         <el-descriptions-item label="用户名">{{ currentRefund.username }}</el-descriptions-item>
         <el-descriptions-item label="退款金额">
-          <span style="color: #f56c6c; font-weight: bold">¥{{ currentRefund.refundAmount }}</span>
+          <span class="amount">¥{{ formatMoney(currentRefund.refundAmount) }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="getStatusType(currentRefund.status)">
-            {{ getStatusText(currentRefund.status) }}
-          </el-tag>
+          <StatusTag :status="getStatusTagKey(currentRefund.status)" :text="getStatusText(currentRefund.status)" />
         </el-descriptions-item>
-        <el-descriptions-item label="申请时间">{{ currentRefund.applyTime }}</el-descriptions-item>
-        <el-descriptions-item label="处理时间" :span="2">{{ currentRefund.processTime || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="申请时间">{{ formatDateTime(currentRefund.applyTime) }}</el-descriptions-item>
+        <el-descriptions-item label="处理时间" :span="2">{{ formatDateTime(currentRefund.processTime) }}</el-descriptions-item>
         <el-descriptions-item label="退款原因" :span="2">{{ currentRefund.reason }}</el-descriptions-item>
-        <el-descriptions-item label="申请说明" :span="2">{{ currentRefund.description || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="申请说明" :span="2">{{ currentRefund.reasonDescription || '-' }}</el-descriptions-item>
         <el-descriptions-item label="处理意见" :span="2">{{ currentRefund.processComment || '-' }}</el-descriptions-item>
       </el-descriptions>
 
@@ -199,6 +195,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import RowActions from '@/components/common/RowActions.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
 import { getRefundList, getRefundStats, getRefundDetail, processRefund } from '@/api/admin'
 
 const loading = ref(false)
@@ -226,7 +227,49 @@ const pagination = reactive({
   total: 0
 })
 
-// 获取退款统计数据
+const processForm = reactive({
+  decision: 'APPROVE',
+  comment: ''
+})
+
+// 状态统一映射到 StatusTag 词典：橙=待处理/待审核、蓝=处理中、绿=已通过/完成、红=已拒绝/失败
+const STATUS_TAG_KEYS = Object.freeze({
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  PROCESSING: 'processing',
+  REJECTED: 'rejected',
+  COMPLETED: 'completed',
+  SUCCESS: 'completed',
+  FAILED: 'failed'
+})
+
+const getStatusTagKey = (status) => STATUS_TAG_KEYS[status] || 'unknown'
+
+const getStatusText = (status) => {
+  const texts = {
+    PENDING: '待处理',
+    APPROVED: '已批准',
+    PROCESSING: '退款中',
+    REJECTED: '已拒绝',
+    COMPLETED: '已完成',
+    SUCCESS: '已完成',
+    FAILED: '退款失败'
+  }
+  return texts[status] || '未知'
+}
+
+const formatMoney = (value, withSymbol = false) => {
+  const amount = Number(value || 0).toFixed(2)
+  return withSymbol ? `¥${amount}` : amount
+}
+
+const formatDateTime = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 const fetchRefundStats = async () => {
   try {
     const response = await getRefundStats()
@@ -241,12 +284,6 @@ const fetchRefundStats = async () => {
   }
 }
 
-const processForm = reactive({
-  decision: 'approve',
-  comment: ''
-})
-
-// 获取退款列表
 const fetchRefundList = async () => {
   loading.value = true
   try {
@@ -259,7 +296,7 @@ const fetchRefundList = async () => {
 
     if (response) {
       refundList.value = response.records || []
-      pagination.total = response.total || 0
+      pagination.total = response.total || response.records?.length || 0
     }
   } catch (error) {
     console.error('获取退款列表失败:', error)
@@ -269,37 +306,11 @@ const fetchRefundList = async () => {
   }
 }
 
-// 获取状态类型
-const getStatusType = (status) => {
-  const types = {
-    'PENDING': 'warning',
-    'APPROVED': 'primary',
-    'REJECTED': 'danger',
-    'PROCESSING': 'info',
-    'COMPLETED': 'success'
-  }
-  return types[status] || 'info'
-}
-
-// 获取状态文本
-const getStatusText = (status) => {
-  const texts = {
-    'PENDING': '待处理',
-    'APPROVED': '已批准',
-    'REJECTED': '已拒绝',
-    'PROCESSING': '退款中',
-    'COMPLETED': '已完成'
-  }
-  return texts[status] || '未知'
-}
-
-// 搜索
 const handleSearch = () => {
   pagination.page = 1
   fetchRefundList()
 }
 
-// 重置
 const handleReset = () => {
   searchForm.keyword = ''
   searchForm.status = ''
@@ -308,12 +319,17 @@ const handleReset = () => {
   fetchRefundList()
 }
 
-// 查看详情
+const rowActions = (row) => {
+  if (row.status !== 'PENDING') return []
+  return [{ text: '处理', onClick: () => handleProcess(row) }]
+}
+
 const handleView = async (row) => {
   try {
     const response = await getRefundDetail(row.refundId)
-    if (response) {
-      currentRefund.value = response
+    const detail = response?.data || response
+    if (detail?.refundId) {
+      currentRefund.value = detail
       detailDialogVisible.value = true
     }
   } catch (error) {
@@ -322,13 +338,13 @@ const handleView = async (row) => {
   }
 }
 
-// 处理退款
 const handleProcess = async (row) => {
   try {
     const response = await getRefundDetail(row.refundId)
-    if (response) {
-      currentRefund.value = response
-      processForm.decision = 'approve'
+    const detail = response?.data || response
+    if (detail?.refundId) {
+      currentRefund.value = detail
+      processForm.decision = 'APPROVE'
       processForm.comment = ''
       processDialogVisible.value = true
     }
@@ -338,9 +354,8 @@ const handleProcess = async (row) => {
   }
 }
 
-// 提交处理
 const submitProcess = async () => {
-  if (processForm.decision === 'reject' && !processForm.comment.trim()) {
+  if (processForm.decision === 'REJECT' && !processForm.comment.trim()) {
     ElMessage.warning('拒绝时必须填写处理意见')
     return
   }
@@ -354,7 +369,8 @@ const submitProcess = async () => {
     if (response) {
       ElMessage.success('处理提交成功')
       processDialogVisible.value = false
-      fetchRefundList()
+      await fetchRefundList()
+      await fetchRefundStats()
     }
   } catch (error) {
     console.error('处理提交失败:', error)
@@ -370,52 +386,102 @@ onMounted(() => {
 
 <style scoped lang="less">
 .refund-management-container {
-  .page-header {
-    margin-bottom: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
-  }
-
-  .stats-cards {
+  .stats-section {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-
-    .stat-card {
-      text-align: center;
-    }
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
   }
 
   .search-card {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-8);
 
     .search-form {
       margin-bottom: 0;
+
+      :deep(.el-form-item) {
+        margin-right: var(--space-4);
+        margin-bottom: var(--space-2);
+      }
     }
   }
 
   .table-card {
     .pagination-container {
-      margin-top: 20px;
       display: flex;
       justify-content: flex-end;
+      margin-top: var(--space-5);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--line);
+    }
+
+    :deep(.el-table__header th) {
+      background-color: var(--canvas-sunken);
+      font-weight: var(--weight-semibold);
+    }
+
+    :deep(.el-table__row) {
+      height: 44px;
+    }
+
+    :deep(.el-table__body tr:hover > td) {
+      background-color: var(--canvas-sunken);
+      transition: background-color var(--duration-fast) var(--ease-out);
     }
   }
 
-  .process-content {
-    .refund-info {
-      margin-bottom: 20px;
+  .cell-id,
+  .cell-num,
+  .cell-date {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .amount {
+    color: var(--ink-900);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+  }
+
+  .amount--lg {
+    font-size: var(--text-h3);
+  }
+
+  .refund-info {
+    margin-bottom: var(--space-5);
+  }
+
+  :deep(.el-dialog) {
+    border-radius: var(--radius-md);
+  }
+
+  @media (max-width: 960px) {
+    .stats-section {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    padding: var(--space-3);
+
+    .stats-section {
+      grid-template-columns: 1fr;
+    }
+
+    .search-form {
+      :deep(.el-form-item) {
+        margin-right: 0;
+      }
     }
   }
 }
