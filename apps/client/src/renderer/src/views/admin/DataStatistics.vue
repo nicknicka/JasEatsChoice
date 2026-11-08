@@ -71,7 +71,9 @@
         <template #header>
           <div class="chart-header">
             <span class="chart-title">用户增长趋势</span>
-            <span class="chart-summary">近 {{ periodDays }} 天新增用户 {{ sum(trend.newUsers) }}</span>
+            <span class="chart-summary"
+              >近 {{ periodDays }} 天新增用户 {{ sum(trend.newUsers) }}</span
+            >
           </div>
         </template>
         <div class="chart-body">
@@ -116,7 +118,9 @@
         <template #header>
           <div class="chart-header">
             <span class="chart-title">收入趋势</span>
-            <span class="chart-summary">近 {{ periodDays }} 天收入 {{ formatMoney(sum(trend.revenue)) }}</span>
+            <span class="chart-summary"
+              >近 {{ periodDays }} 天收入 {{ formatMoney(sum(trend.revenue)) }}</span
+            >
           </div>
         </template>
         <div class="chart-body">
@@ -138,7 +142,9 @@
         <template #header>
           <div class="chart-header">
             <span class="chart-title">用户类型分布</span>
-            <span class="chart-summary">共 {{ stats.totalUsers }} 名用户 / {{ stats.totalMerchants }} 家商家</span>
+            <span class="chart-summary"
+              >共 {{ stats.totalUsers }} 名用户 / {{ stats.totalMerchants }} 家商家</span
+            >
           </div>
         </template>
         <div class="chart-body">
@@ -161,7 +167,9 @@
       <template #header>
         <div class="chart-header">
           <span class="chart-title">每日详细数据</span>
-          <el-button type="primary" size="small" :icon="Download" @click="handleExport">导出数据</el-button>
+          <el-button type="primary" size="small" :icon="Download" @click="handleExport"
+            >导出数据</el-button
+          >
         </div>
       </template>
       <!-- 空数据：紧凑中文空状态替换表体（§4.3、§5.5） -->
@@ -184,7 +192,9 @@
         </el-table-column>
         <el-table-column prop="activeUsers" label="活跃用户" width="100" />
         <el-table-column prop="averageOrderAmount" label="客单价" width="120">
-          <template #default="{ row }">¥{{ Number(row.averageOrderAmount || 0).toFixed(2) }}</template>
+          <template #default="{ row }"
+            >¥{{ Number(row.averageOrderAmount || 0).toFixed(2) }}</template
+          >
         </el-table-column>
       </el-table>
     </el-card>
@@ -239,7 +249,8 @@ let revenueTrendChart = null
 let userDistributionChart = null
 
 // 图表用 Canvas 渲染，拿不到 CSS 变量，运行时从 tokens.css 读唯一颜色源（§7.1）
-const tokenColor = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+const tokenColor = (name) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 
 // 面积色由同一条 token 派生，避免再引入第二处颜色定义（§7.1）
 const withAlpha = (color, alpha) => {
