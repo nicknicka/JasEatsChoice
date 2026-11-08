@@ -39,7 +39,7 @@
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <!-- 分配权限和编辑先弹对话框；删除等立即生效动作收进更多菜单（#441） -->
+            <!-- 分配权限和编辑先弹对话框；删除等立即生效动作收进更多菜单 -->
             <RowActions
               :primary="{ text: '分配权限', onClick: () => handleAssignPermissions(row) }"
               :items="rowActions(row)"
@@ -231,7 +231,7 @@ const rowActions = (row) => {
   return items
 }
 
-// 删除角色：确认由 RowActions 的危险动作入口承担，避免叠加两层确认（§4.6、#441）
+// 删除角色：确认由 RowActions 的危险动作入口承担，避免叠加两层确认（§4.6）
 const handleDelete = async (row) => {
   try {
     console.log('[角色管理] 删除角色:', row.roleId)
