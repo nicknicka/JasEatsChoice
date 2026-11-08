@@ -1,340 +1,307 @@
 <template>
   <div class="withdrawal-audit-page">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <h2>提现审核</h2>
-          <div class="header-actions">
-            <el-button
-              :type="autoRefresh ? 'success' : 'default'"
-              :icon="autoRefresh ? VideoPause : VideoPlay"
-              @click="toggleAutoRefresh"
-            >
-              {{ autoRefresh ? '停止刷新' : '自动刷新' }}
-            </el-button>
-            <el-button :icon="Download" @click="handleExport">导出</el-button>
+    <!-- 页头：统一标题容器 + 右侧动作区（§4.7）；自动刷新带开关态与最近刷新时间（P2） -->
+    <AppPageHeader title="提现审核" :compact="true">
+      <template #actions>
+        <label class="refresh-toggle">
+          <el-switch
+            v-model="autoRefresh"
+            size="small"
+            @change="handleAutoRefreshChange"
+          />
+          <span class="refresh-toggle__text">自动刷新</span>
+        </label>
+        <span v-if="lastRefreshAt" class="refresh-time">最近刷新 {{ lastRefreshAt }}</span>
+        <el-button :icon="Download" @click="handleExport">导出</el-button>
+      </template>
+    </AppPageHeader>
+
+    <!-- 概览卡：线性图标 + 数值 + 标签，四个一行（§4.8） -->
+    <div class="stats-section">
+      <AppStatCard
+        label="待审核"
+        :value="stats.pending"
+        icon="Clock"
+        :trend="trendOf(stats.pendingTrend)"
+      />
+      <AppStatCard label="处理中" :value="stats.processing" icon="Loading" />
+      <AppStatCard
+        label="今日提现"
+        :value="`¥${formatAmount(stats.todayAmount)}`"
+        icon="Money"
+        :trend="trendOf(stats.todayTrend)"
+      />
+      <AppStatCard
+        label="累计提现"
+        :value="`¥${formatAmount(stats.totalAmount)}`"
+        icon="Wallet"
+      />
+    </div>
+
+    <!-- 趋势图：次级可折叠区块，默认收起，把提现列表提上首屏（P0 / §4.8） -->
+    <el-card shadow="never" class="chart-card">
+      <el-collapse v-model="chartExpanded" class="chart-collapse" @change="handleChartToggle">
+        <el-collapse-item name="trend">
+          <template #title>
+            <span class="chart-title">提现趋势</span>
+          </template>
+
+          <div class="chart-toolbar">
+            <el-radio-group v-model="chartPeriod" size="small" @change="handleChartPeriodChange">
+              <el-radio-button label="week">近7天</el-radio-button>
+              <el-radio-button label="month">近30天</el-radio-button>
+            </el-radio-group>
           </div>
+
+          <!-- 趋势空态：该周期没有提现时不画贴底折线（P0） -->
+          <div v-loading="chartLoading" class="chart-body">
+            <AppEmptyState
+              v-if="!chartLoading && chartEmpty"
+              compact
+              icon="TrendCharts"
+              description="该周期暂无提现"
+            />
+            <div v-show="!chartEmpty" ref="chartRef" class="chart-container"></div>
+          </div>
+        </el-collapse-item>
+      </el-collapse>
+    </el-card>
+
+    <!-- 筛选条：所有条件并入同一条 inline 表单，减少折行留白（P1 / §4.3） -->
+    <el-card shadow="never" class="filter-card">
+      <el-form :inline="true" :model="searchForm" class="search-form" @submit.prevent>
+        <el-form-item>
+          <el-input
+            v-model="searchForm.keyword"
+            placeholder="流水号/用户ID/用户昵称"
+            clearable
+            class="filter-keyword"
+            @clear="handleSearch"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-select
+            v-model="searchForm.status"
+            placeholder="状态"
+            clearable
+            class="filter-select"
+            @change="handleSearch"
+          >
+            <el-option
+              v-for="item in STATUS_OPTIONS"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-select
+            v-model="searchForm.withdrawMethod"
+            placeholder="提现方式"
+            clearable
+            class="filter-select"
+            @change="handleSearch"
+          >
+            <el-option
+              v-for="item in METHOD_OPTIONS"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-date-picker
+            v-model="searchForm.dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            class="filter-date"
+            @change="handleSearch"
+          />
+        </el-form-item>
+        <el-form-item class="filter-amount">
+          <span class="filter-label">金额范围：</span>
+          <el-input-number
+            v-model="searchForm.minAmount"
+            :min="0"
+            :precision="2"
+            placeholder="最小金额"
+            controls-position="right"
+            class="filter-number"
+          />
+          <span class="range-divider">-</span>
+          <el-input-number
+            v-model="searchForm.maxAmount"
+            :min="0"
+            :precision="2"
+            placeholder="最大金额"
+            controls-position="right"
+            class="filter-number"
+          />
+          <el-button type="primary" link @click="handleSearch">应用</el-button>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+          <el-button :icon="RefreshLeft" @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 提现列表：页面主角，紧跟页头与筛选条（P0 / §4.3） -->
+    <el-card shadow="never" class="table-card">
+      <!-- 空数据：紧凑中文空状态替换表体（§4.3、§5.5） -->
+      <AppEmptyState
+        v-if="!loading && tableData.length === 0"
+        compact
+        icon="Wallet"
+        description="没有符合条件的提现记录，换个关键词或清空筛选试试"
+        action-text="重置筛选"
+        @action="handleReset"
+      />
+
+      <template v-else>
+        <el-table
+          :data="tableData"
+          v-loading="loading"
+          stripe
+          class="data-table"
+          @selection-change="handleSelectionChange"
+          @row-dblclick="handleView"
+        >
+          <el-table-column type="selection" width="48" fixed="left" />
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div class="expand-content">
+                <el-descriptions :column="3" border>
+                  <el-descriptions-item label="流水号" :span="3">{{ row.withdrawNo }}</el-descriptions-item>
+                  <el-descriptions-item label="用户昵称">{{ row.nickname || '-' }}</el-descriptions-item>
+                  <el-descriptions-item label="用户ID">{{ row.userId }}</el-descriptions-item>
+                  <el-descriptions-item label="提现方式">
+                    {{ getMethodText(row.withdrawMethod) }}
+                  </el-descriptions-item>
+                  <el-descriptions-item label="提现金额">
+                    <span class="amount-text">¥{{ formatAmount(row.amount) }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="手续费">¥{{ formatAmount(row.fee || 0) }}</el-descriptions-item>
+                  <el-descriptions-item label="实际到账">
+                    <span class="amount-text">¥{{ formatAmount(row.actualAmount || row.amount) }}</span>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="提现账号" :span="3">{{ row.accountInfo || '-' }}</el-descriptions-item>
+                  <el-descriptions-item label="申请时间" :span="3">{{ formatTime(row.createdAt) }}</el-descriptions-item>
+                  <el-descriptions-item v-if="row.auditor" label="审核人">{{ row.auditor }}</el-descriptions-item>
+                  <el-descriptions-item v-if="row.auditTime" label="审核时间">{{ formatTime(row.auditTime) }}</el-descriptions-item>
+                  <el-descriptions-item v-if="row.rejectReason" label="拒绝原因" :span="3">
+                    <span class="error-text">{{ row.rejectReason }}</span>
+                  </el-descriptions-item>
+                </el-descriptions>
+              </div>
+            </template>
+          </el-table-column>
+          <!-- 流水号：不可拆分标识，单行 + 等宽数字，点击复制（§4.3、§5.4） -->
+          <el-table-column prop="withdrawNo" label="流水号" width="170" fixed="left">
+            <template #default="{ row }">
+              <el-tooltip content="点击复制" placement="top">
+                <span class="cell-num copy-text" @click="copyText(row.withdrawNo)">
+                  {{ row.withdrawNo }}
+                  <el-icon><DocumentCopy /></el-icon>
+                </span>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+          <el-table-column label="用户" width="170" show-overflow-tooltip>
+            <template #default="{ row }">
+              <div class="user-cell">
+                <el-avatar v-if="row.avatar" :src="row.avatar" :size="32" />
+                <el-avatar v-else :size="32">
+                  <el-icon><User /></el-icon>
+                </el-avatar>
+                <div class="user-info">
+                  <div class="user-nickname">{{ row.nickname || '-' }}</div>
+                  <div class="user-id">{{ row.userId }}</div>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+          <!-- 金额：右对齐 + 中性深色 + 无衬线等宽数字，不带红绿蓝（§4.3、§5.2） -->
+          <el-table-column label="提现金额" width="120" align="right" sortable prop="amount">
+            <template #default="{ row }">
+              <span :class="['amount-text', { 'high-amount': row.amount >= 10000 }]">
+                ¥{{ formatAmount(row.amount) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="提现方式" width="100">
+            <template #default="{ row }">
+              {{ getMethodText(row.withdrawMethod) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <StatusTag :status="row.withdrawStatus" :text="getStatusText(row.withdrawStatus)" />
+            </template>
+          </el-table-column>
+          <!-- 时间统一 YYYY-MM-DD HH:mm，去掉 ISO 的 T（§4.3） -->
+          <el-table-column label="申请时间" width="160" sortable prop="createdAt">
+            <template #default="{ row }">
+              <span class="cell-num">{{ formatTime(row.createdAt) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column v-if="showAuditInfo" label="审核人" width="110">
+            <template #default="{ row }">
+              {{ row.auditor || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column v-if="showAuditInfo" label="审核时间" width="160">
+            <template #default="{ row }">
+              <span class="cell-num">{{ formatTime(row.auditTime) }}</span>
+            </template>
+          </el-table-column>
+          <!-- 行操作：查看 + 通过可见（均先弹对话框），拒绝收进「更多」（§4.3 行操作可见性规则） -->
+          <el-table-column label="操作" width="150" fixed="right">
+            <template #default="{ row }">
+              <RowActions
+                :primary="{ text: '查看', onClick: () => handleView(row) }"
+                :items="rowActions(row)"
+                :max-visible="1"
+              />
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 批量操作 -->
+        <div v-if="selectedRows.length > 0" class="batch-actions">
+          <el-alert
+            :title="`已选择 ${selectedRows.length} 条记录`"
+            type="info"
+            :closable="false"
+          >
+            <el-button size="small" @click="handleBatchApprove">批量通过</el-button>
+            <el-button size="small" type="danger" plain @click="handleBatchReject">批量拒绝</el-button>
+            <el-button size="small" @click="selectedRows = []">取消选择</el-button>
+          </el-alert>
+        </div>
+
+        <!-- 分页：合计用实际记录数兜底，空数据时不渲染（§4.3、§5.4） -->
+        <div v-if="tableData.length > 0" class="pagination-container">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="fetchData"
+            @current-change="fetchData"
+          />
         </div>
       </template>
-
-      <!-- 统计卡片 -->
-      <el-row :gutter="16" class="stats-row">
-        <el-col :xs="12" :sm="12" :md="6" :lg="6" :xl="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-item">
-              <div class="stat-icon" style="background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);">
-                <el-icon :size="24" color="#fa8c16"><Clock /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-label">待审核</div>
-                <div class="stat-value">{{ stats.pending }}</div>
-                <div v-if="stats.pendingTrend !== 0" class="stat-trend" :class="stats.pendingTrend > 0 ? 'up' : 'down'">
-                  <el-icon><CaretTop v-if="stats.pendingTrend > 0" /><CaretBottom v-else /></el-icon>
-                  {{ Math.abs(stats.pendingTrend) }}%
-                </div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :xs="12" :sm="12" :md="6" :lg="6" :xl="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-item">
-              <div class="stat-icon" style="background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);">
-                <el-icon :size="24" color="#1890ff"><Loading /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-label">处理中</div>
-                <div class="stat-value">{{ stats.processing }}</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :xs="12" :sm="12" :md="6" :lg="6" :xl="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-item">
-              <div class="stat-icon" style="background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);">
-                <el-icon :size="24" color="#52c41a"><Money /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-label">今日提现</div>
-                <div class="stat-value">¥{{ formatAmount(stats.todayAmount) }}</div>
-                <div v-if="stats.todayTrend !== 0" class="stat-trend" :class="stats.todayTrend > 0 ? 'up' : 'down'">
-                  <el-icon><CaretTop v-if="stats.todayTrend > 0" /><CaretBottom v-else /></el-icon>
-                  {{ Math.abs(stats.todayTrend) }}%
-                </div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :xs="12" :sm="12" :md="6" :lg="6" :xl="6">
-          <el-card shadow="hover" class="stat-card">
-            <div class="stat-item">
-              <div class="stat-icon" style="background: linear-gradient(135deg, #fff0f6 0%, #ffd6e7 100%);">
-                <el-icon :size="24" color="#eb2f96"><Wallet /></el-icon>
-              </div>
-              <div class="stat-content">
-                <div class="stat-label">累计提现</div>
-                <div class="stat-value">¥{{ formatAmount(stats.totalAmount) }}</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <!-- 趋势图表 -->
-      <el-card shadow="never" class="chart-card">
-        <div class="chart-header">
-          <span class="chart-title">提现趋势</span>
-          <el-radio-group v-model="chartPeriod" size="small" @change="handleChartPeriodChange">
-            <el-radio-button label="week">近7天</el-radio-button>
-            <el-radio-button label="month">近30天</el-radio-button>
-          </el-radio-group>
-        </div>
-        <div ref="chartRef" class="chart-container"></div>
-      </el-card>
-
-      <!-- 高级搜索表单 -->
-      <div class="filter-section">
-        <el-row :gutter="12" class="filter-row">
-          <el-col :xs="24" :sm="24" :md="6" :lg="6" :xl="6">
-            <el-input
-              v-model="searchForm.keyword"
-              placeholder="流水号/用户ID/用户昵称"
-              clearable
-              @clear="handleSearch"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
-          </el-col>
-          <el-col :xs="12" :sm="12" :md="4" :lg="4" :xl="4">
-            <el-select
-              v-model="searchForm.status"
-              placeholder="状态"
-              clearable
-              @change="handleSearch"
-              style="width: 100%"
-            >
-              <el-option
-                v-for="item in STATUS_OPTIONS"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
-            </el-select>
-          </el-col>
-          <el-col :xs="12" :sm="12" :md="4" :lg="4" :xl="4">
-            <el-select
-              v-model="searchForm.withdrawMethod"
-              placeholder="提现方式"
-              clearable
-              @change="handleSearch"
-              style="width: 100%"
-            >
-              <el-option
-                v-for="item in METHOD_OPTIONS"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
-            </el-select>
-          </el-col>
-          <el-col :xs="24" :sm="24" :md="6" :lg="6" :xl="6">
-            <el-date-picker
-              v-model="searchForm.dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              value-format="YYYY-MM-DD"
-              @change="handleSearch"
-              style="width: 100%"
-            />
-          </el-col>
-          <el-col :xs="24" :sm="24" :md="4" :lg="4" :xl="4">
-            <div class="filter-buttons-inline">
-              <el-button type="primary" @click="handleSearch">
-                <el-icon><Search /></el-icon> 搜索
-              </el-button>
-              <el-button @click="handleReset">
-                <el-icon><RefreshLeft /></el-icon> 重置
-              </el-button>
-            </div>
-          </el-col>
-        </el-row>
-        <el-row :gutter="12" class="filter-row-second">
-          <el-col :xs="24" :sm="24" :md="12" :lg="12" :xl="12">
-            <div class="amount-range-filter">
-              <span class="filter-label">金额范围：</span>
-              <el-input-number
-                v-model="searchForm.minAmount"
-                :min="0"
-                :precision="2"
-                placeholder="最小金额"
-                controls-position="right"
-              />
-              <span class="range-divider">-</span>
-              <el-input-number
-                v-model="searchForm.maxAmount"
-                :min="0"
-                :precision="2"
-                placeholder="最大金额"
-                controls-position="right"
-              />
-              <el-button type="primary" link @click="handleSearch">应用</el-button>
-            </div>
-          </el-col>
-        </el-row>
-      </div>
-
-      <!-- 数据表格 -->
-      <el-table
-        :data="tableData"
-        v-loading="loading"
-        stripe
-        @selection-change="handleSelectionChange"
-        @row-dblclick="handleView"
-        class="data-table"
-      >
-        <el-table-column type="selection" width="55" fixed="left" />
-        <el-table-column type="expand">
-          <template #default="{ row }">
-            <div class="expand-content">
-              <el-descriptions :column="3" border>
-                <el-descriptions-item label="流水号" :span="3">{{ row.withdrawNo }}</el-descriptions-item>
-                <el-descriptions-item label="用户昵称">{{ row.nickname || '-' }}</el-descriptions-item>
-                <el-descriptions-item label="用户ID">{{ row.userId }}</el-descriptions-item>
-                <el-descriptions-item label="提现方式">
-                  <el-tag :type="getMethodTagType(row.withdrawMethod)">
-                    {{ getMethodText(row.withdrawMethod) }}
-                  </el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item label="提现金额">
-                  <span class="amount-text">¥{{ row.amount }}</span>
-                </el-descriptions-item>
-                <el-descriptions-item label="手续费">¥{{ row.fee || 0 }}</el-descriptions-item>
-                <el-descriptions-item label="实际到账">
-                  <span class="amount-text highlight">¥{{ row.actualAmount || row.amount }}</span>
-                </el-descriptions-item>
-                <el-descriptions-item label="提现账号" :span="3">{{ row.accountInfo || '-' }}</el-descriptions-item>
-                <el-descriptions-item label="申请时间" :span="3">{{ row.createdAt }}</el-descriptions-item>
-                <el-descriptions-item v-if="row.auditor" label="审核人">{{ row.auditor }}</el-descriptions-item>
-                <el-descriptions-item v-if="row.auditTime" label="审核时间">{{ row.auditTime }}</el-descriptions-item>
-                <el-descriptions-item v-if="row.rejectReason" label="拒绝原因" :span="3">
-                  <span class="error-text">{{ row.rejectReason }}</span>
-                </el-descriptions-item>
-              </el-descriptions>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="withdrawNo" label="流水号" width="180" fixed="left">
-          <template #default="{ row }">
-            <el-tooltip content="点击复制" placement="top">
-              <span class="copy-text" @click="copyText(row.withdrawNo)">
-                {{ row.withdrawNo }}
-                <el-icon><DocumentCopy /></el-icon>
-              </span>
-            </el-tooltip>
-          </template>
-        </el-table-column>
-        <el-table-column label="用户" width="180">
-          <template #default="{ row }">
-            <div class="user-cell">
-              <el-avatar v-if="row.avatar" :src="row.avatar" :size="32" />
-              <el-avatar v-else :size="32">
-                <el-icon><User /></el-icon>
-              </el-avatar>
-              <div class="user-info">
-                <div class="user-nickname">{{ row.nickname || '-' }}</div>
-                <div class="user-id">ID: {{ row.userId }}</div>
-              </div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="提现金额" width="120" sortable prop="amount">
-          <template #default="{ row }">
-            <span :class="['amount-text', { 'high-amount': row.amount >= 10000 }]">
-              ¥{{ formatAmount(row.amount) }}
-            </span>
-          </template>
-        </el-table-column>
-        <el-table-column label="提现方式" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getMethodTagType(row.withdrawMethod)">
-              {{ getMethodText(row.withdrawMethod) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.withdrawStatus)">
-              {{ getStatusText(row.withdrawStatus) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" label="申请时间" width="180" sortable />
-        <el-table-column v-if="showAuditInfo" label="审核人" width="120">
-          <template #default="{ row }">
-            {{ row.auditor || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column v-if="showAuditInfo" prop="auditTime" label="审核时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link size="small" :icon="View" @click="handleView(row)">
-              查看
-            </el-button>
-            <el-button
-              v-if="row.withdrawStatus === 'pending'"
-              type="success"
-              link
-              size="small"
-              :icon="CircleCheck"
-              @click="handleAudit(row, 'APPROVE')"
-            >
-              通过
-            </el-button>
-            <el-button
-              v-if="row.withdrawStatus === 'pending'"
-              type="danger"
-              link
-              size="small"
-              :icon="CircleClose"
-              @click="handleAudit(row, 'REJECT')"
-            >
-              拒绝
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 空状态 -->
-      <el-empty v-if="!loading && tableData.length === 0" description="暂无提现记录" />
-
-      <!-- 批量操作按钮 -->
-      <div v-if="selectedRows.length > 0" class="batch-actions">
-        <el-alert
-          :title="`已选择 ${selectedRows.length} 条记录`"
-          type="info"
-          :closable="false"
-        >
-          <el-button size="small" type="success" @click="handleBatchApprove">批量通过</el-button>
-          <el-button size="small" type="danger" @click="handleBatchReject">批量拒绝</el-button>
-          <el-button size="small" @click="selectedRows = []">取消选择</el-button>
-        </el-alert>
-      </div>
-
-      <!-- 分页 -->
-      <el-pagination
-        v-model:current-page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="pagination.total"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="fetchData"
-        @current-change="fetchData"
-      />
     </el-card>
 
     <!-- 详情对话框 -->
@@ -355,36 +322,35 @@
               </el-avatar>
               <div class="user-detail-info">
                 <div class="user-nickname">{{ currentRow.nickname || '-' }}</div>
-                <div class="user-id">ID: {{ currentRow.userId }}</div>
+                <div class="user-id">{{ currentRow.userId }}</div>
               </div>
             </div>
           </el-descriptions-item>
           <el-descriptions-item label="提现金额">
-            <span class="amount-text">¥{{ currentRow.amount }}</span>
+            <span class="amount-text">¥{{ formatAmount(currentRow.amount) }}</span>
           </el-descriptions-item>
-          <el-descriptions-item label="手续费">¥{{ currentRow.fee || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="手续费">¥{{ formatAmount(currentRow.fee || 0) }}</el-descriptions-item>
           <el-descriptions-item label="实际到账" :span="2">
-            <span class="amount-text highlight">¥{{ currentRow.actualAmount || currentRow.amount }}</span>
+            <span class="amount-text">¥{{ formatAmount(currentRow.actualAmount || currentRow.amount) }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="提现方式" :span="2">
-            <el-tag :type="getMethodTagType(currentRow.withdrawMethod)">
-              {{ getMethodText(currentRow.withdrawMethod) }}
-            </el-tag>
+            {{ getMethodText(currentRow.withdrawMethod) }}
           </el-descriptions-item>
           <el-descriptions-item label="提现账号" :span="2">
             {{ currentRow.accountInfo || '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="状态">
-            <el-tag :type="getStatusType(currentRow.withdrawStatus)">
-              {{ getStatusText(currentRow.withdrawStatus) }}
-            </el-tag>
+            <StatusTag
+              :status="currentRow.withdrawStatus"
+              :text="getStatusText(currentRow.withdrawStatus)"
+            />
           </el-descriptions-item>
-          <el-descriptions-item label="申请时间">{{ currentRow.createdAt }}</el-descriptions-item>
+          <el-descriptions-item label="申请时间">{{ formatTime(currentRow.createdAt) }}</el-descriptions-item>
           <el-descriptions-item v-if="currentRow.auditor" label="审核人">
             {{ currentRow.auditor }}
           </el-descriptions-item>
           <el-descriptions-item v-if="currentRow.auditTime" label="审核时间">
-            {{ currentRow.auditTime }}
+            {{ formatTime(currentRow.auditTime) }}
           </el-descriptions-item>
           <el-descriptions-item v-if="currentRow.rejectReason" label="拒绝原因" :span="2">
             <span class="error-text">{{ currentRow.rejectReason }}</span>
@@ -401,7 +367,7 @@
             <el-timeline-item
               v-for="(log, index) in currentRow.logs"
               :key="index"
-              :timestamp="log.time"
+              :timestamp="formatTime(log.time)"
               placement="top"
             >
               <div class="log-item">
@@ -417,7 +383,7 @@
         <el-button @click="detailVisible = false">关闭</el-button>
         <el-button
           v-if="currentRow && currentRow.withdrawStatus === 'pending'"
-          type="success"
+          type="primary"
           :icon="CircleCheck"
           @click="handleAudit(currentRow, 'APPROVE')"
         >
@@ -426,6 +392,7 @@
         <el-button
           v-if="currentRow && currentRow.withdrawStatus === 'pending'"
           type="danger"
+          plain
           :icon="CircleClose"
           @click="handleAudit(currentRow, 'REJECT')"
         >
@@ -451,19 +418,17 @@
         <el-form-item label="提现金额">
           <el-input :value="'¥' + (currentRow?.amount || 0)" disabled>
             <template #prefix>
-              <span :class="{ 'high-amount': currentRow?.amount >= 10000 }">
-                {{ currentRow?.amount >= 10000 ? '⚠️ 大额' : '' }}
-              </span>
+              <span v-if="currentRow?.amount >= 10000" class="high-amount">大额</span>
             </template>
           </el-input>
         </el-form-item>
-        <el-form-item label="快速原因" v-if="auditDecision === 'REJECT'">
+        <el-form-item v-if="auditDecision === 'REJECT'" label="快速原因">
           <el-select
             v-model="auditForm.quickReason"
             placeholder="选择快速原因"
-            @change="handleQuickReason"
             clearable
             style="width: 100%"
+            @change="handleQuickReason"
           >
             <el-option
               v-for="item in REJECT_REASONS"
@@ -485,7 +450,8 @@
       <template #footer>
         <el-button @click="auditVisible = false">取消</el-button>
         <el-button
-          :type="auditDecision === 'APPROVE' ? 'success' : 'danger'"
+          :type="auditDecision === 'APPROVE' ? 'primary' : 'danger'"
+          :plain="auditDecision !== 'APPROVE'"
           @click="submitAudit"
         >
           确定
@@ -507,13 +473,13 @@
         style="margin-bottom: 20px"
       />
       <el-form :model="batchAuditForm" label-width="80px">
-        <el-form-item label="快速原因" v-if="batchAuditDecision === 'REJECT'">
+        <el-form-item v-if="batchAuditDecision === 'REJECT'" label="快速原因">
           <el-select
             v-model="batchAuditForm.quickReason"
             placeholder="选择快速原因"
-            @change="handleBatchQuickReason"
             clearable
             style="width: 100%"
+            @change="handleBatchQuickReason"
           >
             <el-option
               v-for="item in REJECT_REASONS"
@@ -535,7 +501,8 @@
       <template #footer>
         <el-button @click="batchAuditVisible = false">取消</el-button>
         <el-button
-          :type="batchAuditDecision === 'APPROVE' ? 'success' : 'danger'"
+          :type="batchAuditDecision === 'APPROVE' ? 'primary' : 'danger'"
+          :plain="batchAuditDecision !== 'APPROVE'"
           @click="submitBatchAudit"
         >
           确定
@@ -548,12 +515,14 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import {
-  Clock, Loading, Money, Wallet, Search, RefreshLeft, Download,
-  View, CircleCheck, CircleClose, DocumentCopy, User,
-  VideoPlay, VideoPause, CaretTop, CaretBottom
-} from '@element-plus/icons-vue'
+import { Search, RefreshLeft, Download, CircleCheck, CircleClose, DocumentCopy, User } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
+import RowActions from '@/components/common/RowActions.vue'
+import { formatTime } from '@/utils/formatters'
 import {
   getWithdrawList,
   getWithdrawDetail,
@@ -587,15 +556,6 @@ const REJECT_REASONS = [
   '风控系统拦截'
 ]
 
-const STATUS_TYPE_MAP = {
-  'pending': 'warning',
-  'approved': 'primary',
-  'rejected': 'danger',
-  'processing': 'info',
-  'success': 'success',
-  'failed': 'danger'
-}
-
 const STATUS_TEXT_MAP = {
   'pending': '待审核',
   'approved': '已通过',
@@ -609,12 +569,6 @@ const METHOD_TEXT_MAP = {
   'wechat': '微信',
   'alipay': '支付宝',
   'bank': '银行卡'
-}
-
-const METHOD_TAG_TYPE_MAP = {
-  'wechat': 'success',
-  'alipay': 'primary',
-  'bank': 'info'
 }
 
 const AUTO_REFRESH_INTERVAL = 30000 // 30秒
@@ -631,7 +585,13 @@ const autoRefresh = ref(false)
 const autoRefreshTimer = ref(null)
 const chartRef = ref(null)
 const chartInstance = ref(null)
+let chartResizeObserver = null
 const chartPeriod = ref('week')
+const chartExpanded = ref([])
+const chartEmpty = ref(false)
+const chartLoading = ref(false)
+const trendSeries = ref({ dates: [], amounts: [], counts: [] })
+const lastRefreshAt = ref('')
 
 const stats = reactive({
   pending: 0,
@@ -686,13 +646,25 @@ const formatAmount = (amount) => {
   })
 }
 
-const getStatusType = (status) => STATUS_TYPE_MAP[status] || 'info'
-
 const getStatusText = (status) => STATUS_TEXT_MAP[status] || '未知'
 
 const getMethodText = (method) => METHOD_TEXT_MAP[method] || '未知'
 
-const getMethodTagType = (method) => METHOD_TAG_TYPE_MAP[method] || 'info'
+// 概览卡趋势：0 表示无变化，交给 AppStatCard 渲染趋势标（§4.8）
+const trendOf = (value) => {
+  const delta = Number(value) || 0
+  if (delta === 0) return null
+  return { direction: delta > 0 ? 'up' : 'down', text: `${Math.abs(delta)}%` }
+}
+
+// 行操作：先弹对话框的动作保持可见，「拒绝」按每行最多 2 个可见动作收进「更多」（§4.3 行操作可见性规则）
+const rowActions = (row) => {
+  if (row.withdrawStatus !== 'pending') return []
+  return [
+    { text: '通过', onClick: () => handleAudit(row, 'APPROVE') },
+    { text: '拒绝', onClick: () => handleAudit(row, 'REJECT') }
+  ]
+}
 
 const copyText = async (text) => {
   try {
@@ -723,7 +695,9 @@ const fetchData = async () => {
 
     if (response && response.success) {
       tableData.value = response.records || []
-      pagination.total = response.total || 0
+      // 后端分页插件缺失时返回 total=0 与全量记录，此处以实际记录数兜底（§5.4）
+      pagination.total = response.total || tableData.value.length
+      lastRefreshAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
     } else {
       tableData.value = []
       pagination.total = 0
@@ -755,69 +729,38 @@ const fetchStats = async () => {
 }
 
 // ============ 图表相关 ============
-const initChart = () => {
-  if (!chartRef.value) return
+// 图表颜色只从 tokens.css 读，不在 JS 里写裸色值（§7.1）
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 
-  chartInstance.value = echarts.init(chartRef.value)
-
-  // 监听图例切换事件，同步控制 Y 轴显示/隐藏
-  chartInstance.value.on('legendselectchanged', (params) => {
-    const option = chartInstance.value.getOption()
-
-    // 根据图例选中状态，同步控制对应的 Y 轴
-    if (params.name === '提现金额') {
-      option.yAxis[0].show = params.selected['提现金额']
-    } else if (params.name === '提现笔数') {
-      option.yAxis[1].show = params.selected['提现笔数']
-    }
-
-    chartInstance.value.setOption(option)
-  })
-
-  updateChart()
+const syncAxisVisibility = (params) => {
+  if (!chartInstance.value) return
+  const option = chartInstance.value.getOption()
+  if (params.name === '提现金额') {
+    option.yAxis[0].show = params.selected['提现金额']
+  } else if (params.name === '提现笔数') {
+    option.yAxis[1].show = params.selected['提现笔数']
+  }
+  chartInstance.value.setOption(option)
 }
 
-const updateChart = async () => {
-  if (!chartInstance.value) return
-
-  // 从后端获取图表数据
-  const days = chartPeriod.value === 'week' ? 7 : 30
-  const dates = []
-  const amounts = []
-  const counts = []
-
-  try {
-    const response = await getWithdrawTrend(days)
-    if (response && response.data) {
-      // 处理后端返回的数据
-      response.data.forEach(item => {
-        dates.push(item.date)
-        amounts.push(item.amount || 0)
-        counts.push(item.count || 0)
-      })
-    } else {
-      // 如果后端没有返回数据，生成空数据
-      for (let i = days - 1; i >= 0; i--) {
-        const date = new Date()
-        date.setDate(date.getDate() - i)
-        dates.push(date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }))
-        amounts.push(0)
-        counts.push(0)
-      }
-    }
-  } catch (error) {
-    console.error('[提现审核] 获取图表数据失败:', error)
-    // 出错时生成空数据
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date()
-      date.setDate(date.getDate() - i)
-      dates.push(date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }))
-      amounts.push(0)
-      counts.push(0)
+const ensureChart = () => {
+  if (!chartRef.value) return null
+  if (!chartInstance.value) {
+    chartInstance.value = echarts.init(chartRef.value)
+    chartInstance.value.on('legendselectchanged', syncAxisVisibility)
+    if (typeof ResizeObserver !== 'undefined') {
+      chartResizeObserver = new ResizeObserver(() => chartInstance.value?.resize())
+      chartResizeObserver.observe(chartRef.value)
     }
   }
+  return chartInstance.value
+}
 
-  const option = {
+const buildChartOption = ({ dates, amounts, counts }) => {
+  const amountColor = cssVar('--brand-500')
+  const countColor = cssVar('--info')
+
+  return {
     tooltip: {
       trigger: 'axis',
       axisPointer: {
@@ -879,7 +822,10 @@ const updateChart = async () => {
         },
         axisLabel: {
           show: true
-        }
+        },
+        // 笔数是计数：量纲只能取整数，不再出现 0~1 的 0.2 刻度（P0）
+        minInterval: 1,
+        min: 0
       }
     ],
     series: [
@@ -889,12 +835,12 @@ const updateChart = async () => {
         smooth: true,
         data: amounts,
         itemStyle: {
-          color: '#67C23A'
+          color: amountColor
         },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(103, 194, 58, 0.3)' },
-            { offset: 1, color: 'rgba(103, 194, 58, 0.05)' }
+            { offset: 0, color: echarts.color.modifyAlpha(amountColor, 0.3) },
+            { offset: 1, color: echarts.color.modifyAlpha(amountColor, 0.05) }
           ])
         }
       },
@@ -905,13 +851,52 @@ const updateChart = async () => {
         yAxisIndex: 1,
         data: counts,
         itemStyle: {
-          color: '#409EFF'
+          color: countColor
         }
       }
     ]
   }
+}
 
-  chartInstance.value.setOption(option, true)
+// 趋势图只在展开时取数；该周期全为 0 时走空态，不画贴底折线（P0）
+const updateChart = async () => {
+  const days = chartPeriod.value === 'week' ? 7 : 30
+  const dates = []
+  const amounts = []
+  const counts = []
+  chartLoading.value = true
+
+  try {
+    const response = await getWithdrawTrend(days)
+    if (response && response.data) {
+      response.data.forEach((item) => {
+        dates.push(item.date)
+        amounts.push(item.amount || 0)
+        counts.push(item.count || 0)
+      })
+    }
+  } catch (error) {
+    console.error('[提现审核] 获取图表数据失败:', error)
+  } finally {
+    chartLoading.value = false
+  }
+
+  trendSeries.value = { dates, amounts, counts }
+  chartEmpty.value = !amounts.some((value) => value > 0) && !counts.some((value) => value > 0)
+
+  if (chartEmpty.value) return
+
+  await nextTick()
+  const instance = ensureChart()
+  if (!instance) return
+  instance.setOption(buildChartOption(trendSeries.value), true)
+  instance.resize()
+}
+
+const handleChartToggle = (activeNames) => {
+  if (Array.isArray(activeNames) && activeNames.includes('trend')) {
+    updateChart()
+  }
 }
 
 const handleChartPeriodChange = () => {
@@ -1116,159 +1101,115 @@ const handleExport = async () => {
 }
 
 // ============ 自动刷新 ============
-const toggleAutoRefresh = () => {
-  autoRefresh.value = !autoRefresh.value
-  if (autoRefresh.value) {
-    autoRefreshTimer.value = setInterval(() => {
-      fetchData()
-      fetchStats()
-    }, AUTO_REFRESH_INTERVAL)
-    ElMessage.success(`已开启自动刷新（每${AUTO_REFRESH_INTERVAL / 1000}秒）`)
-  } else {
-    if (autoRefreshTimer.value) {
-      clearInterval(autoRefreshTimer.value)
-      autoRefreshTimer.value = null
-    }
-    ElMessage.info('已停止自动刷新')
+// 开关态 + 最近刷新时间（P2）：切换开关才注册/清理定时器（§4.6）
+const handleAutoRefreshChange = (enabled) => {
+  if (autoRefreshTimer.value) {
+    clearInterval(autoRefreshTimer.value)
+    autoRefreshTimer.value = null
   }
+
+  if (!enabled) {
+    ElMessage.info('已停止自动刷新')
+    return
+  }
+
+  autoRefreshTimer.value = setInterval(() => {
+    fetchData()
+    fetchStats()
+  }, AUTO_REFRESH_INTERVAL)
+  ElMessage.success(`已开启自动刷新（每${AUTO_REFRESH_INTERVAL / 1000}秒）`)
 }
 
 // ============ 生命周期 ============
+const handleWindowResize = () => {
+  chartInstance.value?.resize()
+}
+
 onMounted(async () => {
   await fetchData()
   await fetchStats()
-
-  nextTick(() => {
-    initChart()
-  })
-
-  window.addEventListener('resize', () => {
-    chartInstance.value?.resize()
-  })
+  window.addEventListener('resize', handleWindowResize)
 })
 
 onUnmounted(() => {
   if (autoRefreshTimer.value) {
     clearInterval(autoRefreshTimer.value)
+    autoRefreshTimer.value = null
   }
+  window.removeEventListener('resize', handleWindowResize)
+  chartResizeObserver?.disconnect()
+  chartResizeObserver = null
   chartInstance.value?.dispose()
+  chartInstance.value = null
 })
 </script>
 
 <style scoped lang="less">
 .withdrawal-audit-page {
-  padding: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-  .card-header {
-    display: flex;
-    justify-content: space-between;
+  /* 页头动作区：自动刷新开关 + 最近刷新时间 + 导出（§4.7） */
+  .refresh-toggle {
+    display: inline-flex;
     align-items: center;
-
-    h2 {
-      margin: 0;
-      font-size: 1.286rem /* 原值: 18px */;
-      color: #303133;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 10px;
-    }
+    gap: var(--space-2);
+    cursor: pointer;
   }
 
-  // 统计卡片
-  .stats-row {
-    margin-bottom: 20px;
-
-    .stat-card {
-      transition: all 0.3s ease;
-      cursor: pointer;
-      height: 100%;
-
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-      }
-
-      :deep(.el-card__body) {
-        padding: 20px;
-      }
-
-      .stat-item {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-
-        .stat-icon {
-          width: 56px;
-          height: 56px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          transition: transform 0.3s ease;
-        }
-
-        &:hover .stat-icon {
-          transform: scale(1.1) rotate(5deg);
-        }
-
-        .stat-content {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-
-          .stat-label {
-            font-size: 1rem /* 原值: 14px */;
-            color: #909399;
-            font-weight: 500;
-          }
-
-          .stat-value {
-            font-size: 2.286rem /* 原值: 32px */;
-            font-weight: 700;
-            color: #303133;
-            line-height: 1;
-          }
-
-          .stat-trend {
-            font-size: 0.857rem /* 原值: 12px */;
-            display: flex;
-            align-items: center;
-            gap: 2px;
-
-            &.up {
-              color: #f56c6c;
-            }
-
-            &.down {
-              color: #67c23a;
-            }
-          }
-        }
-      }
-    }
+  .refresh-toggle__text,
+  .refresh-time {
+    font-size: var(--text-body-sm);
+    color: var(--ink-500);
+    white-space: nowrap;
   }
 
-  // 图表卡片
+  .refresh-time {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stats-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
+  }
+
+  /* 趋势图：次级可折叠区块（P0） */
   .chart-card {
-    margin-bottom: 20px;
-    border: none;
-    box-shadow: none;
+    margin-bottom: var(--space-8);
 
-    .chart-header {
+    :deep(.el-collapse),
+    :deep(.el-collapse-item__header),
+    :deep(.el-collapse-item__wrap) {
+      border: 0;
+    }
+
+    :deep(.el-collapse-item__header) {
+      height: auto;
+      padding: var(--space-1) 0;
+      line-height: normal;
+    }
+
+    :deep(.el-collapse-item__content) {
+      padding-bottom: 0;
+    }
+
+    .chart-title {
+      font-size: var(--text-h3);
+      font-weight: var(--weight-semibold);
+      color: var(--ink-900);
+    }
+
+    .chart-toolbar {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-
-      .chart-title {
-        font-size: 1.143rem /* 原值: 16px */;
-        font-weight: bold;
-        color: #303133;
-      }
+      justify-content: flex-end;
+      margin-bottom: var(--space-3);
     }
 
     .chart-container {
@@ -1277,263 +1218,216 @@ onUnmounted(() => {
     }
   }
 
-  // 筛选区域
-  .filter-section {
-    margin-bottom: 20px;
-    padding: 16px;
-    background: #fafafa;
-    border-radius: 8px;
-    border: 1px solid #ebeef5;
+  /* 筛选条（§4.3） */
+  .filter-card {
+    margin-bottom: var(--space-8);
 
-    .filter-row {
-      margin-bottom: 12px;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
+    .search-form {
+      margin-bottom: 0;
     }
 
-    .filter-row-second {
-      margin-top: 8px;
+    :deep(.el-form-item) {
+      margin-right: var(--space-4);
+      margin-bottom: var(--space-3);
     }
 
-    .filter-buttons-inline {
-      display: flex;
-      gap: 8px;
+    .filter-keyword {
+      width: 220px;
+    }
+
+    .filter-select {
+      width: 140px;
+    }
+
+    .filter-date {
+      width: 260px;
+    }
+
+    .filter-amount {
+      display: inline-flex;
       align-items: center;
-      height: 32px;
-
-      .el-button {
-        flex: 1;
-      }
+      gap: var(--space-2);
+      margin-right: 0;
     }
 
-    .amount-range-filter {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .filter-number {
+      width: 140px;
+    }
 
-      .filter-label {
-        font-size: 1rem /* 原值: 14px */;
-        color: #606266;
+    .filter-label {
+      font-size: var(--text-body-sm);
+      color: var(--ink-500);
+      white-space: nowrap;
+    }
+
+    .range-divider {
+      color: var(--ink-400);
+    }
+  }
+
+  /* 表格（§4.3、§5.4） */
+  .table-card {
+    .pagination-container {
+      margin-top: var(--space-5);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* 长表滚动时表头可辨：浅底色 + 中量字重（§4.3） */
+    :deep(.el-table__header th) {
+      background-color: var(--canvas-sunken);
+      font-weight: var(--weight-semibold);
+    }
+
+    /* 财务长表行 hover 高亮，避免横向读串行（§3.5 高频微交互用 CSS transition） */
+    :deep(.el-table__body tr:hover > td) {
+      background-color: var(--canvas-sunken);
+      transition: background-color var(--duration-fast) var(--ease-out);
+    }
+  }
+
+  .cell-num {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .copy-text {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--brand-600);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--brand-500);
+      text-decoration: underline;
+    }
+  }
+
+  .user-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+
+    .user-info {
+      min-width: 0;
+
+      .user-nickname {
+        font-size: var(--text-body-sm);
+        color: var(--ink-700);
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
       }
 
-      .range-divider {
-        color: #909399;
+      .user-id {
+        font-family: var(--font-num);
+        font-variant-numeric: tabular-nums;
+        font-size: var(--text-caption);
+        color: var(--ink-500);
       }
     }
   }
 
-  // 数据表格
-  :deep(.el-table) {
-    border-radius: 8px;
-    overflow: hidden;
+  /* 金额：无衬线等宽数字 + 中性深色，不带红绿蓝（§4.3、§5.2） */
+  .amount-text {
+    color: var(--ink-900);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
 
-    .el-table__header th {
-      background-color: #fafafa;
-      font-weight: 600;
+    /* 大额只加粗一档，不用颜色表达（§5.2） */
+    &.high-amount {
+      font-weight: var(--weight-bold);
     }
   }
 
-  .data-table {
-    border-radius: 8px;
-    overflow: hidden;
-
-    .copy-text {
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      color: #409eff;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    }
-
-    .user-cell {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      .user-info {
-        .user-nickname {
-          font-size: 1rem /* 原值: 14px */;
-          color: #303133;
-        }
-
-        .user-id {
-          font-size: 0.857rem /* 原值: 12px */;
-          color: #909399;
-        }
-      }
-    }
-
-    .amount-text {
-      color: #f56c6c;
-      font-weight: bold;
-
-      &.highlight {
-        font-size: 1.143rem /* 原值: 16px */;
-      }
-
-      &.high-amount {
-        color: #ff4d4f;
-        font-size: 1.071rem /* 原值: 15px */;
-      }
-    }
-
-    .expand-content {
-      padding: 20px;
-      background: #fafafa;
-    }
+  .expand-content {
+    padding: var(--space-4);
+    background: var(--canvas-sunken);
   }
 
-  // 批量操作
   .batch-actions {
-    margin-bottom: 16px;
-
-    :deep(.el-alert) {
-      border-radius: 8px;
-    }
+    margin-top: var(--space-4);
 
     :deep(.el-alert__content) {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-2);
       flex-wrap: wrap;
     }
   }
 
-  // 分页
-  .el-pagination {
-    margin-top: 20px;
-    display: flex;
-    justify-content: flex-end;
-    padding-top: 16px;
-    border-top: 1px solid #ebeef5;
-  }
-
-  // 详情对话框
+  /* 详情对话框 */
   .detail-content {
     .copy-item {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-2);
+      font-family: var(--font-num);
+      font-variant-numeric: tabular-nums;
     }
 
     .user-detail {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: var(--space-3);
 
       .user-detail-info {
         .user-nickname {
-          font-size: 1rem /* 原值: 14px */;
-          color: #303133;
-          font-weight: 500;
+          font-size: var(--text-body);
+          color: var(--ink-900);
+          font-weight: var(--weight-medium);
         }
 
         .user-id {
-          font-size: 0.857rem /* 原值: 12px */;
-          color: #909399;
+          font-family: var(--font-num);
+          font-variant-numeric: tabular-nums;
+          font-size: var(--text-body-sm);
+          color: var(--ink-500);
         }
       }
     }
 
     .logs-section {
-      margin-top: 24px;
-      padding-top: 16px;
-      border-top: 1px solid #ebeef5;
+      margin-top: var(--space-6);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--line);
 
       .logs-title {
-        font-size: 1rem /* 原值: 14px */;
-        font-weight: bold;
-        color: #303133;
-        margin-bottom: 12px;
+        font-size: var(--text-body);
+        font-weight: var(--weight-semibold);
+        color: var(--ink-900);
+        margin-bottom: var(--space-3);
       }
 
       .log-item {
         .log-action {
-          font-weight: 500;
-          color: #303133;
+          font-weight: var(--weight-medium);
+          color: var(--ink-900);
         }
 
         .log-user {
-          margin-left: 8px;
-          color: #409eff;
+          margin-left: var(--space-2);
+          color: var(--brand-600);
         }
 
         .log-comment {
-          color: #606266;
+          color: var(--ink-700);
         }
       }
     }
   }
 
   .error-text {
-    color: #f56c6c;
+    color: var(--danger);
   }
 
-  .high-amount {
-    color: #ff4d4f;
-    font-weight: bold;
-  }
-
-  // 空状态
-  .el-empty {
-    padding: 40px 0;
-  }
-
-  // 对话框圆角
   :deep(.el-dialog) {
-    border-radius: 8px;
-  }
-
-  :deep(.el-dialog__body) {
-    padding: 24px;
-  }
-
-  // 响应式优化
-  @media (max-width: 1200px) {
-    .stats-row {
-      :deep(.el-col) {
-        margin-bottom: 12px;
-      }
-    }
-
-    .filter-section {
-      .filter-row {
-        > [class*="el-col-"] {
-          margin-bottom: 12px;
-        }
-      }
-    }
-  }
-
-  @media (max-width: 768px) {
-    padding: 12px;
-
-    .stats-row {
-      :deep(.el-col) {
-        margin-bottom: 12px;
-      }
-    }
-
-    .card-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
-
-      .header-actions {
-        width: 100%;
-
-        .el-button {
-          flex: 1;
-        }
-      }
-    }
+    border-radius: var(--radius-lg);
   }
 }
 </style>
