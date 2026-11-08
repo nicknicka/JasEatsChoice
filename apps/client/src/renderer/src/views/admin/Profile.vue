@@ -1,15 +1,11 @@
 <template>
   <div class="admin-profile-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>个人信息</h1>
-      <p class="subtitle">查看和编辑管理员个人信息</p>
-    </div>
+    <AppPageHeader title="个人信息" subtitle="查看和编辑管理员个人信息" :compact="true" />
 
     <!-- 个人信息卡片 -->
     <el-card class="profile-card" shadow="never">
       <el-form ref="profileFormRef" :model="profileForm" :rules="rules" label-width="120px">
-        <el-divider content-position="left">基本信息</el-divider>
+        <h2>基本信息</h2>
 
         <el-form-item label="用户名">
           <div class="readonly-field">
@@ -60,7 +56,7 @@
 
     <!-- 角色信息 -->
     <el-card class="role-card" shadow="never">
-      <el-divider content-position="left">角色信息</el-divider>
+      <h2>角色信息</h2>
       <el-descriptions :column="2" border>
         <el-descriptions-item label="角色名称">
           {{ profileForm.roleName }}
@@ -94,6 +90,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import { getAdminInfo } from '@/utils/auth'
 import { updateAdminProfile } from '@/api/admin'
 import { formatTime } from '@/utils/formatters'
@@ -281,20 +278,13 @@ onMounted(() => {
 
 <style scoped lang="less">
 .admin-profile-container {
-  .page-header {
-    margin-bottom: 20px;
-
-    h1 {
-      font-size: var(--text-h1);
-      color: var(--ink-900);
-      margin: 0 0 var(--space-2) 0;
-    }
-
-    .subtitle {
-      color: var(--ink-500);
-      margin: 0;
-      font-size: var(--text-body);
-    }
+  /* 区块标题从 h2 起，与 Settings.vue 同源（§4.7） */
+  h2 {
+    font-size: var(--text-h3);
+    color: var(--ink-900);
+    margin: var(--space-5) 0 var(--space-4);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--line);
   }
 
   .profile-card,

@@ -1,16 +1,12 @@
 <template>
   <div class="role-management-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>角色管理</h1>
-      <p class="subtitle">管理系统角色和权限分配</p>
-    </div>
+    <AppPageHeader title="角色管理" subtitle="管理系统角色和权限分配" :compact="true" />
 
     <!-- 角色列表 -->
     <el-card class="table-card" shadow="never">
       <template #header>
         <div class="table-card-header">
-          <span>角色列表</span>
+          <h2>角色列表</h2>
           <el-button type="primary" :icon="Plus" @click="handleCreate">新建角色</el-button>
         </div>
       </template>
@@ -27,9 +23,7 @@
         </el-table-column>
         <el-table-column label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
-              {{ row.status === 'ACTIVE' ? '启用' : '禁用' }}
-            </el-tag>
+            <StatusTag :status="row.status === 'ACTIVE' ? 'enabled' : 'disabled'" />
           </template>
         </el-table-column>
         <el-table-column label="创建时间" width="160">
@@ -124,6 +118,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import RowActions from '@/components/common/RowActions.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import { formatTime } from '@/utils/formatters'
 import {
   getRoleList,
@@ -350,30 +346,19 @@ onMounted(() => {
 
 <style scoped lang="less">
 .role-management-container {
-  .page-header {
-    margin-bottom: var(--space-5);
-
-    h1 {
-      font-size: var(--text-h1);
-      color: var(--ink-900);
-      margin: 0 0 var(--space-2) 0;
-    }
-
-    .subtitle {
-      color: var(--ink-500);
-      margin: 0;
-      font-size: var(--text-body);
-    }
-  }
-
+  /* 卡头标题从 h2 起，与列表页同源（§4.7） */
   .table-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-4);
-    color: var(--ink-900);
-    font-size: var(--text-h3);
-    font-weight: var(--weight-semibold);
+
+    h2 {
+      margin: 0;
+      color: var(--ink-900);
+      font-size: var(--text-h3);
+      font-weight: var(--weight-semibold);
+    }
   }
 
   .permission-count {
