@@ -1,25 +1,18 @@
 <template>
   <div class="dish-audit-container">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>菜品审核</h1>
-      <p class="subtitle">审核商家提交的菜品</p>
-    </div>
+    <AppPageHeader title="菜品审核" :compact="true" class="audit-page-header">
+      <template #actions>
+        <el-button type="primary" @click="fetchDishList">刷新</el-button>
+      </template>
+    </AppPageHeader>
 
     <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-card class="stat-card">
-        <el-statistic title="待审核" :value="stats.pending" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="今日已审核" :value="stats.todayApproved" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="今日已拒绝" :value="stats.todayRejected" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="本月审核总数" :value="stats.monthTotal" />
-      </el-card>
+    <div class="stats-section">
+      <AppStatCard label="待审核" :value="stats.pending" icon="Clock" />
+      <AppStatCard label="今日已审核" :value="stats.todayApproved" icon="Checked" />
+      <AppStatCard label="今日已拒绝" :value="stats.todayRejected" icon="Close" />
+      <AppStatCard label="本月审核总数" :value="stats.monthTotal" icon="TrendCharts" />
     </div>
 
     <!-- 搜索栏 -->
@@ -58,30 +51,34 @@
       </el-form>
     </el-card>
 
-    <!-- 审核列表 -->
+    <!-- 菜品列表 -->
     <el-card class="table-card" shadow="never">
-      <el-table :data="auditList" v-loading="loading" stripe>
-        <el-table-column prop="dishId" label="菜品ID" width="100" />
-        <el-table-column prop="dishName" label="菜品名称" min-width="150" />
+      <el-table :data="dishList" v-loading="loading" stripe>
+        <el-table-column prop="dishId" label="菜品 ID" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="dishName" label="菜品名称" min-width="200" />
         <el-table-column prop="merchantName" label="商家名称" min-width="150" />
-        <el-table-column prop="category" label="分类" width="100" />
-        <el-table-column prop="price" label="价格" width="100">
-          <template #default="{ row }">
-            <span style="color: #f56c6c; font-weight: bold">¥{{ row.price }}</span>
-          </template>
-        </el-table-column>
         <el-table-column label="审核状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getAuditStatusType(row.auditStatus)">
-              {{ getAuditStatusText(row.auditStatus) }}
-            </el-tag>
+            <StatusTag :type="getStatusType(row.auditStatus)" :text="getStatusText(row.auditStatus)" />
           </template>
         </el-table-column>
-        <el-table-column prop="submitTime" label="提交时间" width="180" />
+        <el-table-column label="图片" width="100">
+          <template #default="{ row }">
+            <el-image
+              v-if="row.imageUrl"
+              :src="row.imageUrl"
+              :preview-src-list="[row.imageUrl]"
+              fit="cover"
+              style="width: 60px; height: 60px"
+            />
+            <span v-else style="color: #909399">无图</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createdAt" label="提交时间" width="180" />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleAudit(row)">审核</el-button>
-            <el-button type="info" size="small" link @click="handleView(row)">详情</el-button>
+            <el-button type="success" size="small" link @click="handleAudit(row, 'APPROVED')">通过</el-button>
+            <el-button type="danger" size="small" link @click="handleAudit(row, 'REJECTED')">拒绝</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -94,8 +91,8 @@
           :page-sizes="[10, 20, 50, 100]"
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchAuditList"
-          @current-change="fetchAuditList"
+          @size-change="fetchDishList"
+          @current-change="fetchDishList"
         />
       </div>
     </el-card>
@@ -103,104 +100,39 @@
     <!-- 审核对话框 -->
     <el-dialog
       v-model="auditDialogVisible"
-      title="菜品审核"
-      width="800px"
-      :close-on-click-modal="false"
-    >
-      <div v-if="currentDish" class="audit-content">
-        <el-descriptions :column="2" border class="dish-info">
-          <el-descriptions-item label="菜品名称">{{ currentDish.dishName }}</el-descriptions-item>
-          <el-descriptions-item label="商家名称">{{ currentDish.merchantName }}</el-descriptions-item>
-          <el-descriptions-item label="分类">{{ currentDish.category || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="价格">
-            <span style="color: #f56c6c; font-weight: bold">¥{{ currentDish.price }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="热量">{{ currentDish.calories || '-' }} kcal</el-descriptions-item>
-          <el-descriptions-item label="库存">{{ currentDish.stock || '不限量' }}</el-descriptions-item>
-          <el-descriptions-item label="提交时间" :span="2">{{ currentDish.submitTime }}</el-descriptions-item>
-          <el-descriptions-item label="菜品描述" :span="2">{{ currentDish.description || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="菜品图片" :span="2">
-            <el-image
-              v-if="currentDish.image"
-              :src="currentDish.image"
-              style="width: 200px; height: 200px"
-              fit="cover"
-              :preview-src-list="[currentDish.image]"
-            />
-            <span v-else>-</span>
-          </el-descriptions-item>
-        </el-descriptions>
-
-        <el-divider>审核操作</el-divider>
-        <el-form :model="auditForm" label-width="80px">
-          <el-form-item label="审核结果">
-            <el-radio-group v-model="auditForm.decision">
-              <el-radio label="approve">通过</el-radio>
-              <el-radio label="reject">拒绝</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="审核意见">
-            <el-input
-              v-model="auditForm.comment"
-              type="textarea"
-              :rows="4"
-              placeholder="请输入审核意见（拒绝时必填）"
-            />
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <template #footer>
-        <el-button @click="auditDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitAudit">提交审核</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 详情对话框 -->
-    <el-dialog
-      v-model="detailDialogVisible"
-      title="菜品详情"
-      width="700px"
+      :title="auditForm.status === 'APPROVED' ? '确认通过菜品审核' : '确认拒绝菜品审核'"
+      width="500px"
       :close-on-click-modal="false"
     >
       <el-descriptions v-if="currentDish" :column="2" border>
-        <el-descriptions-item label="菜品ID">{{ currentDish.dishId }}</el-descriptions-item>
         <el-descriptions-item label="菜品名称">{{ currentDish.dishName }}</el-descriptions-item>
         <el-descriptions-item label="商家名称">{{ currentDish.merchantName }}</el-descriptions-item>
-        <el-descriptions-item label="分类">{{ currentDish.category || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="价格">
-          <span style="color: #f56c6c; font-weight: bold">¥{{ currentDish.price }}</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="审核状态">
-          <el-tag :type="getAuditStatusType(currentDish.auditStatus)">
-            {{ getAuditStatusText(currentDish.auditStatus) }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="热量">{{ currentDish.calories || '-' }} kcal</el-descriptions-item>
-        <el-descriptions-item label="库存">{{ currentDish.stock || '不限量' }}</el-descriptions-item>
-        <el-descriptions-item label="提交时间" :span="2">{{ currentDish.submitTime }}</el-descriptions-item>
         <el-descriptions-item label="菜品描述" :span="2">{{ currentDish.description || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="审核意见" :span="2">{{ currentDish.auditComment || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="菜品图片" :span="2">
-          <el-image
-            v-if="currentDish.image"
-            :src="currentDish.image"
-            style="width: 100px; height: 100px"
-            fit="cover"
-            :preview-src-list="[currentDish.image]"
-          />
-          <span v-else>-</span>
+        <el-descriptions-item label="当前状态">
+          <StatusTag :type="getStatusType(currentDish.auditStatus)" :text="getStatusText(currentDish.auditStatus)" />
         </el-descriptions-item>
       </el-descriptions>
 
+      <el-form :model="auditForm" label-width="80px" style="margin-top: var(--space-5)">
+        <el-form-item label="本次操作">
+          <el-tag :type="auditForm.status === 'APPROVED' ? 'success' : 'danger'">
+            {{ auditForm.status === 'APPROVED' ? '确认通过' : '确认拒绝' }}
+          </el-tag>
+        </el-form-item>
+        <el-form-item label="审核意见" v-if="auditForm.status === 'REJECTED'">
+          <el-input
+            v-model="auditForm.reason"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入拒绝原因"
+          />
+        </el-form-item>
+      </el-form>
+
       <template #footer>
-        <el-button @click="detailDialogVisible = false">关闭</el-button>
-        <el-button
-          v-if="currentDish?.auditStatus === 'PENDING'"
-          type="primary"
-          @click="detailDialogVisible = false; handleAudit(currentDish)"
-        >
-          去审核
+        <el-button @click="auditDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitAudit">
+          {{ auditForm.status === 'APPROVED' ? '确认通过' : '确认拒绝' }}
         </el-button>
       </template>
     </el-dialog>
@@ -210,14 +142,16 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh } from '@element-plus/icons-vue'
-import { getDishAuditList, getDishAuditDetail, auditDish } from '@/api/admin'
+import { Search, Refresh, Clock, Checked, Close, TrendCharts } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/AppPageHeader.vue'
+import AppStatCard from '@/components/AppStatCard.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
+import { getDishAuditList, auditDish } from '@/api/admin'
 
 const loading = ref(false)
-const auditList = ref([])
+const dishList = ref([])
 const currentDish = ref(null)
 const auditDialogVisible = ref(false)
-const detailDialogVisible = ref(false)
 
 const stats = reactive({
   pending: 0,
@@ -228,7 +162,7 @@ const stats = reactive({
 
 const searchForm = reactive({
   keyword: '',
-  auditStatus: 'PENDING',
+  auditStatus: '',
   dateRange: null
 })
 
@@ -239,178 +173,141 @@ const pagination = reactive({
 })
 
 const auditForm = reactive({
-  decision: 'approve',
-  comment: ''
+  dishId: null,
+  status: 'APPROVED',
+  reason: ''
 })
 
-// 获取审核列表
-const fetchAuditList = async () => {
+// 获取菜品列表
+const fetchDishList = async () => {
   loading.value = true
   try {
     const response = await getDishAuditList({
       page: pagination.page,
       pageSize: pagination.pageSize,
       keyword: searchForm.keyword,
-      auditStatus: searchForm.auditStatus
+      auditStatus: searchForm.auditStatus,
+      startDate: searchForm.dateRange?.[0] || '',
+      endDate: searchForm.dateRange?.[1] || ''
     })
 
     if (response) {
-      auditList.value = response.records || []
+      dishList.value = response.records || []
       pagination.total = response.total || 0
-
-      // 更新统计数据
-      stats.pending = auditList.value.filter(d => d.auditStatus === 'PENDING').length
+      
+      // Update statistics
+      stats.pending = response.pending || 0
+      stats.todayApproved = response.todayApproved || 0
+      stats.todayRejected = response.todayRejected || 0
+      stats.monthTotal = response.monthTotal || 0
     }
   } catch (error) {
-    console.error('获取审核列表失败:', error)
-    ElMessage.error('获取审核列表失败')
+    console.error('获取菜品审核列表失败:', error)
+    ElMessage.error('获取菜品审核列表失败：' + (error.message || '网络错误'))
   } finally {
     loading.value = false
   }
 }
 
-// 获取审核状态类型
-const getAuditStatusType = (status) => {
+// 获取状态类型
+const getStatusType = (status) => {
   const types = {
-    'PENDING': 'warning',
-    'APPROVED': 'success',
-    'REJECTED': 'danger'
+    PENDING: 'warning',
+    APPROVED: 'success',
+    REJECTED: 'danger'
   }
   return types[status] || 'info'
 }
 
-// 获取审核状态文本
-const getAuditStatusText = (status) => {
-  const texts = {
-    'PENDING': '待审核',
-    'APPROVED': '已通过',
-    'REJECTED': '已拒绝'
+// 获取状态文本
+const getStatusText = (status) => {
+  const textMap = {
+    PENDING: '待审核',
+    APPROVED: '已通过',
+    REJECTED: '已拒绝'
   }
-  return texts[status] || '未知'
+  return textMap[status] || '未知'
 }
 
 // 搜索
 const handleSearch = () => {
   pagination.page = 1
-  fetchAuditList()
+  fetchDishList()
 }
 
 // 重置
 const handleReset = () => {
   searchForm.keyword = ''
-  searchForm.auditStatus = 'PENDING'
+  searchForm.auditStatus = ''
   searchForm.dateRange = null
   pagination.page = 1
-  fetchAuditList()
-}
-
-// 查看详情
-const handleView = async (row) => {
-  try {
-    const response = await getDishAuditDetail(row.dishId)
-    if (response) {
-      currentDish.value = response
-      detailDialogVisible.value = true
-    }
-  } catch (error) {
-    console.error('获取详情失败:', error)
-    ElMessage.error('获取详情失败')
-  }
+  fetchDishList()
 }
 
 // 审核
-const handleAudit = async (row) => {
-  try {
-    const response = await getDishAuditDetail(row.dishId)
-    if (response) {
-      currentDish.value = response
-      auditForm.decision = 'approve'
-      auditForm.comment = ''
-      auditDialogVisible.value = true
-    }
-  } catch (error) {
-    console.error('获取菜品信息失败:', error)
-    ElMessage.error('获取菜品信息失败')
-  }
+const handleAudit = (row, status) => {
+  currentDish.value = row
+  auditForm.dishId = row.dishId
+  auditForm.status = status
+  auditForm.reason = ''
+  auditDialogVisible.value = true
 }
 
 // 提交审核
 const submitAudit = async () => {
-  if (auditForm.decision === 'reject' && !auditForm.comment.trim()) {
-    ElMessage.warning('拒绝时必须填写审核意见')
-    return
-  }
-
   try {
-    const response = await auditDish(currentDish.value.dishId, {
-      decision: auditForm.decision,
-      comment: auditForm.comment
+    const response = await auditDish(auditForm.dishId, {
+      status: auditForm.status,
+      reason: auditForm.reason
     })
 
     if (response) {
-      ElMessage.success('审核提交成功')
+      ElMessage.success('审核完成')
       auditDialogVisible.value = false
-      fetchAuditList()
+      fetchDishList()
     }
   } catch (error) {
-    console.error('审核提交失败:', error)
-    ElMessage.error('审核提交失败')
+    console.error('审核失败:', error)
+    ElMessage.error('审核失败')
   }
 }
 
 onMounted(() => {
-  fetchAuditList()
+  fetchDishList()
 })
 </script>
 
 <style scoped lang="less">
+@import '@/assets/css/nordic-theme.less';
+
 .dish-audit-container {
-  .page-header {
-    margin-bottom: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
+  .audit-page-header {
+    margin-bottom: var(--space-6);
   }
 
-  .stats-cards {
+  .stats-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-
-    .stat-card {
-      text-align: center;
-    }
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
   }
 
   .search-card {
-    margin-bottom: 20px;
-
-    .search-form {
-      margin-bottom: 0;
-    }
+    margin-bottom: var(--space-8);
   }
 
   .table-card {
     .pagination-container {
-      margin-top: 20px;
+      margin-top: var(--space-5);
       display: flex;
       justify-content: flex-end;
-    }
-  }
-
-  .audit-content {
-    .dish-info {
-      margin-bottom: 20px;
     }
   }
 }
