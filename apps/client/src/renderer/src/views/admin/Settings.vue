@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Setting, Connection, Refresh, Warning } from '@element-plus/icons-vue'
+import { Connection, Refresh, Warning } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import {
   getSystemConfigsByGroup,
   batchUpdateSystemConfigs,
@@ -111,7 +112,7 @@ const aiConfig = ref({
   }
 })
 
-// #188 公告索引重建状态展示；状态字段可能为 null/缺失（老后端），按未知兜底
+// Issue 188 公告索引重建状态展示；状态字段可能为 null/缺失（老后端），按未知兜底
 const EMBEDDING_STATE_LABELS = {
   READY: { label: '就绪', type: 'success' },
   REBUILDING: { label: '重建中', type: 'warning' },
@@ -638,19 +639,12 @@ onMounted(async () => {
 
 <template>
   <div class="admin-settings-container">
-    <el-card shadow="never">
-      <template #header>
-        <div class="header">
-          <h3>
-            <el-icon><Setting /></el-icon>
-            系统设置
-          </h3>
-        </div>
-      </template>
+    <AppPageHeader title="系统配置" subtitle="管理系统、通知、安全与 AI 配置" :compact="true" />
 
+    <el-card class="settings-card" shadow="never">
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <!-- 系统设置 -->
-        <el-tab-pane label="系统设置" name="system">
+        <el-tab-pane label="系统配置" name="system">
           <el-form :model="systemSettings" label-width="180px" style="max-width: 600px" v-loading="loading">
             <h4>基本设置</h4>
             <el-form-item label="网站名称">
@@ -1127,7 +1121,7 @@ onMounted(async () => {
     h3 {
       margin: 0;
       font-size: 1.429rem /* 原值: 20px */;
-      color: #303133;
+      color: var(--ink-900);
       display: flex;
       align-items: center;
       gap: 10px;
@@ -1136,10 +1130,10 @@ onMounted(async () => {
 
   h4 {
     font-size: 1.143rem /* 原值: 16px */;
-      color: #303133;
+      color: var(--ink-900);
       margin: 20px 0 15px 0;
       padding-bottom: 8px;
-      border-bottom: 2px solid #ff6b6b;
+      border-bottom: 1px solid var(--line);
   }
 
   // ===== AI 设置页新样式 =====
@@ -1151,21 +1145,21 @@ onMounted(async () => {
   }
 
   .mono-text {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--font-num);
     font-size: 13px;
   }
 
   .key-fingerprint {
     margin-left: 8px;
-    color: #909399;
+    color: var(--ink-500);
     font-size: 12px;
   }
 
   // 状态总览卡
   .status-card {
     border: none;
-    background: linear-gradient(135deg, #f8f9ff 0%, #fff5f0 100%);
-    border-radius: 12px;
+    background: var(--canvas-sunken);
+    border-radius: var(--radius-lg);
 
     :deep(.el-card__header) {
       padding: 0;
@@ -1193,18 +1187,18 @@ onMounted(async () => {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #909399;
+    background: var(--neutral);
 
-    &.success { background: #67c23a; box-shadow: 0 0 0 4px rgba(103,194,58,0.15); }
-    &.warning { background: #e6a23c; box-shadow: 0 0 0 4px rgba(230,162,60,0.15); }
-    &.danger  { background: #f56c6c; box-shadow: 0 0 0 4px rgba(245,108,108,0.15); }
-    &.info    { background: #909399; box-shadow: 0 0 0 4px rgba(144,147,153,0.15); }
+    &.success { background: var(--success); box-shadow: 0 0 0 4px var(--success-bg); }
+    &.warning { background: var(--warning); box-shadow: 0 0 0 4px var(--warning-bg); }
+    &.danger  { background: var(--danger); box-shadow: 0 0 0 4px var(--danger-bg); }
+    &.info    { background: var(--neutral); box-shadow: 0 0 0 4px var(--neutral-bg); }
   }
 
   .status-title {
     font-size: 16px;
     font-weight: 600;
-    color: #303133;
+    color: var(--ink-900);
   }
 
   .status-tag {
@@ -1223,17 +1217,17 @@ onMounted(async () => {
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.7);
-    border: 1px solid rgba(144,147,153,0.2);
-    color: #909399;
+    border-radius: var(--radius-full);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink-500);
     font-size: 13px;
-    transition: all 0.2s;
+    transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
 
     &.enabled {
-      color: #67c23a;
-      border-color: rgba(103,194,58,0.3);
-      background: rgba(103,194,58,0.08);
+      color: var(--success);
+      border-color: var(--line-strong);
+      background: var(--success-bg);
     }
   }
 
@@ -1249,20 +1243,20 @@ onMounted(async () => {
   .status-description {
     margin-top: 12px;
     padding: 10px 14px;
-    background: rgba(255,255,255,0.8);
-    border-radius: 8px;
+    background: var(--surface);
+    border-radius: var(--radius-md);
     font-size: 13px;
-    color: #e6a23c;
+    color: var(--warning);
     line-height: 1.5;
   }
 
   .status-warning {
     margin-top: 12px;
     padding: 10px 14px;
-    background: rgba(245,108,108,0.08);
-    border-radius: 8px;
+    background: var(--danger-bg);
+    border-radius: var(--radius-md);
     font-size: 13px;
-    color: #f56c6c;
+    color: var(--danger);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1270,7 +1264,7 @@ onMounted(async () => {
 
   // 配置卡
   .config-card {
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
 
     :deep(.el-card__header) {
       padding: 16px 20px;
@@ -1290,16 +1284,16 @@ onMounted(async () => {
   .card-title {
     font-size: 15px;
     font-weight: 600;
-    color: #303133;
+    color: var(--ink-900);
   }
 
   .card-subtitle {
     font-size: 12px;
-    color: #909399;
+    color: var(--ink-500);
   }
 
   .editing-hint {
-    color: #e6a23c;
+    color: var(--warning);
   }
 
   .config-actions {
@@ -1317,7 +1311,7 @@ onMounted(async () => {
   }
 
   .connectivity-message {
-    color: #606266;
+    color: var(--ink-700);
     font-size: 13px;
   }
 
@@ -1339,39 +1333,39 @@ onMounted(async () => {
     gap: 10px;
     justify-content: flex-end;
     padding-top: 16px;
-    border-top: 1px solid #ebeef5;
+    border-top: 1px solid var(--line);
   }
 
   .test-result {
     margin-top: 14px;
     padding: 10px 14px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 13px;
 
     &.success {
-      background: rgba(103,194,58,0.08);
-      color: #67c23a;
+      background: var(--success-bg);
+      color: var(--success);
     }
     &.fail {
-      background: rgba(245,108,108,0.08);
-      color: #f56c6c;
+      background: var(--danger-bg);
+      color: var(--danger);
     }
   }
 
   .test-result-message {
-    color: #606266;
+    color: var(--ink-700);
   }
 
   .test-result-model {
-    color: #909399;
+    color: var(--ink-500);
   }
 
   // 折叠分区卡
   .section-card {
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
 
     :deep(.el-card__header) {
       padding: 0 20px;
@@ -1405,11 +1399,11 @@ onMounted(async () => {
 
   .history-subtitle {
     font-size: 12px;
-    color: #e6a23c;
+    color: var(--warning);
     font-weight: normal;
 
     &.muted {
-      color: #c0c4cc;
+      color: var(--ink-400);
     }
   }
 
@@ -1422,7 +1416,7 @@ onMounted(async () => {
   }
 
   .embedding-state-reason {
-    color: #909399;
+    color: var(--ink-500);
     font-size: 12px;
   }
 
@@ -1441,7 +1435,7 @@ onMounted(async () => {
 
   .form-tip {
     margin-left: 10px;
-    color: #909399;
+    color: var(--ink-500);
     font-size: 0.857rem /* 原值: 12px */;
   }
 }
