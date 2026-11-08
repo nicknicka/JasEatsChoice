@@ -120,16 +120,19 @@ test.describe('模块十二：管理员端-用户与商家管理', () => {
 
       const row = page.locator('.el-table__body-wrapper tbody tr').filter({ hasText: phone })
       await expect(row).toHaveCount(1, { timeout: 10000 })
-      await expect(row.getByRole('button', { name: '禁用' })).toBeVisible()
+      // 行操作收敛为「查看 + 更多」，禁用进「更多」菜单并由 RowActions 二次确认（DESIGN-BASELINE §4.3）
+      await row.getByRole('button', { name: '更多' }).click()
+      const disableItem = page.locator('.el-dropdown-menu__item:visible').filter({ hasText: '禁用' })
+      await expect(disableItem).toBeVisible()
       const disableResponsePromise = page.waitForResponse((response) =>
         response.url().includes(`/admin/users/${userId}/status`) &&
         response.request().method() === 'PUT' &&
         response.request().postDataJSON()?.status === 'LOCKED'
       )
-      await row.getByRole('button', { name: '禁用' }).click()
-      const disableDialog = page.locator('.el-message-box').filter({ hasText: '确定要禁用用户' })
+      await disableItem.click()
+      const disableDialog = page.locator('.el-message-box').filter({ hasText: '禁用' })
       await expect(disableDialog).toBeVisible()
-      await disableDialog.getByRole('button', { name: '确定' }).click()
+      await disableDialog.getByRole('button', { name: '确认执行' }).click()
       const disableResponse = await disableResponsePromise
       expect(disableResponse.ok(), '禁用接口应返回成功状态').toBeTruthy()
       await expect(page.locator('.el-message--success').filter({ hasText: '状态修改成功' }).first()).toBeVisible()
@@ -147,16 +150,15 @@ test.describe('模块十二：管理员端-用户与商家管理', () => {
       expect(blockedResult.message, '禁用用户登录提示应明确').toContain('禁用')
 
       const enabledRow = page.locator('.el-table__body-wrapper tbody tr').filter({ hasText: phone })
-      await expect(enabledRow.getByRole('button', { name: '启用' })).toBeVisible()
+      await enabledRow.getByRole('button', { name: '更多' }).click()
+      const enableItem = page.locator('.el-dropdown-menu__item:visible').filter({ hasText: '启用' })
+      await expect(enableItem).toBeVisible()
       const enableResponsePromise = page.waitForResponse((response) =>
         response.url().includes(`/admin/users/${userId}/status`) &&
         response.request().method() === 'PUT' &&
         response.request().postDataJSON()?.status === 'ACTIVE'
       )
-      await enabledRow.getByRole('button', { name: '启用' }).click()
-      const enableDialog = page.locator('.el-message-box').filter({ hasText: '确定要启用用户' })
-      await expect(enableDialog).toBeVisible()
-      await enableDialog.getByRole('button', { name: '确定' }).click()
+      await enableItem.click()
       const enableResponse = await enableResponsePromise
       expect(enableResponse.ok(), '启用接口应返回成功状态').toBeTruthy()
       await expect(page.locator('.el-message--success').filter({ hasText: '状态修改成功' }).first()).toBeVisible()
