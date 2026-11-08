@@ -13,7 +13,7 @@
         <div class="card-header">
           <span>待审核教程队列</span>
           <el-badge :value="pendingTutorials.length" class="badge">
-            <el-button type="primary">待审核</el-button>
+            <span class="badge-label">待审核</span>
           </el-badge>
         </div>
       </template>
@@ -23,12 +23,18 @@
 
       <!-- 教程列表 -->
       <el-table v-else :data="pendingTutorials" stripe>
-        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="id" label="ID" min-width="190" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="cell-id">{{ row.id }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="title" label="教程标题" min-width="180" show-overflow-tooltip />
 
         <el-table-column label="来源" width="100" align="center">
           <template #default="{ row }">
-            <StatusTag :type="getSourceTypeTag(row.sourceType).type" :text="getSourceTypeTag(row.sourceType).text" />
+            <el-tag :type="getSourceTypeTag(row.sourceType).type" size="small">
+              {{ getSourceTypeTag(row.sourceType).text }}
+            </el-tag>
           </template>
         </el-table-column>
 
@@ -36,10 +42,13 @@
           <template #default="{ row }">{{ row.author || '未知作者' }}</template>
         </el-table-column>
 
-        <el-table-column label="类型" width="70" align="center">
+        <el-table-column label="类型" width="90" align="center">
           <template #default="{ row }">
-            <el-icon v-if="row.type === 'video'" class="type-icon video"><VideoCamera /></el-icon>
-            <el-icon v-else class="type-icon article"><Document /></el-icon>
+            <span class="type-cell">
+              <el-icon v-if="row.type === 'video'"><VideoCamera /></el-icon>
+              <el-icon v-else><Document /></el-icon>
+              {{ row.type === 'video' ? '视频' : '图文' }}
+            </span>
           </template>
         </el-table-column>
 
@@ -49,19 +58,19 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="关联信息" width="130" show-overflow-tooltip>
+        <el-table-column label="关联信息" width="140" show-overflow-tooltip>
           <template #default="{ row }">
-            <span v-if="row.linkedDishId" class="info-text">菜品#{{ row.linkedDishId }}</span>
-            <span v-else-if="row.aiModelVersion" class="ai-info">{{ row.aiModelVersion }}</span>
+            <span class="relation-text">{{ getRelationText(row) }}</span>
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="110" fixed="right" align="center">
+        <el-table-column label="操作" width="150" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button-group>
-              <el-button type="success" size="small" @click="viewDetail(row)" title="查看详情"><el-icon><View /></el-icon></el-button>
-              <el-button type="primary" size="small" @click="viewDetail(row)" title="审核"><el-icon><Check /></el-icon></el-button>
-            </el-button-group>
+            <RowActions
+              :primary="{ text: '查看', onClick: () => viewDetail(row) }"
+              :items="[{ text: '通过', onClick: () => openReview(row) }]"
+              :max-visible="1"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -100,7 +109,9 @@
         <div class="meta-section">
           <div class="meta-item">
             <span class="label">来源:</span>
-            <StatusTag :type="getSourceTypeTag(currentTutorial.sourceType).type" :text="getSourceTypeTag(currentTutorial.sourceType).text" />
+            <el-tag :type="getSourceTypeTag(currentTutorial.sourceType).type" size="small">
+              {{ getSourceTypeTag(currentTutorial.sourceType).text }}
+            </el-tag>
           </div>
           <div class="meta-item"><span class="label">作者:</span><span>{{ currentTutorial.author }}</span></div>
           <div class="meta-item" v-if="currentTutorial.difficulty">
@@ -153,7 +164,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Check, View, Document, VideoCamera } from '@element-plus/icons-vue'
+import { Document, VideoCamera } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../../utils/api.js'
 import { getAvatarUrl } from '../../utils/avatar'
@@ -161,7 +172,7 @@ import { API_CONFIG } from '../../config/index.js'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
-import StatusTag from '@/components/common/StatusTag.vue'
+import RowActions from '@/components/common/RowActions.vue'
 
 // 配置 marked 选项
 marked.setOptions({ breaks: true, gfm: true })
@@ -210,10 +221,11 @@ const fetchPendingTutorials = async () => {
     console.log('待审核教程列表响应:', response)
     if (response && response.records) {
       pendingTutorials.value = response.records.map(normalizeTutorial)
-      pagination.value.total = response.total || 0
+      // 后端分页插件缺失时返回 total=0，此处以实际记录数兜底
+      pagination.value.total = response.total || pendingTutorials.value.length
     } else if (response && response.data && response.data.records) {
       pendingTutorials.value = response.data.records.map(normalizeTutorial)
-      pagination.value.total = response.data.total || 0
+      pagination.value.total = response.data.total || pendingTutorials.value.length
     } else if (Array.isArray(response)) {
       pendingTutorials.value = response.map(normalizeTutorial)
       pagination.value.total = response.length
@@ -227,6 +239,15 @@ const fetchPendingTutorials = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 关联信息列只保留可读的菜品关联，模型版本仍留在详情弹窗里
+const getRelationText = (row) => (row.linkedDishId ? `菜品 #${row.linkedDishId}` : '-')
+
+// 「通过」与「查看」都进同一个审核对话框，区别只在于显式把决定预置成通过
+const openReview = (tutorial) => {
+  viewDetail(tutorial)
+  reviewForm.value.decision = 'approve'
 }
 
 const viewDetail = (tutorial) => {
@@ -304,7 +325,11 @@ onMounted(() => { fetchPendingTutorials() })
 
 .tutorial-review-container { padding: var(--card-padding-compact) var(--page-gutter); background: var(--canvas); max-width: 1440px; width: 100%; margin: 0 auto; box-sizing: border-box;
   .review-page-header { margin-bottom: var(--space-6); }
-  .table-card { .card-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; h3 { margin: 0; color: var(--ink-900); } :deep(.el-badge__content) { background-color: var(--danger); } } .pagination-container { margin-top: var(--space-5); display: flex; justify-content: flex-end; } }
+  /* 长 ID 不可拆：等宽数字 + 单行（§4.3 §5.4） */
+  .cell-id { font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .type-cell { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--ink-700); white-space: nowrap; }
+  .relation-text { color: var(--ink-600); }
+  .table-card { .card-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; h3 { margin: 0; color: var(--ink-900); } /* 待审核是状态不是操作，改用纯徽标（§4.6） */ .badge-label { color: var(--ink-700); font-weight: var(--weight-medium); } :deep(.el-badge__content) { background-color: var(--danger); } } .pagination-container { margin-top: var(--space-5); display: flex; justify-content: flex-end; } }
   .tutorial-preview { .cover-section { position: relative; margin-bottom: var(--space-6); img { max-width: 100%; height: auto; border-radius: var(--radius-lg); } .type-badge { position: absolute; top: var(--space-2); right: var(--space-2); background: rgba(0,0,0,0.6); color: white; padding: var(--space-1) var(--space-3); border-radius: var(--radius-md); display: flex; align-items: center; gap: var(--space-1); } } .meta-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-6); .meta-item { display: flex; align-items: center; gap: var(--space-2); .label { color: var(--ink-500); font-weight: 500; } } } .content-section h4, .related-section h4 { color: var(--ink-900); font-size: var(--text-base); margin-bottom: var(--space-3); } .content-text { line-height: 1.8; color: var(--ink-800); } .related-section p { color: var(--ink-600); font-size: var(--text-sm); margin-bottom: var(--space-2); } }
 }
 </style>
