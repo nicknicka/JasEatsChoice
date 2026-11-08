@@ -806,7 +806,7 @@ onMounted(() => {
     .batch-actions__buttons {
       display: flex;
       flex-wrap: wrap;
-      gap: var(--space-8);
+      gap: var(--space-6);
 
       :deep(.el-button + .el-button) {
         margin-left: 0;
