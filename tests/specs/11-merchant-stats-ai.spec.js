@@ -215,5 +215,38 @@ test.describe('模块十一：商家端-经营与AI', () => {
     } catch (e) { markFailed('11.6', e.message.slice(0, 50)); throw e }
   })
 
+  test('11.7 AI 助手对话页高度链', async ({ page }) => {
+    markRunning('11.7')
+    try {
+      await page.goto('/merchant/home/ai')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      await expect(page.locator('.chat-panel')).toBeVisible({ timeout: 10000 })
+
+      // 回归点：把 <el-tabs> 换成 Element 后 tab pane 丢掉高度传递，
+      // 对话卡会随内容长到数千 px，输入区被顶出视口彻底不可达。
+      const layout = await page.evaluate(() => {
+        const pane = document.querySelector('.el-tab-pane')
+        const tabsContent = document.querySelector('.el-tabs__content')
+        const input = document.querySelector('.input-area')
+        const rect = input.getBoundingClientRect()
+        return {
+          paneH: Math.round(pane.getBoundingClientRect().height),
+          tabsContentH: Math.round(tabsContent.getBoundingClientRect().height),
+          inputTop: Math.round(rect.top),
+          inputBottom: Math.round(rect.bottom),
+          viewportH: window.innerHeight
+        }
+      })
+
+      // tab pane 必须收敛到 tabs 内容区高度，而不是随内容无限增长
+      expect(layout.paneH).toBeLessThanOrEqual(layout.tabsContentH + 1)
+      // 输入区必须完整落在视口内（旧实现里它在 5000px 之外）
+      expect(layout.inputTop).toBeGreaterThanOrEqual(0)
+      expect(layout.inputBottom).toBeLessThanOrEqual(layout.viewportH)
+
+      markPassed('11.7', `pane=${layout.paneH}px、输入区 ${layout.inputTop}-${layout.inputBottom}px 在视口内`)
+    } catch (e) { markFailed('11.7', e.message.slice(0, 50)); throw e }
+  })
+
   test.afterAll(() => { updateSummary() })
 })

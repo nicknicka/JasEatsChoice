@@ -127,7 +127,12 @@ export function useMerchantAIChat() {
       merchantLogger.error('加载商家AI聊天记录失败:', error)
       messages.value = [createWelcomeMessage()]
     } finally {
-      scrollToBottom(false)
+      // 首屏停在消息顶部：第一张卡片完整可见，不被 scrollToBottom 顶出上方裁切
+      nextTick(() => {
+        if (chatContainerRef.value) {
+          chatContainerRef.value.scrollTop = 0
+        }
+      })
     }
   }
 

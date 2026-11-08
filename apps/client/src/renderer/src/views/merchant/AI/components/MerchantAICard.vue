@@ -11,6 +11,7 @@
 <script setup>
 import { computed } from 'vue'
 import UniCard from '@/views/user/AI/components/cards/UniCard.vue'
+import { OrderStatusMap } from '@/views/user/AI/constants/messageTypes'
 import { createMerchantAICardViewModel } from '../composables/merchantAICardDisplayService'
 
 const props = defineProps({
@@ -24,8 +25,47 @@ const props = defineProps({
   }
 })
 
+// 订单列表组件只认英文状态键，而 AI 卡片给的是中文状态文案；
+// 按 OrderStatusMap（订单状态文案的唯一来源）反推语义键，让状态色回到 §3.1 的状态表。
+const STATUS_KEY_BY_COLOR = {
+  warning: 'pending',
+  primary: 'confirmed',
+  success: 'completed',
+  danger: 'cancelled',
+  info: 'refunded'
+}
+const STATUS_KEY_BY_TEXT = Object.fromEntries(
+  Object.values(OrderStatusMap).map((item) => [item.text, STATUS_KEY_BY_COLOR[item.color] || 'pending'])
+)
+
+const withOrderStatusKey = (card) => {
+  if (!Array.isArray(card.elements)) {
+    return card
+  }
+
+  return {
+    ...card,
+    elements: card.elements.map((element) => {
+      if (element?.tag !== 'order_list' || !Array.isArray(element.orders)) {
+        return element
+      }
+
+      return {
+        ...element,
+        orders: element.orders.map((order) => {
+          const statusKey = order && !order.status ? STATUS_KEY_BY_TEXT[order.statusText] : ''
+          return statusKey ? { ...order, status: statusKey } : order
+        })
+      }
+    })
+  }
+}
+
 const cardViewModel = computed(() => createMerchantAICardViewModel(props.data, props.fallbackText))
-const parsedCard = computed(() => (cardViewModel.value.kind === 'card' ? cardViewModel.value.card : null))
+const parsedCard = computed(() => {
+  const card = cardViewModel.value.kind === 'card' ? cardViewModel.value.card : null
+  return card ? withOrderStatusKey(card) : null
+})
 const safeFallbackText = computed(() => (cardViewModel.value.kind === 'text' ? cardViewModel.value.text : '卡片内容暂不可用'))
 </script>
 
@@ -35,6 +75,17 @@ const safeFallbackText = computed(() => (cardViewModel.value.kind === 'text' ? c
 
 .merchant-ai-card {
   width: 100%;
+
+  // §3.1：序号属中性信息，红色只留给「已取消」等异常状态
+  :deep(.order-number) {
+    background: var(--neutral-bg);
+    color: var(--neutral);
+  }
+
+  // §5.2：金额不染色
+  :deep(.value.price) {
+    color: var(--ink-900);
+  }
 }
 
 .merchant-ai-card-fallback {
