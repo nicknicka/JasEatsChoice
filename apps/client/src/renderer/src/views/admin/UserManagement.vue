@@ -32,7 +32,7 @@
         </el-table-column>
         <el-table-column label="头像" width="80">
           <template #default="{ row }">
-            <el-avatar :size="40" :src="getAvatarUrl(row.avatar)" />
+            <el-avatar :size="32" :src="getAvatarUrl(row.avatar)" />
           </template>
         </el-table-column>
         <el-table-column prop="nickname" label="昵称" min-width="140" show-overflow-tooltip />
@@ -448,5 +448,27 @@ onMounted(() => {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
+}
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.user-management-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.user-management-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
+
+.user-management-container .search-card {
+  margin-bottom: var(--space-3);
+}
+
+.user-management-container :deep(.search-card > .el-card__body) {
+  padding: var(--space-3) var(--space-4);
+}
+
+.user-management-container :deep(.table-card > .el-card__body) {
+  padding-top: var(--space-3);
 }
 </style>

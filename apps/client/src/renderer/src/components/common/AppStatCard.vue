@@ -1,5 +1,10 @@
 <template>
-  <AppCard class="app-stat-card" :level="1" padding="md">
+  <AppCard
+    class="app-stat-card"
+    :class="{ 'app-stat-card--compact': props.compact }"
+    :level="1"
+    :padding="props.compact ? 'sm' : 'md'"
+  >
     <div v-if="props.icon || props.trend" class="app-stat-card__top">
       <el-icon v-if="props.icon" class="app-stat-card__icon" aria-hidden="true">
         <component :is="props.icon" />
@@ -57,6 +62,10 @@ const props = defineProps({
     validator: (value) =>
       value === null ||
       (['up', 'down', 'flat'].includes(value.direction) && typeof value.text === 'string')
+  },
+  compact: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -143,5 +152,38 @@ const trendIcon = computed(() => (props.trend ? TREND_ICONS[props.trend.directio
   font-size: var(--text-body-sm);
   font-weight: var(--weight-medium);
   line-height: normal;
+}
+
+/* 紧凑档：图标与数值同排，标签回到下一行（§4.10）。 */
+.app-stat-card--compact {
+  display: grid;
+  grid-template-areas:
+    "top value"
+    "label label";
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+}
+
+.app-stat-card--compact .app-stat-card__top {
+  grid-area: top;
+  gap: var(--space-2);
+}
+
+.app-stat-card--compact .app-stat-card__icon {
+  font-size: var(--text-h3);
+}
+
+.app-stat-card--compact .app-stat-card__value {
+  grid-area: value;
+  justify-content: flex-end;
+  margin-top: 0;
+  font-size: var(--text-h1);
+}
+
+.app-stat-card--compact .app-stat-card__label {
+  grid-area: label;
+  margin-top: 0;
 }
 </style>

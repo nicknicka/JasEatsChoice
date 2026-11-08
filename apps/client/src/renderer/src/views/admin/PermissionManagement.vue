@@ -373,4 +373,14 @@ onMounted(() => {
     vertical-align: middle;
   }
 }
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.permission-management-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.permission-management-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
 </style>

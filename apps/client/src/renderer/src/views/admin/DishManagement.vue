@@ -5,10 +5,10 @@
 
     <!-- 统计卡片（§4.8 线性图标 + 数值 + 标签，四卡一行） -->
     <div class="stats-section">
-      <AppStatCard label="菜品总数" :value="stats.total" icon="Dish" />
-      <AppStatCard label="已上架" :value="stats.active" icon="CircleCheck" />
-      <AppStatCard label="已下架" :value="stats.inactive" icon="CircleClose" />
-      <AppStatCard label="待审核" :value="stats.pending" icon="Clock" />
+      <AppStatCard compact label="菜品总数" :value="stats.total" icon="Dish" />
+      <AppStatCard compact label="已上架" :value="stats.active" icon="CircleCheck" />
+      <AppStatCard compact label="已下架" :value="stats.inactive" icon="CircleClose" />
+      <AppStatCard compact label="待审核" :value="stats.pending" icon="Clock" />
     </div>
 
     <!-- 搜索栏：关键词 + 分类 + 状态 + 搜索/重置 单行排布（§4.3 筛选条） -->
@@ -386,5 +386,32 @@ onMounted(() => {
     font-variant-numeric: tabular-nums;
     font-weight: var(--weight-semibold);
   }
+}
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.dish-management-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.dish-management-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
+
+/* §4.10：统计卡使用紧凑档后，收口卡片间距，保证 1440×900 下的首屏预算。 */
+.dish-management-container .stats-section {
+  margin-bottom: var(--space-3);
+}
+
+.dish-management-container .search-card {
+  margin-bottom: var(--space-3);
+}
+
+.dish-management-container :deep(.search-card > .el-card__body) {
+  padding: var(--space-2) var(--space-4);
+}
+
+.dish-management-container :deep(.table-card > .el-card__body) {
+  padding-top: var(--space-2);
 }
 </style>
