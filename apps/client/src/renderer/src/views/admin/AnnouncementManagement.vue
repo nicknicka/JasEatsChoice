@@ -170,16 +170,16 @@
           </el-table-column>
           <el-table-column label="目标群体" width="88">
             <template #default="{ row }">
-              <StatusTag status="neutral" :text="targetAudienceLabel(row.target_audience)" />
+              <StatusTag status="neutral" :text="targetAudienceLabel(row.targetAudience)" />
             </template>
           </el-table-column>
           <el-table-column label="阅读" width="80">
             <template #default="{ row }">
-              <div v-if="row.read_count !== undefined" class="read-stats">
-                <el-tooltip :content="`阅读人数: ${row.read_users || 0}`" placement="top">
+              <div v-if="row.readCount !== undefined" class="read-stats">
+                <el-tooltip :content="`阅读人数: ${row.readUsers || 0}`" placement="top">
                   <div class="stat-item-inline">
                     <el-icon :size="14"><View /></el-icon>
-                    <span>{{ formatNumber(row.read_count) }}</span>
+                    <span>{{ formatNumber(row.readCount) }}</span>
                   </div>
                 </el-tooltip>
               </div>
@@ -196,14 +196,14 @@
               <div class="time-cell">
                 <div>
                   <span class="time-label">生效</span>
-                  <span v-if="row.start_time || row.end_time">
-                    {{ formatDate(row.start_time) }} 至 {{ formatDate(row.end_time) }}
+                  <span v-if="row.startTime || row.endTime">
+                    {{ formatDate(row.startTime) }} 至 {{ formatDate(row.endTime) }}
                   </span>
                   <span v-else>永久</span>
                 </div>
                 <div>
                   <span class="time-label">创建</span>
-                  <span>{{ formatDateTime(row.created_at) }}</span>
+                  <span>{{ formatDateTime(row.createdAt) }}</span>
                 </div>
               </div>
             </template>
@@ -369,7 +369,7 @@
             <StatusTag :status="statusKey(currentAnnouncement.status)" />
             <StatusTag
               status="neutral"
-              :text="targetAudienceLabel(currentAnnouncement.target_audience)"
+              :text="targetAudienceLabel(currentAnnouncement.targetAudience)"
             />
           </el-space>
         </div>
@@ -377,21 +377,21 @@
         <div class="detail-info">
           <div class="info-row">
             <span class="label">生效时间：</span>
-            <span v-if="currentAnnouncement.start_time || currentAnnouncement.end_time">
-              {{ formatDateTime(currentAnnouncement.start_time) }} 至
-              {{ formatDateTime(currentAnnouncement.end_time) }}
+            <span v-if="currentAnnouncement.startTime || currentAnnouncement.endTime">
+              {{ formatDateTime(currentAnnouncement.startTime) }} 至
+              {{ formatDateTime(currentAnnouncement.endTime) }}
             </span>
             <span v-else class="muted">永久有效</span>
           </div>
           <div class="info-row">
             <span class="label">创建时间：</span>
-            <span>{{ formatDateTime(currentAnnouncement.created_at) }}</span>
+            <span>{{ formatDateTime(currentAnnouncement.createdAt) }}</span>
           </div>
-          <div v-if="currentAnnouncement.read_count !== undefined" class="info-row">
+          <div v-if="currentAnnouncement.readCount !== undefined" class="info-row">
             <span class="label">阅读统计：</span>
             <span>
-              阅读量 {{ formatNumber(currentAnnouncement.read_count) }} 次， 阅读人数
-              {{ formatNumber(currentAnnouncement.read_users || 0) }} 人
+              阅读量 {{ formatNumber(currentAnnouncement.readCount) }} 次， 阅读人数
+              {{ formatNumber(currentAnnouncement.readUsers || 0) }} 人
             </span>
           </div>
         </div>
@@ -417,16 +417,16 @@
             :status="priorityStatus(previewAnnouncement.priority)"
             :text="priorityLabel(previewAnnouncement.priority)"
           />
-          <span class="preview-date">{{ formatDateTime(previewAnnouncement.created_at) }}</span>
+          <span class="preview-date">{{ formatDateTime(previewAnnouncement.createdAt) }}</span>
         </div>
         <h3 class="preview-title">{{ previewAnnouncement.title }}</h3>
         <div class="preview-content">{{ previewAnnouncement.content }}</div>
         <div
-          v-if="previewAnnouncement.start_time || previewAnnouncement.end_time"
+          v-if="previewAnnouncement.startTime || previewAnnouncement.endTime"
           class="preview-footer"
         >
-          有效期：{{ formatDate(previewAnnouncement.start_time) }} ~
-          {{ formatDate(previewAnnouncement.end_time) }}
+          有效期：{{ formatDate(previewAnnouncement.startTime) }} ~
+          {{ formatDate(previewAnnouncement.endTime) }}
         </div>
       </div>
       <template #footer>
@@ -523,12 +523,14 @@ const typeStatus = (type) => {
   return map[type] || 'neutral'
 }
 
+// 线上数据里既有 normal/important/urgent，也有 low/high，展示层都要认
 const priorityLabel = (priority) => {
-  return priorityOptions.find((p) => p.value === priority)?.label || '-'
+  const map = { low: '低', normal: '普通', high: '高', important: '重要', urgent: '紧急' }
+  return map[priority] || '-'
 }
 
 const priorityStatus = (priority) => {
-  const map = { normal: 'neutral', important: 'warning', urgent: 'danger' }
+  const map = { low: 'neutral', normal: 'neutral', high: 'warning', important: 'warning', urgent: 'danger' }
   return map[priority] || 'neutral'
 }
 
@@ -714,9 +716,9 @@ const handleEdit = (row) => {
     content: row.content,
     type: row.type || 'system',
     priority: row.priority || 'normal',
-    targetAudience: row.target_audience || 'all',
-    startTime: row.start_time || null,
-    endTime: row.end_time || null,
+    targetAudience: row.targetAudience || 'all',
+    startTime: row.startTime || null,
+    endTime: row.endTime || null,
     status: row.status
   })
   showDialog.value = true
@@ -832,7 +834,7 @@ const copyAnnouncement = (row) => {
     content: row.content,
     type: row.type || 'system',
     priority: row.priority || 'normal',
-    targetAudience: row.target_audience || 'all',
+    targetAudience: row.targetAudience || 'all',
     startTime: null,
     endTime: null,
     status: 'draft'
