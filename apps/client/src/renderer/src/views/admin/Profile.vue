@@ -46,7 +46,7 @@
               :before-upload="beforeAvatarUpload"
               :http-request="uploadAvatar"
             >
-              <el-button size="small" type="primary">点击上传</el-button>
+              <el-button size="small">点击上传</el-button>
             </el-upload>
           </div>
         </el-form-item>
