@@ -6,6 +6,7 @@ import { getDashboardStats } from '@/api/admin'
 import { API_CONFIG } from '../../config/index.js'
 import { ElMessage } from 'element-plus'
 import api from '../../utils/api.js'
+import { formatTime } from '@/utils/formatters'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppStatCard from '@/components/common/AppStatCard.vue'
 import AppEmptyState from '@/components/common/AppEmptyState.vue'
@@ -93,10 +94,10 @@ const fetchStats = async () => {
 const fetchRecentTutorials = async () => {
   loading.value = true
   try {
+    // utils/api.js 拦截器已返回 response.data，本接口返回的是裸数组（issue 452）
     const response = await api.get(API_CONFIG.tutorial.list)
-    if (response.data) {
-      recentTutorials.value = response.data.slice(0, 5)
-    }
+    const list = Array.isArray(response) ? response : response?.data || []
+    recentTutorials.value = list.slice(0, 5)
   } catch (error) {
     console.error('获取最近教程失败:', error)
     ElMessage.error('获取最近教程失败，请稍后重试')
@@ -111,11 +112,9 @@ const navigateTo = (path) => {
   router.push(path)
 }
 
-// 来源标签：交给 StatusTag 统一取色（§3.1、§4.6）
-const sourceStatus = (type) => {
-  const map = { ADMIN: 'info', MERCHANT: 'warning', AI_GENERATED: 'success' }
-  return map[type] || 'neutral'
-}
+// 来源是分类不是状态，按 §3.1 统一走中性档。
+// StatusTag 词典里没有 info / neutral 这类 type key，用其中性 key `unknown` 承载分类文案。
+const SOURCE_TAG_STATUS = 'unknown'
 
 const sourceLabel = (type) => {
   const map = { ADMIN: '管理员', MERCHANT: '商家', AI_GENERATED: 'AI' }
@@ -125,7 +124,7 @@ const sourceLabel = (type) => {
 // 教程状态词典：按 §3.1 状态表映射
 const tutorialStatusKey = (status) => {
   const map = {
-    PUBLISHED: 'active',
+    PUBLISHED: 'published',
     PENDING: 'pendingreview',
     DRAFT: 'draft',
     REJECTED: 'rejected'
@@ -210,12 +209,16 @@ onMounted(() => {
       />
 
       <el-table v-else v-loading="loading" :data="recentTutorials" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column label="ID" width="140">
+          <template #default="{ row }">
+            <span class="cell-num">{{ row.id }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="title" label="教程标题" min-width="200" />
 
         <el-table-column label="来源" width="120">
           <template #default="{ row }">
-            <StatusTag :status="sourceStatus(row.sourceType)" :text="sourceLabel(row.sourceType)" />
+            <StatusTag :status="SOURCE_TAG_STATUS" :text="sourceLabel(row.sourceType)" />
           </template>
         </el-table-column>
 
@@ -246,7 +249,11 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column prop="created_at" label="创建时间" width="120" />
+        <el-table-column label="创建时间" width="170">
+          <template #default="{ row }">
+            <span class="cell-num">{{ formatTime(row.createdAt) }}</span>
+          </template>
+        </el-table-column>
       </el-table>
     </div>
   </div>
@@ -411,6 +418,13 @@ onMounted(() => {
 
   .muted {
     color: var(--ink-400);
+  }
+
+  /* ID 与时间单行完整展示，数字走无衬线等宽（§4.3） */
+  .cell-num {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 }
 
