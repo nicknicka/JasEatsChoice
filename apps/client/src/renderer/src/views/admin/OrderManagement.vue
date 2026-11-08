@@ -1,25 +1,18 @@
 <template>
   <div class="order-management-container">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>订单管理</h1>
-      <p class="subtitle">管理系统所有订单</p>
-    </div>
+    <AppPageHeader title="订单管理" :compact="true" class="order-page-header">
+      <template #actions>
+        <el-button type="primary" @click="fetchOrderList">刷新</el-button>
+      </template>
+    </AppPageHeader>
 
     <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-card class="stat-card">
-        <el-statistic title="今日订单" :value="stats.today" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="待处理" :value="stats.pending" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="进行中" :value="stats.processing" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="已完成" :value="stats.completed" />
-      </el-card>
+    <div class="stats-section">
+      <AppStatCard label="今日订单" :value="stats.today" icon="Document" />
+      <AppStatCard label="待处理" :value="stats.pending" icon="Clock" />
+      <AppStatCard label="进行中" :value="stats.processing" icon="TrendCharts" />
+      <AppStatCard label="已完成" :value="stats.completed" icon="Checked" />
     </div>
 
     <!-- 搜索栏 -->
@@ -63,19 +56,17 @@
     <!-- 订单列表 -->
     <el-card class="table-card" shadow="never">
       <el-table :data="orderList" v-loading="loading" stripe>
-        <el-table-column prop="orderId" label="订单ID" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="userId" label="用户ID" width="150" />
+        <el-table-column prop="orderId" label="订单 ID" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="userId" label="用户 ID" width="150" />
         <el-table-column prop="merchantName" label="商家名称" min-width="150" />
         <el-table-column label="订单状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusText(row.status) }}
-            </el-tag>
+            <StatusTag :type="getStatusType(row.status)" :text="getStatusText(row.status)" />
           </template>
         </el-table-column>
         <el-table-column prop="totalAmount" label="订单金额" width="120">
           <template #default="{ row }">
-            <span style="color: #f56c6c; font-weight: bold">¥{{ row.totalAmount }}</span>
+            ¥{{ row.totalAmount }}
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="下单时间" width="180" />
@@ -109,17 +100,13 @@
       :close-on-click-modal="false"
     >
       <el-descriptions v-if="currentOrder" :column="2" border>
-        <el-descriptions-item label="订单ID">{{ currentOrder.orderId }}</el-descriptions-item>
-        <el-descriptions-item label="用户ID">{{ currentOrder.userId }}</el-descriptions-item>
+        <el-descriptions-item label="订单 ID">{{ currentOrder.orderId }}</el-descriptions-item>
+        <el-descriptions-item label="用户 ID">{{ currentOrder.userId }}</el-descriptions-item>
         <el-descriptions-item label="商家名称">{{ currentOrder.merchantName }}</el-descriptions-item>
         <el-descriptions-item label="订单状态">
-          <el-tag :type="getStatusType(currentOrder.status)">
-            {{ getStatusText(currentOrder.status) }}
-          </el-tag>
+          <StatusTag :type="getStatusType(currentOrder.status)" :text="getStatusText(currentOrder.status)" />
         </el-descriptions-item>
-        <el-descriptions-item label="订单金额">
-          <span style="color: #f56c6c; font-weight: bold">¥{{ currentOrder.totalAmount }}</span>
-        </el-descriptions-item>
+        <el-descriptions-item label="订单金额">¥{{ currentOrder.totalAmount }}</el-descriptions-item>
         <el-descriptions-item label="支付方式">{{ currentOrder.paymentMethod || '-' }}</el-descriptions-item>
         <el-descriptions-item label="收货地址" :span="2">{{ currentOrder.deliveryAddress || '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ currentOrder.remark || '-' }}</el-descriptions-item>
@@ -132,7 +119,7 @@
         <el-table-column prop="dishName" label="菜品名称" />
         <el-table-column prop="quantity" label="数量" width="80" />
         <el-table-column prop="price" label="单价" width="100">
-          <template #default="{ row }">¥{{ row.price }}</template>
+          <template #default="{ row }}">¥{{ row.price }}</template>
         </el-table-column>
         <el-table-column label="小计" width="100">
           <template #default="{ row }">¥{{ (row.price * row.quantity).toFixed(2) }}</template>
@@ -154,9 +141,7 @@
     >
       <el-form :model="statusForm" label-width="80px">
         <el-form-item label="当前状态">
-          <el-tag :type="getStatusType(currentOrder?.status)">
-            {{ getStatusText(currentOrder?.status) }}
-          </el-tag>
+          <StatusTag :type="getStatusType(currentOrder?.status)" :text="getStatusText(currentOrder?.status)" />
         </el-form-item>
         <el-form-item label="新状态">
           <el-select v-model="statusForm.status" placeholder="请选择新状态">
@@ -181,6 +166,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/AppPageHeader.vue'
+import AppStatCard from '@/components/AppStatCard.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
 import { getOrderList, getOrderDetail, updateOrderStatus } from '@/api/admin'
 
 const loading = ref(false)
@@ -217,15 +205,13 @@ const statusForm = reactive({
 const fetchOrderList = async () => {
   loading.value = true
   try {
-    console.log('[订单管理] 获取订单列表, 页码:', pagination.page, '每页:', pagination.pageSize)
+    console.log('[订单管理] 获取订单列表，页码:', pagination.page, '每页:', pagination.pageSize)
     const response = await getOrderList({
       page: pagination.page,
       pageSize: pagination.pageSize,
       keyword: searchForm.keyword,
       status: searchForm.status
     })
-
-    console.log(response)
 
     if (response) {
       orderList.value = (response.records || []).map(order => ({
@@ -234,21 +220,21 @@ const fetchOrderList = async () => {
       }))
       pagination.total = response.total || 0
 
-      // 更新统计数据（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
+      // 更新统计数据（5 状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
       stats.pending = orderList.value.filter(o => o.status === 0 || o.status === 1).length
       stats.processing = orderList.value.filter(o => o.status === 2).length
       stats.completed = orderList.value.filter(o => o.status === 3).length
-      console.log('[订单管理] 获取订单列表成功, 总数:', pagination.total)
+      console.log('[订单管理] 获取订单列表成功，总数:', pagination.total)
     }
   } catch (error) {
     console.error('[订单管理] 获取订单列表失败:', error)
-    ElMessage.error('获取订单列表失败: ' + (error.message || '网络错误'))
+    ElMessage.error('获取订单列表失败：' + (error.message || '网络错误'))
   } finally {
     loading.value = false
   }
 }
 
-// 获取状态类型（5状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
+// 获取状态类型（5 状态系统：0-待支付、1-待接单、2-制作中、3-已完成、4-已取消）
 const getStatusType = (status) => {
   const types = {
     0: 'warning',   // 待支付
@@ -291,7 +277,7 @@ const handleReset = () => {
 const handleView = async (row) => {
   try {
     const orderId = row.orderId || row.id
-    console.log('[订单管理] 查看订单详情, 订单ID:', orderId)
+    console.log('[订单管理] 查看订单详情，订单 ID:', orderId)
     const response = await getOrderDetail(orderId)
 
     if (response.success || response.data) {
@@ -303,7 +289,7 @@ const handleView = async (row) => {
     }
   } catch (error) {
     console.error('[订单管理] 获取订单详情失败:', error)
-    ElMessage.error('获取订单详情失败: ' + (error.message || '网络错误'))
+    ElMessage.error('获取订单详情失败：' + (error.message || '网络错误'))
   }
 }
 
@@ -337,45 +323,34 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '@/assets/css/nordic-theme.less';
+
 .order-management-container {
-  .page-header {
-    margin-bottom: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
+  .order-page-header {
+    margin-bottom: var(--space-6);
   }
 
-  .stats-cards {
+  .stats-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-
-    .stat-card {
-      text-align: center;
-    }
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
   }
 
   .search-card {
-    margin-bottom: 20px;
-
-    .search-form {
-      margin-bottom: 0;
-    }
+    margin-bottom: var(--space-8);
   }
 
   .table-card {
     .pagination-container {
-      margin-top: 20px;
+      margin-top: var(--space-5);
       display: flex;
       justify-content: flex-end;
     }
