@@ -596,19 +596,18 @@ const resetFilters = () => {
   fetchTopics()
 }
 
-// 行操作：编辑和状态变更可见；删除进「更多」，由 RowActions 承担危险色与二次确认
+// 行操作：审核优先占可见位；状态变更可见；删除进「更多」，由 RowActions 承担危险色与二次确认
 const rowActions = (row) => {
-  const actions = [
-    {
-      text: row.status === 'ACTIVE' ? '禁用' : '启用',
-      onClick: () => toggleStatus(row)
-    }
-  ]
+  const actions = []
 
   if (row.requireReview && row.reviewStatus === 'PENDING') {
     actions.push({ text: '审核', onClick: () => handleReview(row) })
   }
 
+  actions.push({
+    text: row.status === 'ACTIVE' ? '禁用' : '启用',
+    onClick: () => toggleStatus(row)
+  })
   actions.push({ text: '删除', danger: true, onClick: () => handleDelete(row) })
   return actions
 }
@@ -807,7 +806,11 @@ onMounted(() => {
     .batch-actions__buttons {
       display: flex;
       flex-wrap: wrap;
-      gap: var(--space-2);
+      gap: var(--space-6);
+
+      :deep(.el-button + .el-button) {
+        margin-left: 0;
+      }
     }
 
     .pagination-container {
