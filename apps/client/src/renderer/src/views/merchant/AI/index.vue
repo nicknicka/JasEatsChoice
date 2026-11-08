@@ -101,9 +101,21 @@ onMounted(() => {
     margin-bottom: var(--space-4);
   }
 
-  .el-tabs__content {
-    overflow-y: auto;
-    height: calc(100% - 56px);
+  // Element Plus 的 .el-tabs__content / .el-tab-pane 由 <el-tabs> 内部渲染，
+  // 普通 scoped 选择器命不中它们；#427 换成 <el-tabs> 后高度链断掉，
+  // 四个 tab 都拿不到真实可用高（对话页消息区不滚动、输入框掉出视口）。
+  :deep(.el-tabs__content) {
+    overflow: hidden;
+  }
+
+  :deep(.el-tab-pane) {
+    height: 100%;
+  }
+
+  // 四个 tab 子页都是 height:100% + padding:20px 并依赖 border-box 才撑满，
+  // 统一按边框盒，避免各自的 padding 把高度撑出 pane（原来会溢出 40px、底部被裁）。
+  :deep(.el-tab-pane > *) {
+    box-sizing: border-box;
   }
 }
 </style>
