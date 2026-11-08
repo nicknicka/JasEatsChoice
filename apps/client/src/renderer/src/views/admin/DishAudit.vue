@@ -1,25 +1,18 @@
 <template>
   <div class="dish-audit-container">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>菜品审核</h1>
-      <p class="subtitle">审核商家提交的菜品</p>
-    </div>
+    <AppPageHeader title="菜品审核" subtitle="审核商家提交的菜品" :compact="true">
+      <template #actions>
+        <el-button type="primary" :loading="loading" @click="fetchAuditList">刷新</el-button>
+      </template>
+    </AppPageHeader>
 
     <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-card class="stat-card">
-        <el-statistic title="待审核" :value="stats.pending" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="今日已审核" :value="stats.todayApproved" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="今日已拒绝" :value="stats.todayRejected" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="本月审核总数" :value="stats.monthTotal" />
-      </el-card>
+    <div class="stats-section">
+      <AppStatCard class="stat-card-pending" label="待审核" :value="stats.pending" icon="Clock" />
+      <AppStatCard label="今日已审核" :value="stats.todayApproved" icon="Checked" />
+      <AppStatCard label="今日已拒绝" :value="stats.todayRejected" icon="Close" />
+      <AppStatCard label="本月审核总数" :value="stats.monthTotal" icon="TrendCharts" />
     </div>
 
     <!-- 搜索栏 -->
@@ -30,11 +23,11 @@
             v-model="searchForm.keyword"
             placeholder="搜索菜品名称、商家名称"
             clearable
-            style="width: 250px"
+            style="width: 200px"
           />
         </el-form-item>
         <el-form-item label="审核状态">
-          <el-select v-model="searchForm.auditStatus" placeholder="全部" clearable style="width: 140px">
+          <el-select v-model="searchForm.auditStatus" placeholder="全部" clearable style="width: 120px">
             <el-option label="待审核" value="PENDING" />
             <el-option label="已通过" value="APPROVED" />
             <el-option label="已拒绝" value="REJECTED" />
@@ -48,10 +41,10 @@
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             clearable
-            style="width: 280px"
+            style="width: 220px"
           />
         </el-form-item>
-        <el-form-item>
+        <el-form-item class="filter-actions">
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
         </el-form-item>
@@ -60,44 +53,55 @@
 
     <!-- 审核列表 -->
     <el-card class="table-card" shadow="never">
-      <el-table :data="auditList" v-loading="loading" stripe>
-        <el-table-column prop="dishId" label="菜品ID" width="100" />
-        <el-table-column prop="dishName" label="菜品名称" min-width="150" />
-        <el-table-column prop="merchantName" label="商家名称" min-width="150" />
-        <el-table-column prop="category" label="分类" width="100" />
-        <el-table-column prop="price" label="价格" width="100">
-          <template #default="{ row }">
-            <span style="color: #f56c6c; font-weight: bold">¥{{ row.price }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="审核状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getAuditStatusType(row.auditStatus)">
-              {{ getAuditStatusText(row.auditStatus) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="submitTime" label="提交时间" width="180" />
-        <el-table-column label="操作" width="150" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleAudit(row)">审核</el-button>
-            <el-button type="info" size="small" link @click="handleView(row)">详情</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <AppEmptyState
+        v-if="!loading && auditList.length === 0"
+        compact
+        icon="Dish"
+        description="当前没有待审核的菜品，去菜品管理看看已上架的那些"
+        action-text="刷新"
+        @action="fetchAuditList"
+      />
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchAuditList"
-          @current-change="fetchAuditList"
-        />
-      </div>
+      <template v-else>
+        <el-table :data="auditList" v-loading="loading" stripe>
+          <el-table-column prop="dishId" label="菜品 ID" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="dishName" label="菜品名称" min-width="150" />
+          <el-table-column prop="merchantName" label="商家名称" min-width="150" />
+          <el-table-column prop="category" label="分类" width="100" />
+          <el-table-column label="价格" width="100" align="right">
+            <template #default="{ row }">
+              <span class="amount">¥{{ row.price }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="审核状态" width="100">
+            <template #default="{ row }">
+              <StatusTag :status="row.auditStatus" :text="getAuditStatusText(row.auditStatus)" />
+            </template>
+          </el-table-column>
+          <el-table-column label="提交时间" width="180">
+            <template #default="{ row }">{{ formatTime(row.submitTime) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="150" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" size="small" link @click="handleAudit(row)">审核</el-button>
+              <el-button type="info" size="small" link @click="handleView(row)">详情</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 分页：空数据时不渲染（§4.3） -->
+        <div v-if="auditList.length > 0" class="pagination-container">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="fetchAuditList"
+            @current-change="fetchAuditList"
+          />
+        </div>
+      </template>
     </el-card>
 
     <!-- 审核对话框 -->
@@ -113,17 +117,17 @@
           <el-descriptions-item label="商家名称">{{ currentDish.merchantName }}</el-descriptions-item>
           <el-descriptions-item label="分类">{{ currentDish.category || '-' }}</el-descriptions-item>
           <el-descriptions-item label="价格">
-            <span style="color: #f56c6c; font-weight: bold">¥{{ currentDish.price }}</span>
+            <span class="amount">¥{{ currentDish.price }}</span>
           </el-descriptions-item>
-          <el-descriptions-item label="热量">{{ currentDish.calories || '-' }} kcal</el-descriptions-item>
+          <el-descriptions-item label="热量">{{ currentDish.calorie || '-' }} kcal</el-descriptions-item>
           <el-descriptions-item label="库存">{{ currentDish.stock || '不限量' }}</el-descriptions-item>
-          <el-descriptions-item label="提交时间" :span="2">{{ currentDish.submitTime }}</el-descriptions-item>
+          <el-descriptions-item label="提交时间" :span="2">{{ formatTime(currentDish.submitTime) }}</el-descriptions-item>
           <el-descriptions-item label="菜品描述" :span="2">{{ currentDish.description || '-' }}</el-descriptions-item>
           <el-descriptions-item label="菜品图片" :span="2">
             <el-image
               v-if="currentDish.image"
               :src="currentDish.image"
-              style="width: 200px; height: 200px"
+              class="dish-image"
               fit="cover"
               :preview-src-list="[currentDish.image]"
             />
@@ -164,28 +168,26 @@
       :close-on-click-modal="false"
     >
       <el-descriptions v-if="currentDish" :column="2" border>
-        <el-descriptions-item label="菜品ID">{{ currentDish.dishId }}</el-descriptions-item>
+        <el-descriptions-item label="菜品 ID">{{ currentDish.dishId }}</el-descriptions-item>
         <el-descriptions-item label="菜品名称">{{ currentDish.dishName }}</el-descriptions-item>
         <el-descriptions-item label="商家名称">{{ currentDish.merchantName }}</el-descriptions-item>
         <el-descriptions-item label="分类">{{ currentDish.category || '-' }}</el-descriptions-item>
         <el-descriptions-item label="价格">
-          <span style="color: #f56c6c; font-weight: bold">¥{{ currentDish.price }}</span>
+          <span class="amount">¥{{ currentDish.price }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="审核状态">
-          <el-tag :type="getAuditStatusType(currentDish.auditStatus)">
-            {{ getAuditStatusText(currentDish.auditStatus) }}
-          </el-tag>
+          <StatusTag :status="currentDish.auditStatus" :text="getAuditStatusText(currentDish.auditStatus)" />
         </el-descriptions-item>
-        <el-descriptions-item label="热量">{{ currentDish.calories || '-' }} kcal</el-descriptions-item>
+        <el-descriptions-item label="热量">{{ currentDish.calorie || '-' }} kcal</el-descriptions-item>
         <el-descriptions-item label="库存">{{ currentDish.stock || '不限量' }}</el-descriptions-item>
-        <el-descriptions-item label="提交时间" :span="2">{{ currentDish.submitTime }}</el-descriptions-item>
+        <el-descriptions-item label="提交时间" :span="2">{{ formatTime(currentDish.submitTime) }}</el-descriptions-item>
         <el-descriptions-item label="菜品描述" :span="2">{{ currentDish.description || '-' }}</el-descriptions-item>
         <el-descriptions-item label="审核意见" :span="2">{{ currentDish.auditComment || '-' }}</el-descriptions-item>
         <el-descriptions-item label="菜品图片" :span="2">
           <el-image
             v-if="currentDish.image"
             :src="currentDish.image"
-            style="width: 100px; height: 100px"
+            class="dish-image dish-image--small"
             fit="cover"
             :preview-src-list="[currentDish.image]"
           />
@@ -211,6 +213,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
+import { formatTime } from '../../utils/formatters'
 import { getDishAuditList, getDishAuditDetail, auditDish } from '@/api/admin'
 
 const loading = ref(false)
@@ -255,11 +262,11 @@ const fetchAuditList = async () => {
     })
 
     if (response) {
-      auditList.value = response.records || []
-      pagination.total = response.total || 0
-
-      // 更新统计数据
-      stats.pending = auditList.value.filter(d => d.auditStatus === 'PENDING').length
+      const records = response.records || []
+      auditList.value = records
+      // 后端分页插件缺失时只回传 total=0，此处以实际记录数兜底
+      pagination.total = response.total || records.length
+      stats.pending = records.filter((d) => d.auditStatus === 'PENDING').length
     }
   } catch (error) {
     console.error('获取审核列表失败:', error)
@@ -267,16 +274,6 @@ const fetchAuditList = async () => {
   } finally {
     loading.value = false
   }
-}
-
-// 获取审核状态类型
-const getAuditStatusType = (status) => {
-  const types = {
-    'PENDING': 'warning',
-    'APPROVED': 'success',
-    'REJECTED': 'danger'
-  }
-  return types[status] || 'info'
 }
 
 // 获取审核状态文本
@@ -364,36 +361,30 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '@/assets/css/nordic-theme.less';
+
 .dish-audit-container {
-  .page-header {
-    margin-bottom: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
-  }
-
-  .stats-cards {
+  .stats-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
+  }
 
-    .stat-card {
-      text-align: center;
-    }
+  /* 待审核是待办入口，按 §3.1 语义色给警示黄强调（§4.8） */
+  .stat-card-pending :deep(.app-stat-card__icon) {
+    color: var(--warning);
   }
 
   .search-card {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-8);
 
     .search-form {
       margin-bottom: 0;
@@ -402,15 +393,33 @@ onMounted(() => {
 
   .table-card {
     .pagination-container {
-      margin-top: 20px;
+      margin-top: var(--space-5);
       display: flex;
       justify-content: flex-end;
     }
   }
 
+  /* 金额/数值：无衬线 + 等宽数字 + 中性色，不带语义红绿（§4.3） */
+  .amount {
+    color: var(--ink-900);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-semibold);
+  }
+
+  .dish-image {
+    width: 200px;
+    height: 200px;
+  }
+
+  .dish-image--small {
+    width: 100px;
+    height: 100px;
+  }
+
   .audit-content {
     .dish-info {
-      margin-bottom: 20px;
+      margin-bottom: var(--space-5);
     }
   }
 }
