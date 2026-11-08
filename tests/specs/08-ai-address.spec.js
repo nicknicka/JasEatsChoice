@@ -1,7 +1,7 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { getAddress } = require('../utils/real-data')
 const { TEST_API_BASE } = require('../utils/api')
-const { markRunning, markPassed, markFailed, markSkipped, updateSummary } = require('../utils/progress')
+const { markRunning, markPassed, markFailed, markSkippedEnv, updateSummary } = require('../utils/progress')
 
 const USER_ID = '3384650106421960'
 // CI 不注入 AMAP_API_KEY，后端 /v1/location/cascader 按设计返回空列表。
@@ -118,8 +118,8 @@ async function gateRecipeScenario(page, caseId) {
   if (capabilities.streaming === true) return
 
   await assertRecipeGateUnavailable(page)
-  const reason = `AI 未配置或未启用流式模型：/v1/ai/capabilities available=${capabilities.available}, streaming=${capabilities.streaming}`
-  markSkipped(caseId, '#467', reason)
+  const reason = `AI 未配置或未启用流式模型（/v1/ai/capabilities available=${capabilities.available}, streaming=${capabilities.streaming}）`
+  markSkippedEnv(caseId, reason)
   test.skip(true, reason)
 }
 
