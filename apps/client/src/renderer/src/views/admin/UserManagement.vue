@@ -1,10 +1,7 @@
 <template>
   <div class="user-management-container">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>用户管理</h1>
-      <p class="subtitle">管理系统所有用户</p>
-    </div>
+    <AppPageHeader title="用户管理" subtitle="管理系统所有用户" :compact="true" />
 
     <!-- 搜索栏 -->
     <el-card class="search-card" shadow="never">
@@ -20,7 +17,7 @@
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-          <el-button type="success" :icon="Download" @click="handleExport">导出Excel</el-button>
+          <el-button :icon="Download" @click="handleExport">导出Excel</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -28,15 +25,19 @@
     <!-- 用户列表 -->
     <el-card class="table-card" shadow="never">
       <el-table :data="userList" v-loading="loading" stripe>
-        <el-table-column prop="userId" label="用户ID" width="200" />
+        <el-table-column prop="userId" label="用户ID" width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="cell-id">{{ row.userId }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="头像" width="80">
           <template #default="{ row }">
             <el-avatar :size="40" :src="getAvatarUrl(row.avatar)" />
           </template>
         </el-table-column>
-        <el-table-column prop="nickname" label="昵称" min-width="120" />
+        <el-table-column prop="nickname" label="昵称" min-width="140" show-overflow-tooltip />
         <el-table-column prop="phone" label="手机号" width="130" />
-        <el-table-column prop="email" label="邮箱" min-width="180" />
+        <el-table-column prop="email" label="邮箱" min-width="200" show-overflow-tooltip />
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="row.status === false ? 'danger' : 'success'">
@@ -44,25 +45,21 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="位置" width="100">
+        <el-table-column prop="location" label="位置" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ row.location || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="注册时间" width="180" />
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="注册时间" width="180">
+          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="170" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
-            <el-button type="warning" size="small" link @click="handleEdit(row)">编辑</el-button>
-            <el-button
-              :type="row.status === false ? 'success' : 'danger'"
-              size="small"
-              link
-              @click="handleToggleStatus(row)"
-            >
-              {{ row.status === false ? '启用' : '禁用' }}
-            </el-button>
-            <el-button type="danger" size="small" link @click="handleDelete(row)">删除</el-button>
+            <RowActions
+              :primary="{ text: '查看', onClick: () => handleView(row) }"
+              :items="rowActions(row)"
+              :max-visible="1"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -167,8 +164,11 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Search, Refresh, Download } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import RowActions from '@/components/common/RowActions.vue'
+import { formatTime } from '../../utils/formatters'
 import { getUserList, getUserDetail, deleteUser, updateUser, updateUserStatus } from '@/api/admin'
 import { exportToExcel } from '@/utils/export.js'
 import { getAvatarUrl } from '@/utils/avatar'
@@ -231,7 +231,8 @@ const fetchUserList = async () => {
     // api.js返回的是response.data，所以response就是IPage对象
     if (response) {
       userList.value = response.records || []
-      pagination.total = response.total || 0
+      // 后端分页插件缺失时返回 total=0 与全量记录，此处以实际记录数兜底
+      pagination.total = response.total || userList.value.length
       console.log('[用户管理] 获取用户列表成功, 总数:', pagination.total, '记录数:', userList.value.length)
     }
   } catch (error) {
@@ -352,22 +353,26 @@ const handleSubmitEdit = async () => {
   }
 }
 
-// 启用/禁用用户
+// 行操作：查看 + 更多（编辑可见，禁用/删除进「更多」，危险动作由 RowActions 二次确认）
+const rowActions = (row) => {
+  const disabling = row.status !== false
+  return [
+    { text: '编辑', onClick: () => handleEdit(row) },
+    {
+      text: disabling ? '禁用' : '启用',
+      danger: disabling,
+      onClick: () => handleToggleStatus(row)
+    },
+    { text: '删除', danger: true, onClick: () => handleDelete(row) }
+  ]
+}
+
+// 启用/禁用用户（确认弹窗由 RowActions 负责）
 const handleToggleStatus = async (row) => {
   const nextStatus = row.status === false ? 'ACTIVE' : 'LOCKED'
   const action = nextStatus === 'ACTIVE' ? '启用' : '禁用'
 
   try {
-    await ElMessageBox.confirm(
-      `确定要${action}用户 "${row.nickname || row.phone}" 吗？`,
-      '提示',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-
     const response = await updateUserStatus(row.userId, nextStatus)
     if (response.success) {
       ElMessage.success(response.message || `${action}成功`)
@@ -376,26 +381,14 @@ const handleToggleStatus = async (row) => {
       ElMessage.error(response.message || `${action}失败`)
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error(`[用户管理] ${action}用户失败:`, error)
-      ElMessage.error(`${action}用户失败: ` + (error.message || '网络错误'))
-    }
+    console.error(`[用户管理] ${action}用户失败:`, error)
+    ElMessage.error(`${action}用户失败: ` + (error.message || '网络错误'))
   }
 }
 
-// 删除用户
+// 删除用户（确认弹窗由 RowActions 负责）
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm(
-      `确定要删除用户 "${row.nickname || row.phone}" 吗？此操作不可恢复！`,
-      '警告',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-
     console.log('[用户管理] 删除用户, 用户ID:', row.userId)
     const response = await deleteUser(row.userId)
 
@@ -407,10 +400,8 @@ const handleDelete = async (row) => {
       ElMessage.error(response.message || '删除失败')
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('[用户管理] 删除用户失败:', error)
-      ElMessage.error('删除用户失败: ' + (error.message || '网络错误'))
-    }
+    console.error('[用户管理] 删除用户失败:', error)
+    ElMessage.error('删除用户失败: ' + (error.message || '网络错误'))
   }
 }
 
@@ -420,25 +411,18 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '@/assets/css/nordic-theme.less';
+
 .user-management-container {
-  .page-header {
-    margin-bottom: 20px;
-
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
-  }
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
   .search-card {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-8);
 
     .search-form {
       margin-bottom: 0;
@@ -447,10 +431,23 @@ onMounted(() => {
 
   .table-card {
     .pagination-container {
-      margin-top: 20px;
+      margin-top: var(--space-5);
       display: flex;
       justify-content: flex-end;
     }
+
+    /* 长表滚动时表头可辨：浅底色 + 中量字重（§4.3） */
+    :deep(.el-table__header th) {
+      background-color: var(--canvas-sunken);
+      font-weight: var(--weight-semibold);
+    }
+  }
+
+  /* 长数字 ID：无衬线等宽数字，不折行（§4.3） */
+  .cell-id {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 }
 </style>
