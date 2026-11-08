@@ -19,7 +19,7 @@
             {{ msg.sender === 'ai' ? 'AI' : merchantFallbackText }}
           </span>
         </div>
-        <div class="bubble">
+        <div class="bubble" :class="{ 'bubble-card': isCardMessage(msg) }">
           <div v-if="msg.isThinking || msg.progress" class="thinking-state">
             <div class="typing-indicator">
               <span></span><span></span><span></span>
@@ -138,6 +138,9 @@ const merchantFallbackText = computed(() => {
   const name = userStore.merchantInfo?.nickname || userStore.merchantInfo?.name || '店'
   return name.charAt(0)
 })
+
+// 助手消息是否渲染数据卡；数据卡气泡可占满对话区，普通文本保持可读限宽
+const isCardMessage = (message) => messageCards(message).length > 0 || hasCardPayload(message)
 
 // 快捷提问列表
 const quickQuestions = ref(MERCHANT_QUICK_QUESTIONS)
@@ -277,6 +280,12 @@ onMounted(() => {
       background: @merchant-surface;
       border: 1px solid @merchant-border;
       border-top-left-radius: 6px;
+
+      // 数据卡消息占满对话区可用宽度；纯文本消息仍按 .bubble 的 72% 限宽保证可读
+      &.bubble-card {
+        flex: 1 1 auto;
+        max-width: 100%;
+      }
     }
   }
 
@@ -609,8 +618,11 @@ onMounted(() => {
         transform: translateY(0);
       }
 
+      // §4.1 禁用态：中性底 + 弱化文字，与可用态（品牌实心 + 阴影）拉开层级
       &:disabled {
-        opacity: 0.5;
+        background: var(--neutral-bg);
+        color: var(--ink-400);
+        box-shadow: none;
         cursor: not-allowed;
         transform: none;
       }
