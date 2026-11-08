@@ -380,4 +380,14 @@ onBeforeUnmount(() => { if (feedbackTimer) clearTimeout(feedbackTimer) })
   .table-card { .card-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; h3 { margin: 0; color: var(--ink-900); } /* 待审核是状态不是操作，改用纯徽标（§4.6） */ .badge-label { color: var(--ink-700); font-weight: var(--weight-medium); } :deep(.el-badge__content) { background-color: var(--danger); } } .pagination-container { margin-top: var(--space-5); display: flex; justify-content: flex-end; } }
   .tutorial-preview { .cover-section { position: relative; margin-bottom: var(--space-6); img { max-width: 100%; height: auto; border-radius: var(--radius-lg); } .type-badge { position: absolute; top: var(--space-2); right: var(--space-2); background: rgba(0,0,0,0.6); color: white; padding: var(--space-1) var(--space-3); border-radius: var(--radius-md); display: flex; align-items: center; gap: var(--space-1); } } .meta-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-6); .meta-item { display: flex; align-items: center; gap: var(--space-2); .label { color: var(--ink-500); font-weight: 500; } } } .content-section h4, .related-section h4 { color: var(--ink-900); font-size: var(--text-base); margin-bottom: var(--space-3); } .content-text { line-height: 1.8; color: var(--ink-800); } .related-section p { color: var(--ink-600); font-size: var(--text-sm); margin-bottom: var(--space-2); } }
 }
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.tutorial-review-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.tutorial-review-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
 </style>

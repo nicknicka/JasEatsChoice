@@ -9,7 +9,7 @@
 
     <!-- 统计卡片：四卡一行，线性图标 + 数值 + 标签（§4.8） -->
     <div class="stats-section">
-      <AppStatCard
+      <AppStatCard compact
         v-for="stat in statsConfig"
         :key="stat.key"
         :label="stat.label"
@@ -1187,5 +1187,28 @@ onMounted(() => {
       }
     }
   }
+}
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.announcement-management-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.announcement-management-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
+
+.announcement-management-container .stats-section {
+  margin-bottom: var(--space-2);
+}
+
+.announcement-management-container :deep(.main-card > .el-card__body) {
+  padding-top: var(--space-2);
+}
+
+.announcement-management-container .filter-section {
+  margin-bottom: var(--space-2);
+  padding: var(--space-2) var(--space-4);
 }
 </style>

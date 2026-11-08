@@ -18,54 +18,25 @@
 
     <!-- 概览卡：线性图标 + 数值 + 标签，四个一行（§4.8） -->
     <div class="stats-section">
-      <AppStatCard
+      <AppStatCard compact
         label="待审核"
         :value="stats.pending"
         icon="Clock"
         :trend="trendOf(stats.pendingTrend)"
       />
-      <AppStatCard label="处理中" :value="stats.processing" icon="Loading" />
-      <AppStatCard
+      <AppStatCard compact label="处理中" :value="stats.processing" icon="Loading" />
+      <AppStatCard compact
         label="今日提现"
         :value="`¥${formatAmount(stats.todayAmount)}`"
         icon="Money"
         :trend="trendOf(stats.todayTrend)"
       />
-      <AppStatCard
+      <AppStatCard compact
         label="累计提现"
         :value="`¥${formatAmount(stats.totalAmount)}`"
         icon="Wallet"
       />
     </div>
-
-    <!-- 趋势图：次级可折叠区块，默认收起，把提现列表提上首屏（P0 / §4.8） -->
-    <el-card shadow="never" class="chart-card">
-      <el-collapse v-model="chartExpanded" class="chart-collapse" @change="handleChartToggle">
-        <el-collapse-item name="trend">
-          <template #title>
-            <span class="chart-title">提现趋势</span>
-          </template>
-
-          <div class="chart-toolbar">
-            <el-radio-group v-model="chartPeriod" size="small" @change="handleChartPeriodChange">
-              <el-radio-button label="week">近7天</el-radio-button>
-              <el-radio-button label="month">近30天</el-radio-button>
-            </el-radio-group>
-          </div>
-
-          <!-- 趋势空态：该周期没有提现时不画贴底折线（P0） -->
-          <div v-loading="chartLoading" class="chart-body">
-            <AppEmptyState
-              v-if="!chartLoading && chartEmpty"
-              compact
-              icon="TrendCharts"
-              description="该周期暂无提现"
-            />
-            <div v-show="!chartEmpty" ref="chartRef" class="chart-container"></div>
-          </div>
-        </el-collapse-item>
-      </el-collapse>
-    </el-card>
 
     <!-- 筛选条：所有条件并入同一条 inline 表单，减少折行留白（P1 / §4.3） -->
     <el-card shadow="never" class="filter-card">
@@ -302,6 +273,35 @@
           />
         </div>
       </template>
+    </el-card>
+
+    <!-- 趋势图：移到列表后，默认收起，避免抢占列表首屏（P0 / §4.10） -->
+    <el-card shadow="never" class="chart-card">
+      <el-collapse v-model="chartExpanded" class="chart-collapse" @change="handleChartToggle">
+        <el-collapse-item name="trend">
+          <template #title>
+            <span class="chart-title">提现趋势</span>
+          </template>
+
+          <div class="chart-toolbar">
+            <el-radio-group v-model="chartPeriod" size="small" @change="handleChartPeriodChange">
+              <el-radio-button label="week">近7天</el-radio-button>
+              <el-radio-button label="month">近30天</el-radio-button>
+            </el-radio-group>
+          </div>
+
+          <!-- 趋势空态：该周期没有提现时不画贴底折线（P0） -->
+          <div v-loading="chartLoading" class="chart-body">
+            <AppEmptyState
+              v-if="!chartLoading && chartEmpty"
+              compact
+              icon="TrendCharts"
+              description="该周期暂无提现"
+            />
+            <div v-show="!chartEmpty" ref="chartRef" class="chart-container"></div>
+          </div>
+        </el-collapse-item>
+      </el-collapse>
     </el-card>
 
     <!-- 详情对话框 -->
@@ -1315,6 +1315,7 @@ onUnmounted(() => {
 
       .user-nickname {
         font-size: var(--text-body-sm);
+        line-height: 20px;
         color: var(--ink-700);
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1325,6 +1326,7 @@ onUnmounted(() => {
         font-family: var(--font-num);
         font-variant-numeric: tabular-nums;
         font-size: var(--text-caption);
+        line-height: 18px;
         color: var(--ink-500);
       }
     }
@@ -1428,5 +1430,32 @@ onUnmounted(() => {
   :deep(.el-dialog) {
     border-radius: var(--radius-lg);
   }
+}
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.withdrawal-audit-page :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.withdrawal-audit-page :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
+
+/* §4.10：统计卡使用紧凑档后，收口卡片间距，保证 1440×900 下的首屏预算。 */
+.withdrawal-audit-page .stats-section {
+  margin-bottom: var(--space-3);
+}
+
+.withdrawal-audit-page .filter-card {
+  margin-bottom: var(--space-3);
+}
+
+.withdrawal-audit-page :deep(.filter-card > .el-card__body) {
+  padding: var(--space-2) var(--space-4);
+}
+
+.withdrawal-audit-page :deep(.table-card > .el-card__body) {
+  padding-top: var(--space-2);
 }
 </style>

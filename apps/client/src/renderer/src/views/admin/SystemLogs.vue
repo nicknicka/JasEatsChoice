@@ -20,28 +20,28 @@
 
     <!-- 概览卡：线性图标 + 数值 + 标签，统一同源色（§4.8、§7.1） -->
     <div class="stats-section">
-      <AppStatCard label="总日志数" :value="statistics.totalLogs || 0" icon="Document" />
-      <AppStatCard
+      <AppStatCard compact label="总日志数" :value="statistics.totalLogs || 0" icon="Document" />
+      <AppStatCard compact
         label="登录操作"
         :value="statistics.operationStats?.LOGIN || 0"
         icon="User"
       />
-      <AppStatCard
+      <AppStatCard compact
         label="创建操作"
         :value="statistics.operationStats?.CREATE || 0"
         icon="CirclePlus"
       />
-      <AppStatCard
+      <AppStatCard compact
         label="更新操作"
         :value="statistics.operationStats?.UPDATE || 0"
         icon="Edit"
       />
-      <AppStatCard
+      <AppStatCard compact
         label="删除操作"
         :value="statistics.operationStats?.DELETE || 0"
         icon="Delete"
       />
-      <AppStatCard
+      <AppStatCard compact
         label="查询操作"
         :value="statistics.operationStats?.QUERY || 0"
         icon="Search"
@@ -487,10 +487,10 @@ onMounted(() => {
     margin-left: var(--space-6);
   }
 
-  /* 六张概览卡排成 3×2，网格闭合、无 4+1 空位（§4.8） */
+  /* 六张概览卡在 1440 下压成一行摘要，窄屏回退为 3/2/1 列（§4.8、§4.10） */
   .stats-section {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: var(--card-gap-compact);
     margin-bottom: var(--space-8);
   }
@@ -628,13 +628,46 @@ onMounted(() => {
 /* 窄屏下概览卡换行显示，避免六卡硬挤一行（§4.8） */
 @media (max-width: 1200px) {
   .system-logs-container .stats-section {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .system-logs-container .stats-section {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .system-logs-container .stats-section {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.system-logs-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.system-logs-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
+
+/* §4.10：统计卡使用紧凑档后，收口卡片间距，保证 1440×900 下的首屏预算。 */
+.system-logs-container .stats-section {
+  margin-bottom: var(--space-3);
+}
+
+.system-logs-container .search-card {
+  margin-bottom: var(--space-3);
+}
+
+.system-logs-container :deep(.search-card > .el-card__body) {
+  padding: var(--space-2) var(--space-4);
+}
+
+.system-logs-container :deep(.table-card > .el-card__body) {
+  padding-top: var(--space-2);
 }
 </style>

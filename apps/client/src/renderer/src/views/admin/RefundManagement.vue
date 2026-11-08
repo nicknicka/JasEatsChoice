@@ -3,10 +3,10 @@
     <AppPageHeader title="退款管理" subtitle="处理用户退款申请" :compact="true" />
 
     <div class="stats-section">
-      <AppStatCard label="待处理" :value="stats.pending" icon="Clock" />
-      <AppStatCard label="今日已退款" :value="formatMoney(stats.todayApproved, true)" icon="Money" />
-      <AppStatCard label="今日已拒绝" :value="stats.todayRejected" icon="CircleClose" />
-      <AppStatCard label="本月退款总额" :value="formatMoney(stats.monthTotal, true)" icon="Wallet" />
+      <AppStatCard compact label="待处理" :value="stats.pending" icon="Clock" />
+      <AppStatCard compact label="今日已退款" :value="formatMoney(stats.todayApproved, true)" icon="Money" />
+      <AppStatCard compact label="今日已拒绝" :value="stats.todayRejected" icon="CircleClose" />
+      <AppStatCard compact label="本月退款总额" :value="formatMoney(stats.monthTotal, true)" icon="Wallet" />
     </div>
 
     <el-card class="search-card" shadow="never">
@@ -484,5 +484,32 @@ onMounted(() => {
       }
     }
   }
+}
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.refund-management-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.refund-management-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
+
+/* §4.10：统计卡使用紧凑档后，收口卡片间距，保证 1440×900 下的首屏预算。 */
+.refund-management-container .stats-section {
+  margin-bottom: var(--space-3);
+}
+
+.refund-management-container .search-card {
+  margin-bottom: var(--space-3);
+}
+
+.refund-management-container :deep(.search-card > .el-card__body) {
+  padding: var(--space-2) var(--space-4);
+}
+
+.refund-management-container :deep(.table-card > .el-card__body) {
+  padding-top: var(--space-2);
 }
 </style>

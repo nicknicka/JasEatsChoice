@@ -9,9 +9,9 @@
 
     <!-- 统计卡片 -->
     <div class="stats-section">
-      <AppStatCard class="stat-card-pending" label="待审核" :value="stats.pending" icon="Clock" />
-      <AppStatCard label="今日已审核" :value="stats.todayApproved" icon="Checked" />
-      <AppStatCard label="本周通过率" :value="stats.approvalRate" suffix="%" icon="TrendCharts" />
+      <AppStatCard compact class="stat-card-pending" label="待审核" :value="stats.pending" icon="Clock" />
+      <AppStatCard compact label="今日已审核" :value="stats.todayApproved" icon="Checked" />
+      <AppStatCard compact label="本周通过率" :value="stats.approvalRate" suffix="%" icon="TrendCharts" />
     </div>
 
     <!-- 待审核列表 -->
@@ -269,5 +269,24 @@ onMounted(() => {
       justify-content: flex-end;
     }
   }
+}
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.merchant-audit-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.merchant-audit-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
+
+/* §4.10：统计卡使用紧凑档后，收口卡片间距，保证 1440×900 下的首屏预算。 */
+.merchant-audit-container .stats-section {
+  margin-bottom: var(--space-3);
+}
+
+.merchant-audit-container :deep(.table-card > .el-card__body) {
+  padding-top: var(--space-2);
 }
 </style>

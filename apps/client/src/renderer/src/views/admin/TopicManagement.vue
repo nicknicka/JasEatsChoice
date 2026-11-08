@@ -8,10 +8,10 @@
     </AppPageHeader>
 
     <div class="stats-section">
-      <AppStatCard label="总热点数" :value="statistics.total || 0" icon="Document" />
-      <AppStatCard label="生效中" :value="statistics.active || 0" icon="CircleCheck" />
-      <AppStatCard label="待审核" :value="statistics.pending || 0" icon="Clock" />
-      <AppStatCard label="总点击量" :value="statistics.totalClicks || 0" icon="View" />
+      <AppStatCard compact label="总热点数" :value="statistics.total || 0" icon="Document" />
+      <AppStatCard compact label="生效中" :value="statistics.active || 0" icon="CircleCheck" />
+      <AppStatCard compact label="待审核" :value="statistics.pending || 0" icon="Clock" />
+      <AppStatCard compact label="总点击量" :value="statistics.totalClicks || 0" icon="View" />
     </div>
 
     <el-card class="search-card" shadow="never">
@@ -898,5 +898,32 @@ onMounted(() => {
       }
     }
   }
+}
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.topic-management-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.topic-management-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
+
+/* §4.10：统计卡使用紧凑档后，收口卡片间距，保证 1440×900 下的首屏预算。 */
+.topic-management-container .stats-section {
+  margin-bottom: var(--space-3);
+}
+
+.topic-management-container .search-card {
+  margin-bottom: var(--space-3);
+}
+
+.topic-management-container :deep(.search-card > .el-card__body) {
+  padding: var(--space-2) var(--space-4);
+}
+
+.topic-management-container :deep(.table-card > .el-card__body) {
+  padding-top: var(--space-2);
 }
 </style>

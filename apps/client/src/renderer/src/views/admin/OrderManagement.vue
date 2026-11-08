@@ -9,10 +9,10 @@
 
     <!-- 统计卡片 -->
     <div class="stats-section">
-      <AppStatCard label="今日订单" :value="stats.today" icon="Document" />
-      <AppStatCard label="待处理" :value="stats.pending" icon="Clock" />
-      <AppStatCard label="进行中" :value="stats.processing" icon="TrendCharts" />
-      <AppStatCard label="已完成" :value="stats.completed" icon="Checked" />
+      <AppStatCard compact label="今日订单" :value="stats.today" icon="Document" />
+      <AppStatCard compact label="待处理" :value="stats.pending" icon="Clock" />
+      <AppStatCard compact label="进行中" :value="stats.processing" icon="TrendCharts" />
+      <AppStatCard compact label="已完成" :value="stats.completed" icon="Checked" />
     </div>
 
     <!-- 搜索栏 -->
@@ -355,5 +355,32 @@ onMounted(() => {
       justify-content: flex-end;
     }
   }
+}
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.order-management-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.order-management-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
+
+/* §4.10：统计卡使用紧凑档后，收口卡片间距，保证 1440×900 下的首屏预算。 */
+.order-management-container .stats-section {
+  margin-bottom: var(--space-3);
+}
+
+.order-management-container .search-card {
+  margin-bottom: var(--space-3);
+}
+
+.order-management-container :deep(.search-card > .el-card__body) {
+  padding: var(--space-2) var(--space-4);
+}
+
+.order-management-container :deep(.table-card > .el-card__body) {
+  padding-top: var(--space-2);
 }
 </style>

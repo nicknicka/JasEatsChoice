@@ -9,10 +9,10 @@
 
     <!-- 概览卡：线性图标 + 数值 + 标签，四个一行（§4.8） -->
     <div class="stats-section">
-      <AppStatCard label="今日充值金额" :value="formatMoney(stats.todayAmount)" icon="Money" />
-      <AppStatCard label="今日充值笔数" :value="stats.todayCount" icon="Tickets" />
-      <AppStatCard label="本月充值金额" :value="formatMoney(stats.monthAmount)" icon="Wallet" />
-      <AppStatCard label="本月充值笔数" :value="stats.monthCount" icon="TrendCharts" />
+      <AppStatCard compact label="今日充值金额" :value="formatMoney(stats.todayAmount)" icon="Money" />
+      <AppStatCard compact label="今日充值笔数" :value="stats.todayCount" icon="Tickets" />
+      <AppStatCard compact label="本月充值金额" :value="formatMoney(stats.monthAmount)" icon="Wallet" />
+      <AppStatCard compact label="本月充值笔数" :value="stats.monthCount" icon="TrendCharts" />
     </div>
 
     <!-- 搜索栏 -->
@@ -415,5 +415,32 @@ onMounted(() => {
   .amount--lg {
     font-size: var(--text-h3);
   }
+}
+
+/* §4.3：admin 列表只保留单行 40px / 双行 ≤56px 两档，列宽不足由单元格省略而不是折行。 */
+.recharge-management-container :deep(.el-table__body .el-table__cell) {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.recharge-management-container :deep(.el-table__body .el-table__row) {
+  height: 40px;
+}
+
+/* §4.10：统计卡使用紧凑档后，收口卡片间距，保证 1440×900 下的首屏预算。 */
+.recharge-management-container .stats-section {
+  margin-bottom: var(--space-3);
+}
+
+.recharge-management-container .search-card {
+  margin-bottom: var(--space-3);
+}
+
+.recharge-management-container :deep(.search-card > .el-card__body) {
+  padding: var(--space-2) var(--space-4);
+}
+
+.recharge-management-container :deep(.table-card > .el-card__body) {
+  padding-top: var(--space-2);
 }
 </style>
