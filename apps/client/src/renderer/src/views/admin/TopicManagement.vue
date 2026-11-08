@@ -1,257 +1,161 @@
 <template>
   <div class="topic-management-container">
-    <!-- 统计卡片 -->
-    <el-row :gutter="20" class="stats-row">
-      <el-col :xs="12" :sm="12" :md="6" :lg="6" :xl="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-item">
-            <div class="stat-icon" style="background: #ecf5ff;">
-              <el-icon :size="24" color="#409eff"><Document /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">总热点数</div>
-              <div class="stat-value">{{ statistics.total || 0 }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :sm="12" :md="6" :lg="6" :xl="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-item">
-            <div class="stat-icon" style="background: #f0f9ff;">
-              <el-icon :size="24" color="#67c23a"><SuccessFilled /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">生效中</div>
-              <div class="stat-value">{{ statistics.active || 0 }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :sm="12" :md="6" :lg="6" :xl="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-item">
-            <div class="stat-icon" style="background: #fef0f0;">
-              <el-icon :size="24" color="#f56c6c"><Clock /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">待审核</div>
-              <div class="stat-value">{{ statistics.pending || 0 }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :sm="12" :md="6" :lg="6" :xl="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-item">
-            <div class="stat-icon" style="background: #fdf6ec;">
-              <el-icon :size="24" color="#e6a23c"><View /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">总点击量</div>
-              <div class="stat-value">{{ statistics.totalClicks || 0 }}</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 主内容卡片 -->
-    <el-card shadow="never" class="main-card">
-      <template #header>
-        <div class="card-header">
-          <h3>热点话题管理</h3>
-          <div class="header-actions">
-            <el-button @click="handleExport">
-              <el-icon><Download /></el-icon>
-              导出
-            </el-button>
-            <el-button type="primary" @click="showCreateDialog">
-              <el-icon><Plus /></el-icon>
-              新增热点
-            </el-button>
-          </div>
-        </div>
+    <AppPageHeader title="热点话题管理" subtitle="管理热点话题、优先级与审核状态" :compact="true">
+      <template #actions>
+        <el-button :icon="Download" @click="handleExport">导出</el-button>
+        <el-button type="primary" :icon="Plus" @click="showCreateDialog">新增热点</el-button>
       </template>
+    </AppPageHeader>
 
-      <!-- 搜索筛选 -->
-      <div class="filter-section">
-        <el-row :gutter="12" class="filter-row">
-          <el-col :xs="24" :sm="24" :md="10" :lg="10" :xl="10">
-            <el-input
-              v-model="filters.keyword"
-              placeholder="搜索热点内容"
-              clearable
-              @clear="handleSearchClear"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
-          </el-col>
-          <el-col :xs="12" :sm="12" :md="5" :lg="5" :xl="5">
-            <el-select v-model="filters.status" placeholder="状态" clearable @change="fetchTopics" style="width: 100%;">
-              <el-option label="生效中" value="ACTIVE" />
-              <el-option label="未生效" value="INACTIVE" />
-              <el-option label="已过期" value="EXPIRED" />
-            </el-select>
-          </el-col>
-          <el-col :xs="12" :sm="12" :md="5" :lg="5" :xl="5">
-            <el-select v-model="filters.sourceType" placeholder="来源" clearable @change="fetchTopics" style="width: 100%;">
-              <el-option label="手动设置" value="MANUAL" />
-              <el-option label="来自教程" value="TUTORIAL" />
-              <el-option label="AI生成" value="AI" />
-              <el-option label="第三方API" value="API" />
-            </el-select>
-          </el-col>
-          <el-col :xs="24" :sm="24" :md="4" :lg="4" :xl="4">
-            <div class="filter-buttons-inline">
-              <el-button type="primary" @click="fetchTopics">
-                <el-icon><Search /></el-icon> 查询
-              </el-button>
-              <el-button @click="resetFilters">
-                <el-icon><RefreshLeft /></el-icon> 重置
-              </el-button>
-            </div>
-          </el-col>
-        </el-row>
-        <el-row :gutter="12" class="filter-row-action">
-          <el-col :xs="24" :sm="24" :md="24" :lg="24" :xl="24">
-            <el-date-picker
-              v-model="filters.dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              value-format="YYYY-MM-DD"
-              @change="fetchTopics"
-              style="width: 50%;"
-            />
-          </el-col>
-        </el-row>
-      </div>
+    <div class="stats-section">
+      <AppStatCard label="总热点数" :value="statistics.total || 0" icon="Document" />
+      <AppStatCard label="生效中" :value="statistics.active || 0" icon="CircleCheck" />
+      <AppStatCard label="待审核" :value="statistics.pending || 0" icon="Clock" />
+      <AppStatCard label="总点击量" :value="statistics.totalClicks || 0" icon="View" />
+    </div>
 
-      <!-- 批量操作 -->
+    <el-card class="search-card" shadow="never">
+      <el-form :inline="true" :model="filters" class="search-form">
+        <el-form-item label="关键词">
+          <el-input
+            v-model="filters.keyword"
+            placeholder="搜索热点内容"
+            clearable
+            style="width: 240px"
+            @clear="handleSearchClear"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="filters.status" placeholder="全部" clearable style="width: 130px" @change="handleSearch">
+            <el-option label="生效中" value="ACTIVE" />
+            <el-option label="未生效" value="INACTIVE" />
+            <el-option label="已过期" value="EXPIRED" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="来源">
+          <el-select v-model="filters.sourceType" placeholder="全部" clearable style="width: 130px" @change="handleSearch">
+            <el-option label="手动设置" value="MANUAL" />
+            <el-option label="来自教程" value="TUTORIAL" />
+            <el-option label="AI生成" value="AI" />
+            <el-option label="第三方API" value="API" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="生效日期">
+          <el-date-picker
+            v-model="filters.dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            style="width: 280px"
+            @change="handleSearch"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
+          <el-button :icon="RefreshLeft" @click="resetFilters">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card class="table-card" shadow="never">
       <div v-if="selectedIds.length > 0" class="batch-actions">
-        <el-alert
-          :title="`已选择 ${selectedIds.length} 项`"
-          type="info"
-          :closable="false"
-        >
-          <el-button size="small" type="success" @click="batchUpdateStatus('ACTIVE')">批量启用</el-button>
-          <el-button size="small" type="warning" @click="batchUpdateStatus('INACTIVE')">批量禁用</el-button>
-          <el-button size="small" type="danger" @click="batchDelete">批量删除</el-button>
-          <el-button size="small" @click="clearSelection">取消选择</el-button>
+        <el-alert :title="`已选择 ${selectedIds.length} 项`" type="info" :closable="false">
+          <div class="batch-actions__buttons">
+            <el-button :icon="CircleCheck" @click="batchUpdateStatus('ACTIVE')">批量启用</el-button>
+            <el-button :icon="CircleClose" @click="batchUpdateStatus('INACTIVE')">批量禁用</el-button>
+            <el-button type="danger" plain :icon="Delete" @click="batchDelete">批量删除</el-button>
+            <el-button @click="clearSelection">取消选择</el-button>
+          </div>
         </el-alert>
       </div>
 
-      <!-- 表格 -->
-      <el-table
-        v-loading="loading"
-        :data="topics"
-        stripe
-        @selection-change="handleSelectionChange"
-        class="topic-table"
-      >
-        <el-table-column type="selection" width="55" />
-        <el-table-column prop="content" label="热点内容" min-width="200" max-width="300">
-          <template #default="{ row }">
-            <div class="content-cell">
-              <div class="content-text" :title="row.content">{{ row.content }}</div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="来源" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getSourceTypeTag(row.sourceType)" size="small">
-              {{ getSourceTypeName(row.sourceType) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="优先级" width="80" align="center" sortable>
-          <template #default="{ row }">
-            <el-tag type="warning" size="small">{{ row.priority || 0 }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getStatusTag(row.status)" size="small">
-              {{ getStatusName(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="审核状态" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag v-if="row.requireReview" :type="getReviewStatusTag(row.reviewStatus)" size="small">
-              {{ getReviewStatusName(row.reviewStatus) }}
-            </el-tag>
-            <span v-else style="color: #909399; font-size: 0.857rem /* 原值: 12px */;">无需审核</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="点击/分享" width="100" align="center">
-          <template #default="{ row }">
-            <span>{{ row.clickCount || 0 }} / {{ row.shareCount || 0 }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="生效时间" width="120" align="center">
-          <template #default="{ row }">
-            <div class="date-range">
-              <div>{{ formatDate(row.startDate) }}</div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right" align="center">
-          <template #default="{ row }">
-            <el-dropdown @command="(cmd) => handleActionCommand(cmd, row)">
-              <el-button size="small" type="primary">
-                操作 <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="edit">
-                    <el-icon><Edit /></el-icon> 编辑
-                  </el-dropdown-item>
-                  <el-dropdown-item command="toggleStatus" v-if="row.status === 'ACTIVE'">
-                    <el-icon><CircleClose /></el-icon> 禁用
-                  </el-dropdown-item>
-                  <el-dropdown-item command="toggleStatus" v-else>
-                    <el-icon><CircleCheck /></el-icon> 启用
-                  </el-dropdown-item>
-                  <el-dropdown-item command="review" v-if="row.requireReview && row.reviewStatus === 'PENDING'" divided>
-                    <el-icon><Check /></el-icon> 审核
-                  </el-dropdown-item>
-                  <el-dropdown-item command="delete" divided style="color: #f56c6c;">
-                    <el-icon><Delete /></el-icon> 删除
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </template>
-        </el-table-column>
-      </el-table>
+      <AppEmptyState
+        v-if="!loading && topics.length === 0"
+        compact
+        icon="Document"
+        description="没有符合条件的热点话题，换个关键词或清空筛选试试"
+        action-text="重置筛选"
+        @action="resetFilters"
+      />
 
-      <!-- 空状态 -->
-      <div v-if="!loading && topics.length === 0" class="empty-state">
-        <el-empty description="暂无热点数据">
-          <el-button type="primary" @click="showCreateDialog">创建第一个热点</el-button>
-        </el-empty>
-      </div>
+      <template v-else>
+        <el-table
+          ref="tableRef"
+          v-loading="loading"
+          :data="topics"
+          stripe
+          class="topic-table"
+          @selection-change="handleSelectionChange"
+        >
+          <el-table-column type="selection" width="44" />
+          <el-table-column prop="content" label="热点内容" min-width="220" show-overflow-tooltip />
+          <el-table-column label="来源" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag :type="getSourceTypeTag(row.sourceType)" size="small" effect="plain">
+                {{ getSourceTypeName(row.sourceType) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="priority" label="优先级" width="80" align="center" sortable>
+            <template #default="{ row }">
+              <span class="priority-value">{{ row.priority || 0 }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <StatusTag :status="row.status" :text="getStatusName(row.status)" />
+            </template>
+          </el-table-column>
+          <el-table-column label="审核状态" width="95" align="center">
+            <template #default="{ row }">
+              <StatusTag
+                v-if="row.requireReview"
+                :status="row.reviewStatus"
+                :text="getReviewStatusName(row.reviewStatus)"
+              />
+              <span v-else class="muted-text">无需审核</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="点击/分享" width="100" align="center">
+            <template #default="{ row }">
+              <span class="cell-num">{{ row.clickCount || 0 }} / {{ row.shareCount || 0 }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="生效时间" width="145" align="center">
+            <template #default="{ row }">
+              <span class="cell-date">{{ formatDate(row.startDate) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="160" fixed="right" align="center">
+            <template #default="{ row }">
+              <RowActions
+                :primary="{ text: '编辑', onClick: () => handleEdit(row) }"
+                :items="rowActions(row)"
+              />
+            </template>
+          </el-table-column>
+        </el-table>
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.size"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchTopics"
-          @current-change="fetchTopics"
-        />
-      </div>
+        <div v-if="topics.length > 0" class="pagination-container">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.size"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="fetchTopics"
+            @current-change="fetchTopics"
+          />
+        </div>
+      </template>
     </el-card>
 
-    <!-- 创建/编辑对话框 -->
     <el-dialog
       v-model="showDialog"
       :title="dialogMode === 'create' ? '新增热点' : '编辑热点'"
@@ -271,7 +175,7 @@
         </el-form-item>
         <el-form-item label="优先级" prop="priority">
           <el-input-number v-model="form.priority" :min="0" :max="999" />
-          <span style="margin-left: 10px; color: #909399; font-size: 0.857rem /* 原值: 12px */;">数值越大优先级越高</span>
+          <span class="helper-text">数值越大优先级越高</span>
         </el-form-item>
         <el-form-item label="来源类型" prop="sourceType">
           <el-select v-model="form.sourceType">
@@ -305,9 +209,7 @@
         </el-form-item>
         <el-form-item label="需要审核" prop="requireReview">
           <el-switch v-model="form.requireReview" />
-          <span style="margin-left: 10px; color: #909399; font-size: 0.857rem /* 原值: 12px */;">
-            开启后需要管理员审核才能生效
-          </span>
+          <span class="helper-text">开启后需要管理员审核才能生效</span>
         </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input
@@ -325,12 +227,7 @@
       </template>
     </el-dialog>
 
-    <!-- 审核对话框 -->
-    <el-dialog
-      v-model="showReviewDialog"
-      title="审核热点"
-      width="500px"
-    >
+    <el-dialog v-model="showReviewDialog" title="审核热点" width="500px">
       <el-form :model="reviewForm" ref="reviewFormRef" label-width="100px">
         <el-form-item label="热点内容">
           <div class="preview-content">
@@ -364,11 +261,12 @@
 <script setup>
 import { ref, onMounted, reactive, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Document, SuccessFilled, Clock, View, Plus, Search,
-  Edit, Delete, Check, Close, Download, ArrowDown,
-  CircleClose, CircleCheck, RefreshLeft
-} from '@element-plus/icons-vue'
+import { Plus, Search, Download, CircleClose, CircleCheck, Delete, RefreshLeft } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import RowActions from '@/components/common/RowActions.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
 import { debounce } from 'lodash-es'
@@ -377,6 +275,7 @@ import { debounce } from 'lodash-es'
 const topics = ref([])
 const loading = ref(false)
 const selectedIds = ref([])
+const tableRef = ref(null)
 
 // 统计数据
 const statistics = ref({
@@ -460,7 +359,7 @@ const fetchTopics = async () => {
     // 处理分页响应
     if (response && response.records) {
       topics.value = response.records
-      pagination.total = response.total || 0
+      pagination.total = response.total || response.records.length
     } else if (Array.isArray(response)) {
       topics.value = response
       pagination.total = response.length
@@ -471,6 +370,12 @@ const fetchTopics = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 查询：统一回到第一页，避免筛选后停留在空页
+const handleSearch = () => {
+  pagination.page = 1
+  fetchTopics()
 }
 
 // 搜索防抖处理
@@ -487,7 +392,7 @@ watch(() => filters.keyword, () => {
 // 清除搜索
 const handleSearchClear = () => {
   filters.keyword = ''
-  fetchTopics()
+  handleSearch()
 }
 
 // 获取统计数据
@@ -584,13 +489,9 @@ const handleSubmit = async () => {
   }
 }
 
-// 处理删除
+// 处理删除：确认由 RowActions 的危险动作统一承担
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm('确定要删除该热点吗？', '提示', {
-      type: 'warning'
-    })
-
     const response = await api.delete(`${API_CONFIG.admin.hotTopicDelete}/${row.id}`)
 
     if (response?.success !== false) {
@@ -643,6 +544,7 @@ const handleSelectionChange = (selection) => {
 // 清除选择
 const clearSelection = () => {
   selectedIds.value = []
+  tableRef.value?.clearSelection()
 }
 
 // 处理审核
@@ -694,22 +596,21 @@ const resetFilters = () => {
   fetchTopics()
 }
 
-// 处理操作命令
-const handleActionCommand = (command, row) => {
-  switch (command) {
-    case 'edit':
-      handleEdit(row)
-      break
-    case 'delete':
-      handleDelete(row)
-      break
-    case 'toggleStatus':
-      toggleStatus(row)
-      break
-    case 'review':
-      handleReview(row)
-      break
+// 行操作：编辑和状态变更可见；删除进「更多」，由 RowActions 承担危险色与二次确认
+const rowActions = (row) => {
+  const actions = [
+    {
+      text: row.status === 'ACTIVE' ? '禁用' : '启用',
+      onClick: () => toggleStatus(row)
+    }
+  ]
+
+  if (row.requireReview && row.reviewStatus === 'PENDING') {
+    actions.push({ text: '审核', onClick: () => handleReview(row) })
   }
+
+  actions.push({ text: '删除', danger: true, onClick: () => handleDelete(row) })
+  return actions
 }
 
 // 切换状态
@@ -806,12 +707,12 @@ const handleExport = async () => {
   }
 }
 
-// 格式化日期
+// 格式化日期：全站列表统一 YYYY-MM-DD HH:mm，禁止 ISO 的 T（§4.3）
 const formatDate = (date) => {
   if (!date) return '-'
   const d = new Date(date)
-  // 只返回月日时分，节省空间
-  return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  if (Number.isNaN(d.getTime())) return '-'
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 // 获取来源类型标签样式
@@ -836,16 +737,6 @@ const getSourceTypeName = (type) => {
   return map[type] || type
 }
 
-// 获取状态标签样式
-const getStatusTag = (status) => {
-  const map = {
-    'ACTIVE': 'success',
-    'INACTIVE': 'info',
-    'EXPIRED': 'danger'
-  }
-  return map[status] || 'info'
-}
-
 // 获取状态名称
 const getStatusName = (status) => {
   const map = {
@@ -854,16 +745,6 @@ const getStatusName = (status) => {
     'EXPIRED': '已过期'
   }
   return map[status] || status
-}
-
-// 获取审核状态标签样式
-const getReviewStatusTag = (status) => {
-  const map = {
-    'PENDING': 'warning',
-    'APPROVED': 'success',
-    'REJECTED': 'danger'
-  }
-  return map[status] || 'info'
 }
 
 // 获取审核状态名称
@@ -885,272 +766,132 @@ onMounted(() => {
 
 <style scoped lang="less">
 .topic-management-container {
-  padding: 20px;
-  background: #f5f7fa;
-  min-height: 100vh;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-  .stats-row {
-    margin-bottom: 20px;
+  .stats-section {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
+  }
 
-    .stat-card {
-      transition: all 0.3s ease;
-      cursor: pointer;
-      height: 100%;
+  .search-card {
+    margin-bottom: var(--space-8);
 
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-      }
+    .search-form {
+      margin-bottom: 0;
 
-      :deep(.el-card__body) {
-        padding: 20px;
-      }
-    }
-
-    .stat-item {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-
-      .stat-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        transition: transform 0.3s ease;
-      }
-
-      &:hover .stat-icon {
-        transform: scale(1.1) rotate(5deg);
-      }
-
-      .stat-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-
-        .stat-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #909399;
-          font-weight: 500;
-        }
-
-        .stat-value {
-          font-size: 2.286rem /* 原值: 32px */;
-          font-weight: 700;
-          color: #303133;
-          line-height: 1;
-        }
+      :deep(.el-form-item) {
+        margin-right: var(--space-4);
+        margin-bottom: var(--space-2);
       }
     }
   }
 
-  .main-card {
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-
-    :deep(.el-card__header) {
-      padding: 20px 24px;
-      border-bottom: 1px solid #ebeef5;
-    }
-
-    :deep(.el-card__body) {
-      padding: 24px;
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      h3 {
-        margin: 0;
-        font-size: 1.286rem /* 原值: 18px */;
-        font-weight: 600;
-        color: #303133;
-      }
-
-      .header-actions {
-        display: flex;
-        gap: 12px;
-      }
-    }
-
-    .filter-section {
-      margin-bottom: 20px;
-      padding: 16px;
-      background: #fafafa;
-      border-radius: 8px;
-      border: 1px solid #ebeef5;
-
-      .filter-row {
-        margin-bottom: 12px;
-
-        &:last-child {
-          margin-bottom: 0;
-        }
-      }
-
-      .filter-buttons-inline {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        height: 32px;
-
-        .el-button {
-          flex: 1;
-        }
-      }
-
-      .filter-row-action {
-        margin-top: 8px;
-      }
-    }
-
+  .table-card {
     .batch-actions {
-      margin-bottom: 16px;
-
-      :deep(.el-alert) {
-        border-radius: 8px;
-      }
+      margin-bottom: var(--space-4);
 
       :deep(.el-alert__content) {
         display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: var(--space-3);
       }
     }
 
-    .topic-table {
-      border-radius: 8px;
-      overflow: hidden;
-
-      .content-cell {
-        .content-text {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          line-clamp: 2;
-          -webkit-box-orient: vertical;
-          line-height: 1.5;
-          max-height: 3em;
-        }
-      }
-
-      .date-range {
-        font-size: 0.75rem /* 原值: 11px */;
-        line-height: 1.3;
-        word-break: break-all;
-
-        .date-divider {
-          color: #909399;
-          font-size: 10px;
-          margin: 2px 0;
-        }
-      }
-    }
-
-    .empty-state {
-      padding: 40px 0;
-      text-align: center;
+    .batch-actions__buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
     }
 
     .pagination-container {
-      margin-top: 24px;
       display: flex;
       justify-content: flex-end;
-      padding-top: 16px;
-      border-top: 1px solid #ebeef5;
+      margin-top: var(--space-5);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--line);
+    }
+
+    :deep(.el-table__header th) {
+      background-color: var(--canvas-sunken);
+      font-weight: var(--weight-semibold);
+    }
+
+    :deep(.el-table__row) {
+      height: 44px;
+    }
+
+    :deep(.el-table__body tr:hover > td) {
+      background-color: var(--canvas-sunken);
+      transition: background-color var(--duration-fast) var(--ease-out);
     }
   }
 
+  .priority-value,
+  .cell-num {
+    color: var(--ink-900);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+  }
+
+  .cell-date {
+    white-space: nowrap;
+  }
+
+  .muted-text {
+    color: var(--ink-500);
+    font-size: var(--text-body-sm);
+    white-space: nowrap;
+  }
+
+  .helper-text {
+    margin-left: var(--space-2);
+    color: var(--ink-500);
+    font-size: var(--text-body-sm);
+  }
+
   .preview-content {
-    padding: 16px;
-    background: #f5f7fa;
-    border-radius: 8px;
+    padding: var(--space-4);
+    background: var(--canvas-sunken);
+    border-radius: var(--radius-md);
+    color: var(--ink-700);
     line-height: 1.6;
-    color: #606266;
     white-space: pre-wrap;
     word-break: break-word;
   }
 
-  :deep(.el-table) {
-    border-radius: 8px;
-    overflow: hidden;
-
-    .el-table__header th {
-      background-color: #fafafa;
-      font-weight: 600;
-    }
-  }
-
   :deep(.el-dialog) {
-    border-radius: 8px;
+    border-radius: var(--radius-md);
   }
 
   :deep(.el-dialog__body) {
-    padding: 24px;
+    padding: var(--space-6);
   }
 
-  :deep(.el-dropdown) {
-    .el-button {
-      font-size: 0.929rem /* 原值: 13px */;
-    }
-  }
-
-  // 响应式优化
-  @media (max-width: 1200px) {
-    .stats-row {
-      :deep(.el-col) {
-        margin-bottom: 12px;
-      }
-    }
-
-    .filter-section {
-      .filter-row {
-        > [class*="el-col-"] {
-          margin-bottom: 12px;
-        }
-      }
+  @media (max-width: 960px) {
+    .stats-section {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  @media (max-width: 768px) {
-    padding: 12px;
+  @media (max-width: 640px) {
+    padding: var(--space-3);
 
-    .stats-row {
-      :deep(.el-col) {
-        margin-bottom: 12px;
-      }
+    .stats-section {
+      grid-template-columns: 1fr;
     }
 
-    .main-card {
-      :deep(.el-card__header) {
-        padding: 16px;
-      }
-
-      :deep(.el-card__body) {
-        padding: 16px;
-      }
-
-      .card-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-
-        .header-actions {
-          width: 100%;
-
-          .el-button {
-            flex: 1;
-          }
-        }
+    .search-form {
+      :deep(.el-form-item) {
+        margin-right: 0;
       }
     }
   }
