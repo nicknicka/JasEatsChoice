@@ -1,25 +1,21 @@
 <template>
   <div class="wish-list-audit">
     <!-- 头部统计 -->
-    <div class="audit-header">
+    <div v-if="items.length > 0" class="audit-header">
       <div class="stats-cards">
-        <div class="stat-card">
-          <div class="stat-number">{{ pendingCount }}</div>
-          <div class="stat-label">待审核</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">{{ todayApprovedCount }}</div>
-          <div class="stat-label">今日已通过</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">{{ todayRejectedCount }}</div>
-          <div class="stat-label">今日已拒绝</div>
-        </div>
+        <AppStatCard
+          :class="{ 'audit-stat--pending': pendingCount > 0 }"
+          label="待审核"
+          :value="pendingCount"
+          :icon="Timer"
+        />
+        <AppStatCard label="今日已通过" :value="todayApprovedCount" :icon="CircleCheck" />
+        <AppStatCard label="今日已拒绝" :value="todayRejectedCount" :icon="CircleClose" />
       </div>
     </div>
 
     <!-- 标签筛选 -->
-    <div class="tabs-wrapper">
+    <div v-if="items.length > 0" class="tabs-wrapper">
       <el-tabs v-model="activeTab" @tab-change="loadItems">
         <el-tab-pane label="全部" name="all" />
         <el-tab-pane label="待审核" name="pending" />
@@ -32,19 +28,14 @@
     <!-- 列表内容 -->
     <div v-loading="loading" class="audit-content">
       <div v-if="items.length > 0" class="wish-cards">
-        <div
-          v-for="item in items"
-          :key="item.id"
-          class="wish-card"
-          :class="getStatusClass(item.auditStatus)"
-        >
+        <div v-for="item in items" :key="item.id" class="wish-card">
           <!-- 菜品信息 -->
           <div class="wish-header">
             <div class="dish-image" v-if="item.dishImage">
               <img :src="item.dishImage" :alt="item.dishName" />
             </div>
             <div class="dish-info">
-              <h4 class="dish-name">{{ item.dishName }}</h4>
+              <h2 class="dish-name">{{ item.dishName }}</h2>
               <p class="wish-meta">
                 <el-icon><Calendar /></el-icon>
                 <span>{{ formatTime(item.createdAt) }}</span>
@@ -63,61 +54,57 @@
           <!-- 状态和操作 -->
           <div class="wish-footer">
             <div class="status-info">
-              <el-tag :type="getStatusTagType(item.auditStatus)">
-                {{ item.auditStatusName }}
-              </el-tag>
+              <StatusTag
+                :status="statusTagStates[getStatusTagType(item.auditStatus)]"
+                :text="item.auditStatusName"
+              />
               <span v-if="item.auditStatus === 0" class="deadline">
                 剩余：{{ item.remainingHours }}小时
               </span>
             </div>
 
-            <!-- 审核操作（仅待审核状态） -->
-            <div class="audit-actions" v-if="item.auditStatus === 0">
-              <el-button
-                type="success"
-                size="small"
-                @click="handleAudit(item, true)"
-              >
+            <div class="audit-actions">
+              <el-button v-if="item.auditStatus === 0" @click="handleAudit(item, true)">
                 通过
               </el-button>
-              <el-button
-                type="danger"
-                size="small"
-                @click="handleAudit(item, false)"
-              >
-                拒绝
-              </el-button>
-            </div>
-
-            <!-- 申诉操作（已拒绝状态） -->
-            <div class="audit-actions" v-if="item.auditStatus === 2">
-              <el-button
-                type="primary"
-                size="small"
-                @click="handleAppeal(item)"
-              >
+              <el-button v-if="item.auditStatus === 2" @click="handleAppeal(item)">
                 申诉
               </el-button>
+              <el-dropdown
+                v-if="item.auditStatus === 0"
+                trigger="click"
+                popper-class="wish-audit-menu"
+                @command="$event === 'reject' ? handleAudit(item, false) : viewDetail(item)"
+              >
+                <el-button link class="text-action" :aria-label="`${item.dishName}的更多操作`">
+                  更多
+                  <el-icon><ArrowDown /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="detail">查看详情</el-dropdown-item>
+                    <el-dropdown-item command="reject" divided class="reject-action">
+                      拒绝
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <el-button v-else link class="text-action" @click="viewDetail(item)">
+                查看详情
+              </el-button>
             </div>
-
-            <!-- 查看详情 -->
-            <el-button
-              type="info"
-              size="small"
-              text
-              @click="viewDetail(item)"
-            >
-              查看详情
-            </el-button>
           </div>
         </div>
       </div>
 
       <!-- 空状态 -->
-      <el-empty
+      <AppEmptyState
         v-else-if="!loading"
-        description="暂无审核项目"
-        :image-size="80"
+        class="audit-empty"
+        compact
+        description="暂无审核项目，顾客提交想吃条目后会出现在这里"
+        action-text="刷新"
+        @action="loadItems"
       />
     </div>
 
@@ -167,8 +154,14 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="auditDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmAudit" :loading="auditing">
+        <el-button class="dialog-cancel" @click="auditDialogVisible = false">取消</el-button>
+        <el-button
+          class="dialog-confirm"
+          :class="{ 'dialog-confirm--danger': !isApprove }"
+          :type="isApprove ? 'primary' : 'danger'"
+          @click="confirmAudit"
+          :loading="auditing"
+        >
           确认
         </el-button>
       </template>
@@ -194,8 +187,8 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="appealDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitAppeal" :loading="appealing">
+        <el-button class="dialog-cancel" @click="appealDialogVisible = false">取消</el-button>
+        <el-button class="dialog-confirm" type="primary" @click="submitAppeal" :loading="appealing">
           提交申诉
         </el-button>
       </template>
@@ -204,9 +197,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Calendar } from '@element-plus/icons-vue'
+import { ArrowDown, Calendar, CircleCheck, CircleClose, Timer } from '@element-plus/icons-vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
 import wishListApi from '@/api/wishList'
 
 const props = defineProps({
@@ -265,15 +261,11 @@ const rejectionReasons = [
   { code: 99, title: '其他原因' }
 ]
 
-// 获取状态类名
-const getStatusClass = (status) => {
-  const classMap = {
-    0: 'status-pending',
-    1: 'status-approved',
-    2: 'status-rejected',
-    3: 'status-appealing'
-  }
-  return classMap[status] || ''
+const statusTagStates = {
+  warning: 'pending',
+  success: 'approved',
+  danger: 'rejected',
+  info: 'appealing'
 }
 
 // 获取状态标签类型
@@ -426,81 +418,72 @@ onMounted(() => {
 
 <style scoped>
 .audit-header {
-  margin-bottom: 20px;
+  margin-bottom: var(--card-gap-compact);
 }
 
 .stats-cards {
-  display: flex;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--card-gap-compact);
 }
 
-.stat-card {
-  flex: 1;
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+.stats-cards :deep(.app-stat-card) {
+  padding: var(--card-padding-compact);
 }
 
-.stat-number {
-  font-size: 2rem /* 原值: 28px */;
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 8px;
+.stats-cards :deep(.app-stat-card__value) {
+  font-size: var(--text-h1);
 }
 
-.stat-label {
-  font-size: 1rem /* 原值: 14px */;
-  color: #909399;
+.stats-cards :deep(.app-stat-card__icon) {
+  color: var(--ink-400);
+}
+
+.audit-stat--pending :deep(.app-stat-card__icon),
+.audit-stat--pending :deep(.app-stat-card__value) {
+  color: var(--brand-600);
 }
 
 .tabs-wrapper {
-  margin-bottom: 20px;
+  margin-bottom: var(--card-gap-compact);
 }
 
 .audit-content {
   min-height: 200px;
 }
 
+.audit-empty {
+  animation: audit-empty-in var(--duration-base) var(--ease-out);
+}
+
+@keyframes audit-empty-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .wish-cards {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--card-gap-compact);
 }
 
 .wish-card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 16px;
-  border-left: 4px solid #e4e7ed;
-  transition: all 0.3s;
-}
-
-.wish-card:hover {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
-
-.wish-card.status-pending {
-  border-left-color: #e6a23c;
-}
-
-.wish-card.status-approved {
-  border-left-color: #67c23a;
-}
-
-.wish-card.status-rejected {
-  border-left-color: #f56c6c;
-}
-
-.wish-card.status-appealing {
-  border-left-color: #409eff;
+  padding: var(--card-padding-compact);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
 }
 
 .wish-header {
   display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
 }
 
 .dish-image {
@@ -513,7 +496,7 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 .dish-info {
@@ -521,32 +504,32 @@ onMounted(() => {
 }
 
 .dish-name {
-  margin: 0 0 8px 0;
-  font-size: 1.143rem /* 原值: 16px */;
-  font-weight: 600;
-  color: #303133;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
 }
 
 .wish-meta {
   margin: 0;
-  font-size: 0.929rem /* 原值: 13px */;
-  color: #909399;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
+  font-size: var(--text-body-sm);
+  color: var(--ink-500);
 }
 
 .wish-description {
-  margin: 0 0 12px 0;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 4px;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  background: var(--canvas-sunken);
+  border-radius: var(--radius-sm);
 }
 
 .wish-description p {
   margin: 0;
-  font-size: 1rem /* 原值: 14px */;
-  color: #606266;
+  font-size: var(--text-body);
+  color: var(--ink-700);
   line-height: 1.5;
 }
 
@@ -559,16 +542,54 @@ onMounted(() => {
 .status-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .deadline {
-  font-size: 0.857rem /* 原值: 12px */;
-  color: #e6a23c;
+  font-size: var(--text-body-sm);
+  color: var(--warning);
 }
 
 .audit-actions {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.audit-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+.wish-footer :deep(.el-button),
+.audit-empty :deep(.el-button),
+.dialog-cancel {
+  height: var(--control-height-sm);
+  border-radius: var(--radius-md);
+}
+
+.text-action {
+  --el-button-text-color: var(--brand-600);
+  --el-button-hover-text-color: var(--brand-500);
+  --el-button-active-text-color: var(--brand-700);
+}
+
+:global(.wish-audit-menu .reject-action) {
+  color: var(--danger);
+  margin-top: var(--space-6);
+}
+
+:global(.wish-audit-menu .reject-action:not(.is-disabled):hover),
+:global(.wish-audit-menu .reject-action:focus) {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.dialog-confirm {
+  height: var(--control-height-md);
+  border-radius: var(--radius-md);
+}
+
+.dialog-confirm--danger {
+  margin-left: var(--space-6);
 }
 </style>
