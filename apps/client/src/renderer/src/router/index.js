@@ -533,7 +533,7 @@ const router = createRouter({
           path: 'settings', // 管理员设置
           name: 'admin-settings',
           component: AdminSettings,
-          meta: { title: '系统设置' }
+          meta: { title: '系统配置' }
         },
         {
           path: 'settings/profile', // 管理员个人信息
