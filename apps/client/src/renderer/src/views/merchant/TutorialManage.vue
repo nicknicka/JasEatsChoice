@@ -1,14 +1,19 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { Plus, Edit, Delete, VideoCamera, Document } from '@element-plus/icons-vue'
+import { Plus, VideoCamera, Document, Collection, EditPen, Clock, CircleCheck } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '../../utils/api.js'
 import { API_CONFIG } from '../../config/index.js'
+import AppPageHeader from '../../components/common/AppPageHeader.vue'
+import AppCard from '../../components/common/AppCard.vue'
+import AppEmptyState from '../../components/common/AppEmptyState.vue'
+import StatusTag from '../../components/common/StatusTag.vue'
 
 // 数据
 const merchantTutorials = ref([])
 const loading = ref(false)
 const showEditDialog = ref(false)
+const activeTab = ref('all')
 const dialogMode = ref('create') // create 或 edit
 
 // 表单数据
@@ -43,6 +48,21 @@ const stats = computed(() => {
     published: all.filter(t => t.status === 'PUBLISHED').length,
     rejected: all.filter(t => t.reviewStatus === 'REJECTED').length
   }
+})
+
+const filters = [
+  { value: 'all', label: '全部教程', count: 'total', icon: Collection },
+  { value: 'draft', label: '草稿', count: 'draft', icon: EditPen },
+  { value: 'pending', label: '待审核', count: 'pending', icon: Clock },
+  { value: 'published', label: '已发布', count: 'published', icon: CircleCheck }
+]
+
+const filteredTutorials = computed(() => {
+  const tutorials = merchantTutorials.value
+  if (activeTab.value === 'draft') return tutorials.filter(t => t.status === 'DRAFT')
+  if (activeTab.value === 'pending') return tutorials.filter(t => t.reviewStatus === 'PENDING')
+  if (activeTab.value === 'published') return tutorials.filter(t => t.status === 'PUBLISHED')
+  return tutorials
 })
 
 // 获取商家教程列表
@@ -267,89 +287,102 @@ onMounted(() => {
 
 <template>
   <div class="merchant-tutorial-manage-container">
-    <el-card shadow="never">
-      <template #header>
-        <div class="header">
-          <h3>我的教程</h3>
-          <el-button type="primary" @click="openCreateDialog">
-            <el-icon><Plus /></el-icon> 创建教程
-          </el-button>
-        </div>
+    <AppPageHeader title="我的教程" subtitle="管理教程草稿，查看审核与发布状态" compact>
+      <template #actions>
+        <el-button type="primary" :plain="showEditDialog" :icon="Plus" @click="openCreateDialog">
+          创建教程
+        </el-button>
       </template>
+    </AppPageHeader>
 
-      <!-- 统计卡片 -->
-      <div class="stats-cards">
-        <div class="stat-card total">
-          <div class="stat-value">{{ stats.total }}</div>
-          <div class="stat-label">总计</div>
-        </div>
-        <div class="stat-card draft">
-          <div class="stat-value">{{ stats.draft }}</div>
-          <div class="stat-label">草稿</div>
-        </div>
-        <div class="stat-card pending">
-          <div class="stat-value">{{ stats.pending }}</div>
-          <div class="stat-label">待审核</div>
-        </div>
-        <div class="stat-card published">
-          <div class="stat-value">{{ stats.published }}</div>
-          <div class="stat-label">已发布</div>
-        </div>
+    <AppCard v-if="loading && !merchantTutorials.length" padding="none" class="tutorial-panel" aria-label="正在加载教程" aria-busy="true">
+      <el-skeleton :rows="5" />
+    </AppCard>
+    <AppCard v-else-if="!merchantTutorials.length" padding="none" class="tutorial-panel">
+      <AppEmptyState
+        :icon="Document"
+        description="还没有教程，创建第一篇教程分享你的烹饪经验"
+        action-text="创建教程"
+        compact
+        @action="openCreateDialog"
+      />
+    </AppCard>
+    <template v-else>
+      <div class="tutorial-filters" role="group" aria-label="按教程状态筛选">
+        <button
+          v-for="filter in filters"
+          :key="filter.value"
+          type="button"
+          class="tutorial-filter"
+          :aria-pressed="activeTab === filter.value"
+          :disabled="loading"
+          @click="activeTab = filter.value"
+        >
+          <el-icon aria-hidden="true"><component :is="filter.icon" /></el-icon>
+          <span>{{ filter.label }}</span>
+          <span class="filter-count">{{ stats[filter.count] }}</span>
+        </button>
       </div>
 
-      <!-- Tab切换 -->
-      <el-tabs v-model="activeTab" style="margin-top: 20px">
-        <!-- 全部教程 -->
-        <el-tab-pane label="全部教程" name="all">
-          <tutorial-list
-            :tutorials="merchantTutorials"
-            :loading="loading"
-            @edit="openEditDialog"
-            @submit="submitForReview"
-            @delete="deleteTutorial"
-          />
-        </el-tab-pane>
-
-        <!-- 草稿 -->
-        <el-tab-pane label="草稿" name="draft">
-          <tutorial-list
-            :tutorials="merchantTutorials.filter(t => t.status === 'DRAFT')"
-            :loading="loading"
-            @edit="openEditDialog"
-            @submit="submitForReview"
-            @delete="deleteTutorial"
-          />
-        </el-tab-pane>
-
-        <!-- 待审核 -->
-        <el-tab-pane label="待审核" name="pending">
-          <tutorial-list
-            :tutorials="merchantTutorials.filter(t => t.reviewStatus === 'PENDING')"
-            :loading="loading"
-            @edit="openEditDialog"
-            @submit="submitForReview"
-            @delete="deleteTutorial"
-          />
-        </el-tab-pane>
-
-        <!-- 已发布 -->
-        <el-tab-pane label="已发布" name="published">
-          <tutorial-list
-            :tutorials="merchantTutorials.filter(t => t.status === 'PUBLISHED')"
-            :loading="loading"
-            @edit="openEditDialog"
-            @submit="submitForReview"
-            @delete="deleteTutorial"
-          />
-        </el-tab-pane>
-      </el-tabs>
-    </el-card>
+      <AppCard v-loading="loading" padding="none" class="tutorial-panel" :aria-busy="loading">
+        <p class="tutorial-summary" role="status">共 <span>{{ filteredTutorials.length }}</span> 篇教程</p>
+        <el-table v-if="filteredTutorials.length" :data="filteredTutorials" row-key="id" class="tutorial-table">
+          <el-table-column prop="title" label="教程标题" min-width="240" show-overflow-tooltip />
+          <el-table-column label="类型" width="120">
+            <template #default="{ row }">
+              <span class="tutorial-type">
+                <el-icon aria-hidden="true"><component :is="row.type === 'video' ? VideoCamera : Document" /></el-icon>
+                {{ row.type === 'video' ? '视频教程' : '图文指南' }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="发布状态" width="110">
+            <template #default="{ row }">
+              <StatusTag :status="row.status || 'unknown'" :text="getStatusTag(row.status).text" />
+            </template>
+          </el-table-column>
+          <el-table-column label="审核状态" width="110">
+            <template #default="{ row }">
+              <StatusTag :status="row.reviewStatus || 'unknown'" :text="getReviewStatusTag(row.reviewStatus).text" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="duration" label="时长" width="110" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.duration || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="150" fixed="right">
+            <template #default="{ row }">
+              <div class="tutorial-actions">
+                <el-button v-if="isEditable(row)" type="primary" link @click="openEditDialog(row)">编辑</el-button>
+                <el-dropdown v-if="canSubmit(row) || canDelete(row)" trigger="click" popper-class="merchant-tutorial-actions-menu">
+                  <el-button link type="primary" :aria-label="`${row.title}的更多操作`">更多</el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item v-if="canSubmit(row)" @click="submitForReview(row)">提交审核</el-dropdown-item>
+                      <el-dropdown-item v-if="canDelete(row)" :divided="canSubmit(row)" class="tutorial-delete" @click="deleteTutorial(row)">删除教程</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+                <span v-if="!isEditable(row) && !canSubmit(row) && !canDelete(row)" class="tutorial-readonly">—</span>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+        <AppEmptyState
+          v-else
+          :icon="Document"
+          description="当前筛选下没有教程，清除筛选查看全部教程"
+          action-text="清除筛选"
+          compact
+          @action="activeTab = 'all'"
+        />
+      </AppCard>
+    </template>
 
     <!-- 编辑对话框 -->
     <el-dialog
       v-model="showEditDialog"
       :title="dialogMode === 'create' ? '创建教程' : '编辑教程'"
-      width="700px"
+      width="min(var(--form-width-settings), calc(100% - var(--space-8)))"
     >
       <el-form :model="tutorialForm" label-width="100px">
         <el-form-item label="教程标题" required>
@@ -437,92 +470,150 @@ onMounted(() => {
 </template>
 
 
-<style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
+<style scoped>
 .merchant-tutorial-manage-container {
-  padding: 20px;
-
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    h3 {
-      margin: 0;
-      font-size: 1.429rem /* 原值: 20px */;
-      color: @merchant-text;
-    }
-  }
-
-  .stats-cards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-    margin-bottom: 20px;
-
-    .stat-card {
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-      box-shadow: 0 2px 8px @merchant-shadow-hover;
-
-      &.total {
-        background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
-        color: @merchant-surface;
-      }
-
-      &.draft {
-        background: linear-gradient(135deg, @merchant-secondary 0%, @merchant-error 100%);
-        color: @merchant-surface;
-      }
-
-      &.pending {
-        background: linear-gradient(135deg, @merchant-warning 0%, @merchant-warning-light 100%);
-        color: @merchant-surface;
-      }
-
-      &.published {
-        background: linear-gradient(135deg, @merchant-success 0%, @merchant-primary-dark 100%);
-        color: @merchant-surface;
-      }
-
-      .stat-value {
-        font-size: 2.571rem /* 原值: 36px */;
-        font-weight: bold;
-        margin-bottom: 8px;
-      }
-
-      .stat-label {
-        font-size: 1rem /* 原值: 14px */;
-        opacity: 0.9;
-      }
-    }
-  }
-
-  .type-icon {
-    font-size: 1.286rem /* 原值: 18px */;
-
-    &.video {
-      color: @merchant-error;
-    }
-
-    &.article {
-      color: @merchant-warning;
-    }
-  }
+  min-width: 0;
+  padding: var(--space-6);
+  font-family: var(--font-sans);
+  color: var(--ink-700);
 }
 
-@media (max-width: 1200px) {
-  .stats-cards {
-    grid-template-columns: repeat(2, 1fr);
+.merchant-tutorial-manage-container :deep(.app-page-header__actions .el-button) {
+  height: var(--control-height-md);
+}
+
+.tutorial-panel {
+  min-width: 0;
+  padding: var(--card-padding-compact);
+}
+
+.tutorial-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  margin-bottom: var(--card-gap-compact);
+  border-radius: var(--radius-lg);
+  background: var(--canvas-sunken);
+}
+
+.tutorial-filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink-500);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.tutorial-filter:hover:not(:disabled),
+.tutorial-filter[aria-pressed='true'] {
+  color: var(--brand-600);
+  border-color: var(--brand-300);
+  background: var(--brand-50);
+}
+
+.tutorial-filter[aria-pressed='true'] {
+  font-weight: var(--weight-semibold);
+}
+
+.tutorial-filter:active:not(:disabled) {
+  background: var(--brand-100);
+}
+
+.tutorial-filter:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+}
+
+.tutorial-filter:disabled {
+  color: var(--ink-400);
+  border-color: var(--line);
+  background: var(--neutral-bg);
+  cursor: not-allowed;
+}
+
+.filter-count,
+.tutorial-summary span {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.tutorial-summary {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-500);
+  font-size: var(--text-body-sm);
+}
+
+.tutorial-table {
+  --el-table-header-bg-color: var(--canvas);
+  --el-table-header-text-color: var(--ink-500);
+  --el-table-text-color: var(--ink-700);
+  --el-table-row-hover-bg-color: var(--canvas);
+  font-size: var(--text-body-sm);
+}
+
+.tutorial-table :deep(.el-table__cell) {
+  height: var(--control-height-md);
+  padding: var(--space-1) 0;
+}
+
+.tutorial-table :deep(th.el-table__cell) {
+  font-weight: var(--weight-semibold);
+}
+
+.tutorial-type,
+.tutorial-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.tutorial-type,
+.tutorial-readonly {
+  color: var(--ink-500);
+}
+
+.tutorial-actions :deep(.el-button) {
+  height: var(--control-height-sm);
+  font-size: var(--text-body-sm);
+}
+
+:global(.merchant-tutorial-actions-menu .tutorial-delete) {
+  color: var(--danger);
+}
+
+:global(.merchant-tutorial-actions-menu .tutorial-delete:not(.is-disabled):hover),
+:global(.merchant-tutorial-actions-menu .tutorial-delete:not(.is-disabled):focus) {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+@media (max-width: 1280px) {
+  .merchant-tutorial-manage-container {
+    padding: var(--space-4);
   }
 }
 
 @media (max-width: 768px) {
-  .stats-cards {
-    grid-template-columns: 1fr;
+  .merchant-tutorial-manage-container :deep(.app-page-header__main) {
+    flex-wrap: wrap;
+  }
+
+  .tutorial-filter {
+    flex: 1 1 auto;
   }
 }
 </style>
