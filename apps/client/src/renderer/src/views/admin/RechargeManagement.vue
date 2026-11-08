@@ -1,25 +1,18 @@
 <template>
   <div class="recharge-management-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>充值记录</h1>
-      <p class="subtitle">管理用户充值记录</p>
-    </div>
+    <!-- 页头：统一标题容器 + 右侧动作区（§4.7） -->
+    <AppPageHeader title="充值记录" subtitle="管理用户充值记录" :compact="true">
+      <template #actions>
+        <el-button :icon="Download" @click="handleExport">导出</el-button>
+      </template>
+    </AppPageHeader>
 
-    <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-card class="stat-card">
-        <el-statistic title="今日充值金额" :value="stats.todayAmount" :precision="2" prefix="¥" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="今日充值笔数" :value="stats.todayCount" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="本月充值金额" :value="stats.monthAmount" :precision="2" prefix="¥" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="本月充值笔数" :value="stats.monthCount" />
-      </el-card>
+    <!-- 概览卡：线性图标 + 数值 + 标签，四个一行（§4.8） -->
+    <div class="stats-section">
+      <AppStatCard label="今日充值金额" :value="formatMoney(stats.todayAmount)" icon="Money" />
+      <AppStatCard label="今日充值笔数" :value="stats.todayCount" icon="Tickets" />
+      <AppStatCard label="本月充值金额" :value="formatMoney(stats.monthAmount)" icon="Wallet" />
+      <AppStatCard label="本月充值笔数" :value="stats.monthCount" icon="TrendCharts" />
     </div>
 
     <!-- 搜索栏 -->
@@ -67,51 +60,73 @@
 
     <!-- 充值记录列表 -->
     <el-card class="table-card" shadow="never">
-      <el-table :data="rechargeList" v-loading="loading" stripe>
-        <el-table-column label="记录ID" min-width="220" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ getRechargeRecordId(row) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="username" label="用户名" width="150" show-overflow-tooltip />
-        <el-table-column prop="amount" label="充值金额" width="120">
-          <template #default="{ row }">
-            <span style="color: #67c23a; font-weight: bold">¥{{ row.amount }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="paymentMethod" label="充值方式" width="120">
-          <template #default="{ row }">
-            {{ getPaymentMethodText(row.paymentMethod) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="transactionId" label="交易单号" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="createdAt" label="充值时间" width="180" />
-        <el-table-column label="操作" width="100" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleView(row)">详情</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <!-- 空数据：紧凑中文空状态替换表体（§4.3、§5.5） -->
+      <AppEmptyState
+        v-if="!loading && rechargeList.length === 0"
+        compact
+        icon="Money"
+        description="没有符合条件的充值记录，换个关键词或清空筛选试试"
+        action-text="重置筛选"
+        @action="handleReset"
+      />
 
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchRechargeList"
-          @current-change="fetchRechargeList"
-        />
-      </div>
+      <template v-else>
+        <el-table :data="rechargeList" v-loading="loading" stripe>
+          <!-- 记录 ID：单行完整，不折行（§4.3、§5.4） -->
+          <el-table-column label="记录ID" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="cell-num">{{ getRechargeRecordId(row) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="username" label="用户名" width="160" show-overflow-tooltip />
+          <!-- 金额：右对齐 + 无衬线等宽数字 + 中性深色，不带红绿蓝（§4.3、§5.2） -->
+          <el-table-column label="充值金额" width="95" align="right">
+            <template #default="{ row }">
+              <span class="amount">¥{{ row.amount }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="paymentMethod" label="充值方式" width="100">
+            <template #default="{ row }">
+              {{ getPaymentMethodText(row.paymentMethod) }}
+            </template>
+          </el-table-column>
+          <!-- 状态：待支付 warning、处理中 info，同色不同义拆开（§3.1、§4.6） -->
+          <el-table-column label="状态" width="95">
+            <template #default="{ row }">
+              <StatusTag :status="row.status" :text="getStatusText(row.status)" />
+            </template>
+          </el-table-column>
+          <el-table-column label="交易单号" min-width="165" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="cell-num">{{ row.transactionId || '-' }}</span>
+            </template>
+          </el-table-column>
+          <!-- 时间统一 YYYY-MM-DD HH:mm，去掉 ISO 的 T（§4.3） -->
+          <el-table-column label="充值时间" width="165">
+            <template #default="{ row }">
+              <span class="cell-num">{{ formatTime(row.createdAt) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="85" fixed="right">
+            <template #default="{ row }">
+              <RowActions :primary="{ text: '详情', onClick: () => handleView(row) }" :items="[]" />
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- 分页：合计用实际记录数兜底，空数据时不渲染（§4.3、§5.4） -->
+        <div v-if="rechargeList.length > 0" class="pagination-container">
+          <el-pagination
+            v-model:current-page="pagination.page"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="fetchRechargeList"
+            @current-change="fetchRechargeList"
+          />
+        </div>
+      </template>
     </el-card>
 
     <!-- 详情对话框 -->
@@ -125,20 +140,18 @@
         <el-descriptions-item label="记录ID">{{ getRechargeRecordId(currentRecord) }}</el-descriptions-item>
         <el-descriptions-item label="用户名">{{ currentRecord.username }}</el-descriptions-item>
         <el-descriptions-item label="充值金额">
-          <span style="color: #67c23a; font-weight: bold; font-size: 1.286rem /* 原值: 18px */">¥{{ currentRecord.amount }}</span>
+          <span class="amount amount--lg">¥{{ currentRecord.amount }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="充值方式">
           {{ getPaymentMethodText(currentRecord.paymentMethod) }}
         </el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="getStatusType(currentRecord.status)">
-            {{ getStatusText(currentRecord.status) }}
-          </el-tag>
+          <StatusTag :status="currentRecord.status" :text="getStatusText(currentRecord.status)" />
         </el-descriptions-item>
         <el-descriptions-item label="充值前余额">¥{{ currentRecord.balanceBefore || 0 }}</el-descriptions-item>
         <el-descriptions-item label="充值后余额">¥{{ currentRecord.balanceAfter || 0 }}</el-descriptions-item>
         <el-descriptions-item label="交易单号" :span="2">{{ currentRecord.transactionId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="充值时间" :span="2">{{ currentRecord.createdAt }}</el-descriptions-item>
+        <el-descriptions-item label="充值时间" :span="2">{{ formatTime(currentRecord.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ currentRecord.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
 
@@ -152,7 +165,14 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh } from '@element-plus/icons-vue'
+import { Search, Refresh, Download } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
+import RowActions from '@/components/common/RowActions.vue'
+import { formatTime, formatAmount } from '@/utils/formatters'
+import { exportToExcel } from '@/utils/export.js'
 import { getRechargeList, getRechargeStats, getRechargeDetail } from '@/api/admin'
 
 const loading = ref(false)
@@ -179,6 +199,8 @@ const pagination = reactive({
   pageSize: 10,
   total: 0
 })
+
+const formatMoney = (value) => `¥${formatAmount(value)}`
 
 // 获取充值统计数据
 const fetchRechargeStats = async () => {
@@ -209,7 +231,8 @@ const fetchRechargeList = async () => {
 
     if (response) {
       rechargeList.value = (response.records || []).map(normalizeRechargeRecord)
-      pagination.total = response.total || 0
+      // 后端分页插件缺失时返回 total=0 与全量记录，此处以实际记录数兜底（§5.4）
+      pagination.total = response.total || rechargeList.value.length
     }
   } catch (error) {
     console.error('获取充值记录失败:', error)
@@ -244,18 +267,7 @@ const getPaymentMethodText = (method) => {
   return texts[normalized] || method || '-'
 }
 
-// 获取状态类型
-const getStatusType = (status) => {
-  const types = {
-    success: 'success',
-    pending: 'warning',
-    processing: 'warning',
-    failed: 'danger'
-  }
-  return types[normalizeRechargeStatus(status)] || 'info'
-}
-
-// 获取状态文本
+// 获取状态文本：状态色由 StatusTag 按 §3.1 状态表统一映射
 const getStatusText = (status) => {
   const texts = {
     success: '成功',
@@ -282,6 +294,44 @@ const handleReset = () => {
   fetchRechargeList()
 }
 
+// 导出当前列表（§4.1 次级动作，与 12-提现审核 的导出能力对齐）
+const handleExport = () => {
+  if (!rechargeList.value.length) {
+    ElMessage.warning('暂无可导出的充值记录')
+    return
+  }
+
+  const success = exportToExcel(
+    rechargeList.value.map((row) => ({
+      记录ID: getRechargeRecordId(row),
+      用户名: row.username || '-',
+      充值金额: row.amount,
+      充值方式: getPaymentMethodText(row.paymentMethod),
+      状态: getStatusText(row.status),
+      交易单号: row.transactionId || '-',
+      充值时间: formatTime(row.createdAt)
+    })),
+    {
+      filename: '充值记录',
+      headers: [
+        { key: '记录ID', label: '记录ID', width: 22 },
+        { key: '用户名', label: '用户名', width: 22 },
+        { key: '充值金额', label: '充值金额', width: 12 },
+        { key: '充值方式', label: '充值方式', width: 12 },
+        { key: '状态', label: '状态', width: 10 },
+        { key: '交易单号', label: '交易单号', width: 22 },
+        { key: '充值时间', label: '充值时间', width: 20 }
+      ]
+    }
+  )
+
+  if (success) {
+    ElMessage.success('导出成功')
+  } else {
+    ElMessage.error('导出失败')
+  }
+}
+
 // 查看详情
 const handleView = async (row) => {
   try {
@@ -305,35 +355,22 @@ onMounted(() => {
 
 <style scoped lang="less">
 .recharge-management-container {
-  .page-header {
-    margin-bottom: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
-  }
-
-  .stats-cards {
+  .stats-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-
-    .stat-card {
-      text-align: center;
-    }
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
   }
 
   .search-card {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-8);
 
     .search-form {
       margin-bottom: 0;
@@ -342,10 +379,42 @@ onMounted(() => {
 
   .table-card {
     .pagination-container {
-      margin-top: 20px;
+      margin-top: var(--space-5);
       display: flex;
       justify-content: flex-end;
     }
+
+    /* 长表滚动时表头可辨：浅底色 + 中量字重（§4.3） */
+    :deep(.el-table__header th) {
+      background-color: var(--canvas-sunken);
+      font-weight: var(--weight-semibold);
+    }
+
+    /* 财务长表行 hover 高亮，避免横向读串行（§3.5 高频微交互用 CSS transition） */
+    :deep(.el-table__body tr:hover > td) {
+      background-color: var(--canvas-sunken);
+      transition: background-color var(--duration-fast) var(--ease-out);
+    }
+  }
+
+  /* ID / 交易单号 / 时间：单行不折行 + 等宽数字（§4.3、§5.4） */
+  .cell-num {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* 金额：无衬线等宽数字 + 中性深色，不带红绿蓝（§4.3、§5.2） */
+  .amount {
+    color: var(--ink-900);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+  }
+
+  .amount--lg {
+    font-size: var(--text-h3);
   }
 }
 </style>
