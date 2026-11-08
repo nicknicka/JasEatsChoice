@@ -440,7 +440,8 @@ const handleCleanLogs = async () => {
       {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
       }
     )
 
