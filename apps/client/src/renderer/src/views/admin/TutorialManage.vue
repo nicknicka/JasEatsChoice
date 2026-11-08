@@ -1,14 +1,10 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import {
-	Edit,
-	Delete,
-	VideoCamera,
-	Document,
-	Plus,
-	Star,
-} from "@element-plus/icons-vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { VideoCamera, Document, Plus } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import AppPageHeader from "@/components/common/AppPageHeader.vue";
+import AppStatCard from "@/components/common/AppStatCard.vue";
+import RowActions from "@/components/common/RowActions.vue";
 import api from "../../utils/api.js";
 import { API_CONFIG } from "../../config/index.js";
 
@@ -216,15 +212,9 @@ const saveTutorial = async () => {
 	}
 };
 
-// 删除教程
+// 删除教程：二次确认统一由 RowActions 的危险项承担（§4.6）
 const deleteTutorial = async (tutorial) => {
 	try {
-		await ElMessageBox.confirm("删除后无法恢复，确认删除？", "删除教程", {
-			confirmButtonText: "确认删除",
-			cancelButtonText: "取消",
-			type: "warning",
-		});
-
 		const response = await api.delete(
 			`${API_CONFIG.tutorial.adminDelete}${tutorial.id}`
 		);
@@ -234,10 +224,8 @@ const deleteTutorial = async (tutorial) => {
 			fetchAllTutorials();
 		}
 	} catch (error) {
-		if (error !== "cancel") {
-			console.error("删除失败:", error);
-			ElMessage.error("删除失败，请稍后重试");
-		}
+		console.error("删除失败:", error);
+		ElMessage.error("删除失败，请稍后重试");
 	}
 };
 
@@ -310,38 +298,29 @@ onMounted(() => {
 
 <template>
 	<div class="admin-tutorial-manage-container">
-		<el-card shadow="never" class="tutorial-card">
-			<template #header>
-				<div class="header">
-					<h3>教程管理</h3>
-					<el-button type="primary" @click="openCreateDialog">
-						<el-icon><Plus /></el-icon> 创建教程
-					</el-button>
-				</div>
+		<AppPageHeader
+			title="教程管理"
+			subtitle="全平台教程的发布、审核与精选"
+			:compact="true"
+		>
+			<template #actions>
+				<el-button type="primary" @click="openCreateDialog">
+					<el-icon><Plus /></el-icon> 创建教程
+				</el-button>
 			</template>
+		</AppPageHeader>
 
-			<!-- 统计卡片 -->
+		<el-card shadow="never" class="tutorial-card">
+			<!-- 统计卡片：统一全站概览卡（§4.8 / §5.6） -->
 			<div class="stats-cards">
-				<div class="stat-card">
-					<div class="stat-value">{{ stats.total }}</div>
-					<div class="stat-label">总计</div>
-				</div>
-				<div class="stat-card published">
-					<div class="stat-value">{{ stats.published }}</div>
-					<div class="stat-label">已发布</div>
-				</div>
-				<div class="stat-card pending">
-					<div class="stat-value">{{ stats.pending }}</div>
-					<div class="stat-label">待审核</div>
-				</div>
-				<div class="stat-card featured">
-					<div class="stat-value">{{ stats.featured }}</div>
-					<div class="stat-label">精选</div>
-				</div>
+				<AppStatCard label="总计" :value="stats.total" icon="Files" />
+				<AppStatCard label="已发布" :value="stats.published" icon="CircleCheck" />
+				<AppStatCard label="待审核" :value="stats.pending" icon="Clock" />
+				<AppStatCard label="精选" :value="stats.featured" icon="Star" />
 			</div>
 
 			<!-- Tab切换 -->
-			<el-tabs v-model="activeTab" style="margin-top: 20px" class="tutorial-tabs">
+			<el-tabs v-model="activeTab" class="tutorial-tabs">
 				<!-- 全部教程 -->
 				<el-tab-pane name="all">
 					<template #label>
@@ -360,10 +339,20 @@ onMounted(() => {
 						stripe
 						height="350"
 					>
-						<el-table-column prop="id" label="ID" width="80" />
-						<el-table-column prop="title" label="教程标题" min-width="200" />
+						<el-table-column
+							prop="id"
+							label="ID"
+							width="190"
+							show-overflow-tooltip
+						/>
+						<el-table-column
+							prop="title"
+							label="教程标题"
+							min-width="150"
+							show-overflow-tooltip
+						/>
 
-						<el-table-column label="来源" width="120">
+						<el-table-column label="来源" width="76">
 							<template #default="{ row }">
 								<el-tag
 									:type="getSourceTypeTag(row.sourceType).type"
@@ -374,21 +363,18 @@ onMounted(() => {
 							</template>
 						</el-table-column>
 
-						<el-table-column label="类型" width="100">
+						<el-table-column label="类型" width="64">
 							<template #default="{ row }">
-								<el-icon
-									v-if="row.type === 'video'"
-									class="type-icon video"
-								>
+								<el-icon v-if="row.type === 'video'" class="type-icon">
 									<VideoCamera />
 								</el-icon>
-								<el-icon v-else class="type-icon article">
+								<el-icon v-else class="type-icon">
 									<Document />
 								</el-icon>
 							</template>
 						</el-table-column>
 
-						<el-table-column label="状态" width="100">
+						<el-table-column label="状态" width="80">
 							<template #default="{ row }">
 								<el-tag
 									:type="getStatusTag(row.status).type"
@@ -399,7 +385,7 @@ onMounted(() => {
 							</template>
 						</el-table-column>
 
-						<el-table-column label="审核状态" width="100">
+						<el-table-column label="审核状态" width="96">
 							<template #default="{ row }">
 								<el-tag
 									:type="getReviewStatusTag(row.reviewStatus).type"
@@ -410,7 +396,7 @@ onMounted(() => {
 							</template>
 						</el-table-column>
 
-						<el-table-column label="精选" width="80">
+						<el-table-column label="精选" width="64">
 							<template #default="{ row }">
 								<el-tag v-if="row.featured" type="success" size="small">
 									⭐
@@ -418,7 +404,7 @@ onMounted(() => {
 							</template>
 						</el-table-column>
 
-						<el-table-column label="难度" width="100">
+						<el-table-column label="难度" width="76">
 							<template #default="{ row }">
 								<el-tag v-if="row.difficulty" type="info" size="small">
 									{{ getDifficultyName(row.difficulty) }}
@@ -426,51 +412,44 @@ onMounted(() => {
 							</template>
 						</el-table-column>
 
-						<el-table-column label="浏览量" width="120">
+						<el-table-column label="浏览量" width="80">
 							<template #default="{ row }">
 								<span>{{ row.viewCount?.toLocaleString() || 0 }}</span>
 							</template>
 						</el-table-column>
 
-						<el-table-column label="评分" width="100">
+						<el-table-column label="评分" width="72">
 							<template #default="{ row }">
 								<span v-if="row.rating">{{ row.rating }} ⭐</span>
-								<span v-else style="color: #909399">-</span>
+								<span v-else class="cell-muted">-</span>
 							</template>
 						</el-table-column>
 
 						<el-table-column
 							label="操作"
-							width="180"
+							width="120"
 							fixed="right"
 							align="center"
 						>
 							<template #default="{ row }">
-								<el-button-group>
-									<el-button
-										size="small"
-										@click="openEditDialog(row)"
-										title="编辑"
-									>
-										<el-icon><Edit /></el-icon>
-									</el-button>
-									<el-button
-										:type="row.featured ? 'warning' : 'success'"
-										size="small"
-										@click="toggleFeatured(row)"
-										:title="row.featured ? '取消精选' : '设为精选'"
-									>
-										<el-icon><Star /></el-icon>
-									</el-button>
-									<el-button
-										type="danger"
-										size="small"
-										@click="deleteTutorial(row)"
-										title="删除"
-									>
-										<el-icon><Delete /></el-icon>
-									</el-button>
-								</el-button-group>
+								<RowActions
+									:primary="{
+										text: '编辑',
+										onClick: () => openEditDialog(row),
+									}"
+									:items="[
+										{
+											text: row.featured ? '取消精选' : '设为精选',
+											onClick: () => toggleFeatured(row),
+										},
+										{
+											text: '删除',
+											danger: true,
+											onClick: () => deleteTutorial(row),
+										},
+									]"
+									:max-visible="0"
+								/>
 							</template>
 						</el-table-column>
 					</el-table>
@@ -495,9 +474,19 @@ onMounted(() => {
 						stripe
 						height="350"
 					>
-						<el-table-column prop="id" label="ID" width="80" />
-						<el-table-column prop="title" label="教程标题" min-width="200" />
-						<el-table-column label="来源" width="120">
+						<el-table-column
+							prop="id"
+							label="ID"
+							width="190"
+							show-overflow-tooltip
+						/>
+						<el-table-column
+							prop="title"
+							label="教程标题"
+							min-width="150"
+							show-overflow-tooltip
+						/>
+						<el-table-column label="来源" width="76">
 							<template #default="{ row }">
 								<el-tag
 									:type="getSourceTypeTag(row.sourceType).type"
@@ -507,69 +496,60 @@ onMounted(() => {
 								</el-tag>
 							</template>
 						</el-table-column>
-						<el-table-column label="类型" width="100">
+						<el-table-column label="类型" width="64">
 							<template #default="{ row }">
-								<el-icon
-									v-if="row.type === 'video'"
-									class="type-icon video"
-									><VideoCamera
-								/></el-icon>
-								<el-icon v-else class="type-icon article"
-									><Document
-								/></el-icon>
+								<el-icon v-if="row.type === 'video'" class="type-icon">
+									<VideoCamera />
+								</el-icon>
+								<el-icon v-else class="type-icon">
+									<Document />
+								</el-icon>
 							</template>
 						</el-table-column>
-						<el-table-column label="难度" width="100">
+						<el-table-column label="难度" width="76">
 							<template #default="{ row }">
 								<el-tag v-if="row.difficulty" type="info" size="small">
 									{{ getDifficultyName(row.difficulty) }}
 								</el-tag>
 							</template>
 						</el-table-column>
-						<el-table-column label="浏览量" width="120">
+						<el-table-column label="浏览量" width="80">
 							<template #default="{ row }">
 								<span>{{ row.viewCount?.toLocaleString() || 0 }}</span>
 							</template>
 						</el-table-column>
-						<el-table-column label="精选" width="80">
+						<el-table-column label="精选" width="64">
 							<template #default="{ row }">
-								<el-tag v-if="row.featured" type="success" size="small"
-									>⭐</el-tag
-								>
+								<el-tag v-if="row.featured" type="success" size="small">
+									⭐
+								</el-tag>
 							</template>
 						</el-table-column>
 						<el-table-column
 							label="操作"
-							width="180"
+							width="120"
 							fixed="right"
 							align="center"
 						>
 							<template #default="{ row }">
-								<el-button-group>
-									<el-button
-										size="small"
-										@click="openEditDialog(row)"
-										title="编辑"
-									>
-										<el-icon><Edit /></el-icon>
-									</el-button>
-									<el-button
-										:type="row.featured ? 'warning' : 'success'"
-										size="small"
-										@click="toggleFeatured(row)"
-										:title="row.featured ? '取消精选' : '设为精选'"
-									>
-										<el-icon><Star /></el-icon>
-									</el-button>
-									<el-button
-										type="danger"
-										size="small"
-										@click="deleteTutorial(row)"
-										title="删除"
-									>
-										<el-icon><Delete /></el-icon>
-									</el-button>
-								</el-button-group>
+								<RowActions
+									:primary="{
+										text: '编辑',
+										onClick: () => openEditDialog(row),
+									}"
+									:items="[
+										{
+											text: row.featured ? '取消精选' : '设为精选',
+											onClick: () => toggleFeatured(row),
+										},
+										{
+											text: '删除',
+											danger: true,
+											onClick: () => deleteTutorial(row),
+										},
+									]"
+									:max-visible="0"
+								/>
 							</template>
 						</el-table-column>
 					</el-table>
@@ -594,9 +574,19 @@ onMounted(() => {
 						stripe
 						height="350"
 					>
-						<el-table-column prop="id" label="ID" width="80" />
-						<el-table-column prop="title" label="教程标题" min-width="200" />
-						<el-table-column label="来源" width="120">
+						<el-table-column
+							prop="id"
+							label="ID"
+							width="190"
+							show-overflow-tooltip
+						/>
+						<el-table-column
+							prop="title"
+							label="教程标题"
+							min-width="150"
+							show-overflow-tooltip
+						/>
+						<el-table-column label="来源" width="76">
 							<template #default="{ row }">
 								<el-tag
 									:type="getSourceTypeTag(row.sourceType).type"
@@ -606,20 +596,18 @@ onMounted(() => {
 								</el-tag>
 							</template>
 						</el-table-column>
-						<el-table-column label="作者" width="120" prop="author" />
-						<el-table-column label="类型" width="100">
+						<el-table-column prop="author" label="作者" width="120" />
+						<el-table-column label="类型" width="64">
 							<template #default="{ row }">
-								<el-icon
-									v-if="row.type === 'video'"
-									class="type-icon video"
-									><VideoCamera
-								/></el-icon>
-								<el-icon v-else class="type-icon article"
-									><Document
-								/></el-icon>
+								<el-icon v-if="row.type === 'video'" class="type-icon">
+									<VideoCamera />
+								</el-icon>
+								<el-icon v-else class="type-icon">
+									<Document />
+								</el-icon>
 							</template>
 						</el-table-column>
-						<el-table-column label="审核状态" width="100">
+						<el-table-column label="审核状态" width="96">
 							<template #default="{ row }">
 								<el-tag
 									:type="getReviewStatusTag(row.reviewStatus).type"
@@ -631,29 +619,25 @@ onMounted(() => {
 						</el-table-column>
 						<el-table-column
 							label="操作"
-							width="140"
+							width="120"
 							fixed="right"
 							align="center"
 						>
 							<template #default="{ row }">
-								<el-button-group>
-									<el-button
-										type="primary"
-										size="small"
-										@click="openEditDialog(row)"
-										title="审核"
-									>
-										<el-icon><Edit /></el-icon>
-									</el-button>
-									<el-button
-										type="danger"
-										size="small"
-										@click="deleteTutorial(row)"
-										title="删除"
-									>
-										<el-icon><Delete /></el-icon>
-									</el-button>
-								</el-button-group>
+								<RowActions
+									:primary="{
+										text: '审核',
+										onClick: () => openEditDialog(row),
+									}"
+									:items="[
+										{
+											text: '删除',
+											danger: true,
+											onClick: () => deleteTutorial(row),
+										},
+									]"
+									:max-visible="0"
+								/>
 							</template>
 						</el-table-column>
 					</el-table>
@@ -678,9 +662,19 @@ onMounted(() => {
 						stripe
 						height="350"
 					>
-						<el-table-column prop="id" label="ID" width="80" />
-						<el-table-column prop="title" label="教程标题" min-width="200" />
-						<el-table-column label="来源" width="120">
+						<el-table-column
+							prop="id"
+							label="ID"
+							width="190"
+							show-overflow-tooltip
+						/>
+						<el-table-column
+							prop="title"
+							label="教程标题"
+							min-width="150"
+							show-overflow-tooltip
+						/>
+						<el-table-column label="来源" width="76">
 							<template #default="{ row }">
 								<el-tag
 									:type="getSourceTypeTag(row.sourceType).type"
@@ -698,29 +692,25 @@ onMounted(() => {
 						/>
 						<el-table-column
 							label="操作"
-							width="140"
+							width="120"
 							fixed="right"
 							align="center"
 						>
 							<template #default="{ row }">
-								<el-button-group>
-									<el-button
-										type="primary"
-										size="small"
-										@click="openEditDialog(row)"
-										title="编辑"
-									>
-										<el-icon><Edit /></el-icon>
-									</el-button>
-									<el-button
-										type="danger"
-										size="small"
-										@click="deleteTutorial(row)"
-										title="删除"
-									>
-										<el-icon><Delete /></el-icon>
-									</el-button>
-								</el-button-group>
+								<RowActions
+									:primary="{
+										text: '编辑',
+										onClick: () => openEditDialog(row),
+									}"
+									:items="[
+										{
+											text: '删除',
+											danger: true,
+											onClick: () => deleteTutorial(row),
+										},
+									]"
+									:max-visible="0"
+								/>
 							</template>
 						</el-table-column>
 					</el-table>
@@ -823,8 +813,8 @@ onMounted(() => {
 
 <style scoped lang="less">
 .admin-tutorial-manage-container {
-	padding: 20px;
-	height: calc(100vh - 40px);
+	padding: var(--space-5);
+	height: calc(100vh - var(--space-10));
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
@@ -835,10 +825,6 @@ onMounted(() => {
 		flex-direction: column;
 		overflow: hidden;
 
-		:deep(.el-card__header) {
-			flex-shrink: 0;
-		}
-
 		:deep(.el-card__body) {
 			flex: 1;
 			overflow: hidden;
@@ -847,68 +833,22 @@ onMounted(() => {
 		}
 	}
 
-	.header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-
-		h3 {
-			margin: 0;
-			font-size: 1.429rem /* 原值: 20px */;
-			color: #303133;
-		}
-	}
-
+	/* 概览卡：4 个一行，浅底统一卡（§4.8） */
 	.stats-cards {
 		display: grid;
 		grid-template-columns: repeat(4, 1fr);
-		gap: 20px;
-		margin-bottom: 16px;
+		gap: var(--card-gap-compact);
+		margin-bottom: var(--space-4);
 		flex-shrink: 0;
-
-		.stat-card {
-			padding: 20px;
-			border-radius: 8px;
-			text-align: center;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			color: white;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-			&.published {
-				background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-			}
-
-			&.pending {
-				background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-			}
-
-			&.featured {
-				background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
-			}
-
-			.stat-value {
-				font-size: 2.286rem /* 原值: 32px */;
-				font-weight: bold;
-				margin-bottom: 8px;
-			}
-
-			.stat-label {
-				font-size: 1rem /* 原值: 14px */;
-				opacity: 0.9;
-			}
-		}
 	}
 
 	.type-icon {
-		font-size: 1.286rem /* 原值: 18px */;
+		font-size: var(--text-h3);
+		color: var(--ink-500);
+	}
 
-		&.video {
-			color: #ff6b6b;
-		}
-
-		&.article {
-			color: #f7b267;
-		}
+	.cell-muted {
+		color: var(--ink-400);
 	}
 
 	// 教程标签页样式
@@ -917,6 +857,7 @@ onMounted(() => {
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
+		margin-top: var(--space-5);
 
 		:deep(.el-tabs__content) {
 			flex: 1;
@@ -928,7 +869,7 @@ onMounted(() => {
 		}
 
 		:deep(.el-tabs__header) {
-			margin-bottom: 16px;
+			margin-bottom: var(--space-4);
 			flex-shrink: 0;
 		}
 
@@ -937,40 +878,40 @@ onMounted(() => {
 		}
 
 		:deep(.el-tabs__item) {
-			font-size: 1rem /* 原值: 14px */;
-			padding: 0 20px;
-			transition: all 0.3s;
+			font-size: var(--text-body);
+			padding: 0 var(--space-5);
+			transition: color var(--duration-fast) var(--ease-out);
 
 			&:hover {
-				color: #667eea;
+				color: var(--brand-500);
 			}
 
 			&.is-active {
-				color: #667eea;
-				font-weight: 600;
+				color: var(--brand-500);
+				font-weight: var(--weight-semibold);
 			}
 		}
 
 		:deep(.el-tabs__active-bar) {
-			background-color: #667eea;
+			background-color: var(--brand-500);
 			height: 3px;
-			border-radius: 2px;
+			border-radius: var(--radius-sm);
 		}
 
 		.tab-label {
 			display: flex;
 			align-items: center;
-			gap: 8px;
+			gap: var(--space-2);
 			position: relative;
 
 			.tab-badge {
 				:deep(.el-badge__content) {
-					font-size: 0.75rem /* 原值: 11px */;
+					font-size: var(--text-caption);
 					height: 16px;
 					line-height: 16px;
 					padding: 0 5px;
 					min-width: 18px;
-					border-radius: 8px;
+					border-radius: var(--radius-md);
 				}
 			}
 		}
@@ -978,48 +919,30 @@ onMounted(() => {
 
 	// 表格样式优化
 	:deep(.el-table) {
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		overflow: hidden;
 
 		.el-table__header th {
-			background-color: #fafafa;
-			font-weight: 600;
-			color: #606266;
+			background-color: var(--canvas-sunken);
+			font-weight: var(--weight-semibold);
+			color: var(--ink-500);
 		}
 
 		.el-table__body tr:hover > td {
-			background-color: #f5f7fa;
+			background-color: var(--canvas);
 		}
 
-		// 优化操作列的内边距
+		// 优化操作列/单元格的内边距
 		.el-table__cell {
-			padding: 12px 8px;
+			padding: var(--space-3) var(--space-2);
 
-			// 操作列右侧单元格减少右边距
 			&:last-child {
-				padding-right: 12px;
-			}
-		}
-
-		// 操作按钮之间的间距
-		.el-button + .el-button {
-			margin-left: 6px;
-		}
-
-		// 优化按钮组样式
-		.el-button-group {
-			.el-button {
-				padding: 5px 8px;
-
-				.el-icon {
-					font-size: 1rem /* 原值: 14px */;
-				}
+				padding-right: var(--space-3);
 			}
 		}
 
 		// 表格滚动区域自定义滚动条
 		.el-table__body-wrapper {
-			// 滚动条覆盖显示
 			&::-webkit-scrollbar {
 				width: 8px;
 				height: 8px;
@@ -1030,18 +953,18 @@ onMounted(() => {
 			}
 
 			&::-webkit-scrollbar-thumb {
-				background: rgba(144, 147, 153, 0.3);
-				border-radius: 4px;
-				transition: background 0.3s;
+				background: var(--line-strong);
+				border-radius: var(--radius-sm);
+				transition: background var(--duration-fast) var(--ease-out);
 
 				&:hover {
-					background: rgba(144, 147, 153, 0.5);
+					background: var(--ink-400);
 				}
 			}
 
 			// Firefox 滚动条
 			scrollbar-width: thin;
-			scrollbar-color: rgba(144, 147, 153, 0.3) transparent;
+			scrollbar-color: var(--line-strong) transparent;
 		}
 	}
 }
