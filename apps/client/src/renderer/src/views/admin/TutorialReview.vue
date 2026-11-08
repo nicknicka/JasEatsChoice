@@ -18,6 +18,19 @@
         </div>
       </template>
 
+      <div
+        v-if="auditFeedback"
+        class="audit-feedback"
+        :class="`audit-feedback--${auditFeedback.type}`"
+        role="status"
+      >
+        <el-icon :size="16">
+          <CircleCheck v-if="auditFeedback.type === 'success'" />
+          <CircleClose v-else />
+        </el-icon>
+        <span>{{ auditFeedback.text }}</span>
+      </div>
+
       <!-- 加载状态 -->
       <div v-if="loading" v-loading="loading" style="min-height: 200px"></div>
 
@@ -67,8 +80,8 @@
         <el-table-column label="操作" width="150" fixed="right" align="center">
           <template #default="{ row }">
             <RowActions
-              :primary="{ text: '查看', onClick: () => viewDetail(row) }"
-              :items="[{ text: '通过', onClick: () => openReview(row) }]"
+              :primary="{ text: '通过', onClick: () => openReview(row) }"
+              :items="[{ text: '查看', onClick: () => viewDetail(row) }]"
               :max-visible="1"
             />
           </template>
@@ -90,9 +103,9 @@
     <!-- 审核对话框 -->
     <el-dialog
       v-model="showReviewDialog"
-      :title="`审核教程：${currentTutorial?.title}`"
+      :title="dialogTitle"
       width="800px"
-      @close="reviewForm.decision = 'approve'; reviewForm.comment = ''"
+      @close="resetReviewForm"
     >
       <div v-if="currentTutorial" class="tutorial-preview">
         <!-- 封面图 -->
@@ -137,34 +150,41 @@
           <p v-if="currentTutorial.aiModelVersion">AI 模型版本：{{ currentTutorial.aiModelVersion }}</p>
         </div>
 
-        <!-- 审核表单 -->
-        <el-divider />
-        <el-form :model="reviewForm" label-width="100px">
-          <el-form-item label="审核决定">
-            <el-radio-group v-model="reviewForm.decision">
-              <el-radio value="approve">通过并发布</el-radio>
-              <el-radio value="approve_featured">通过并设为精选 ⭐</el-radio>
-              <el-radio value="reject">拒绝</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="审核意见">
-            <el-input v-model="reviewForm.comment" type="textarea" :rows="4" placeholder="请输入审核意见（选填）" />
-          </el-form-item>
-        </el-form>
+        <!-- 审核表单：查看模式只读，不渲染任何写库动作 -->
+        <template v-if="dialogMode === 'review'">
+          <el-divider />
+          <el-form :model="reviewForm" label-width="100px">
+            <el-form-item label="审核决定">
+              <el-radio-group v-model="reviewForm.decision">
+                <el-radio value="approve">通过并发布</el-radio>
+                <el-radio value="approve_featured">通过并设为精选 ⭐</el-radio>
+                <el-radio value="reject">拒绝</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="审核意见">
+              <el-input v-model="reviewForm.comment" type="textarea" :rows="4" placeholder="请输入审核意见（选填）" />
+            </el-form-item>
+          </el-form>
+        </template>
       </div>
       <template #footer>
-        <el-button @click="showReviewDialog = false">取消</el-button>
-        <el-button :type="reviewForm.decision === 'reject' ? 'danger' : 'primary'" @click="submitReview">
-          {{ reviewForm.decision === 'reject' ? '拒绝' : '通过' }}
-        </el-button>
+        <template v-if="dialogMode === 'review'">
+          <el-button @click="showReviewDialog = false">取消</el-button>
+          <el-button :type="reviewForm.decision === 'reject' ? 'danger' : 'primary'" @click="submitReview">
+            {{ reviewForm.decision === 'reject' ? '拒绝' : '通过' }}
+          </el-button>
+        </template>
+        <template v-else>
+          <el-button @click="showReviewDialog = false">关闭</el-button>
+        </template>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { Document, VideoCamera } from '@element-plus/icons-vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { CircleCheck, CircleClose, Document, VideoCamera } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '../../utils/api.js'
 import { getAvatarUrl } from '../../utils/avatar'
@@ -189,6 +209,9 @@ const pendingTutorials = ref([])
 const loading = ref(false)
 const currentTutorial = ref(null)
 const showReviewDialog = ref(false)
+const dialogMode = ref('view')
+const auditFeedback = ref(null)
+let feedbackTimer = null
 
 const resolveTutorialImage = (url) => {
   const rawUrl = String(url || '').trim().replace(/\\/g, '/')
@@ -209,8 +232,25 @@ const normalizeTutorial = (tutorial = {}) => ({
   isOfficial: tutorial.isOfficial ?? tutorial.is_official ?? tutorial.official ?? false
 })
 
-const reviewForm = ref({ decision: 'approve', comment: '' })
+const reviewForm = ref({ decision: '', comment: '' })
 const pagination = ref({ page: 1, size: 10, total: 0 })
+
+const dialogTitle = computed(() => dialogMode.value === 'review'
+  ? `审核教程：${currentTutorial.value?.title || ''}`
+  : `教程详情：${currentTutorial.value?.title || ''}`)
+
+const resetReviewForm = () => {
+  reviewForm.value = { decision: '', comment: '' }
+}
+
+const showAuditFeedback = (type, text) => {
+  auditFeedback.value = { type, text }
+  if (feedbackTimer) clearTimeout(feedbackTimer)
+  feedbackTimer = setTimeout(() => {
+    auditFeedback.value = null
+    feedbackTimer = null
+  }, 5000)
+}
 
 const fetchPendingTutorials = async () => {
   loading.value = true
@@ -243,16 +283,19 @@ const fetchPendingTutorials = async () => {
 // 关联信息列只保留可读的菜品关联，模型版本仍留在详情弹窗里
 const getRelationText = (row) => (row.linkedDishId ? `菜品 #${row.linkedDishId}` : '-')
 
-// 「通过」与「查看」都进同一个审核对话框，区别只在于显式把决定预置成通过
+// 查看只打开详情；审核通过必须走独立入口并显式预选 approve。
 const openReview = (tutorial) => {
-  viewDetail(tutorial)
-  reviewForm.value.decision = 'approve'
+  currentTutorial.value = normalizeTutorial(tutorial)
+  dialogMode.value = 'review'
+  reviewForm.value = { decision: 'approve', comment: '' }
+  showReviewDialog.value = true
 }
 
 const viewDetail = (tutorial) => {
   currentTutorial.value = normalizeTutorial(tutorial)
+  dialogMode.value = 'view'
+  resetReviewForm()
   showReviewDialog.value = true
-  reviewForm.value = { decision: 'approve', comment: '' }
 }
 
 const approveTutorial = async () => {
@@ -268,8 +311,10 @@ const approveTutorial = async () => {
       setFeatured: setFeatured
     })
     if (response?.success) {
+      const title = currentTutorial.value?.title || '未命名教程'
       ElMessage.success('审核通过！')
       showReviewDialog.value = false
+      showAuditFeedback('success', `已通过：《${title}》`)
       fetchPendingTutorials()
     } else throw new Error('操作失败')
   } catch (error) {
@@ -289,8 +334,10 @@ const rejectTutorial = async () => {
       comment: reviewForm.value.comment
     })
     if (response?.success) {
+      const title = currentTutorial.value?.title || '未命名教程'
       ElMessage.success('已拒绝该教程')
       showReviewDialog.value = false
+      showAuditFeedback('danger', `已拒绝：《${title}》`)
       fetchPendingTutorials()
     } else throw new Error('操作失败')
   } catch (error) {
@@ -317,6 +364,7 @@ const getDifficultyName = (difficulty) => {
 const handlePageChange = (page) => { pagination.value.page = page; fetchPendingTutorials() }
 
 onMounted(() => { fetchPendingTutorials() })
+onBeforeUnmount(() => { if (feedbackTimer) clearTimeout(feedbackTimer) })
 </script>
 
 <style scoped lang="less">
@@ -324,6 +372,7 @@ onMounted(() => { fetchPendingTutorials() })
 
 .tutorial-review-container { padding: var(--card-padding-compact) var(--page-gutter); background: var(--canvas); max-width: 1440px; width: 100%; margin: 0 auto; box-sizing: border-box;
   .review-page-header { margin-bottom: var(--space-6); }
+  .audit-feedback { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); font-size: var(--text-body-sm); font-weight: var(--weight-medium); &--success { color: var(--success); background: var(--success-bg); } &--danger { color: var(--danger); background: var(--danger-bg); } }
   /* 长 ID 不可拆：等宽数字 + 单行（§4.3 §5.4） */
   .cell-id { font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .type-cell { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--ink-700); white-space: nowrap; }
