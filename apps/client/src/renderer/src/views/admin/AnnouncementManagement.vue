@@ -58,9 +58,9 @@
           </el-form-item>
           <el-form-item label="状态">
             <el-select v-model="filters.status" placeholder="全部" clearable style="width: 130px">
-              <el-option label="已发布" value="active" />
+              <el-option label="生效中" value="active" />
               <el-option label="草稿" value="draft" />
-              <el-option label="已下线" value="inactive" />
+              <el-option label="已下架" value="inactive" />
             </el-select>
           </el-form-item>
           <el-form-item label="目标群体">
@@ -485,8 +485,8 @@ const targetAudienceOptions = [
 
 const statsConfig = [
   { key: 'totalCount', label: '总公告数', icon: Document },
-  { key: 'activeCount', label: '已发布', icon: SuccessFilled },
-  { key: 'draftCount', label: '草稿箱', icon: CircleClose },
+  { key: 'activeCount', label: '生效中', icon: SuccessFilled },
+  { key: 'draftCount', label: '草稿', icon: CircleClose },
   { key: 'todayNewCount', label: '今日新增', icon: Calendar }
 ]
 
