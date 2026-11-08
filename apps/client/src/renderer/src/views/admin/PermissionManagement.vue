@@ -1,20 +1,27 @@
 <template>
   <div class="permission-management-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>权限管理</h1>
-      <p class="subtitle">管理系统权限和菜单</p>
-    </div>
-
-    <!-- 操作栏 -->
-    <div class="toolbar">
-      <el-button type="primary" :icon="Plus" @click="handleCreate">新建权限</el-button>
-      <el-button :icon="Refresh" @click="fetchPermissionTree">刷新</el-button>
-    </div>
+    <!-- 页头：统一标题容器 + 右侧动作区（§4.7） -->
+    <AppPageHeader title="权限管理" subtitle="管理系统权限和菜单" :compact="true">
+      <template #actions>
+        <el-button type="primary" :icon="ElIcons.Plus" @click="handleCreate">新建权限</el-button>
+        <el-button :icon="ElIcons.Refresh" @click="fetchPermissionTree">刷新</el-button>
+      </template>
+    </AppPageHeader>
 
     <!-- 权限树表格 -->
     <el-card class="table-card" shadow="never">
+      <!-- 空数据：紧凑中文空状态替换表体（§4.3、§5.5） -->
+      <AppEmptyState
+        v-if="!loading && permissionList.length === 0"
+        compact
+        icon="Lock"
+        description="还没有权限数据，先新建一条权限试试"
+        action-text="新建权限"
+        @action="handleCreate"
+      />
+
       <el-table
+        v-else
         :data="permissionList"
         v-loading="loading"
         row-key="permissionId"
@@ -22,7 +29,8 @@
         stripe
         default-expand-all
       >
-        <el-table-column prop="permissionName" label="权限名称" min-width="200" />
+        <!-- 权限名称列固定，长表横向滚动时保留层级锚点（§4.3） -->
+        <el-table-column prop="permissionName" label="权限名称" min-width="200" fixed="left" />
         <el-table-column prop="permissionCode" label="权限编码" min-width="180" />
         <el-table-column label="资源类型" width="120">
           <template #default="{ row }">
@@ -32,7 +40,15 @@
           </template>
         </el-table-column>
         <el-table-column prop="path" label="路由路径" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="icon" label="图标" width="100" />
+        <!-- 图标列渲染真实线性图标，缺值给占位，不再展示纯文本图标名（§4.9） -->
+        <el-table-column label="图标" width="80" align="center">
+          <template #default="{ row }">
+            <el-icon v-if="resolveIcon(row.icon)" class="cell-icon" :title="row.icon">
+              <component :is="resolveIcon(row.icon)" />
+            </el-icon>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="description" label="描述" min-width="150" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
@@ -44,9 +60,12 @@
         <el-table-column prop="sortOrder" label="排序" width="80" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="success" size="small" link @click="handleCreateChild(row)">添加子权限</el-button>
-            <el-button type="danger" size="small" link @click="handleDelete(row)">删除</el-button>
+            <!-- 行操作统一规则：删除这类破坏性动作收进「更多」；每行最多 2 个可见动作 -->
+            <RowActions
+              :primary="{ text: '编辑', onClick: () => handleEdit(row) }"
+              :items="rowActions(row)"
+              :max-visible="1"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -113,8 +132,11 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Refresh } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import * as ElIcons from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import RowActions from '@/components/common/RowActions.vue'
 import { getPermissionTree, createPermission, updatePermission, deletePermission } from '@/api/admin'
 
 const loading = ref(false)
@@ -155,8 +177,9 @@ const dialogTitle = computed(() => {
 
 // 获取资源类型颜色
 const getResourceTypeColor = (type) => {
+  // 资源类型是分类不是状态；菜单取信息蓝、接口取警示橙，保持评审认定的蓝/橙区分（§3.1）
   const colors = {
-    'MENU': 'primary',
+    'MENU': 'info',
     'BUTTON': 'success',
     'API': 'warning'
   }
@@ -240,7 +263,7 @@ const handleEdit = (row) => {
   dialogVisible.value = true
 }
 
-// 删除权限
+// 删除权限：二次确认由 RowActions 的「更多」菜单承担，避免叠加两层确认（§4.6、行操作统一规则）
 const handleDelete = async (row) => {
   try {
     // 检查是否有子权限
@@ -248,16 +271,6 @@ const handleDelete = async (row) => {
       ElMessage.warning('该权限下有子权限，无法删除')
       return
     }
-
-    await ElMessageBox.confirm(
-      `确定要删除权限 "${row.permissionName}" 吗？此操作不可恢复！`,
-      '警告',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
 
     console.log('[权限管理] 删除权限:', row.permissionId)
     const response = await deletePermission(row.permissionId)
@@ -269,12 +282,19 @@ const handleDelete = async (row) => {
       ElMessage.error(response?.message || '删除失败')
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('[权限管理] 删除权限失败:', error)
-      ElMessage.error('删除权限失败: ' + (error.message || '网络错误'))
-    }
+    console.error('[权限管理] 删除权限失败:', error)
+    ElMessage.error('删除权限失败: ' + (error.message || '网络错误'))
   }
 }
+
+// 把权限的 icon 名解析为真实 Element Plus 线性图标；未注册的名字返回 null（§4.9）
+const resolveIcon = (name) => (name && ElIcons[name]) || null
+
+// 行操作：破坏性动作（删除）带 danger，由 RowActions 收进「更多」并二次确认
+const rowActions = (row) => [
+  { text: '添加子权限', onClick: () => handleCreateChild(row) },
+  { text: '删除', danger: true, onClick: () => handleDelete(row) }
+]
 
 // 提交权限
 const submitPermission = async () => {
@@ -314,24 +334,43 @@ onMounted(() => {
 
 <style scoped lang="less">
 .permission-management-container {
-  .page-header {
-    margin-bottom: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
+  .table-card {
+    /* 长表滚动时表头可辨：浅底色 + 中量字重（§4.3） */
+    :deep(.el-table__header th) {
+      background-color: var(--canvas-sunken);
+      font-weight: var(--weight-semibold);
     }
 
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
+    /* 长表行 hover 高亮，避免横向读串行（§3.5 高频微交互用 CSS transition） */
+    :deep(.el-table__body tr:hover > td) {
+      background-color: var(--canvas-sunken);
+      transition: background-color var(--duration-fast) var(--ease-out);
+    }
+
+    /* 树展开/收起：过渡取 token，并放大命中区域 + hover 提示（§3.5） */
+    :deep(.el-table__expand-icon) {
+      transition: transform var(--duration-fast) var(--ease-out);
+      padding: var(--space-2);
+      margin: calc(var(--space-2) * -1);
+      border-radius: var(--radius-sm);
+    }
+
+    :deep(.el-table__expand-icon:hover) {
+      background-color: var(--canvas-sunken);
     }
   }
 
-  .toolbar {
-    margin-bottom: 20px;
+  /* 权限图标：中性色（§4.9） */
+  .cell-icon {
+    color: var(--ink-500);
+    vertical-align: middle;
   }
 }
 </style>
