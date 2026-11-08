@@ -695,8 +695,7 @@ const fetchData = async () => {
 
     if (response && response.success) {
       tableData.value = response.records || []
-      // 后端分页插件缺失时返回 total=0 与全量记录，此处以实际记录数兜底（§5.4）
-      pagination.total = response.total || tableData.value.length
+      pagination.total = response.total ?? 0
       lastRefreshAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
     } else {
       tableData.value = []

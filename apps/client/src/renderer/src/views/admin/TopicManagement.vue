@@ -359,7 +359,7 @@ const fetchTopics = async () => {
     // 处理分页响应
     if (response && response.records) {
       topics.value = response.records
-      pagination.total = response.total || response.records.length
+      pagination.total = response.total ?? 0
     } else if (Array.isArray(response)) {
       topics.value = response
       pagination.total = response.length

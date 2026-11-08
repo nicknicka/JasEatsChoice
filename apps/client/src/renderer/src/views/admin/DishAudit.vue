@@ -264,8 +264,7 @@ const fetchAuditList = async () => {
     if (response) {
       const records = response.records || []
       auditList.value = records
-      // 后端分页插件缺失时只回传 total=0，此处以实际记录数兜底
-      pagination.total = response.total || records.length
+      pagination.total = response.total ?? 0
       stats.pending = records.filter((d) => d.auditStatus === 'PENDING').length
     }
   } catch (error) {

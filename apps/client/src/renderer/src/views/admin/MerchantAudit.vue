@@ -140,14 +140,13 @@ const fetchPendingList = async () => {
 
     if (response?.records) {
       pendingList.value = response.records
-      // 后端分页插件缺失时会返回 total=0 与全量记录，此时以实际记录数兜底
-      pagination.total = response.total || response.records.length
+      pagination.total = response.total ?? 0
       stats.pending = pagination.total
       stats.todayApproved = response.todayApproved || 0
       stats.approvalRate = response.approvalRate || 0
     } else if (response?.code === '200' || response?.code === 200) {
       pendingList.value = response.data?.records || response.data?.list || response.data || []
-      pagination.total = response.data?.total || pendingList.value.length
+      pagination.total = response.data?.total ?? 0
       stats.pending = pagination.total
       stats.todayApproved = response.data?.todayApproved || 0
       stats.approvalRate = response.data?.approvalRate || 0

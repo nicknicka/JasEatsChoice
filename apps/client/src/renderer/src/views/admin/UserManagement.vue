@@ -231,8 +231,7 @@ const fetchUserList = async () => {
     // api.js返回的是response.data，所以response就是IPage对象
     if (response) {
       userList.value = response.records || []
-      // 后端分页插件缺失时返回 total=0 与全量记录，此处以实际记录数兜底
-      pagination.total = response.total || userList.value.length
+      pagination.total = response.total ?? 0
       console.log('[用户管理] 获取用户列表成功, 总数:', pagination.total, '记录数:', userList.value.length)
     }
   } catch (error) {

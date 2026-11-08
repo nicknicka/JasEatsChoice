@@ -91,17 +91,21 @@ test.describe('模块十四：管理员端-系统管理', () => {
   test('14.4 公告管理', async ({ page, request }) => {
     markRunning('14.4')
     try {
-      const announcements = recordsOf(await apiRequest(page, request, '/admin/announcements?page=1&pageSize=10'))
+      const announcementPage = await apiRequest(page, request, '/admin/announcements?page=1&pageSize=10')
+      const announcements = recordsOf(announcementPage)
       await page.goto('/admin/announcements')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
       expect(announcements.length, '公告接口应有可验证记录').toBeGreaterThan(0)
+      // 分页契约：有记录时接口必须给出真实 total（#433 回归防线，前端不再用当前页记录数兜底）
+      expect(announcementPage.total, '公告接口应有真实 total').toBeGreaterThan(0)
+      expect(announcementPage.total, 'total 不应小于当前页记录数').toBeGreaterThanOrEqual(announcements.length)
       const rows = page.locator('.el-table__body-wrapper tbody tr')
       await expect(rows).toHaveCount(announcements.length, { timeout: 10000 })
       await expect(rows.first()).toContainText(announcements[0].title)
       await expect(rows.first()).toContainText(announcements[0].content)
 
-      markPassed('14.4', `公告表 ${announcements.length} 行，首行标题/内容与接口一致`)
+      markPassed('14.4', `公告表 ${announcements.length} 行，首行标题/内容与接口一致；total=${announcementPage.total}`)
     } catch (e) { markFailed('14.4', e.message.slice(0, 50)); throw e }
   })
 
