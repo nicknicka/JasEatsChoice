@@ -1,7 +1,10 @@
 package com.xx.jaseatschoicejava.config;
 
+import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,14 +19,17 @@ public class MyBatisPlusConfig {
 
     /**
      * MyBatis-Plus拦截器配置
-     * 在 3.5.11+ 版本中，分页功能已自动配置
-     * 这里只配置乐观锁插件
+     * 分页必须显式注册 PaginationInnerInterceptor：本类自定义了 MybatisPlusInterceptor，
+     * starter 不会再补齐，缺了它 page() 不会下发改写 SQL、也不会执行 count（total 恒为 0）。
+     * 顺序按官方建议：分页 -> 乐观锁。
      */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        // 分页插件
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
         // 添加乐观锁插件
-        interceptor.addInnerInterceptor(new com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor());
+        interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         return interceptor;
     }
 

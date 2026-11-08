@@ -84,6 +84,12 @@
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
             <version>3.5.11</version>
         </dependency>
+        <!-- 3.5.9+ 起 PaginationInnerInterceptor 拆到独立模块，分页必需 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>3.5.11</version>
+        </dependency>
 
         <!-- Redis -->
         <dependency>

@@ -247,15 +247,21 @@ test.describe('模块十二：管理员端-用户与商家管理', () => {
   test('12.7 商家状态管理', async ({ page, request }) => {
     markRunning('12.7')
     try {
-      const merchants = pageRecords(await apiRequest(page, request, '/admin/merchants?page=1&pageSize=10'))
-      const target = merchants.find(merchant => merchant.auditStatus !== 'PENDING' && merchant.status !== 'PENDING')
+      // 分页生效后 pageSize 会真的限制返回条数，而首屏 10 条按 created_at 倒序全是待审核商家，
+      // 所以先按审核状态筛出非待审核商家，再把每页条数调大，让它出现在表格里。
+      const approved = pageRecords(await apiRequest(page, request, '/admin/merchants?page=1&pageSize=10&status=APPROVED'))
+      expect(approved.length, '应有已通过审核的商家').toBeGreaterThan(0)
+      const target = approved.find(merchant => merchant.auditStatus !== 'PENDING' && merchant.status !== 'PENDING')
       expect(target, '应有可打开状态弹窗的商家').toBeTruthy()
 
       await page.goto('/admin/merchants')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
-      await page.locator('.el-table__body-wrapper tbody tr')
+      await page.locator('.el-pagination .el-select').first().click()
+      await page.locator('.el-select-dropdown__item:visible').filter({ hasText: '100/page' }).first().click()
+      const targetRow = page.locator('.el-table__body-wrapper tbody tr')
         .filter({ hasText: String(target.merchantId) })
-        .locator('button:has-text("状态")').click()
+      await expect(targetRow, '目标商家应出现在表格中').toHaveCount(1, { timeout: 10000 })
+      await targetRow.locator('button:has-text("状态")').click()
 
       const dialog = page.locator('.el-message-box').filter({ hasText: '修改状态' })
       await expect(dialog).toBeVisible({ timeout: 10000 })
