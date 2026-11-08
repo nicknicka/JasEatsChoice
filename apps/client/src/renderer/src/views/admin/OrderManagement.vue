@@ -119,7 +119,7 @@
         <el-table-column prop="dishName" label="菜品名称" />
         <el-table-column prop="quantity" label="数量" width="80" />
         <el-table-column prop="price" label="单价" width="100">
-          <template #default="{ row }}">¥{{ row.price }}</template>
+          <template #default="{ row }">¥{{ row.price }}</template>
         </el-table-column>
         <el-table-column label="小计" width="100">
           <template #default="{ row }">¥{{ (row.price * row.quantity).toFixed(2) }}</template>
@@ -166,8 +166,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import AppPageHeader from '@/components/AppPageHeader.vue'
-import AppStatCard from '@/components/AppStatCard.vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
 import { getOrderList, getOrderDetail, updateOrderStatus } from '@/api/admin'
 

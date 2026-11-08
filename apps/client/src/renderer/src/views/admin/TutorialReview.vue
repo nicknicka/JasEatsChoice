@@ -160,7 +160,7 @@ import { getAvatarUrl } from '../../utils/avatar'
 import { API_CONFIG } from '../../config/index.js'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import AppPageHeader from '@/components/AppPageHeader.vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
 
 // 配置 marked 选项
