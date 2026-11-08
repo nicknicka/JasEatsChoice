@@ -262,15 +262,9 @@ const fetchPendingTutorials = async () => {
     if (response && response.records) {
       pendingTutorials.value = response.records.map(normalizeTutorial)
       pagination.value.total = response.total ?? 0
-    } else if (response && response.data && response.data.records) {
-      pendingTutorials.value = response.data.records.map(normalizeTutorial)
-      pagination.value.total = response.data.total ?? 0
     } else if (Array.isArray(response)) {
       pendingTutorials.value = response.map(normalizeTutorial)
       pagination.value.total = response.length
-    } else if (response && response.data && Array.isArray(response.data)) {
-      pendingTutorials.value = response.data.map(normalizeTutorial)
-      pagination.value.total = response.data.length || 0
     }
   } catch (error) {
     console.error('获取待审核列表失败:', error)

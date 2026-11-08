@@ -144,12 +144,6 @@ const fetchPendingList = async () => {
       stats.pending = pagination.total
       stats.todayApproved = response.todayApproved || 0
       stats.approvalRate = response.approvalRate || 0
-    } else if (response?.code === '200' || response?.code === 200) {
-      pendingList.value = response.data?.records || response.data?.list || response.data || []
-      pagination.total = response.data?.total ?? 0
-      stats.pending = pagination.total
-      stats.todayApproved = response.data?.todayApproved || 0
-      stats.approvalRate = response.data?.approvalRate || 0
     } else {
       console.warn('获取待审核商家失败，接口返回异常:', response)
       resetPendingStats()
