@@ -191,7 +191,7 @@
               <StatusTag :status="statusKey(row.status)" />
             </template>
           </el-table-column>
-          <el-table-column label="时间" width="188">
+          <el-table-column label="时间" width="208">
             <template #default="{ row }">
               <div class="time-cell">
                 <div>
