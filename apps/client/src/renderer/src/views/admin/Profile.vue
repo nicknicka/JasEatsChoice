@@ -8,11 +8,18 @@
 
     <!-- 个人信息卡片 -->
     <el-card class="profile-card" shadow="never">
-      <el-form :model="profileForm" :rules="rules" ref="profileFormRef" label-width="120px">
+      <el-form ref="profileFormRef" :model="profileForm" :rules="rules" label-width="120px">
         <el-divider content-position="left">基本信息</el-divider>
 
         <el-form-item label="用户名">
-          <el-input v-model="profileForm.username" disabled />
+          <div class="readonly-field">
+            <el-input v-model="profileForm.username" disabled>
+              <template #suffix>
+                <el-icon class="readonly-icon"><Lock /></el-icon>
+              </template>
+            </el-input>
+            <span class="readonly-hint">用户名不可修改</span>
+          </div>
         </el-form-item>
 
         <el-form-item label="真实姓名" prop="realName">
@@ -39,15 +46,13 @@
               :before-upload="beforeAvatarUpload"
               :http-request="uploadAvatar"
             >
-              <el-button size="small" type="primary">点击上传</el-button>
+              <el-button size="small">点击上传</el-button>
             </el-upload>
           </div>
         </el-form-item>
 
         <el-form-item>
-          <el-button type="primary" @click="handleSubmit" :loading="loading">
-            保存修改
-          </el-button>
+          <el-button type="primary" :loading="loading" @click="handleSubmit"> 保存修改 </el-button>
           <el-button @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
@@ -65,7 +70,11 @@
         </el-descriptions-item>
         <el-descriptions-item label="账号状态">
           <el-tooltip
-            :content="profileForm.status === 'ACTIVE' ? '账号功能正常，可以正常使用系统所有功能' : '账号已被禁用，无法登录和使用系统，请联系超级管理员'"
+            :content="
+              profileForm.status === 'ACTIVE'
+                ? '账号功能正常，可以正常使用系统所有功能'
+                : '账号已被禁用，无法登录和使用系统，请联系超级管理员'
+            "
             placement="top"
           >
             <el-tag :type="profileForm.status === 'ACTIVE' ? 'success' : 'danger'">
@@ -74,7 +83,7 @@
           </el-tooltip>
         </el-descriptions-item>
         <el-descriptions-item label="创建时间">
-          {{ profileForm.createdAt }}
+          {{ formatTime(profileForm.createdAt) || '-' }}
         </el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -84,8 +93,10 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Lock } from '@element-plus/icons-vue'
 import { getAdminInfo } from '@/utils/auth'
 import { updateAdminProfile } from '@/api/admin'
+import { formatTime } from '@/utils/formatters'
 import { getAvatarUrl } from '@/utils/avatar'
 import api from '@/utils/api'
 
@@ -112,12 +123,8 @@ const rules = {
     { required: true, message: '请输入真实姓名', trigger: 'blur' },
     { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
   ],
-  phone: [
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-  ],
-  email: [
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-  ]
+  phone: [{ pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }],
+  email: [{ type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }]
 }
 
 // 初始化表单数据
@@ -278,21 +285,43 @@ onMounted(() => {
     margin-bottom: 20px;
 
     h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
+      font-size: var(--text-h1);
+      color: var(--ink-900);
+      margin: 0 0 var(--space-2) 0;
     }
 
     .subtitle {
-      color: #909399;
+      color: var(--ink-500);
       margin: 0;
-      font-size: 1rem /* 原值: 14px */;
+      font-size: var(--text-body);
     }
   }
 
   .profile-card,
   .role-card {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
+  }
+
+  /* 基本信息表单限宽：label 120px + 输入区约 560px（§4.4 的短字段可读性） */
+  .profile-card :deep(.el-form) {
+    max-width: 680px;
+  }
+
+  .readonly-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    width: 100%;
+  }
+
+  .readonly-icon {
+    color: var(--ink-400);
+  }
+
+  .readonly-hint {
+    color: var(--ink-500);
+    font-size: var(--text-caption);
+    line-height: 18px;
   }
 
   .avatar-upload {
