@@ -23,11 +23,11 @@
             v-model="searchForm.keyword"
             placeholder="搜索菜品名称、商家名称"
             clearable
-            class="filter-keyword"
+            style="width: 200px"
           />
         </el-form-item>
         <el-form-item label="审核状态">
-          <el-select v-model="searchForm.auditStatus" placeholder="全部" clearable class="filter-status">
+          <el-select v-model="searchForm.auditStatus" placeholder="全部" clearable style="width: 120px">
             <el-option label="待审核" value="PENDING" />
             <el-option label="已通过" value="APPROVED" />
             <el-option label="已拒绝" value="REJECTED" />
@@ -41,7 +41,7 @@
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             clearable
-            class="filter-date"
+            style="width: 220px"
           />
         </el-form-item>
         <el-form-item class="filter-actions">
@@ -388,19 +388,6 @@ onMounted(() => {
 
     .search-form {
       margin-bottom: 0;
-    }
-
-    /* 筛选控件收在一行内，避免折行后右侧留空（§4.4） */
-    .filter-keyword {
-      width: 200px;
-    }
-
-    .filter-status {
-      width: 120px;
-    }
-
-    .filter-date {
-      width: 240px;
     }
   }
 
