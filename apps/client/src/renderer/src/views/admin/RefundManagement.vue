@@ -232,10 +232,10 @@ const processForm = reactive({
   comment: ''
 })
 
-// 状态统一映射到 StatusTag 词典：橙=待处理、灰=进行中、绿=完成、红=拒绝
+// 状态统一映射到 StatusTag 词典：橙=待处理/待审核、蓝=处理中、绿=已通过/完成、红=已拒绝/失败
 const STATUS_TAG_KEYS = Object.freeze({
   PENDING: 'pending',
-  APPROVED: 'processing',
+  APPROVED: 'approved',
   PROCESSING: 'processing',
   REJECTED: 'rejected',
   COMPLETED: 'completed',
