@@ -6,36 +6,45 @@
       <p class="subtitle">管理系统角色和权限分配</p>
     </div>
 
-    <!-- 操作栏 -->
-    <div class="toolbar">
-      <el-button type="primary" :icon="Plus" @click="handleCreate">新建角色</el-button>
-    </div>
-
     <!-- 角色列表 -->
     <el-card class="table-card" shadow="never">
-      <el-table :data="roleList" v-loading="loading" stripe>
-        <el-table-column prop="roleId" label="角色ID" width="100" />
-        <el-table-column prop="roleName" label="角色名称" min-width="150" />
-        <el-table-column prop="roleCode" label="角色编码" width="180" />
-        <el-table-column prop="description" label="描述" min-width="200" />
-        <el-table-column prop="permissionCount" label="权限数量" width="100" align="center">
+      <template #header>
+        <div class="table-card-header">
+          <span>角色列表</span>
+          <el-button type="primary" :icon="Plus" @click="handleCreate">新建角色</el-button>
+        </div>
+      </template>
+
+      <el-table v-loading="loading" :data="roleList" stripe>
+        <el-table-column prop="roleId" label="角色ID" width="72" />
+        <el-table-column prop="roleName" label="角色名称" min-width="140" />
+        <el-table-column prop="roleCode" label="角色编码" width="160" show-overflow-tooltip />
+        <el-table-column prop="description" label="描述" min-width="160" show-overflow-tooltip />
+        <el-table-column label="权限数量" width="80" align="center">
           <template #default="{ row }">
-            <el-tag type="info">{{ row.permissionCount || 0 }}</el-tag>
+            <span class="permission-count">{{ row.permissionCount || 0 }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column label="状态" width="80">
           <template #default="{ row }">
             <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
               {{ row.status === 'ACTIVE' ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="创建时间" width="160">
           <template #default="{ row }">
-            <el-button type="primary" size="small" link @click="handleAssignPermissions(row)">分配权限</el-button>
-            <el-button type="warning" size="small" link @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" size="small" link @click="handleDelete(row)" v-if="row.roleCode !== 'SUPER_ADMIN'">删除</el-button>
+            <span class="cell-time">{{ formatTime(row.createdAt) || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <!-- 分配权限和编辑先弹对话框；删除等立即生效动作收进更多菜单（#441） -->
+            <RowActions
+              :primary="{ text: '分配权限', onClick: () => handleAssignPermissions(row) }"
+              :items="rowActions(row)"
+              :max-visible="1"
+            />
           </template>
         </el-table-column>
       </el-table>
@@ -48,15 +57,24 @@
       width="500px"
       :close-on-click-modal="false"
     >
-      <el-form :model="roleForm" :rules="roleRules" ref="roleFormRef" label-width="90px">
+      <el-form ref="roleFormRef" :model="roleForm" :rules="roleRules" label-width="90px">
         <el-form-item label="角色名称" prop="roleName">
           <el-input v-model="roleForm.roleName" placeholder="请输入角色名称" />
         </el-form-item>
         <el-form-item label="角色编码" prop="roleCode">
-          <el-input v-model="roleForm.roleCode" placeholder="如：ADMIN, AUDITOR" :disabled="isEdit" />
+          <el-input
+            v-model="roleForm.roleCode"
+            placeholder="如：ADMIN, AUDITOR"
+            :disabled="isEdit"
+          />
         </el-form-item>
         <el-form-item label="描述" prop="description">
-          <el-input v-model="roleForm.description" type="textarea" :rows="3" placeholder="请输入角色描述" />
+          <el-input
+            v-model="roleForm.description"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入角色描述"
+          />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="roleForm.status">
@@ -71,7 +89,7 @@
 
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitRole" :loading="submitting">确定</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitRole">确定</el-button>
       </template>
     </el-dialog>
 
@@ -95,7 +113,7 @@
 
       <template #footer>
         <el-button @click="permissionDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitPermissions" :loading="submitting">确定</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitPermissions">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -103,9 +121,19 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getRoleList, createRole, updateRole, deleteRole, getPermissionTree, assignRolePermissions, getRolePermissions } from '@/api/admin'
+import RowActions from '@/components/common/RowActions.vue'
+import { formatTime } from '@/utils/formatters'
+import {
+  getRoleList,
+  createRole,
+  updateRole,
+  deleteRole,
+  getPermissionTree,
+  assignRolePermissions,
+  getRolePermissions
+} from '@/api/admin'
 
 const loading = ref(false)
 const roleList = ref([])
@@ -194,19 +222,18 @@ const handleEdit = (row) => {
   dialogVisible.value = true
 }
 
-// 删除角色
+// 行操作：编辑先弹对话框，删除为危险动作；超级管理员不显示删除
+const rowActions = (row) => {
+  const items = [{ text: '编辑', onClick: () => handleEdit(row) }]
+  if (row.roleCode !== 'SUPER_ADMIN') {
+    items.push({ text: '删除', danger: true, onClick: () => handleDelete(row) })
+  }
+  return items
+}
+
+// 删除角色：确认由 RowActions 的危险动作入口承担，避免叠加两层确认（§4.6、#441）
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm(
-      `确定要删除角色 "${row.roleName}" 吗？此操作不可恢复！`,
-      '警告',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-
     console.log('[角色管理] 删除角色:', row.roleId)
     const response = await deleteRole(row.roleId)
 
@@ -217,10 +244,8 @@ const handleDelete = async (row) => {
       ElMessage.error(response?.message || '删除失败')
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('[角色管理] 删除角色失败:', error)
-      ElMessage.error('删除角色失败: ' + (error.message || '网络错误'))
-    }
+    console.error('[角色管理] 删除角色失败:', error)
+    ElMessage.error('删除角色失败: ' + (error.message || '网络错误'))
   }
 }
 
@@ -326,32 +351,51 @@ onMounted(() => {
 <style scoped lang="less">
 .role-management-container {
   .page-header {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
 
     h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
+      font-size: var(--text-h1);
+      color: var(--ink-900);
+      margin: 0 0 var(--space-2) 0;
     }
 
     .subtitle {
-      color: #909399;
+      color: var(--ink-500);
       margin: 0;
-      font-size: 1rem /* 原值: 14px */;
+      font-size: var(--text-body);
     }
   }
 
-  .toolbar {
-    margin-bottom: 20px;
+  .table-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    color: var(--ink-900);
+    font-size: var(--text-h3);
+    font-weight: var(--weight-semibold);
+  }
+
+  .permission-count {
+    color: var(--ink-700);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cell-time {
+    color: var(--ink-700);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .table-card {
     .permission-tree-wrapper {
       max-height: 400px;
       overflow-y: auto;
-      border: 1px solid #dcdfe6;
-      border-radius: 4px;
-      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: var(--space-2);
     }
   }
 }
