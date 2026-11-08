@@ -1,25 +1,14 @@
 <template>
   <div class="merchant-management-container">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>商家管理</h1>
-      <p class="subtitle">管理系统所有商家</p>
-    </div>
+    <AppPageHeader title="商家管理" subtitle="管理系统所有商家" :compact="true" />
 
     <!-- 统计卡片 -->
-    <div class="stats-cards">
-      <el-card class="stat-card">
-        <el-statistic title="总商家数" :value="stats.total" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="营业中" :value="stats.active" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="待审核" :value="stats.pending" />
-      </el-card>
-      <el-card class="stat-card">
-        <el-statistic title="已暂停" :value="stats.inactive" />
-      </el-card>
+    <div class="stats-section">
+      <AppStatCard label="总商家数" :value="stats.total" icon="Shop" />
+      <AppStatCard label="营业中" :value="stats.active" icon="CircleCheck" />
+      <AppStatCard class="stat-card-pending" label="待审核" :value="stats.pending" icon="Clock" />
+      <AppStatCard label="已暂停" :value="stats.inactive" icon="CircleClose" />
     </div>
 
     <!-- 搜索栏 -->
@@ -50,19 +39,25 @@
     <!-- 商家列表 -->
     <el-card class="table-card" shadow="never">
       <el-table :data="merchantList" v-loading="loading" stripe>
-        <el-table-column prop="merchantId" label="商家ID" width="100" />
-        <el-table-column prop="name" label="商家名称" min-width="180" />
-        <el-table-column label="状态" width="100">
+        <el-table-column prop="merchantId" label="商家ID" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="cell-id">{{ row.merchantId }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="商家名称" min-width="150" show-overflow-tooltip />
+        <el-table-column label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row)">
               {{ getStatusText(row) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="address" label="地址" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="address" label="地址" min-width="170" show-overflow-tooltip />
         <el-table-column prop="phone" label="联系电话" width="140" />
-        <el-table-column prop="createdAt" label="注册时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="注册时间" width="170">
+          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" link @click="handleView(row)">查看</el-button>
             <el-button
@@ -112,7 +107,7 @@
         <el-descriptions-item label="地址" :span="2">{{ currentMerchant.address }}</el-descriptions-item>
         <el-descriptions-item label="营业时间" :span="2">{{ currentMerchant.businessHours || '-' }}</el-descriptions-item>
         <el-descriptions-item label="商家简介" :span="2">{{ currentMerchant.description || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="注册时间" :span="2">{{ currentMerchant.createdAt }}</el-descriptions-item>
+        <el-descriptions-item label="注册时间" :span="2">{{ formatTime(currentMerchant.createdAt) }}</el-descriptions-item>
       </el-descriptions>
 
       <template #footer>
@@ -163,6 +158,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import { formatTime } from '../../utils/formatters'
 import { getMerchantList, auditMerchant, updateMerchantStatus } from '@/api/admin'
 
 const loading = ref(false)
@@ -233,10 +231,11 @@ const fetchMerchantList = async () => {
 
     if (response) {
       merchantList.value = response.records || []
-      pagination.total = response.total || 0
+      // 后端分页插件缺失时返回 total=0 与全量记录，此处以实际记录数兜底
+      pagination.total = response.total || merchantList.value.length
 
       // 更新统计数据
-      stats.total = response.total || 0
+      stats.total = pagination.total
       stats.active = merchantList.value.filter(m => getMerchantDisplayStatus(m) === 'ACTIVE').length
       stats.pending = merchantList.value.filter(m => getMerchantDisplayStatus(m) === 'PENDING').length
       stats.inactive = merchantList.value.filter(m => getMerchantDisplayStatus(m) === 'INACTIVE').length
@@ -364,36 +363,30 @@ onMounted(() => {
 </script>
 
 <style scoped lang="less">
+@import '@/assets/css/nordic-theme.less';
+
 .merchant-management-container {
-  .page-header {
-    margin-bottom: 20px;
+  padding: var(--card-padding-compact) var(--page-gutter);
+  background: var(--canvas);
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 
-    h1 {
-      font-size: 1.714rem /* 原值: 24px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
-  }
-
-  .stats-cards {
+  .stats-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
+  }
 
-    .stat-card {
-      text-align: center;
-    }
+  /* 待审核是待办入口，按 §3.1 语义色给警示黄强调（§4.8） */
+  .stat-card-pending :deep(.app-stat-card__icon) {
+    color: var(--warning);
   }
 
   .search-card {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-8);
 
     .search-form {
       margin-bottom: 0;
@@ -402,10 +395,17 @@ onMounted(() => {
 
   .table-card {
     .pagination-container {
-      margin-top: 20px;
+      margin-top: var(--space-5);
       display: flex;
       justify-content: flex-end;
     }
+  }
+
+  /* 商家 ID 是不可拆分的标识：单行 + 等宽数字（§4.3 §5.4） */
+  .cell-id {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 }
 </style>
