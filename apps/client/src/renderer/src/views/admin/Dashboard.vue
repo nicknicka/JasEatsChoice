@@ -1,21 +1,15 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  Document,
-  VideoCamera,
-  View,
-  Star,
-  TrendCharts,
-  User,
-  Shop,
-  Checked,
-  Clock
-} from '@element-plus/icons-vue'
+import { Document, User, Shop, Checked } from '@element-plus/icons-vue'
 import { getDashboardStats } from '@/api/admin'
 import { API_CONFIG } from '../../config/index.js'
 import { ElMessage } from 'element-plus'
 import api from '../../utils/api.js'
+import AppPageHeader from '@/components/common/AppPageHeader.vue'
+import AppStatCard from '@/components/common/AppStatCard.vue'
+import AppEmptyState from '@/components/common/AppEmptyState.vue'
+import StatusTag from '@/components/common/StatusTag.vue'
 
 const router = useRouter()
 
@@ -29,6 +23,17 @@ const stats = ref({
 })
 const statsError = ref('')
 
+const formatRevenue = (value) => {
+  return value == null ? '--' : `¥${Number(value).toFixed(2)}`
+}
+
+const secondaryStats = computed(() => [
+  { label: '用户总数', value: stats.value.totalUsers ?? '--' },
+  { label: '商家总数', value: stats.value.totalMerchants ?? '--' },
+  { label: '今日收入', value: formatRevenue(stats.value.newRevenue) },
+  { label: '今日新增用户', value: stats.value.newUsers ?? '--' }
+])
+
 // 最近教程
 const recentTutorials = ref([])
 const loading = ref(false)
@@ -39,38 +44,27 @@ const quickActions = [
     title: '教程审核',
     description: '查看待审核的教程',
     icon: Checked,
-    color: '#ff6b6b',
     route: '/admin/tutorials/review'
   },
   {
     title: '教程管理',
     description: '管理所有教程',
     icon: Document,
-    color: '#4ecdc4',
     route: '/admin/tutorials/manage'
   },
   {
     title: '用户管理',
     description: '管理系统用户',
     icon: User,
-    color: '#ffe66d',
     route: '/admin/users'
   },
   {
     title: '商家管理',
     description: '管理合作商家',
     icon: Shop,
-    color: '#1a535c',
     route: '/admin/merchants'
   }
 ]
-
-// 来源分布
-const sourceDistribution = ref([
-  { name: '管理员', value: 0, color: '#ff6b6b' },
-  { name: '商家', value: 0, color: '#feca57' },
-  { name: 'AI生成', value: 0, color: '#48dbfb' }
-])
 
 // 获取统计数据
 const fetchStats = async () => {
@@ -117,25 +111,26 @@ const navigateTo = (path) => {
   router.push(path)
 }
 
-// 获取来源类型标签样式
-const getSourceTypeStyle = (type) => {
-  const styles = {
-    ADMIN: { color: '#ff6b6b', bg: '#fff0f0' },
-    MERCHANT: { color: '#feca57', bg: '#fff8e1' },
-    AI_GENERATED: { color: '#48dbfb', bg: '#e0f2ff' }
-  }
-  return styles[type] || { color: '#909399', bg: '#f5f5f5' }
+// 来源标签：交给 StatusTag 统一取色（§3.1、§4.6）
+const sourceStatus = (type) => {
+  const map = { ADMIN: 'info', MERCHANT: 'warning', AI_GENERATED: 'success' }
+  return map[type] || 'neutral'
 }
 
-// 获取状态标签样式
-const getStatusStyle = (status) => {
-  const styles = {
-    PUBLISHED: { color: '#67c23a', bg: '#f0f9ff' },
-    PENDING: { color: '#e6a23c', bg: '#fdf6ec' },
-    DRAFT: { color: '#909399', bg: '#f5f5f5' },
-    REJECTED: { color: '#f56c6c', bg: '#fef0f0' }
+const sourceLabel = (type) => {
+  const map = { ADMIN: '管理员', MERCHANT: '商家', AI_GENERATED: 'AI' }
+  return map[type] || '未知'
+}
+
+// 教程状态词典：按 §3.1 状态表映射
+const tutorialStatusKey = (status) => {
+  const map = {
+    PUBLISHED: 'active',
+    PENDING: 'pendingreview',
+    DRAFT: 'draft',
+    REJECTED: 'rejected'
   }
-  return styles[status] || { color: '#909399', bg: '#f5f5f5' }
+  return map[status] || 'unknown'
 }
 
 // 页面加载时获取数据
@@ -147,11 +142,8 @@ onMounted(() => {
 
 <template>
   <div class="admin-dashboard-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h1>管理员控制台</h1>
-      <p class="subtitle">欢迎回来，管理员</p>
-    </div>
+    <!-- 页头：统一标题容器与紧凑密度（§4.7） -->
+    <AppPageHeader title="管理员控制台" subtitle="欢迎回来，管理员" compact />
 
     <el-alert
       v-if="statsError"
@@ -163,58 +155,17 @@ onMounted(() => {
       show-icon
     />
 
-    <!-- 统计卡片 -->
+    <!-- 概览：1 个主指标 + 4 个次级条，避免 5 卡 4+1 空网格（§4.8、§7.1） -->
     <div class="stats-grid">
-      <div class="stat-card primary">
-        <div class="stat-icon">
-          <el-icon :size="40"><User /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.totalUsers ?? '--' }}</div>
-          <div class="stat-label">用户总数</div>
-        </div>
-      </div>
-
-      <div class="stat-card success">
-        <div class="stat-icon">
-          <el-icon :size="40"><Shop /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.totalMerchants ?? '--' }}</div>
-          <div class="stat-label">商家总数</div>
-        </div>
-      </div>
-
-      <div class="stat-card warning">
-        <div class="stat-icon">
-          <el-icon :size="40"><Document /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.newOrders ?? '--' }}</div>
-          <div class="stat-label">今日订单</div>
-        </div>
-      </div>
-
-      <div class="stat-card info">
-        <div class="stat-icon">
-          <el-icon :size="40"><TrendCharts /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">
-            {{ stats.newRevenue == null ? '--' : `¥${Number(stats.newRevenue).toFixed(2)}` }}
-          </div>
-          <div class="stat-label">今日收入</div>
-        </div>
-      </div>
-
-      <div class="stat-card rating">
-        <div class="stat-icon">
-          <el-icon :size="40"><Checked /></el-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ stats.newUsers ?? '--' }}</div>
-          <div class="stat-label">今日新增用户</div>
-        </div>
+      <AppStatCard
+        class="stat-card stats-primary"
+        label="今日订单"
+        :value="stats.newOrders ?? '--'"
+        :icon="Document"
+      />
+      <div v-for="stat in secondaryStats" :key="stat.label" class="stat-card stats-secondary">
+        <span class="stats-secondary__value">{{ stat.value }}</span>
+        <span class="stats-secondary__label">{{ stat.label }}</span>
       </div>
     </div>
 
@@ -228,8 +179,8 @@ onMounted(() => {
           class="quick-action-card"
           @click="navigateTo(action.route)"
         >
-          <div class="action-icon" :style="{ backgroundColor: action.color + '20' }">
-            <el-icon :size="32" :style="{ color: action.color }">
+          <div class="action-icon">
+            <el-icon :size="32">
               <component :is="action.icon" />
             </el-icon>
           </div>
@@ -250,37 +201,27 @@ onMounted(() => {
         </el-button>
       </div>
 
-      <el-table :data="recentTutorials" v-loading="loading" stripe>
+      <AppEmptyState
+        v-if="!loading && recentTutorials.length === 0"
+        compact
+        description="暂时没有最近教程"
+        action-text="去教程管理"
+        @action="navigateTo('/admin/tutorials/manage')"
+      />
+
+      <el-table v-else v-loading="loading" :data="recentTutorials" stripe>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="title" label="教程标题" min-width="200" />
 
         <el-table-column label="来源" width="120">
           <template #default="{ row }">
-            <el-tag
-              :style="{
-                backgroundColor: getSourceTypeStyle(row.sourceType).bg,
-                color: getSourceTypeStyle(row.sourceType).color,
-                border: 'none'
-              }"
-              size="small"
-            >
-              {{ row.sourceType === 'ADMIN' ? '管理员' : row.sourceType === 'MERCHANT' ? '商家' : 'AI' }}
-            </el-tag>
+            <StatusTag :status="sourceStatus(row.sourceType)" :text="sourceLabel(row.sourceType)" />
           </template>
         </el-table-column>
 
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag
-              :style="{
-                backgroundColor: getStatusStyle(row.status).bg,
-                color: getStatusStyle(row.status).color,
-                border: 'none'
-              }"
-              size="small"
-            >
-              {{ row.status === 'PUBLISHED' ? '已发布' : row.status === 'PENDING' ? '待审核' : '草稿' }}
-            </el-tag>
+            <StatusTag :status="tutorialStatusKey(row.status)" />
           </template>
         </el-table-column>
 
@@ -298,10 +239,10 @@ onMounted(() => {
                 disabled
                 show-score
                 size="small"
-                :colors="['#ff6b6b', '#ff6b6b', '#ff6b6b']"
+                :colors="['var(--warning)', 'var(--warning)', 'var(--warning)']"
               />
             </span>
-            <span v-else style="color: #909399">暂无</span>
+            <span v-else class="muted">暂无</span>
           </template>
         </el-table-column>
 
@@ -313,119 +254,84 @@ onMounted(() => {
 
 <style scoped lang="less">
 .admin-dashboard-container {
-  padding: 24px;
-
-  .page-header {
-    margin-bottom: 32px;
-
-    h1 {
-      font-size: 2rem /* 原值: 28px */;
-      color: #303133;
-      margin: 0 0 8px 0;
-    }
-
-    .subtitle {
-      color: #909399;
-      margin: 0;
-      font-size: 1rem /* 原值: 14px */;
-    }
-  }
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1440px;
+  min-height: calc(100vh - 100px);
+  margin: 0 auto;
+  padding: var(--card-padding-compact) var(--page-gutter) var(--space-8);
+  background: var(--canvas);
 
   .stats-error {
-    margin-bottom: 20px;
+    margin-bottom: var(--space-4);
   }
 
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
-    margin-bottom: 32px;
+    grid-template-columns: minmax(240px, 320px) repeat(4, minmax(0, 1fr));
+    gap: var(--card-gap-compact);
+    margin-bottom: var(--space-8);
 
-    .stat-card {
-      background: white;
-      border-radius: 12px;
-      padding: 24px;
+    .stats-primary {
+      min-width: 0;
+    }
+
+    .stats-primary :deep(.app-stat-card__value) {
+      font-size: var(--text-h1);
+    }
+
+    .stats-secondary {
       display: flex;
-      align-items: center;
-      gap: 20px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s;
+      flex-direction: column;
+      gap: var(--space-1);
+      padding: var(--card-padding-compact);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: inset 0 1px 0 var(--surface-highlight);
+    }
 
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-      }
+    .stats-secondary__value {
+      overflow: hidden;
+      color: var(--ink-900);
+      font-family: var(--font-num);
+      font-size: var(--text-h2);
+      font-weight: var(--weight-semibold);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
-      .stat-icon {
-        width: 64px;
-        height: 64px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      &.primary .stat-icon {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-      }
-
-      &.success .stat-icon {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
-      }
-
-      &.warning .stat-icon {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        color: white;
-      }
-
-      &.info .stat-icon {
-        background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
-        color: white;
-      }
-
-      &.rating .stat-icon {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-        color: white;
-      }
-
-      .stat-info {
-        flex: 1;
-
-        .stat-value {
-          font-size: 2.286rem /* 原值: 32px */;
-          font-weight: bold;
-          color: #303133;
-          margin-bottom: 4px;
-        }
-
-        .stat-label {
-          font-size: 1rem /* 原值: 14px */;
-          color: #909399;
-        }
-      }
+    .stats-secondary__label {
+      color: var(--ink-500);
+      font-size: var(--text-body-sm);
     }
   }
 
   .section {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: var(--card-padding-compact) var(--space-6);
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
 
     h2 {
-      font-size: 1.429rem /* 原值: 20px */;
-      color: #303133;
-      margin: 0 0 20px 0;
+      margin: 0 0 var(--space-5);
+      color: var(--ink-900);
+      font-size: var(--text-h2);
+      font-weight: var(--weight-semibold);
+      letter-spacing: var(--tracking-tight);
+      line-height: 28px;
     }
 
     .section-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin-bottom: var(--space-5);
 
       h2 {
         margin: 0;
@@ -435,48 +341,87 @@ onMounted(() => {
 
   .quick-actions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--card-gap-compact);
 
     .quick-action-card {
-      padding: 20px;
-      border-radius: 12px;
-      border: 2px solid #f5f5f5;
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
       cursor: pointer;
-      transition: all 0.3s;
+      transition:
+        border-color var(--duration-fast) var(--ease-out),
+        box-shadow var(--duration-fast) var(--ease-out),
+        transform var(--duration-fast) var(--ease-out);
 
       &:hover {
-        border-color: #409eff;
-        background: #f0f7ff;
-        transform: translateY(-2px);
+        border-color: var(--line-strong);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-1px);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--brand-200);
+        outline-offset: 2px;
       }
 
       .action-icon {
-        width: 64px;
-        height: 64px;
-        border-radius: 12px;
         display: flex;
+        flex: 0 0 auto;
         align-items: center;
         justify-content: center;
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-lg);
+        background: var(--brand-50);
+        color: var(--brand-500);
       }
 
       .action-info {
         flex: 1;
+        min-width: 0;
 
         h3 {
-          font-size: 1.286rem /* 原值: 18px */;
-          color: #303133;
-          margin: 0 0 6px 0;
+          margin: 0 0 var(--space-1);
+          overflow: hidden;
+          color: var(--ink-900);
+          font-size: var(--text-h3);
+          font-weight: var(--weight-semibold);
+          line-height: 24px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         p {
-          font-size: 1rem /* 原值: 14px */;
-          color: #909399;
           margin: 0;
+          overflow: hidden;
+          color: var(--ink-500);
+          font-size: var(--text-body-sm);
+          line-height: 20px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
+      }
+    }
+  }
+
+  .muted {
+    color: var(--ink-400);
+  }
+}
+
+@media (max-width: 1200px) {
+  .admin-dashboard-container {
+    .stats-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+
+      .stats-primary {
+        grid-column: 1 / -1;
+        max-width: 320px;
       }
     }
   }
@@ -484,10 +429,16 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .admin-dashboard-container {
-    padding: 16px;
+    padding-right: var(--space-4);
+    padding-left: var(--space-4);
 
     .stats-grid {
       grid-template-columns: 1fr;
+
+      .stats-primary {
+        grid-column: auto;
+        max-width: none;
+      }
     }
 
     .quick-actions-grid {
