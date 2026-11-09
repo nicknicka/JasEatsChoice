@@ -202,10 +202,30 @@ class AIControllerFakeSeamIntegrationTest {
         for (int i = 0; i < padding.length; i++) {
             padding[i] = (byte) ((nonce >>> (i % 8 * 8)) ^ (i * 31));
         }
-        byte[] header = { (byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13 };
+        byte[] header = pngHeader(320, 200);
         byte[] bytes = new byte[header.length + padding.length];
         System.arraycopy(header, 0, bytes, 0, header.length);
         System.arraycopy(padding, 0, bytes, header.length, padding.length);
+        return bytes;
+    }
+
+    private static byte[] pngHeader(int width, int height) {
+        byte[] bytes = new byte[24];
+        byte[] signature = { (byte) 0x89, 'P', 'N', 'G', 13, 10, 26, 10 };
+        System.arraycopy(signature, 0, bytes, 0, signature.length);
+        bytes[11] = 13;
+        bytes[12] = 'I';
+        bytes[13] = 'H';
+        bytes[14] = 'D';
+        bytes[15] = 'R';
+        bytes[16] = (byte) (width >>> 24);
+        bytes[17] = (byte) (width >>> 16);
+        bytes[18] = (byte) (width >>> 8);
+        bytes[19] = (byte) width;
+        bytes[20] = (byte) (height >>> 24);
+        bytes[21] = (byte) (height >>> 16);
+        bytes[22] = (byte) (height >>> 8);
+        bytes[23] = (byte) height;
         return bytes;
     }
 

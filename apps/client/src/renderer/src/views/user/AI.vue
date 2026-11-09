@@ -45,7 +45,11 @@
           ref="aiChatRef"
           class="tab-pane"
           :inert="chatUnavailable || undefined"
-          v-bind="activeTab === 'recipe' ? { recipeStreamTimeoutMs } : {}"
+          v-bind="activeTab === 'recipe'
+            ? { recipeStreamTimeoutMs }
+            : activeTab === 'recognition'
+              ? { dishRecognitionTimeoutMs }
+              : {}"
         />
       </keep-alive>
 
@@ -106,6 +110,7 @@ const capabilities = ref(null)
 const capabilitiesLoaded = ref(false)
 const capabilitiesError = ref('')
 const DEFAULT_RECIPE_STREAM_TIMEOUT_MS = 120000
+const DEFAULT_DISH_RECOGNITION_TIMEOUT_MS = 30000
 const sliderLeft = ref(0)
 const sliderWidth = ref(0)
 const aiChatRef = ref(null)
@@ -124,6 +129,11 @@ const currentTabComponent = computed(() => tabComponents[activeTab.value] || nul
 const recipeStreamTimeoutMs = computed(() => {
   const timeout = Number(capabilities.value?.recipeStreamTimeoutMs)
   return Number.isFinite(timeout) && timeout > 0 ? timeout : DEFAULT_RECIPE_STREAM_TIMEOUT_MS
+})
+
+const dishRecognitionTimeoutMs = computed(() => {
+  const timeout = Number(capabilities.value?.dishRecognitionTimeoutMs)
+  return Number.isFinite(timeout) && timeout > 0 ? timeout : DEFAULT_DISH_RECOGNITION_TIMEOUT_MS
 })
 
 const isCapabilityControlled = (name) => name === 'recognition' || name === 'recipe'

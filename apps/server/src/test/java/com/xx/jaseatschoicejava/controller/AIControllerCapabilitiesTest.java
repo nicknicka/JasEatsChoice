@@ -75,12 +75,23 @@ class AIControllerCapabilitiesTest {
 
         ResponseResult<?> result = controller.dishRecognize(
                 new MockMultipartFile("image", "dish.jpg", "image/jpeg",
-                        new byte[] { (byte) 0xFF, (byte) 0xD8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }),
+                        jpegHeader(320, 200)),
                 verifiedRequest("42"));
 
         assertFalse(result.getSuccess());
         assertEquals("AI_VISION_NOT_CONFIGURED", result.getCode());
         assertTrue(result.getMessage().contains("暂未开放"));
+    }
+
+    private static byte[] jpegHeader(int width, int height) {
+        return new byte[] {
+            (byte) 0xFF, (byte) 0xD8,
+            (byte) 0xFF, (byte) 0xC0, 0, 17, 8,
+            (byte) (height >>> 8), (byte) height,
+            (byte) (width >>> 8), (byte) width,
+            3, 1, 17, 0, 2, 17, 1, 3, 17, 1,
+            (byte) 0xFF, (byte) 0xD9
+        };
     }
 
     @Test

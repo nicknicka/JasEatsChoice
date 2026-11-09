@@ -289,6 +289,7 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
             .vision(vision)
             .functionCalling(available)
             .agentic(available)
+            .dishRecognitionTimeoutMs(modelTimeoutMs(config))
             .recipeStreamTimeoutMs(recipeStreamTimeoutMs())
             .unavailableMessage(available ? "" : "AI 未配置：请设置 AI_API_KEY 和 AI_BASE_URL")
             .build();
@@ -297,6 +298,14 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
     private long recipeStreamTimeoutMs() {
         Integer configured = aiConfig.getRecipeStreamTimeoutMs();
         return configured != null && configured > 0 ? configured : 120000L;
+    }
+
+    private long modelTimeoutMs(AiModelConfig config) {
+        if (config != null && config.getTimeoutMs() > 0) {
+            return config.getTimeoutMs();
+        }
+        Integer configured = aiConfig == null ? null : aiConfig.getTimeout();
+        return configured != null && configured > 0 ? configured : 30000L;
     }
 
     private String key(String candidateApiKey) {
