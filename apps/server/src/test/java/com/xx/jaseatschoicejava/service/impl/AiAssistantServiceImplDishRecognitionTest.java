@@ -164,6 +164,63 @@ class AiAssistantServiceImplDishRecognitionTest {
         assertEquals("识别超时，请稍后重试", result.get("message"));
     }
 
+    @Test
+    void recognizeDishWithBase64_modelRejectsImageReturnsVisionUnsupported() {
+        when(visionModel.chat(any(UserMessage.class)))
+            .thenThrow(new dev.langchain4j.exception.InvalidRequestException(
+                "This model does not support image input."));
+
+        Map<String, Object> result = service.recognizeDishWithBase64("AAAA", "image/png");
+
+        assertEquals(true, result.get("error"));
+        assertEquals(true, result.get("visionUnsupported"));
+        assertEquals("当前视觉模型不支持图片输入，菜品识别暂不可用", result.get("message"));
+    }
+
+    @Test
+    void recognizeDishWithBase64_http400CauseIsVisionUnsupported() {
+        when(visionModel.chat(any(UserMessage.class)))
+            .thenThrow(new RuntimeException("upstream failed",
+                new dev.langchain4j.exception.HttpException(400, "bad image")));
+
+        Map<String, Object> result = service.recognizeDishWithBase64("AAAA", "image/png");
+
+        assertEquals(true, result.get("visionUnsupported"));
+    }
+
+    @Test
+    void recognizeDishWithBase64_serverErrorIsNotTreatedAsVisionUnsupported() {
+        when(visionModel.chat(any(UserMessage.class)))
+            .thenThrow(new dev.langchain4j.exception.InternalServerException("upstream boom"));
+
+        Map<String, Object> result = service.recognizeDishWithBase64("AAAA", "image/png");
+
+        assertEquals(true, result.get("error"));
+        assertFalse(result.containsKey("visionUnsupported"), "5xx 不能判定为视觉能力不可用");
+        assertEquals("菜品识别失败，请稍后重试", result.get("message"));
+    }
+
+    @Test
+    void recognizeDishWithBase64_rateLimitIsNotTreatedAsVisionUnsupported() {
+        when(visionModel.chat(any(UserMessage.class)))
+            .thenThrow(new dev.langchain4j.exception.RateLimitException("429 rate limited"));
+
+        Map<String, Object> result = service.recognizeDishWithBase64("AAAA", "image/png");
+
+        assertEquals(true, result.get("error"));
+        assertFalse(result.containsKey("visionUnsupported"), "限流不能判定为视觉能力不可用");
+    }
+
+    @Test
+    void recognizeDishWithBase64_unsupportedFeatureIsVisionUnsupported() {
+        when(visionModel.chat(any(UserMessage.class)))
+            .thenThrow(new dev.langchain4j.exception.UnsupportedFeatureException("images not supported"));
+
+        Map<String, Object> result = service.recognizeDishWithBase64("AAAA", "image/png");
+
+        assertEquals(true, result.get("visionUnsupported"));
+    }
+
     private ChatResponse chatResponse(String text) {
         return ChatResponse.builder().aiMessage(AiMessage.from(text)).build();
     }

@@ -45,6 +45,7 @@ import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.service.AiAssistantService;
 import com.xx.jaseatschoicejava.service.AiQuotaScope;
 import com.xx.jaseatschoicejava.service.AiQuotaService;
+import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
 import com.xx.jaseatschoicejava.service.DishRecognitionCacheService;
 import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 
@@ -70,6 +71,9 @@ class AIControllerDishRecognitionTest {
     @Mock
     private AiQuotaService aiQuotaService;
 
+    @Mock
+    private AiRuntimeConfigService aiRuntimeConfigService;
+
     @TempDir
     private Path tempDir;
 
@@ -90,6 +94,7 @@ class AIControllerDishRecognitionTest {
         ReflectionTestUtils.setField(controller, "aiModelRegistry", aiModelRegistry);
         ReflectionTestUtils.setField(controller, "dishRecognitionCacheService", dishRecognitionCacheService);
         ReflectionTestUtils.setField(controller, "aiQuotaService", aiQuotaService);
+        ReflectionTestUtils.setField(controller, "aiRuntimeConfigService", aiRuntimeConfigService);
     }
 
     private static MockHttpServletRequest verifiedRequest(String userId) {
@@ -294,6 +299,42 @@ class AIControllerDishRecognitionTest {
         assertEquals("500", response.getCode());
         assertTrue(response.getMessage().contains("保存上传图片失败"));
         verifyNoInteractions(aiAssistantService);
+    }
+
+    @Test
+    void dishRecognize_modelRejectsImageReturnsStableCodeAndDowngradesVision() {
+        enableVision();
+        Map<String, Object> rejected = new java.util.HashMap<>();
+        rejected.put("error", true);
+        rejected.put("visionUnsupported", true);
+        rejected.put("message", "当前视觉模型不支持图片输入，菜品识别暂不可用");
+        when(aiAssistantService.recognizeDishWithBase64(anyString(), eq("image/png")))
+            .thenReturn(rejected);
+
+        ResponseResult<?> response = controller.dishRecognize(
+            new MockMultipartFile("image", "dish.png", "image/png", PNG), verifiedRequest("42"));
+
+        assertFalse(response.getSuccess());
+        assertEquals("AI_VISION_UNSUPPORTED", response.getCode());
+        assertEquals("当前视觉模型不支持图片输入，菜品识别暂不可用", response.getMessage());
+        verify(aiRuntimeConfigService)
+            .markVisionUnverified("当前视觉模型不支持图片输入，菜品识别暂不可用");
+        assertTrue(uploadDirIsEmpty(), "失败路径不得留下孤儿文件");
+        verify(dishRecognitionCacheService, never()).put(any(), anyString(), anyString(), anyLong(), any());
+    }
+
+    @Test
+    void dishRecognize_serverErrorKeepsGenericFailureCode() {
+        enableVision();
+        when(aiAssistantService.recognizeDishWithBase64(anyString(), eq("image/png")))
+            .thenReturn(Map.of("error", true, "message", "菜品识别失败，请稍后重试"));
+
+        ResponseResult<?> response = controller.dishRecognize(
+            new MockMultipartFile("image", "dish.png", "image/png", PNG), verifiedRequest("42"));
+
+        assertFalse(response.getSuccess());
+        assertEquals("500", response.getCode());
+        verifyNoInteractions(aiRuntimeConfigService);
     }
 
     private void enableVision() {

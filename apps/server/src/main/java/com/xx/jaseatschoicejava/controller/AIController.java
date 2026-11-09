@@ -45,6 +45,7 @@ import com.xx.jaseatschoicejava.agent.dto.AiCapabilitiesDTO;
 import com.xx.jaseatschoicejava.service.AiAssistantService;
 import com.xx.jaseatschoicejava.service.AiQuotaScope;
 import com.xx.jaseatschoicejava.service.AiQuotaService;
+import com.xx.jaseatschoicejava.service.AiRuntimeConfigService;
 import com.xx.jaseatschoicejava.service.DishRecognitionCacheService;
 import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 
@@ -70,6 +71,8 @@ public class AIController {
     private static final Logger log = LoggerFactory.getLogger(AIController.class);
     private static final String AI_NOT_CONFIGURED_CODE = "AI_NOT_CONFIGURED";
     private static final String AI_VISION_NOT_CONFIGURED_CODE = "AI_VISION_NOT_CONFIGURED";
+    /** 模型实际拒绝图片输入时的稳定能力错误码（区别于泛化 500）。 */
+    private static final String AI_VISION_UNSUPPORTED_CODE = "AI_VISION_UNSUPPORTED";
     private static final String INVALID_REQUEST_CODE = "INVALID_REQUEST";
     private static final String AI_CALL_FAILED_CODE = "AI_CALL_FAILED";
     private static final String AI_RESULT_PARSE_FAILED_CODE = "AI_RESULT_PARSE_FAILED";
@@ -105,6 +108,9 @@ public class AIController {
 
     @Resource
     private AiQuotaService aiQuotaService;
+
+    @Resource
+    private AiRuntimeConfigService aiRuntimeConfigService;
 
     @Resource
     private AIConfig aiConfig;
@@ -186,6 +192,13 @@ public class AIController {
             }
             if (Boolean.TRUE.equals(result.get("error"))) {
                 deleteQuietly(filePath);
+                if (Boolean.TRUE.equals(result.get("visionUnsupported"))) {
+                    String message = result.get("message") instanceof String value && !value.isBlank()
+                        ? value : "当前视觉模型不支持图片输入，菜品识别暂不可用";
+                    // 运行时降级：capabilities.vision 立即变 false，入口不再宣称已开放，需重新验证。
+                    aiRuntimeConfigService.markVisionUnverified(message);
+                    return ResponseResult.fail(AI_VISION_UNSUPPORTED_CODE, message);
+                }
                 if (Boolean.TRUE.equals(result.get("notDish"))) {
                     String message = result.get("message") instanceof String value && !value.isBlank()
                         ? value : "请上传食物图片";
