@@ -1085,10 +1085,10 @@ class ApiDocGenerator:
 def main():
     """主函数"""
     # Controller目录
-    controller_dir = Path("/Users/nickxiao/JasEatsChoice/JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/controller")
+    controller_dir = Path("JasEatsChoiceJava/src/main/java/com/xx/jaseatschoicejava/controller")
 
     # 输出文件
-    output_file = Path("/Users/nickxiao/JasEatsChoice/docs/api/后端API文档_完善版.md")
+    output_file = Path("docs/api/后端API文档_完善版.md")
 
     print("=" * 60)
     print("API文档生成器")

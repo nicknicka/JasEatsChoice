@@ -120,11 +120,11 @@ scrub_file "$STAGE_DIR/01_source_code/JasEatsChoiceUniApp/project.config.json" \
 scrub_file "$STAGE_DIR/01_source_code/JasEatsChoiceUniApp/.env.development" \
   "s/wx[0-9a-zA-Z]\\{10,\\}/请替换为自己的微信小程序AppID/g"
 scrub_file "$STAGE_DIR/01_source_code/scripts/generate_api_doc.py" \
-  "s#/Users/nickxiao/JasEatsChoice#./JasEatsChoice#g"
+  "s#/Users/[^/]*/JasEatsChoice#./JasEatsChoice#g"
 scrub_file "$STAGE_DIR/01_source_code/scripts/playwright_capture_thesis_screenshots.js" \
-  "s#/Users/nickxiao/.codex/worktrees/[^']*/JasEatsChoice#./JasEatsChoice#g"
+  "s#/Users/[^/]*/.codex/worktrees/[^']*/JasEatsChoice#./JasEatsChoice#g"
 scrub_file "$STAGE_DIR/01_source_code/JasEatsChoiceFront/REFACTOR_GUIDE.md" \
-  "s#/Users/nickxiao/JasEatsChoice/#./#g"
+  "s#/Users/[^/]*/JasEatsChoice/#./#g"
 
 find "$STAGE_DIR" -name '.DS_Store' -delete
 

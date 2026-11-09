@@ -18,7 +18,6 @@ import org.springframework.stereotype.Component;
  * 订单WebSocket处理器
  * 处理订单相关的WebSocket消息
  *
- * @Author nickxiao
  * @Date 2025/01/19
  */
 @ChannelHandler.Sharable

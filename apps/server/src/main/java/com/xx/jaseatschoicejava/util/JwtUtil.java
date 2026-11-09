@@ -16,7 +16,6 @@ import java.util.Map;
  * JWT工具类
  * 使用Spring配置，支持从配置文件读取密钥和过期时间
  *
- * @Author nickxiao
  * @Date 2025/11/22
  */
 @Component

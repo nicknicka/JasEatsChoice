@@ -34,6 +34,6 @@ CREATE TABLE IF NOT EXISTS t_mock_oauth_user (
 
 -- 预置模拟测试账号
 INSERT INTO t_mock_oauth_user (id, provider, open_id, union_id, nickname, avatar_url, password) VALUES
-('MO1', 'wechat', 'wx_mock_openid_001', 'mock_unionid_001', '微信用户小明', 'https://thirdwx.qlogo.cn/mmopen/g3MonUZtNHkdmzXlibXg7JC1RfF5YbLrgI6ZzmfFnicneCwkYq1mBuBstMWiciaRtznYH0BgSbnJriaOdicZGB0QMkeN8A/0', '123456'),
-('MO2', 'qq', 'qq_mock_openid_001', NULL, 'QQ用户小红', 'https://q.qlogo.cn/qqapp/101235589/ABCD1234/100', '123456'),
-('MO3', 'wechat', 'wx_mock_openid_002', 'mock_unionid_002', '微信用户小刚', 'https://thirdwx.qlogo.cn/mmopen/g3MonUZtNHkdmzXlibXg7JC1RfF5YbLrgI6ZzmfFnicneCwkYq1mBuBstMWiciaRtznYH0BgSbnJriaOdicZGB0QMkeN8A/0', '123456');
+('MO1', 'wechat', 'wx_mock_openid_001', 'mock_unionid_001', '微信用户小明', 'https://example.com/demo-avatar.png', '123456'),
+('MO2', 'qq', 'qq_mock_openid_001', NULL, 'QQ用户小红', 'https://example.com/demo-avatar.png', '123456'),
+('MO3', 'wechat', 'wx_mock_openid_002', 'mock_unionid_002', '微信用户小刚', 'https://example.com/demo-avatar.png', '123456');

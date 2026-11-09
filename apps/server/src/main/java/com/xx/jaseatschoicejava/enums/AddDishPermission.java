@@ -5,7 +5,6 @@ package com.xx.jaseatschoicejava.enums;
  * <p>
  * 0-全员可加菜,1-仅发起者可加菜
  *
- * @Author nickxiao
  * @Date 2026/01/24
  */
 public enum AddDishPermission {

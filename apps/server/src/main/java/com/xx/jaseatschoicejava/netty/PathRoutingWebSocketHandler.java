@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
  * WebSocket路径路由处理器
  * 根据握手时的路径将消息路由到不同的业务处理器
  *
- * @Author nickxiao
  * @Date 2025/01/19
  */
 public class PathRoutingWebSocketHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {

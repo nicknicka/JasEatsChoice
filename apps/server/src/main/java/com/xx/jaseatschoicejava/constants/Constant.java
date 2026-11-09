@@ -3,7 +3,6 @@ package com.xx.jaseatschoicejava.constants;
 /**
  * 系统常量类
  *
- * @Author nickxiao
  * @Date 2025/11/22 13:53
  */
 public class Constant {

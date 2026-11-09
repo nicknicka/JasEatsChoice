@@ -5,7 +5,6 @@ package com.xx.jaseatschoicejava.enums;
  * <p>
  * 定义系统中所有的通知类型常量
  *
- * @Author nickxiao
  * @Date 2026/02/16
  */
 public enum NotificationTypeEnum {

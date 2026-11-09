@@ -5,7 +5,6 @@ package com.xx.jaseatschoicejava.enums;
  * <p>
  * 0-统一支付,1-个人单独支付
  *
- * @Author nickxiao
  * @Date 2026/01/24
  */
 public enum PaymentMode {
