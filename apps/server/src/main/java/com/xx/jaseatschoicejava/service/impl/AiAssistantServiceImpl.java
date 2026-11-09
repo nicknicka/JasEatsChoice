@@ -7,7 +7,10 @@ import com.xx.jaseatschoicejava.agent.config.NoopChatModel;
 import com.xx.jaseatschoicejava.agent.config.NoopStreamingChatModel;
 import com.xx.jaseatschoicejava.config.AiModelConfig;
 import com.xx.jaseatschoicejava.service.AiAssistantService;
+import dev.langchain4j.exception.HttpException;
+import dev.langchain4j.exception.InvalidRequestException;
 import dev.langchain4j.exception.TimeoutException;
+import dev.langchain4j.exception.UnsupportedFeatureException;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
@@ -210,10 +213,45 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
         } catch (Exception e) {
             log.error("菜品识别失败", e);
+            if (isVisionRejectedByModel(e)) {
+                // 4xx 能力错误：模型不接受图片输入。与网络/服务端故障分开，交给上层做稳定降级。
+                log.warn("视觉模型拒绝图片输入，按视觉能力不可用处理：{}", rootMessage(e));
+                return Map.of("error", true, "visionUnsupported", true,
+                    "message", "当前视觉模型不支持图片输入，菜品识别暂不可用");
+            }
             // 超时与一般失败分开提示，前后端展示统一文案（见 spec #222 的「统一的未登录、限流与超时错误」）
             String message = e instanceof TimeoutException ? "识别超时，请稍后重试" : "菜品识别失败，请稍后重试";
             return Map.of("error", true, "message", message);
         }
+    }
+
+    /**
+     * 判断异常是否代表「模型不接受图片输入」的 4xx 能力错误。
+     *
+     * <p>只认 400/415/422 与 {@link UnsupportedFeatureException}：401/403 是鉴权、
+     * 429 是限流、5xx 与网络异常是服务端故障，都不能据此判定视觉能力不可用。
+     */
+    private boolean isVisionRejectedByModel(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (current instanceof UnsupportedFeatureException || current instanceof InvalidRequestException) {
+                return true;
+            }
+            if (current instanceof HttpException http) {
+                int status = http.statusCode();
+                if (status == 400 || status == 415 || status == 422) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private String rootMessage(Throwable error) {
+        Throwable current = error;
+        while (current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current.getMessage() == null ? current.getClass().getSimpleName() : current.getMessage();
     }
 
     // ==================== 食谱优化 ====================

@@ -512,6 +512,42 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
             String message) {
     }
 
+    @Override
+    public synchronized void markVisionUnverified(String reason) {
+        DynamicAiModelRegistry.ActiveModels current = registry.current();
+        AiModelConfig active = current.config();
+        if (active == null || !active.isVisionVerified()) {
+            // 已经是未验证状态：幂等返回，不重复写库。
+            return;
+        }
+
+        String reasonText = hasText(reason) ? reason.trim() : "运行时发现视觉模型不支持图片输入";
+        AiModelConfig downgraded = active.toBuilder()
+            .visionVerified(false)
+            .visionVerificationReason(reasonText)
+            .build();
+        // 只替换配置快照，不重建客户端：模型本身没变，避免在错误路径上再发一次请求。
+        registry.activate(new DynamicAiModelRegistry.ActiveModels(
+            downgraded, current.chat(), current.supervisor(), current.vision(), current.version()));
+        persistVisionDowngrade(downgraded);
+        log.warn("视觉能力已在运行时降级为未验证，需重新验证：{}", reasonText);
+    }
+
+    /**
+     * 只有本来就存在数据库运行时配置时才落库；环境变量配置不会被这次降级悄悄改成数据库配置。
+     */
+    private void persistVisionDowngrade(AiModelConfig config) {
+        try {
+            if (!hasText(databaseConfigValue())) {
+                return;
+            }
+            systemConfigService.setConfigValue(
+                CONFIG_KEY, writeConfigValue(config), "AI 模型运行时配置", CONFIG_GROUP);
+        } catch (RuntimeException exception) {
+            log.warn("视觉降级写入运行时配置失败，仅当前进程生效：{}", exception.getMessage());
+        }
+    }
+
     private void activate(AiModelConfig config, long nextVersion) {
         AiModelClientFactory adapter = adapter(config.getProvider());
         DynamicAiModelRegistry.ActiveModels clients = new DynamicAiModelRegistry.ActiveModels(
