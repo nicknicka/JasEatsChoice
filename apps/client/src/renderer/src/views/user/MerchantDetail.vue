@@ -1237,6 +1237,8 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
     // 返回按钮
     .back-button-container {
+      display: flex;
+      justify-content: flex-end;
       padding: @nordic-space-md @nordic-space-lg;
       background-color: @nordic-surface;
 
@@ -1536,7 +1538,7 @@ watch(activeMenuTab, (newTab, oldTab) => {
 
       .quick-order-button {
         width: 100%;
-        height: 52px;
+        height: var(--control-height-md);
         font-size: @nordic-text-md;
         background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);
         border: none;

@@ -37,3 +37,19 @@
   --el-font-family: var(--font-sans);
   --el-transition-duration: var(--duration-base);
 }
+
+/* ============================================
+ * 控件高度映射
+ * DESIGN-BASELINE.md §3.4：按钮高度只有两档——主按钮/页头动作区 md(40)、
+ * 工具条/表格行内/次级动作 sm(32)，禁止页面自写高度。
+ * main.js 用全局 size:small 当默认档，会让 el-button 落在 EP 的 24px 档，
+ * 这里把两档尺寸映射回 token，页面不需要再逐个声明。
+ * ============================================ */
+
+.el-button--small {
+  --el-button-size: var(--control-height-sm);
+}
+
+.el-button--large {
+  --el-button-size: var(--control-height-md);
+}

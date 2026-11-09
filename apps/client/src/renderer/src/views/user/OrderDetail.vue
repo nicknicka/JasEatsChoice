@@ -432,7 +432,7 @@ const getActiveStep = () => {
               <span class="cancelled-label">取消时间</span>
               <span class="cancelled-value">{{ order.cancelTime || order.time }}</span>
             </div>
-            <el-button type="primary" plain @click="goToOrderList">返回订单列表</el-button>
+            <el-button type="default" @click="goToOrderList">返回订单列表</el-button>
           </div>
         </el-card>
 

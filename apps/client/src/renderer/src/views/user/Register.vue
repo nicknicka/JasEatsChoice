@@ -664,7 +664,7 @@ const toLogin = async () => {
 
 // 按钮样式
 .step-btn {
-  height: 42px;
+  height: var(--control-height-md);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--text-body);

@@ -1920,7 +1920,7 @@ onUnmounted(() => {
 		font-size: 1rem;
 		font-weight: 600;
 		border-radius: 10px;
-		height: 56px;
+		height: var(--control-height-md);
 		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 		display: flex;
 		align-items: center;
@@ -1942,7 +1942,7 @@ onUnmounted(() => {
 		border-radius: 10px;
 		box-shadow: 0 3px 10px rgba(212, 132, 90, 0.3);
 		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-		height: 56px;
+		height: var(--control-height-md);
 		&:hover:not(:disabled) {
 			transform: translateY(-2px);
 			box-shadow: 0 6px 18px rgba(212, 132, 90, 0.4);

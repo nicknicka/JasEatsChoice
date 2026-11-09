@@ -11,13 +11,12 @@
     <main class="register-panel">
       <!-- 标题与表单共用同一中轴（§4.4） -->
       <header class="register-header">
+        <h1 class="register-title">商户注册</h1>
         <CommonBackButton
           class="register-back-btn"
           :use-router-back="false"
-          size="default"
           @click="goToUserHome"
         />
-        <h1 class="register-title">商户注册</h1>
       </header>
 
       <!-- 认证类窄列：沿用 AppFormContainer 契约，宽度只取 --form-width-auth / --form-width-settings 两档（§3.3 / §4.4） -->
@@ -432,25 +431,13 @@ const submitForm = () => {
   z-index: 2;
 }
 
+// 标题 + 右侧返回动作区，动作区控件取 md（§4.7）
 .register-header {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   margin-bottom: var(--space-5);
-}
-
-// 「返回」降级为中性文字层，不与主按钮抢权重（§4.1）
-.register-header :deep(.el-button.register-back-btn) {
-  height: auto;
-  padding: 0 var(--space-1);
-  margin-bottom: var(--space-3);
-  font-size: var(--text-body-sm);
-  color: var(--ink-500);
-  transition: color var(--duration-fast) var(--ease-out);
-
-  &:hover,
-  &:focus-visible {
-    color: var(--ink-900);
-    background: transparent;
-  }
 }
 
 .register-title {
@@ -561,7 +548,7 @@ const submitForm = () => {
 // 唯一实心主按钮：占满表单列宽（§4.1）
 .register-submit-btn {
   width: 100%;
-  height: 42px;
+  height: var(--control-height-md);
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--text-body);

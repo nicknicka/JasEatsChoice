@@ -3,7 +3,6 @@
     <!-- 顶部导航 -->
     <div class="page-header">
       <div class="header-content">
-        <common-back-button type="text" size="small" />
         <h1 class="page-title">
           <template v-if="fromChat">
             <el-tag :type="fromSingleChat ? 'primary' : 'success'" size="large" class="chat-tag">
@@ -13,6 +12,8 @@
           </template>
           <template v-else> 订单确认 </template>
         </h1>
+        <!-- 「返回」统一放右侧动作区（§4.7），次按钮样式（§4.9） -->
+        <common-back-button />
       </div>
     </div>
 
@@ -1113,6 +1114,7 @@ const confirmOrder = async () => {
       padding: var(--space-6) var(--page-gutter);
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: var(--space-4);
 
       .page-title {
@@ -1714,7 +1716,7 @@ const confirmOrder = async () => {
 
       .submit-button-fixed {
         min-width: 160px;
-        height: 48px;
+        height: var(--control-height-md);
         font-size: var(--text-h3);
         font-weight: var(--weight-semibold);
         border-radius: var(--radius-md);
@@ -1728,7 +1730,7 @@ const confirmOrder = async () => {
 
         @media (max-width: 768px) {
           min-width: 140px;
-          height: 44px;
+          height: var(--control-height-md);
           font-size: var(--text-body);
         }
       }

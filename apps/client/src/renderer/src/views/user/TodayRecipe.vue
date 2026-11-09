@@ -1227,6 +1227,7 @@ const filteredRecipes = computed(() => {
 
     // 主按钮：--brand-500 实心 + --surface 文字，每屏唯一
     &.accent {
+      min-height: var(--control-height-md);
       border-color: var(--brand-500);
       background: var(--brand-500);
       color: var(--surface);
