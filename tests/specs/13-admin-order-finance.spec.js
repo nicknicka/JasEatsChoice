@@ -87,7 +87,24 @@ test.describe('模块十三：管理员端-订单菜品与财务', () => {
       await expect(rows.first()).toContainText(String(dishes[0].dishId))
       await expect(rows.first()).toContainText(dishes[0].dishName)
 
-      markPassed('13.3', `菜品表 ${dishes.length} 行，首行 ID/名称与接口一致`)
+      // 「菜品详情」弹窗：用接口返回的真实字段比对渲染值（#440，此前 handleView 取错层级导致字段全空）
+      const first = dishes[0]
+      const detail = (await apiRequest(page, request, `/admin/dishes/${first.dishId}`)).dish
+      await rows.first().locator('button:has-text("查看")').click()
+      const detailDialog = page.locator('.el-dialog').filter({ hasText: '菜品详情' })
+      await expect(detailDialog).toBeVisible({ timeout: 10000 })
+      const detailCell = (label) =>
+        detailDialog
+          .locator('.el-descriptions__label', { hasText: label })
+          .first()
+          .locator('xpath=following-sibling::*[1]')
+      await expect(detailCell('菜品名称'), '详情弹窗菜品名称应与接口一致').toHaveText(String(detail.dishName))
+      await expect(detailCell('价格'), '详情弹窗价格应与接口一致').toHaveText(`¥${detail.price}`)
+      await expect(detailCell('商家名称'), '详情弹窗商家名称应与接口一致').toHaveText(String(detail.merchantName))
+      await expect(detailCell('状态'), '详情弹窗状态应有实际值').toHaveText(/已上架|已下架|待审核/)
+      await detailDialog.locator('button:has-text("关闭")').click()
+
+      markPassed('13.3', `菜品表 ${dishes.length} 行，首行 ID/名称与接口一致，详情弹窗字段与接口一致`)
     } catch (e) { markFailed('13.3', e.message.slice(0, 50)); throw e }
   })
 

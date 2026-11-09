@@ -123,10 +123,10 @@
         <el-descriptions-item label="状态">
           <StatusTag :status="getDishStatusKey(currentDish)" />
         </el-descriptions-item>
-        <el-descriptions-item label="热量">{{ currentDish.calories || '-' }} kcal</el-descriptions-item>
+        <el-descriptions-item label="热量">{{ currentDish.calorie ?? '-' }} kcal</el-descriptions-item>
         <el-descriptions-item label="库存">{{ currentDish.stock || '不限量' }}</el-descriptions-item>
-        <el-descriptions-item label="销量">{{ currentDish.sales || 0 }}</el-descriptions-item>
-        <el-descriptions-item label="评分">{{ currentDish.rating || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="销量">{{ currentDish.orderCount ?? 0 }}</el-descriptions-item>
+        <el-descriptions-item label="评分">-</el-descriptions-item>
         <el-descriptions-item label="创建时间" :span="2">{{ formatTime(currentDish.createdAt) }}</el-descriptions-item>
         <el-descriptions-item label="菜品描述" :span="2">{{ currentDish.description || '-' }}</el-descriptions-item>
         <el-descriptions-item label="菜品图片" :span="2">
@@ -144,11 +144,11 @@
       <template #footer>
         <el-button @click="detailDialogVisible = false">关闭</el-button>
         <el-button
-          :type="currentDish?.status === 'ACTIVE' ? 'warning' : 'success'"
+          :type="isCurrentDishActive ? 'warning' : 'success'"
           :loading="togglingId === currentDish?.dishId"
           @click="handleToggleStatus(currentDish)"
         >
-          {{ currentDish?.status === 'ACTIVE' ? '下架' : '上架' }}
+          {{ isCurrentDishActive ? '下架' : '上架' }}
         </el-button>
       </template>
     </el-dialog>
@@ -156,7 +156,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
@@ -258,6 +258,11 @@ const isActiveStatus = (status, statusCode) => {
   return status === 'ACTIVE'
 }
 
+// 当前弹窗菜品的上架态：优先 statusCode，兼容 status 布尔（复用 isActiveStatus）
+const isCurrentDishActive = computed(() =>
+  isActiveStatus(currentDish.value?.status, currentDish.value?.statusCode)
+)
+
 // 搜索
 const handleSearch = () => {
   pagination.page = 1
@@ -280,7 +285,7 @@ const handleView = async (row) => {
     const response = await getDishDetail(row.dishId)
 
     if (response.success || response.data) {
-      currentDish.value = response.data || response
+      currentDish.value = response.dish || response.data || response
       detailDialogVisible.value = true
       console.log('[菜品管理] 获取菜品详情成功')
     } else {
