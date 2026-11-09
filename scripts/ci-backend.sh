@@ -11,7 +11,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-export COMPOSE_FLAGS="--env-file deploy/.env -f deploy/compose.yml -f deploy/compose.dev.yml"
+export COMPOSE_FLAGS="--env-file deploy/.env -f deploy/compose.yml -f deploy/compose.dev.yml -f deploy/compose.e2e.yml"
 
 cleanup() {
   if [[ "${KEEP_STACK:-0}" != "1" ]]; then
@@ -34,9 +34,11 @@ set -a
 source deploy/.env
 set +a
 
-echo "==> 2/3 启动依赖（mysql/redis/qdrant，不含应用本身）"
-docker compose $COMPOSE_FLAGS up -d mysql redis qdrant
-WAIT_TIMEOUT="${WAIT_TIMEOUT:-300}" scripts/wait-healthy.sh mysql redis qdrant
+echo "==> 2/3 启动依赖（mysql/redis/qdrant + 假 AI 服务，不含应用本身）"
+# 集成测试跑在宿主机上：compose.e2e.yml 把 fake-ai 发布到 127.0.0.1:4011，
+# 测试通过 AI 通用适配器直连它，并读 /_introspect 做 HTTP 级断言。
+docker compose $COMPOSE_FLAGS up -d mysql redis qdrant fake-ai
+WAIT_TIMEOUT="${WAIT_TIMEOUT:-300}" scripts/wait-healthy.sh mysql redis qdrant fake-ai
 
 echo "==> 3/3 跑后端单测"
 cd apps/server

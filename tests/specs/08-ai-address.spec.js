@@ -407,6 +407,36 @@ test.describe('模块八：AI助手与地址管理', () => {
     } catch (e) { markFailed('8.3e', e.message.slice(0, 50)); throw e }
   })
 
+  test('8.3f 优化目标真正进入模型提示词（假服务自省）', async ({ page }) => {
+    await gateRecipeScenario(page, '8.3f')
+    const FAKE_AI_BASE = process.env.FAKE_AI_BASE || 'http://127.0.0.1:4011'
+    // 对着真实栈直跑时，宿主机并未发布 fake-ai 端口：探活失败即按环境条件跳过。
+    try {
+      const probe = await fetch(`${FAKE_AI_BASE}/_introspect`)
+      if (!probe.ok) throw new Error(`HTTP ${probe.status}`)
+    } catch (e) {
+      const reason = `假服务不可达（${FAKE_AI_BASE}/_introspect 探测失败：${e.message}）`
+      markSkippedEnv('8.3f', reason)
+      test.skip(true, reason)
+    }
+    markRunning('8.3f')
+    const input = '[normal] 番茄炒蛋：鸡蛋2个、番茄2个，调味后出锅。'
+    try {
+      await fetch(`${FAKE_AI_BASE}/_reset`, { method: 'POST' })
+      await openRecipeTab(page)
+      const pill = page.locator('.goal-pill', { hasText: '减脂' })
+      await pill.click()
+      await expect(pill).toHaveClass(/active/)
+      await page.locator('.recipe-textarea').fill(input)
+      await page.locator('.recipe-content-wrapper .primary-btn').click()
+      await expect(page.locator('.recipe-result')).toBeVisible({ timeout: 15000 })
+      const after = await (await fetch(`${FAKE_AI_BASE}/_introspect`)).json()
+      // 所选目标码必须出现在模型提示词中，由假服务自省留痕作为端到端证据。
+      expect(after.lastRecipeGoal).toBe('fat_loss')
+      markPassed('8.3f', '用户所选「减脂」目标以 fat_loss 进入模型提示词')
+    } catch (e) { markFailed('8.3f', e.message.slice(0, 50)); throw e }
+  })
+
   test('8.4 AI聊天历史', async ({ page }) => {
     markRunning('8.4')
     try {

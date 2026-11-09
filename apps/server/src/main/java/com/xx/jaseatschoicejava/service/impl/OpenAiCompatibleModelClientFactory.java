@@ -92,6 +92,8 @@ public class OpenAiCompatibleModelClientFactory implements AiModelClientFactory 
             .timeoutMs(genericConfig.getTimeout() != null && genericConfig.getTimeout() > 0
                 ? genericConfig.getTimeout() : 30000)
             .temperature(genericConfig.getTemperature() != null ? genericConfig.getTemperature() : 0.7)
+            // 环境配置默认不宣称已校验视觉；只有显式声明才放开，避免仅凭模型名开放识别入口。
+            .visionVerified(genericConfig.isVisionVerified())
             .build();
     }
 
