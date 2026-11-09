@@ -1,7 +1,7 @@
 name: smoke
 
-# PR 与主干推送只跑三条冒烟用例（登录/下单/商家侧），几分钟内给结论。
-# 全量 107 条走 regression.yml（定时或手动触发）。
+# PR 与主干推送跑冒烟用例（登录/下单/AI/商家侧），几分钟内给结论。
+# 全量 114 条走 regression.yml（定时或手动触发）。
 
 on:
   pull_request:
@@ -60,8 +60,10 @@ jobs:
       - name: Install Playwright browser
         run: cd tests && npx playwright install --with-deps chromium
 
+      # 08 覆盖 AI 识别/食谱流式与降级门控，依赖 compose.e2e.yml 里的 fake-ai；
+      # 它是 #216 的验收主接缝，不能再等到定时回归才跑。
       - name: Run smoke specs
-        run: bash scripts/ci-e2e.sh 01-auth.spec.js 04-order.spec.js 10-merchant-order-dish.spec.js 16-admin-ai-release.spec.js
+        run: bash scripts/ci-e2e.sh 01-auth.spec.js 04-order.spec.js 08-ai-address.spec.js 10-merchant-order-dish.spec.js 16-admin-ai-release.spec.js
 
       - name: Upload Playwright report
         if: failure()
@@ -74,3 +76,25 @@ jobs:
             /tmp/vite.log
           retention-days: 7
           if-no-files-found: ignore
+
+  # 小程序构建门禁：uni build -p mp-weixin 是纯前端构建，不依赖容器与任何密钥。
+  # 页面里的接口字段/组件用法一旦编译不过，这里当场挡下，而不是等开发者本地发现。
+  miniapp:
+    needs: static
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/miniapp/package-lock.json
+
+      - name: Install dependencies
+        run: npm --prefix apps/miniapp ci
+
+      - name: Build WeChat mini program
+        run: make build-miniapp
