@@ -7,8 +7,10 @@
     <el-button
       v-if="props.actionText"
       class="app-empty-state__action"
+      :class="{ 'app-empty-state__action--solid': props.actionVariant === 'solid' }"
+      :size="props.actionSize || undefined"
       type="primary"
-      link
+      :link="props.actionVariant === 'link'"
       @click="emit('action')"
     >
       {{ props.actionText }}
@@ -25,6 +27,15 @@ const props = defineProps({
     default: '暂时没有内容'
   },
   actionText: {
+    type: String,
+    default: ''
+  },
+  actionVariant: {
+    type: String,
+    default: 'link',
+    validator: (value) => ['link', 'solid'].includes(value)
+  },
+  actionSize: {
     type: String,
     default: ''
   },
@@ -62,6 +73,12 @@ const emit = defineEmits(['action'])
   color: var(--ink-500);
   font-size: 14px;
   line-height: 22px;
+}
+
+.app-empty-state__action--solid {
+  border-radius: var(--radius-md);
+  color: var(--surface);
+  font-weight: var(--weight-medium);
 }
 
 .app-empty-state--compact {
