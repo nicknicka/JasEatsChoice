@@ -478,7 +478,6 @@ const handleSubmitOrder = () => {
 
     .cancel-btn {
       min-width: 80px;
-      height: 38px;
       border: 1px solid #d9d9d9;
       color: #666;
       background: #ffffff;
@@ -496,7 +495,6 @@ const handleSubmitOrder = () => {
 
     .submit-btn {
       min-width: 100px;
-      height: 38px;
       background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
       border: none;
       border-radius: 8px;
