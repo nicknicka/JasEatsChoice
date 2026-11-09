@@ -125,15 +125,18 @@ const handleAction = (actionType, order) => {
 }
 
 .order-item {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
-  transition: all 0.3s;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
+/* §3.1：hover 反馈走中性描边，红色只留给状态 */
 .order-item:hover {
-  border-color: #ff6b6b;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .order-header {
@@ -145,15 +148,16 @@ const handleAction = (actionType, order) => {
 
 .order-id {
   font-weight: 600;
-  color: #333;
+  color: var(--ink-900);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
+/* §3.1：序号是中性信息，不用品牌/语义色 */
 .order-number {
-  background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);
-  color: white;
+  background: var(--neutral-bg);
+  color: var(--neutral);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -161,7 +165,7 @@ const handleAction = (actionType, order) => {
 }
 
 .order-id-text {
-  color: #666;
+  color: var(--ink-500);
   font-size: 13px;
   font-weight: 500;
 }
@@ -178,16 +182,17 @@ const handleAction = (actionType, order) => {
 }
 
 .label {
-  color: #666;
+  color: var(--ink-500);
 }
 
 .value {
-  color: #333;
+  color: var(--ink-900);
   font-weight: 500;
 }
 
+/* §2：金额用中性深色，不用红色编码金额 */
 .value.price {
-  color: #f56c6c;
+  color: var(--ink-900);
   font-size: 16px;
   font-weight: 600;
 }
