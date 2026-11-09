@@ -66,4 +66,14 @@ public class AIConfig {
      * 模型调用、SSE 连接与前端超时提示共用这一份配置，避免四处各自写死。
      */
     private Integer recipeStreamTimeoutMs = 120000;
+
+    /**
+     * 环境变量显式声明「视觉模型已通过图片请求验证」。
+     *
+     * 默认 false：能力探测仍以真实行为为准，管理员在运行时配置里保存并激活时
+     * 会用一张图片请求真实验证（见 AiRuntimeConfigServiceImpl#evaluateCandidate）。
+     * 这里只给受控部署（本地联调、E2E 覆盖层指向仓库内假服务）一个显式开关，
+     * 以免必须依赖一次在线探测才能开放视觉能力。
+     */
+    private boolean visionVerified = false;
 }

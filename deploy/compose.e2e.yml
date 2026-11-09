@@ -1,5 +1,5 @@
-# E2E 覆盖层：把通用 AI 适配器指向仓库内的假服务，让 Playwright 在没有真实
-# 厂商密钥时也能跑通菜品识别之外的全部 AI 主链路。
+# E2E 覆盖层：把通用 AI 适配器指向仓库内的假服务，让后端集成测试与 Playwright
+# 在没有真实厂商密钥时也能跑通聊天、视觉、食谱流式与 Embedding 的全部 AI 主链路。
 # 用法：docker compose -f deploy/compose.yml -f deploy/compose.dev.yml -f deploy/compose.e2e.yml ...
 services:
   fake-ai:
@@ -7,6 +7,10 @@ services:
       context: ../tests/fake-ai
     expose:
       - "4011"
+    # 同时发布到宿主机：后端集成测试跑在宿主机上，需要直连 127.0.0.1:4011
+    # 调 /v1/chat/completions 与自省端点 /_introspect 做 HTTP 级断言。
+    ports:
+      - "127.0.0.1:4011:4011"
     networks:
       - jaseats-net
     healthcheck:
@@ -24,6 +28,8 @@ services:
       AI_BASE_URL: http://fake-ai:4011/v1
       # 假服务的 success/stall 用例依赖这个超时：4s 触发 AI_TIMEOUT，UI 断言只等约 4s。
       AI_RECIPE_STREAM_TIMEOUT_MS: "4000"
+      # 假服务能直接回合法视觉结果，这里显式声明已验证，让识别成功链路也走真实端点。
+      AI_VISION_VERIFIED: "true"
       ANNOUNCEMENT_RAG_ENABLED: "false"
     depends_on:
       fake-ai:
