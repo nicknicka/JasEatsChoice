@@ -53,15 +53,15 @@ const onAction = (payload) => {
 <style scoped>
 .unknown-element {
   padding: 12px;
-  background: #fef2f2;
+  background: var(--danger-bg);
   border-radius: 8px;
-  border: 1px dashed #fca5a5;
+  border: 1px dashed var(--danger);
   text-align: center;
 }
 
 .unknown-tag {
   font-size: 13px;
-  color: #dc2626;
+  color: var(--danger);
   font-family: monospace;
 }
 </style>

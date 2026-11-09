@@ -118,8 +118,9 @@ const getStatusText = (status) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #ff6b6b 0%, #f8a5c2 100%);
-  color: white;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-900);
   padding: 16px 20px;
 }
 
@@ -138,11 +139,11 @@ const getStatusText = (status) => {
 
 .header-summary {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--ink-500);
 }
 
 .card-content {
-  background: white;
+  background: var(--surface);
   padding: 16px;
 }
 
@@ -160,18 +161,18 @@ const getStatusText = (status) => {
 }
 
 .stat-item.available {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: var(--success-bg);
+  color: var(--success);
 }
 
 .stat-item.used {
-  background: #e3f2fd;
-  color: #1565c0;
+  background: var(--info-bg);
+  color: var(--info);
 }
 
 .stat-item.expired {
-  background: #ffebee;
-  color: #c62828;
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .stat-label {
@@ -199,25 +200,24 @@ const getStatusText = (status) => {
 .coupon-item {
   display: flex;
   background: white;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
   position: relative;
 }
 
 .coupon-item.available {
-  border-color: #4caf50;
-  background: linear-gradient(to right, #f1f8e9, #ffffff);
+  border-color: var(--success);
 }
 
 .coupon-item.used {
-  border-color: #9e9e9e;
-  background: #fafafa;
+  border-color: var(--neutral);
+  background: var(--canvas-sunken);
 }
 
 .coupon-item.expired {
-  border-color: #f44336;
-  background: #ffebee;
+  border-color: var(--danger);
+  background: var(--danger-bg);
 }
 
 .coupon-left {
@@ -227,8 +227,8 @@ const getStatusText = (status) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);
-  color: white;
+  background: var(--canvas-sunken);
+  color: var(--ink-900);
 }
 
 .coupon-amount {
@@ -248,13 +248,13 @@ const getStatusText = (status) => {
 
 .coupon-condition {
   font-size: 12px;
-  opacity: 0.9;
+  color: var(--ink-500);
 }
 
 .coupon-divider {
   position: relative;
   width: 20px;
-  background: #f0f0f0;
+  background: var(--canvas-sunken);
 }
 
 .divider-circle {
@@ -262,7 +262,7 @@ const getStatusText = (status) => {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: white;
+  background: var(--surface);
   left: 0;
 }
 
@@ -279,14 +279,7 @@ const getStatusText = (status) => {
   left: 50%;
   top: 0;
   bottom: 0;
-  width: 2px;
-  background: repeating-linear-gradient(
-    to bottom,
-    #e0e0e0 0,
-    #e0e0e0 4px,
-    transparent 4px,
-    transparent 8px
-  );
+  border-left: 2px dashed var(--line);
   transform: translateX(-50%);
 }
 
@@ -301,7 +294,7 @@ const getStatusText = (status) => {
 .coupon-name {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--ink-900);
   margin-bottom: 8px;
 }
 
@@ -313,6 +306,6 @@ const getStatusText = (status) => {
 
 .expire-time {
   font-size: 12px;
-  color: #999;
+  color: var(--ink-400);
 }
 </style>

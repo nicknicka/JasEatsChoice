@@ -129,8 +129,9 @@ const handleAction = (actionType, order) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);
-  color: white;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-900);
   padding: 16px 20px;
 }
 
@@ -149,11 +150,11 @@ const handleAction = (actionType, order) => {
 
 .header-summary {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--ink-500);
 }
 
 .card-content {
-  background: white;
+  background: var(--surface);
   padding: 16px;
 }
 
@@ -162,26 +163,26 @@ const handleAction = (actionType, order) => {
   gap: 16px;
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--line);
 }
 
 .stat-item {
   flex: 1;
   text-align: center;
   padding: 12px;
-  background: #f8f9fa;
+  background: var(--canvas-sunken);
   border-radius: 8px;
 }
 
 .stat-item.pending {
-  background: #fff3e0;
-  color: #e65100;
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 
 .stat-label {
   display: block;
   font-size: 12px;
-  color: #666;
+  color: var(--ink-500);
   margin-bottom: 4px;
 }
 
@@ -198,15 +199,15 @@ const handleAction = (actionType, order) => {
 }
 
 .order-item {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
   transition: all 0.3s;
 }
 
 .order-item:hover {
-  border-color: #ff6b6b;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .order-header {
@@ -218,15 +219,15 @@ const handleAction = (actionType, order) => {
 
 .order-id {
   font-weight: 600;
-  color: #333;
+  color: var(--ink-900);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .order-number {
-  background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);
-  color: white;
+  background: var(--neutral-bg);
+  color: var(--neutral);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -234,7 +235,7 @@ const handleAction = (actionType, order) => {
 }
 
 .order-id-text {
-  color: #666;
+  color: var(--ink-500);
   font-size: 13px;
   font-weight: 500;
 }
@@ -251,16 +252,16 @@ const handleAction = (actionType, order) => {
 }
 
 .label {
-  color: #666;
+  color: var(--ink-500);
 }
 
 .value {
-  color: #333;
+  color: var(--ink-900);
   font-weight: 500;
 }
 
 .value.price {
-  color: #f56c6c;
+  color: var(--ink-900);
   font-size: 16px;
   font-weight: 600;
 }

@@ -38,7 +38,6 @@
                 :model-value="dish.rating"
                 disabled
                 show-score
-                text-color="#ff9900"
                 size="small"
               />
             </div>
@@ -148,15 +147,15 @@ const handleAction = (actionType, dish) => {
   display: flex;
   gap: 12px;
   padding: 12px;
-  border: 1px solid #f0f2f5;
+  border: 1px solid var(--line);
   border-radius: 14px;
-  background: white;
+  background: var(--surface);
   transition: all 0.2s ease;
 }
 
 .dish-item:hover {
-  border-color: rgba(255, 159, 67, 0.35);
-  box-shadow: 0 4px 12px rgba(255, 159, 67, 0.12);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
   transform: translateY(2px);
 }
 
@@ -186,7 +185,7 @@ const handleAction = (actionType, dish) => {
 .dish-name {
   font-size: 15px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--ink-900);
   flex: 1;
   line-height: 1.4;
   display: flex;
@@ -201,8 +200,8 @@ const handleAction = (actionType, dish) => {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 500;
-  color: white;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: var(--brand-700);
+  background: var(--brand-50);
   flex-shrink: 0;
   letter-spacing: 0.3px;
 }
@@ -213,7 +212,7 @@ const handleAction = (actionType, dish) => {
 
 .dish-description {
   font-size: 13px;
-  color: #64748b;
+  color: var(--ink-500);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -231,7 +230,7 @@ const handleAction = (actionType, dish) => {
 .price {
   font-size: 18px;
   font-weight: 600;
-  color: #ff6347;
+  color: var(--ink-900);
 }
 
 .category-pill {
@@ -241,8 +240,8 @@ const handleAction = (actionType, dish) => {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 500;
-  color: #38b26a;
-  background: rgba(86, 212, 143, 0.12);
+  color: var(--success);
+  background: var(--success-bg);
 }
 
 .dish-tags {
@@ -258,8 +257,8 @@ const handleAction = (actionType, dish) => {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 400;
-  color: #64748b;
-  background: #f0f2f5;
+  color: var(--ink-500);
+  background: var(--canvas-sunken);
   letter-spacing: 0.2px;
 }
 

@@ -19,7 +19,6 @@
               v-model="avgRatingValue"
               disabled
               show-score
-              text-color="#ff9900"
             />
           </div>
         </div>
@@ -55,7 +54,6 @@
                 v-model="review.rating"
                 disabled
                 show-score
-                text-color="#ff9900"
               />
             </div>
           </div>
@@ -137,8 +135,9 @@ const handleAction = (actionType, review) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #ff6b6b 0%, #e66767 100%);
-  color: white;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-900);
   padding: 16px 20px;
 }
 
@@ -157,18 +156,18 @@ const handleAction = (actionType, review) => {
 
 .header-summary {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--ink-500);
 }
 
 .card-content {
-  background: white;
+  background: var(--surface);
   padding: 16px;
 }
 
 .stats-row {
   margin-bottom: 16px;
   padding: 16px;
-  background: #f8f9fa;
+  background: var(--canvas-sunken);
   border-radius: 8px;
 }
 
@@ -179,7 +178,7 @@ const handleAction = (actionType, review) => {
 .stat-label {
   display: block;
   font-size: 12px;
-  color: #666;
+  color: var(--ink-500);
   margin-bottom: 8px;
 }
 
@@ -193,7 +192,7 @@ const handleAction = (actionType, review) => {
 .stat-value {
   font-size: 28px;
   font-weight: 600;
-  color: #ff9900;
+  color: var(--ink-900);
 }
 
 .empty-state {
@@ -207,15 +206,15 @@ const handleAction = (actionType, review) => {
 }
 
 .review-item {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 16px;
   transition: all 0.3s;
 }
 
 .review-item:hover {
-  border-color: #fa709a;
-  box-shadow: 0 2px 8px rgba(250, 112, 154, 0.1);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .review-header {
@@ -247,18 +246,18 @@ const handleAction = (actionType, review) => {
 .dish-name {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--ink-900);
   margin-bottom: 4px;
 }
 
 .order-id {
   font-size: 12px;
-  color: #999;
+  color: var(--ink-400);
 }
 
 .review-content {
   font-size: 14px;
-  color: #666;
+  color: var(--ink-700);
   line-height: 1.6;
   margin-bottom: 12px;
 }
@@ -287,12 +286,12 @@ const handleAction = (actionType, review) => {
   justify-content: space-between;
   align-items: center;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--line);
 }
 
 .review-time {
   font-size: 12px;
-  color: #999;
+  color: var(--ink-400);
 }
 
 .review-actions {

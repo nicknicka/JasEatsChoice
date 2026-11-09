@@ -40,8 +40,9 @@ const props = defineProps({
 }
 
 .card-header {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-900);
   padding: 16px 20px;
 }
 
@@ -60,27 +61,27 @@ const props = defineProps({
 
 .header-summary {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--ink-500);
 }
 
 .card-content {
-  background: white;
+  background: var(--surface);
   padding: 16px;
 }
 
 .error-info {
   margin-top: 12px;
   font-size: 14px;
-  color: #666;
+  color: var(--ink-500);
 }
 
 .error-label {
-  color: #999;
+  color: var(--ink-400);
   margin-right: 8px;
 }
 
 .error-value {
-  color: #333;
+  color: var(--ink-900);
   font-weight: 500;
 }
 </style>

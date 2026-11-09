@@ -185,8 +185,9 @@ const handleAction = (actionType) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #ff6b6b 0%, #e17055 100%);
-  color: white;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-900);
   padding: 16px 20px;
 }
 
@@ -205,11 +206,11 @@ const handleAction = (actionType) => {
 
 .header-summary {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--ink-500);
 }
 
 .card-content {
-  background: white;
+  background: var(--surface);
   padding: 16px;
 }
 
@@ -224,10 +225,10 @@ const handleAction = (actionType) => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--ink-900);
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 1px solid var(--line);
 }
 
 .info-grid {
@@ -240,24 +241,24 @@ const handleAction = (actionType) => {
   display: flex;
   flex-direction: column;
   padding: 10px;
-  background: #f8f9fa;
+  background: var(--canvas-sunken);
   border-radius: 6px;
 }
 
 .label {
   font-size: 12px;
-  color: #666;
+  color: var(--ink-500);
   margin-bottom: 4px;
 }
 
 .value {
   font-size: 14px;
-  color: #333;
+  color: var(--ink-900);
   font-weight: 500;
 }
 
 .body-data {
-  background: #f0f7ff;
+  background: var(--canvas-sunken);
   padding: 12px;
   border-radius: 8px;
 }
@@ -274,20 +275,20 @@ const handleAction = (actionType) => {
   flex-direction: column;
   align-items: center;
   padding: 12px;
-  background: white;
+  background: var(--surface);
   border-radius: 6px;
 }
 
 .data-label {
   font-size: 12px;
-  color: #666;
+  color: var(--ink-500);
   margin-bottom: 4px;
 }
 
 .data-value {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--ink-900);
 }
 
 .bmi-hint {
@@ -295,7 +296,7 @@ const handleAction = (actionType) => {
 }
 
 .preferences {
-  background: #fff9f0;
+  background: var(--canvas-sunken);
   padding: 12px;
   border-radius: 8px;
 }
@@ -314,18 +315,18 @@ const handleAction = (actionType) => {
 .preference-item .label {
   min-width: 80px;
   font-size: 14px;
-  color: #666;
+  color: var(--ink-500);
 }
 
 .preference-item .value {
   font-size: 14px;
-  color: #333;
+  color: var(--ink-900);
 }
 
 .actions-section {
   display: flex;
   gap: 12px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--line);
 }
 </style>

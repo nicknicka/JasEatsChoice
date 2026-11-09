@@ -32,7 +32,6 @@
                 v-model="favorite.rating"
                 disabled
                 show-score
-                text-color="#ff9900"
               />
               <span class="price">¥{{ favorite.price }}</span>
             </div>
@@ -105,8 +104,9 @@ const handleAction = (actionType, favorite) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #ff6b6b 0%, #f78fb3 100%);
-  color: white;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-900);
   padding: 16px 20px;
 }
 
@@ -125,11 +125,11 @@ const handleAction = (actionType, favorite) => {
 
 .header-summary {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--ink-500);
 }
 
 .card-content {
-  background: white;
+  background: var(--surface);
   padding: 16px;
 }
 
@@ -144,7 +144,7 @@ const handleAction = (actionType, favorite) => {
 }
 
 .favorite-item {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.3s;
@@ -153,8 +153,8 @@ const handleAction = (actionType, favorite) => {
 }
 
 .favorite-item:hover {
-  border-color: #f5576c;
-  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.15);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
   transform: translateY(-2px);
 }
 
@@ -162,7 +162,7 @@ const handleAction = (actionType, favorite) => {
   width: 100%;
   height: 140px;
   overflow: hidden;
-  background: #f5f5f5;
+  background: var(--canvas-sunken);
 }
 
 .dish-image img {
@@ -181,7 +181,7 @@ const handleAction = (actionType, favorite) => {
 .dish-name {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--ink-900);
   margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -198,7 +198,7 @@ const handleAction = (actionType, favorite) => {
 .price {
   font-size: 18px;
   font-weight: 600;
-  color: #f56c6c;
+  color: var(--ink-900);
 }
 
 .dish-tags {
@@ -210,13 +210,13 @@ const handleAction = (actionType, favorite) => {
 
 .collection-time {
   font-size: 12px;
-  color: #999;
+  color: var(--ink-400);
   margin-top: auto;
 }
 
 .dish-actions {
   padding: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--line);
   display: flex;
   gap: 8px;
 }
