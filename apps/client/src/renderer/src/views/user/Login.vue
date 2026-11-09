@@ -828,7 +828,7 @@ const thirdPartyLogin = (type) => {
 // === 登录按钮：唯一实心主按钮，取 --brand-500（§4.1） ===
 .login-btn {
   width: 100%;
-  height: 42px;
+  height: var(--control-height-md);
   border: none;
   border-radius: var(--radius-md);
   background: var(--brand-500);

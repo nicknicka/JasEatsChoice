@@ -340,7 +340,7 @@ const goToMerchantLogin = async () => {
 // 登录按钮
 .login-btn {
   width: 100%;
-  height: 42px;
+  height: var(--control-height-md);
   border: none;
   border-radius: 10px;
   background: @accent-gradient;

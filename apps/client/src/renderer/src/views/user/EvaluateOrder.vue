@@ -861,7 +861,7 @@ onMounted(() => {
 
 .submit-btn {
   min-width: 180px;
-  height: 44px;
+  height: var(--control-height-md);
   border-radius: var(--radius-md);
   font-size: var(--text-body);
   font-weight: var(--weight-semibold);

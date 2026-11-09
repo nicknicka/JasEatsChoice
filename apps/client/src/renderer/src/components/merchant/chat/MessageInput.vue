@@ -180,7 +180,6 @@ defineExpose({
       border: none;
       box-shadow: 0 4px 12px @merchant-shadow-hover;
       transition: all 0.2s ease;
-      height: auto;
 
       &:hover:not(:disabled) {
         transform: translateY(-2px);

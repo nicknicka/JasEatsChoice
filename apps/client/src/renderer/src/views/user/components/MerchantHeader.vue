@@ -250,7 +250,7 @@ const handleToggleFavorite = () => {
 
     .favorite-button {
       flex-shrink: 0;
-      height: 36px;
+      height: var(--control-height-sm);
       padding: 0 var(--space-4);
       transition: background var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
       border-radius: var(--radius-md);

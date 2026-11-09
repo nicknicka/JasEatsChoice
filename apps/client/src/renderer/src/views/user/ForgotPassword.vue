@@ -538,7 +538,7 @@ onUnmounted(() => {
 
 // 按钮样式
 .step-btn {
-  height: 42px;
+  height: var(--control-height-md);
   border: none;
   border-radius: 10px;
   font-size: 14px;

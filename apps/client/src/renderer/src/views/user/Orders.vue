@@ -321,9 +321,9 @@ watch(
   <div class="orders-container">
     <!-- 页头：标准版，标题 --text-h1 + 上下 --space-6（DESIGN-BASELINE §4.7） -->
     <header class="orders-header">
-      <CommonBackButton />
       <h1 class="orders-header__title">订单中心</h1>
       <div class="orders-header__actions">
+        <CommonBackButton />
         <el-button
           type="default"
           size="small"
@@ -443,6 +443,9 @@ watch(
   }
 
   .orders-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
     margin-left: auto;
   }
 

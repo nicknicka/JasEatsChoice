@@ -424,7 +424,7 @@ const handleMerchantImageError = (merchant) => {
 }
 
 .search-input :deep(.el-input__wrapper) {
-  min-height: 36px;
+  min-height: var(--control-height-sm);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 0 var(--space-3);
@@ -463,7 +463,7 @@ const handleMerchantImageError = (merchant) => {
 
 .reset-btn {
   flex-shrink: 0;
-  min-height: 36px;
+  min-height: var(--control-height-sm);
   border-color: var(--line-strong);
   border-radius: var(--radius-md);
   color: var(--ink-700);
@@ -717,7 +717,7 @@ const handleMerchantImageError = (merchant) => {
 
 .order-btn {
   width: 100%;
-  min-height: 36px;
+  min-height: var(--control-height-md);
   border-radius: var(--radius-md);
   font-size: var(--text-body-sm);
   font-weight: var(--weight-semibold);

@@ -14,10 +14,10 @@ const router = useRouter()
 
 // 组件属性
 const props = defineProps({
-  // 按钮类型
+  // 按钮类型：返回统一按 §4.9 次按钮（type=default），不再默认成文字层
   type: {
     type: String,
-    default: 'text'
+    default: 'default'
   },
   // 按钮大小
   size: {
