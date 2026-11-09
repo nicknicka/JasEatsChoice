@@ -19,16 +19,17 @@ const showDetail = ref(false)
 
 // 订单状态映射（对应后端状态码）
 // 0-待支付、1-待接单、2-备菜中、3-烹饪中、4-待上菜、5-已送达、6-已取消、7-待评价、8-已评价
+// type 按 DESIGN-BASELINE §2 状态语义色映射：待处理=warning、进行中=info、已完成=success、已取消=danger
 const orderStatusMap = {
-  0: { text: '待支付', type: 'info', color: '#909399' },
-  1: { text: '待接单', type: 'danger', color: '#f56c6c' },
-  2: { text: '备菜中', type: 'warning', color: '#e6a23c' },
-  3: { text: '烹饪中', type: 'warning', color: '#ff9800' },
-  4: { text: '待上菜', type: 'primary', color: '#409eff' },
-  5: { text: '已送达', type: 'success', color: '#67c23a' },
-  6: { text: '已取消', type: 'info', color: '#c0c4cc' },
-  7: { text: '待评价', type: 'success', color: '#95d475' },
-  8: { text: '已评价', type: 'success', color: '#85ce61' }
+  0: { text: '待支付', type: 'warning' },
+  1: { text: '待接单', type: 'warning' },
+  2: { text: '备菜中', type: 'info' },
+  3: { text: '烹饪中', type: 'info' },
+  4: { text: '待上菜', type: 'warning' },
+  5: { text: '已送达', type: 'success' },
+  6: { text: '已取消', type: 'danger' },
+  7: { text: '待评价', type: 'warning' },
+  8: { text: '已评价', type: 'success' }
 }
 
 // 订单状态
@@ -203,7 +204,7 @@ const sendReminder = () => {
 
   .order-summary {
     padding: 16px 20px;
-    background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-surface-alt 100%);
+    background: var(--surface);
     border: 1px solid @merchant-border;
     border-radius: @nordic-radius-lg;
     box-shadow: 0 2px 8px @merchant-shadow;
@@ -286,7 +287,7 @@ const sendReminder = () => {
       margin-bottom: 16px;
 
       .order-basic-info {
-        background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
+        background: var(--canvas);
         padding: 14px;
         border-radius: @nordic-radius-md;
         margin-bottom: 12px;
@@ -358,10 +359,10 @@ const sendReminder = () => {
       }
 
       .order-total {
-        background: linear-gradient(135deg, @merchant-warning-light 0%, @nordic-yellow-light 100%);
+        background: var(--canvas);
         padding: 14px;
         border-radius: @nordic-radius-md;
-        border: 1px solid @merchant-warning;
+        border: 1px solid var(--line);
 
         .total-row {
           display: flex;
