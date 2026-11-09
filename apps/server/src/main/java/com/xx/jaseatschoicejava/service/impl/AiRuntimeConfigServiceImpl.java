@@ -5,6 +5,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -57,6 +58,11 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     private static final String CONFIG_GROUP = "ai";
     private static final String VISION_PROBE_IMAGE =
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+
+    /** 旧智谱模型名迁移后的中性默认模型。 */
+    private static final String NEUTRAL_LEGACY_MODEL = "gpt-4o-mini";
+    private static final List<String> LEGACY_MODEL_FIELDS =
+        List.of("model", "supervisorModel", "visionModel", "embeddingModel");
 
     private final AIConfig aiConfig;
     private final SystemConfigService systemConfigService;
@@ -597,9 +603,12 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
     }
 
     private boolean migrateProviderFields(ObjectNode node) {
-        boolean changed = false;
-        changed |= migrateProviderField(node, "provider");
-        changed |= migrateProviderField(node, "embeddingProvider");
+        boolean legacyChatProvider = migrateProviderField(node, "provider");
+        boolean legacyEmbeddingProvider = migrateProviderField(node, "embeddingProvider");
+        boolean changed = legacyChatProvider || legacyEmbeddingProvider;
+        if (legacyChatProvider || legacyEmbeddingProvider) {
+            changed |= neutralizeLegacyModels(node);
+        }
         return changed;
     }
 
@@ -614,6 +623,41 @@ public class AiRuntimeConfigServiceImpl implements AiRuntimeConfigService {
         }
         node.put(field, normalized);
         return true;
+    }
+
+    /**
+     * 旧智谱配置里的模型名无法安全映射到通用适配器：替换为中性默认模型，
+     * 并留下管理员可见的重配提示，避免升级后继续把智谱模型名当默认值。
+     */
+    private boolean neutralizeLegacyModels(ObjectNode node) {
+        boolean changed = false;
+        for (String field : LEGACY_MODEL_FIELDS) {
+            JsonNode value = node.get(field);
+            if (value == null || !value.isTextual() || !isLegacyZhipuModel(value.asText())) {
+                continue;
+            }
+            node.put(field, NEUTRAL_LEGACY_MODEL);
+            changed = true;
+        }
+        if (changed) {
+            node.put("needsReconfiguration", true);
+            node.put("configurationNotice",
+                "检测到旧智谱模型名，已替换为通用默认模型，请重新填写 OpenAI 兼容模型名");
+        }
+        return changed;
+    }
+
+    private boolean isLegacyZhipuModel(String model) {
+        if (!hasText(model)) {
+            return false;
+        }
+        String normalized = model.trim().toLowerCase(Locale.ROOT);
+        return "glm".equals(normalized)
+            || normalized.startsWith("glm-")
+            || normalized.startsWith("zhipu")
+            || normalized.startsWith("charglm")
+            || normalized.startsWith("cogview")
+            || normalized.startsWith("cogvideo");
     }
 
     /**

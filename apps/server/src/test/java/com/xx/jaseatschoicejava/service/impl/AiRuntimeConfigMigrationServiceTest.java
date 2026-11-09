@@ -137,6 +137,38 @@ class AiRuntimeConfigMigrationServiceTest {
     }
 
     @Test
+    void legacyZhipuModelNamesAreNeutralizedWithReconfigurationNotice() throws Exception {
+        databaseConfigs.put(CONFIG_KEY, new ObjectMapper().writeValueAsString(AiModelConfig.builder()
+            .provider("zhipu")
+            .embeddingProvider("zhipu")
+            .model("glm-4")
+            .supervisorModel("glm-4-plus")
+            .visionModel("glm-4v")
+            .embeddingModel("glm-embedding")
+            .baseUrl("https://legacy.example.com/v1")
+            .embeddingBaseUrl("https://legacy.example.com/v1")
+            .timeoutMs(30000)
+            .temperature(0.2)
+            .build()));
+
+        AiRuntimeConfigServiceImpl runtime = service();
+        runtime.initialize();
+        runtime.initialize();
+        AiRuntimeConfigSnapshot snapshot = runtime.getCurrentSnapshot();
+
+        assertEquals("openai-compatible", snapshot.getProvider());
+        assertEquals("gpt-4o-mini", snapshot.getModel());
+        assertEquals("gpt-4o-mini", snapshot.getSupervisorModel());
+        assertEquals("gpt-4o-mini", snapshot.getVisionModel());
+        assertTrue(snapshot.isNeedsReconfiguration());
+        assertTrue(snapshot.getConfigurationNotice().contains("重新"));
+        assertFalse(databaseConfigs.get(CONFIG_KEY).contains("glm-"));
+        verify(systemConfigService, org.mockito.Mockito.times(1))
+            .setConfigValue(org.mockito.ArgumentMatchers.eq(CONFIG_KEY), anyString(),
+                anyString(), anyString());
+    }
+
+    @Test
     void legacyHistoryIsReadableThroughSummaryAndMigratedOnWrite() throws Exception {
         historyRows.add(new ObjectMapper().writeValueAsString(
             com.xx.jaseatschoicejava.dto.AiRuntimeConfigHistory.builder()
