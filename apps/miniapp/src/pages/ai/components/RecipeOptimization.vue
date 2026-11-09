@@ -86,6 +86,42 @@
             <text class="card-recipe-name">{{ optimizationResult.recipeName }}</text>
           </view>
 
+          <!-- 食材清单 -->
+          <view class="recipe-block" v-if="optimizationResult.ingredients.length">
+            <view class="recipe-block-title">
+              <text class="recipe-block-icon">🥕</text>
+              <text class="recipe-block-label">食材清单</text>
+            </view>
+            <view class="ingredient-list">
+              <view
+                class="ingredient-item"
+                v-for="(ingredient, index) in optimizationResult.ingredients"
+                :key="index"
+              >
+                <text class="ingredient-dot">·</text>
+                <text class="ingredient-text">{{ ingredient }}</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 步骤列表 -->
+          <view class="recipe-block" v-if="optimizationResult.steps.length">
+            <view class="recipe-block-title">
+              <text class="recipe-block-icon">👩🍳</text>
+              <text class="recipe-block-label">步骤列表</text>
+            </view>
+            <view class="step-list">
+              <view
+                class="step-item"
+                v-for="(step, index) in optimizationResult.steps"
+                :key="index"
+              >
+                <view class="step-index">{{ index + 1 }}</view>
+                <text class="step-text">{{ step }}</text>
+              </view>
+            </view>
+          </view>
+
           <!-- 营养对比 -->
           <view class="nutrition-comparison">
             <view class="comparison-item">
@@ -258,6 +294,37 @@ const getOptimizationErrorMessage = (error) => {
 }
 
 /**
+ * 把统一契约里的 ingredients 字符串解析成展示用列表。
+ * 兼容换行、中英文逗号、顿号、分号等常见分隔符。
+ */
+const parseIngredientList = (value) => {
+  if (typeof value !== 'string') return []
+  return value
+    .split(/[\n\r,，、;；]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+/**
+ * 把统一契约里的 steps 字符串解析成步骤列表。
+ * 优先按换行拆分；单行时再按行内编号（1. / 2、/ 3) 等）拆分。
+ */
+const parseStepList = (value) => {
+  if (typeof value !== 'string') return []
+  const text = value.trim()
+  if (!text) return []
+  const lines = text
+    .split(/[\n\r]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+  const segments = lines.length > 1 ? lines : [text]
+  return segments
+    .flatMap((line) => line.split(/(?=(?:^|\s)\d{1,2}\s*[.、)．])/))
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+/**
  * 优化食谱
  */
 const optimizeRecipe = async () => {
@@ -296,6 +363,8 @@ const optimizeRecipe = async () => {
 
     optimizationResult.value = {
       recipeName: data.recipe?.name || '优化食谱',
+      ingredients: parseIngredientList(data.recipe?.ingredients),
+      steps: parseStepList(data.recipe?.steps),
       originalCalories: num(orig.calorie),
       originalProtein: num(orig.protein),
       originalFat: num(orig.fat),
@@ -588,6 +657,86 @@ const shareResult = () => {
 .card-recipe-name {
   font-size: $font-size-base;
   color: $text-color-secondary;
+}
+
+/* 食材清单 / 步骤列表 */
+.recipe-block {
+  margin-top: $spacing-lg;
+}
+
+.recipe-block-title {
+  @include flex-center;
+  justify-content: flex-start;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-sm;
+}
+
+.recipe-block-icon {
+  font-size: $font-size-lg;
+}
+
+.recipe-block-label {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $text-color-primary;
+}
+
+.ingredient-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.ingredient-item {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-xs;
+}
+
+.ingredient-dot {
+  flex-shrink: 0;
+  color: $primary-color;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-lg;
+}
+
+.ingredient-text {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $text-color-regular;
+  line-height: $line-height-lg;
+}
+
+.step-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+}
+
+.step-index {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  @include flex-center;
+  margin-top: 4rpx;
+  border-radius: $border-radius-round;
+  background: rgba(237, 106, 66, 0.12);
+  color: $primary-color;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+}
+
+.step-text {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $text-color-regular;
+  line-height: $line-height-lg;
 }
 
 .analysis-content {
