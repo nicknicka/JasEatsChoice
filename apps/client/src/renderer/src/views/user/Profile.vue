@@ -2009,14 +2009,12 @@ defineExpose({
 
 .ep-btn-cancel {
   min-width: 88px;
-  height: 36px;
   border-radius: @nordic-radius-md;
   font-weight: 500;
 }
 
 .ep-btn-save {
   min-width: 120px;
-  height: 36px;
   border-radius: @nordic-radius-md;
   font-weight: 600;
   background: linear-gradient(135deg, @nordic-accent 0%, @nordic-accent-dark 100%);

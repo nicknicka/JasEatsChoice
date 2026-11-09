@@ -1147,7 +1147,6 @@ watch(visible, (newVal) => {
       .action-btn {
         width: 80px;
         padding: 0 8px !important;
-        height: 26px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -1155,7 +1154,6 @@ watch(visible, (newVal) => {
         font-size: 0.857rem /* 原值: 12px */;
         box-sizing: border-box;
         border-radius: 4px;
-        line-height: 26px;
 
         // 重置所有按钮类型的默认样式差异
         &.el-button {

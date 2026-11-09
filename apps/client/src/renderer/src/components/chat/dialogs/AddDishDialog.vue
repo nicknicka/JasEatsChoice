@@ -697,7 +697,6 @@ const handleSubmit = async () => {
   }
 
   .el-button {
-    height: 38px;
     padding: 0 24px;
     font-size: 1rem /* 原值: 14px */;
     font-weight: 600;
