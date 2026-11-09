@@ -135,7 +135,7 @@ defineExpose({
   flex: 1;
   padding: 18px 20px;
   overflow-y: auto;
-  background: linear-gradient(180deg, @merchant-surface-alt 0%, @merchant-surface 100%);
+  background: var(--canvas);
 
   .messages-wrapper {
     display: flex;

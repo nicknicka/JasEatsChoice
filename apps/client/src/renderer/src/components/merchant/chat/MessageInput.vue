@@ -120,13 +120,13 @@ defineExpose({
 .message-input-wrapper {
   padding: 16px 20px;
   border-top: 1px solid @merchant-border;
-  background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
+  background: var(--surface);
   box-shadow: 0 -2px 8px @merchant-shadow;
 
   .sync-toggle {
     margin-bottom: 10px;
     padding: 8px 12px;
-    background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-surface-alt 100%);
+    background: var(--brand-50);
     border-radius: @nordic-radius-sm;
     border: 1px solid @merchant-border;
 
@@ -176,7 +176,7 @@ defineExpose({
       border-radius: @nordic-radius-md;
       font-weight: 600;
       padding: 10px 24px;
-      background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-dark 100%);
+      background: var(--brand-500);
       border: none;
       box-shadow: 0 4px 12px @merchant-shadow-hover;
       transition: all 0.2s ease;

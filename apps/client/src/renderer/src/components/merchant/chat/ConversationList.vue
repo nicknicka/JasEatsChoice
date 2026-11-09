@@ -243,7 +243,7 @@ const formatTime = (timeStr) => {
   .list-header {
     padding: 18px 20px;
     border-bottom: 1px solid @merchant-border;
-    background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-surface 100%);
+    background: var(--surface);
     flex-shrink: 0;
 
     .header-title {
@@ -283,7 +283,7 @@ const formatTime = (timeStr) => {
       }
 
       &.active {
-        background: linear-gradient(135deg, @merchant-primary-light 0%, @merchant-surface-alt 100%);
+        background: var(--brand-100);
         border-left: 3px solid @merchant-primary;
         padding-left: 13px;
       }
@@ -311,7 +311,7 @@ const formatTime = (timeStr) => {
           align-items: center;
           justify-content: center;
           font-size: 1.714rem /* 原值: 24px */;
-          background: linear-gradient(135deg, @merchant-surface-alt 0%, @merchant-border 100%);
+          background: var(--canvas-sunken);
           border-radius: 50%;
           transition: transform 0.2s ease;
           overflow: hidden;
@@ -322,7 +322,7 @@ const formatTime = (timeStr) => {
           position: absolute;
           top: -4px;
           right: -4px;
-          background: linear-gradient(135deg, @merchant-error 0%, @merchant-error-light 100%);
+          background: var(--danger);
           color: @merchant-surface;
           border-radius: 12px;
           padding: 2px 7px;
@@ -340,7 +340,7 @@ const formatTime = (timeStr) => {
           right: -2px;
           width: 20px;
           height: 20px;
-          background: linear-gradient(135deg, @merchant-primary 0%, @merchant-primary-light 100%);
+          background: var(--brand-500);
           border-radius: 50%;
           display: flex;
           align-items: center;
