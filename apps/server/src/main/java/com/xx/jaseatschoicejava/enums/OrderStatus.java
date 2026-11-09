@@ -5,7 +5,6 @@ package com.xx.jaseatschoicejava.enums;
  * <p>
  * 0-待支付、1-待接单、2-制作中、3-已完成、4-已取消
  *
- * @Author nickxiao
  * @Date 2025/11/22
  */
 public enum OrderStatus {

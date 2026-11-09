@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
  * WebSocket握手认证处理器
  * 在WebSocket握手升级前验证token
  *
- * @Author nickxiao
  * @Date 2025/11/22
  */
 public class WebSocketAuthHandler extends ChannelInboundHandlerAdapter {

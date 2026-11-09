@@ -3,7 +3,6 @@ package com.xx.jaseatschoicejava.enums;
 /**
  * 消息类型枚举
  *
- * @Author nickxiao
  * @Date 2025/11/22
  */
 public enum MsgType {

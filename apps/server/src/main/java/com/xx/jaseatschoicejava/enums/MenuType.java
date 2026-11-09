@@ -3,7 +3,6 @@ package com.xx.jaseatschoicejava.enums;
 /**
  * 菜单类型枚举
  *
- * @Author nickxiao
  * @Date 2025/11/22
  */
 public enum MenuType {

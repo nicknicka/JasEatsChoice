@@ -5,7 +5,6 @@ package com.xx.jaseatschoicejava.enums;
  * <p>
  * 0-待审核,1-审核通过,2-审核驳回,3-已撤回,4-超时驳回
  *
- * @Author nickxiao
  * @Date 2026/01/24
  */
 public enum AddDishApprovalStatus {

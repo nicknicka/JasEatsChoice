@@ -11,7 +11,6 @@ import java.security.Key;
 /**
  * JWT配置类
  *
- * @Author nickxiao
  * @Date 2025/11/22
  */
 @Configuration

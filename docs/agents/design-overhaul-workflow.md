@@ -100,7 +100,7 @@
 - 一个 issue = 一个 worktree + 一个分支，分支名 `codex/<issue>-<slug>`。
 - 起隔离验证栈时统一 `docker compose --project-name codex<issue> ...`，收尾 `down -v`。
 - `deploy/.env` 是 gitignore 的，worktree 里不存在。直接软链主检出的那份最省事，路径同样被 gitignore，不会污染 diff：
-  `ln -sf /Users/nickxiao/jaseats-choice/deploy/.env deploy/.env`。
+  `ln -sf $HOME/jaseats-choice/deploy/.env deploy/.env`。
 - **上面这条软链命令只能在 worktree 里执行**。在主检出里执行会把主检出的 `.env` 换成指向自己的软链，原内容当场丢失，之后 `docker compose --env-file deploy/.env …` 报 `too many levels of symbolic links`（2026-11-08 已实际发生一次，`04-order.spec.js` 的 4.8 因此失败）。
   还原办法：`deploy/.env` 的键都能从运行中的容器取回 —— `docker inspect jaseats-mysql-1` 取 `MYSQL_ROOT_PASSWORD / MYSQL_DATABASE / MYSQL_USER / MYSQL_PASSWORD`，`docker inspect jaseats-spring-boot-1` 取其余键，`docker inspect -f '{{json .Config.Cmd}}' jaseats-redis-1` 取 `--requirepass` 后的 Redis 密码；以 `deploy/.env.example` 为模板逐键覆盖，写完用 `docker compose --env-file deploy/.env -f deploy/compose.yml -f deploy/compose.dev.yml config` 验证。
 - **`node_modules` 同样不在 worktree 里**（已 gitignore），`make web` / `make check` 会直接找不到依赖。从主检出软链：

@@ -7,7 +7,6 @@ import org.springframework.security.core.Authentication;
  * 安全工具类
  * 用于从 Spring Security Context 中获取当前用户信息
  *
- * @Author nickxiao
  * @Date 2025/11/22
  */
 public class SecurityUtil {
