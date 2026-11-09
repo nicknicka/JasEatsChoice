@@ -104,16 +104,35 @@
               <span class="dot"></span>
             </div>
           </div>
-          <!-- 模型实时输出：阶段提示随真实 token 推进，原始 JSON 默认折叠 -->
+          <!-- 模型实时输出：把增量 token 解析为受控文本，生成期间渐进可见（不呈现原始 JSON） -->
           <div v-if="streamedContent" class="stream-output">
             <div class="stream-live">
               <span class="stream-live-stage">{{ streamStage }}</span>
               <span class="stream-live-count">已生成 {{ streamedContent.length }} 字</span>
             </div>
-            <details class="stream-raw" @toggle="onStreamRawToggle">
-              <summary class="stream-raw-summary">查看模型原始输出</summary>
-              <pre ref="streamOutputRef" class="stream-output-text">{{ streamedContent }}</pre>
-            </details>
+            <div ref="streamPreviewRef" class="stream-preview" aria-live="polite">
+              <div v-if="streamPreview.name" class="stream-line">
+                <span class="stream-line-key">食谱名称</span>
+                <span class="stream-line-value">{{ streamPreview.name }}</span>
+              </div>
+              <div v-if="streamPreview.ingredients" class="stream-line">
+                <span class="stream-line-key">食材用量</span>
+                <span class="stream-line-value">{{ streamPreview.ingredients }}</span>
+              </div>
+              <div v-if="streamPreview.steps" class="stream-line">
+                <span class="stream-line-key">烹饪步骤</span>
+                <span class="stream-line-value">{{ streamPreview.steps }}</span>
+              </div>
+              <div v-if="streamPreview.improvements.length" class="stream-line">
+                <span class="stream-line-key">优化亮点</span>
+                <span class="stream-line-value">
+                  <span v-for="(item, index) in streamPreview.improvements" :key="index" class="stream-chip">{{ item }}</span>
+                </span>
+              </div>
+              <div v-if="!streamPreview.hasContent" class="stream-preview-pending">
+                正在接收模型输出<span class="stream-caret"></span>
+              </div>
+            </div>
           </div>
         </div>
       </Transition>
@@ -332,8 +351,13 @@ watch(
   { immediate: true }
 );
 
-// 模型原始输出节点：仅在用户展开后，新 token 到达时自动滚到底部
-const streamOutputRef = ref(null);
+// 流式预览节点：新 token 到达时自动滚到底部，保证最新文本可见
+const streamPreviewRef = ref(null);
+
+const scrollStreamPreview = () => {
+  const el = streamPreviewRef.value;
+  if (el) el.scrollTop = el.scrollHeight;
+};
 
 // 阶段提示依据已到达的真实 token 内容判断，而不是模拟进度
 const streamStage = computed(() => {
@@ -347,19 +371,63 @@ const streamStage = computed(() => {
   return "AI 正在生成…";
 });
 
-const scrollStreamOutput = () => {
-  const el = streamOutputRef.value;
-  if (el) el.scrollTop = el.scrollHeight;
+// 读取增量 JSON 中某个 key 的字符串「已到达」部分（容忍未闭合字符串与不完整转义）
+const readStreamField = (text, key) => {
+  const marker = `"${key}"`;
+  let index = text.indexOf(marker);
+  if (index === -1) return "";
+  index += marker.length;
+  while (index < text.length && text[index] !== ":") index += 1;
+  if (index >= text.length) return "";
+  index += 1;
+  while (index < text.length && /\s/.test(text[index])) index += 1;
+  if (text[index] !== '"') return "";
+  index += 1;
+
+  const escapeMap = { '"': '"', "\\": "\\", "/": "/", n: "\n", t: "\t", r: "\r", b: "\b", f: "\f" };
+  let value = "";
+  while (index < text.length) {
+    const char = text[index];
+    if (char === "\\") {
+      const next = text[index + 1];
+      if (next === undefined) break;
+      value += escapeMap[next] ?? next;
+      index += 2;
+      continue;
+    }
+    if (char === '"') break;
+    value += char;
+    index += 1;
+  }
+  return value;
 };
 
-const onStreamRawToggle = (event) => {
-  if (event.target.open) nextTick(scrollStreamOutput);
+// 读取增量 JSON 中某个 key 已出现的多个字符串值（用于 improvements 的标题）
+const readStreamFieldList = (text, key) => {
+  const marker = `"${key}"`;
+  const values = [];
+  let index = text.indexOf(marker);
+  while (index !== -1) {
+    const value = readStreamField(text.slice(index), key);
+    if (value) values.push(value);
+    index = text.indexOf(marker, index + marker.length);
+  }
+  return values;
 };
+
+// 受控文本呈现：只投影可读字段，绝不把 {"recipe":...} 原文铺在页面上
+const streamPreview = computed(() => {
+  const text = streamedContent.value || "";
+  const name = readStreamField(text, "name");
+  const ingredients = readStreamField(text, "ingredients");
+  const steps = readStreamField(text, "steps");
+  const improvements = readStreamFieldList(text, "title");
+  const hasContent = Boolean(name || ingredients || steps || improvements.length);
+  return { name, ingredients, steps, improvements, hasContent };
+});
 
 watch(streamedContent, () => {
-  if (streamOutputRef.value?.closest("details")?.open) {
-    nextTick(scrollStreamOutput);
-  }
+  nextTick(scrollStreamPreview);
 });
 
 // 优化目标选项
@@ -905,27 +973,72 @@ const saveToMyRecipes = async () => {
   white-space: nowrap;
 }
 
-.stream-raw-summary {
-  font-size: 12px;
-  color: @nordic-text-muted;
-  cursor: pointer;
-  user-select: none;
-}
-
-.stream-raw[open] .stream-raw-summary {
-  margin-bottom: 8px;
-}
-
-.stream-output-text {
-  margin: 0;
-  max-height: 180px;
+.stream-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 220px;
   overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: inherit;
+}
+
+.stream-line {
+  display: flex;
+  gap: 10px;
   font-size: 13px;
   line-height: 1.7;
-  color: @nordic-text-secondary;
+}
+
+.stream-line-key {
+  flex-shrink: 0;
+  min-width: 62px;
+  color: var(--ink-400);
+  font-weight: 600;
+}
+
+.stream-line-value {
+  flex: 1;
+  color: var(--ink-700);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.stream-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 6px 6px 0;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--brand-50);
+  color: var(--brand-600);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.stream-preview-pending {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-400);
+}
+
+.stream-caret {
+  display: inline-block;
+  width: 6px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--brand-500);
+  animation: caretBlink 1s step-end infinite;
+}
+
+@keyframes caretBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes dotPulse {
