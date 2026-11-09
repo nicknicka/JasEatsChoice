@@ -22,7 +22,7 @@ NPM := npm --no-audit --no-fund
 CHECK_SOURCE ?= auto
 
 .PHONY: doctor env deps up down ps logs reset-db web desktop screenshots test test-smoke lint \
-	check check-unit check-routes check-miniapp-api check-lint nginx-test config-prod
+	check check-unit check-routes check-miniapp-api check-lint build-miniapp nginx-test config-prod
 
 doctor:
 	@echo "== Docker =="
@@ -94,6 +94,10 @@ web:
 
 desktop:
 	cd apps/client && $(NPM) run build:mac
+
+# 小程序构建门禁：不依赖容器与密钥，CI 与本地跑同一条命令
+build-miniapp:
+	cd apps/miniapp && $(NPM) run build:mp-weixin
 
 # 全量网页截图：按需拉起前端 dev server → 逐页截图 → 重建 index.html/README.md。
 # 需要后端栈已 make up；截图与索引都落在 output/web-screenshots（.gitignore，不入库）。
