@@ -105,6 +105,7 @@ class AIControllerAuthAndCapabilitiesIntegrationTest {
         mockMvc.perform(get("/v1/ai/capabilities"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.dishRecognitionTimeoutMs", greaterThan(0)))
             .andExpect(jsonPath("$.data.recipeStreamTimeoutMs", greaterThan(0)));
     }
 

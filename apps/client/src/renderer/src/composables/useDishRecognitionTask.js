@@ -4,6 +4,7 @@ import { API_CONFIG } from '../config'
 import { logger } from '../config/chatConfig'
 import { useAuthStore } from '../store/authStore'
 
+const DEFAULT_DISH_RECOGNITION_TIMEOUT_MS = 30000
 const selectedImage = ref(null)
 const selectedFile = ref(null)
 const recognitionLoading = ref(false)
@@ -13,6 +14,33 @@ const recognitionError = ref(null)
 
 let progressTimer = null
 let runningTask = null
+let activeController = null
+let abortReason = ''
+let dishRecognitionTimeoutMs = DEFAULT_DISH_RECOGNITION_TIMEOUT_MS
+
+const normalizeTimeout = (value) => {
+  const timeout = Number(value)
+  return Number.isFinite(timeout) && timeout > 0
+    ? timeout
+    : DEFAULT_DISH_RECOGNITION_TIMEOUT_MS
+}
+
+export function setDishRecognitionTimeoutMs(value) {
+  dishRecognitionTimeoutMs = normalizeTimeout(value)
+}
+
+const createAbortError = (timeoutMs) => {
+  if (abortReason === 'timeout') {
+    const seconds = Math.max(1, Math.round(timeoutMs / 1000))
+    const error = new Error(`识别超时（超过 ${seconds} 秒未完成），请重试`)
+    error.timedOut = true
+    return error
+  }
+
+  const error = new Error('已取消识别')
+  error.cancelled = true
+  return error
+}
 
 const normalizeRecognitionMessage = (result, fallbackMessage) => {
   return result?.message || result?.msg || result?.data?.reason || result?.reason || fallbackMessage
@@ -142,48 +170,76 @@ const clearImage = () => {
   recognitionProgress.value = 0
 }
 
-const runRecognition = async (file) => {
-  const compressedFile = await compressImageFile(file)
-  logger.log('开始识别菜品，压缩后文件名:', compressedFile.name)
+const runRecognition = async (file, controller, timeoutMs) => {
+  let timeoutTimer = null
 
-  const formData = new FormData()
-  formData.append('image', compressedFile)
+  try {
+    const compressedFile = await compressImageFile(file)
+    if (controller.signal.aborted) {
+      throw createAbortError(timeoutMs)
+    }
+    logger.log('开始识别菜品，压缩后文件名:', compressedFile.name)
 
-  const authStore = useAuthStore()
-  const token = authStore.token || localStorage.getItem('admin_token')
-  const headers = {}
-  if (token) headers.Authorization = `Bearer ${token}`
+    const formData = new FormData()
+    formData.append('image', compressedFile)
 
-  const apiUrl = API_CONFIG.baseURL + API_CONFIG.ai.recognizeDish
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers,
-    body: formData
-  })
-  const result = await response.json().catch(() => null)
-  const responseData = result?.data || null
-  const responseMessage = normalizeRecognitionMessage(result, `请求失败 (${response.status})`)
+    const authStore = useAuthStore()
+    const token = authStore.token || localStorage.getItem('admin_token')
+    const headers = {}
+    if (token) headers.Authorization = `Bearer ${token}`
 
-  if (!response.ok) {
-    throw new Error(responseMessage)
-  }
+    timeoutTimer = setTimeout(() => {
+      abortReason = 'timeout'
+      controller.abort()
+    }, timeoutMs)
 
-  if (isNonDishRecognitionResult(result) || responseData?.isDish === false) {
-    const error = new Error(responseMessage || '请上传食物图片')
-    error.nonDish = true
+    const apiUrl = API_CONFIG.baseURL + API_CONFIG.ai.recognizeDish
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers,
+      body: formData,
+      signal: controller.signal
+    })
+    const result = await response.json().catch(() => null)
+    if (controller.signal.aborted) {
+      throw createAbortError(timeoutMs)
+    }
+    const responseData = result?.data || null
+    const responseMessage = normalizeRecognitionMessage(result, `请求失败 (${response.status})`)
+
+    if (!response.ok) {
+      throw new Error(responseMessage)
+    }
+
+    if (isNonDishRecognitionResult(result) || responseData?.isDish === false) {
+      const error = new Error(responseMessage || '请上传食物图片')
+      error.nonDish = true
+      throw error
+    }
+
+    if ((result?.success === true || result?.code === '200') && responseData?.isDish === true) {
+      recognitionProgress.value = 100
+      recognitionResult.value = mapRecognitionResult(responseData)
+      recognitionError.value = null
+      ElMessage.success('识别成功！')
+      logger.log('✅ 菜品识别完成:', recognitionResult.value.name)
+      return
+    }
+
+    throw new Error(responseMessage || '识别失败，请稍后重试')
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw createAbortError(timeoutMs)
+    }
     throw error
+  } finally {
+    if (timeoutTimer) {
+      clearTimeout(timeoutTimer)
+    }
+    if (activeController === controller) {
+      activeController = null
+    }
   }
-
-  if ((result?.success === true || result?.code === '200') && responseData?.isDish === true) {
-    recognitionProgress.value = 100
-    recognitionResult.value = mapRecognitionResult(responseData)
-    recognitionError.value = null
-    ElMessage.success('识别成功！')
-    logger.log('✅ 菜品识别完成:', recognitionResult.value.name)
-    return
-  }
-
-  throw new Error(responseMessage || '识别失败，请稍后重试')
 }
 
 const recognizeDish = async () => {
@@ -198,18 +254,33 @@ const recognizeDish = async () => {
   }
 
   const file = selectedFile.value
+  const controller = new AbortController()
+  activeController = controller
+  abortReason = ''
   recognitionLoading.value = true
   recognitionResult.value = null
   recognitionError.value = null
   startProgressTimer()
 
-  runningTask = runRecognition(file)
+  runningTask = runRecognition(file, controller, dishRecognitionTimeoutMs)
     .catch((error) => {
       recognitionProgress.value = 0
       const errorMessage = error?.message || '识别失败，请稍后重试'
       recognitionError.value = {
         message: errorMessage,
-        nonDish: error?.nonDish === true
+        nonDish: error?.nonDish === true,
+        cancelled: error?.cancelled === true,
+        timedOut: error?.timedOut === true
+      }
+      if (error?.cancelled) {
+        ElMessage.info(errorMessage)
+        logger.info('菜品识别已取消')
+        return
+      }
+      if (error?.timedOut) {
+        ElMessage.error(errorMessage)
+        logger.warn('菜品识别超时:', errorMessage)
+        return
       }
       if (error?.nonDish) {
         ElMessage.warning(errorMessage)
@@ -235,7 +306,20 @@ const reRecognize = () => {
   return recognizeDish()
 }
 
-export function useDishRecognitionTask() {
+const cancelRecognition = () => {
+  if (!recognitionLoading.value || !activeController || activeController.signal.aborted) {
+    return false
+  }
+  abortReason = 'cancelled'
+  activeController.abort()
+  return true
+}
+
+export function useDishRecognitionTask(options = {}) {
+  if (options.dishRecognitionTimeoutMs !== undefined) {
+    setDishRecognitionTimeoutMs(options.dishRecognitionTimeoutMs)
+  }
+
   return {
     selectedImage,
     selectedFile,
@@ -246,6 +330,8 @@ export function useDishRecognitionTask() {
     setImageFile,
     clearImage,
     recognizeDish,
-    reRecognize
+    reRecognize,
+    cancelRecognition,
+    setDishRecognitionTimeoutMs
   }
 }

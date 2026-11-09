@@ -39,6 +39,14 @@
         </button>
 
         <button
+          v-if="isRecognizing"
+          class="cancel-btn"
+          @click="cancelRecognition"
+        >
+          取消识别
+        </button>
+
+        <button
           v-if="recognitionResult || recognitionError"
           class="re-recognize-btn"
           :disabled="isRecognizing"
@@ -50,7 +58,15 @@
     </view>
 
       <view v-if="recognitionError && !isRecognizing" class="recognition-error">
-        <text class="error-title">{{ recognitionError.nonDish ? '未识别到食物' : '识别失败' }}</text>
+        <text class="error-title">
+          {{ recognitionError.nonDish
+            ? '未识别到食物'
+            : recognitionError.cancelled
+              ? '识别已取消'
+              : recognitionError.timedOut
+                ? '识别超时'
+                : '识别失败' }}
+        </text>
         <text class="error-message">{{ recognitionError.message }}</text>
         <button class="error-retry-btn" @click="recognizeDish">重试识别</button>
       </view>
@@ -217,13 +233,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { aiApi } from '@/api/modules/ai'
 
 const selectedImage = ref('')
 const isRecognizing = ref(false)
 const recognitionResult = ref(null)
 const recognitionError = ref(null)
+const recognitionTimeoutMs = ref(0)
+let activeRecognitionTask = null
+let cancelRequested = false
 
 const normalizeResult = (data) => ({
   isDish: data.isDish === true,
@@ -250,6 +269,36 @@ const normalizeResult = (data) => ({
   }
 })
 
+const loadRecognitionCapabilities = async () => {
+  try {
+    const res = await aiApi.getCapabilities()
+    const capabilities = res?.data || res
+    const timeout = Number(capabilities?.dishRecognitionTimeoutMs)
+    if (!Number.isFinite(timeout) || timeout <= 0) {
+      throw new Error('AI 能力状态缺少菜品识别超时配置')
+    }
+    recognitionTimeoutMs.value = timeout
+  } catch (error) {
+    recognitionTimeoutMs.value = 0
+    console.warn('读取菜品识别超时配置失败:', error)
+  }
+}
+
+const ensureRecognitionTimeout = async () => {
+  if (recognitionTimeoutMs.value > 0) {
+    return true
+  }
+  await loadRecognitionCapabilities()
+  if (recognitionTimeoutMs.value > 0) {
+    return true
+  }
+  uni.showToast({
+    title: '超时配置读取失败，请稍后重试',
+    icon: 'none'
+  })
+  return false
+}
+
 const chooseImage = () => {
   uni.chooseImage({
     count: 1,
@@ -273,28 +322,66 @@ const clearImage = () => {
 const recognizeDish = async () => {
   if (!selectedImage.value || isRecognizing.value) return
 
+  cancelRequested = false
+  activeRecognitionTask = null
   isRecognizing.value = true
   recognitionResult.value = null
   recognitionError.value = null
 
   try {
-    const data = await aiApi.recognizeDish(selectedImage.value)
+    if (!(await ensureRecognitionTimeout())) return
+    if (cancelRequested) {
+      recognitionError.value = {
+        message: '已取消识别',
+        cancelled: true
+      }
+      return
+    }
+    const data = await aiApi.recognizeDish(selectedImage.value, {
+      timeoutMs: recognitionTimeoutMs.value,
+      onTask: (task) => {
+        activeRecognitionTask = task
+        if (cancelRequested && task && typeof task.abort === 'function') {
+          task.abort()
+        }
+      }
+    })
+    if (cancelRequested) {
+      recognitionError.value = {
+        message: '已取消识别',
+        cancelled: true
+      }
+      return
+    }
     recognitionResult.value = normalizeResult(data)
     uni.showToast({
       title: '识别成功',
       icon: 'success'
     })
   } catch (error) {
+    const cancelled = cancelRequested || error?.cancelled === true
     recognitionError.value = {
-      message: error?.message || '识别失败，请重试',
-      nonDish: error?.nonDish === true
+      message: cancelled ? '已取消识别' : (error?.message || '识别失败，请重试'),
+      nonDish: error?.nonDish === true,
+      cancelled,
+      timedOut: error?.timedOut === true
     }
     uni.showToast({
       title: recognitionError.value.message,
       icon: 'none'
     })
   } finally {
+    activeRecognitionTask = null
+    cancelRequested = false
     isRecognizing.value = false
+  }
+}
+
+const cancelRecognition = () => {
+  if (!isRecognizing.value) return
+  cancelRequested = true
+  if (activeRecognitionTask && typeof activeRecognitionTask.abort === 'function') {
+    activeRecognitionTask.abort()
   }
 }
 
@@ -310,6 +397,8 @@ const shareResult = () => {
     withShareTicket: true
   })
 }
+
+onMounted(loadRecognitionCapabilities)
 </script>
 
 <style lang="scss" scoped>
@@ -541,7 +630,8 @@ const shareResult = () => {
 }
 
 .recognize-btn,
-.re-recognize-btn {
+.re-recognize-btn,
+.cancel-btn {
   flex: 1;
   height: 88rpx;
   @include flex-center;
@@ -576,6 +666,18 @@ const shareResult = () => {
   &:active {
     transform: scale(0.98);
   }
+}
+
+.cancel-btn {
+  flex: 0 0 auto;
+  padding: 0 $spacing-lg;
+  height: 88rpx;
+  @include flex-center;
+  border: 1rpx solid rgba(196, 90, 90, 0.28);
+  border-radius: $border-radius-lg;
+  background: #fff7f7;
+  color: #a33d3d;
+  font-size: $font-size-base;
 }
 
 /* 识别失败 */

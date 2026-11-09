@@ -77,12 +77,16 @@ public class AIController {
     private static final String AI_CALL_FAILED_CODE = "AI_CALL_FAILED";
     private static final String AI_RESULT_PARSE_FAILED_CODE = "AI_RESULT_PARSE_FAILED";
     private static final String AI_TIMEOUT_CODE = "AI_TIMEOUT";
+    private static final String IMAGE_DIMENSIONS_INVALID_CODE = "IMAGE_DIMENSIONS_INVALID";
+    private static final String IMAGE_DIMENSIONS_EXCEEDED_CODE = "IMAGE_DIMENSIONS_EXCEEDED";
     /**
      * SSE Emitter 超时相对统一超时配置的宽限；必须严格大于看门狗触发的超时，
      * 保证先由看门狗发出 error(AI_TIMEOUT)+done，Emitter 超时仅作最后兜底。
      */
     private static final long RECIPE_STREAM_EMITTER_GRACE_MS = 5000L;
     private static final long MAX_REMOTE_IMAGE_BYTES = 10 * 1024 * 1024;
+    private static final int MAX_IMAGE_DIMENSION = 8192;
+    private static final long MAX_IMAGE_PIXELS = 25_000_000L;
     private static final int MAX_REMOTE_IMAGE_REDIRECTS = 3;
     private static final int REMOTE_IMAGE_TIMEOUT_MS = 15000;
 
@@ -146,6 +150,17 @@ public class AIController {
         String contentType = detectSupportedImageContentType(imageBytes);
         if (contentType == null) {
             return ResponseResult.fail("415", "仅支持 JPEG、PNG 或 WebP 图片");
+        }
+
+        ImageDimensions dimensions = readImageDimensions(imageBytes, contentType);
+        if (dimensions == null || dimensions.width() <= 0 || dimensions.height() <= 0) {
+            return ResponseResult.fail(IMAGE_DIMENSIONS_INVALID_CODE, "图片尺寸读取失败，请重新选择有效的 JPEG、PNG 或 WebP 图片");
+        }
+        if (dimensions.width() > MAX_IMAGE_DIMENSION || dimensions.height() > MAX_IMAGE_DIMENSION
+            || (long) dimensions.width() * dimensions.height() > MAX_IMAGE_PIXELS) {
+            return ResponseResult.fail(IMAGE_DIMENSIONS_EXCEEDED_CODE,
+                "图片尺寸或像素过大，请压缩后重试（单边不超过 " + MAX_IMAGE_DIMENSION
+                    + " 像素，总像素不超过 " + (MAX_IMAGE_PIXELS / 10_000) + " 万）");
         }
 
         AiCapabilitiesDTO capabilities = chatModelProvider.getCapabilities();
@@ -234,6 +249,132 @@ public class AIController {
             case "image/webp" -> ".webp";
             default -> ".jpg";
         };
+    }
+
+    private ImageDimensions readImageDimensions(byte[] bytes, String contentType) {
+        return switch (contentType) {
+            case "image/jpeg" -> readJpegDimensions(bytes);
+            case "image/png" -> readPngDimensions(bytes);
+            case "image/webp" -> readWebpDimensions(bytes);
+            default -> null;
+        };
+    }
+
+    private ImageDimensions readPngDimensions(byte[] bytes) {
+        if (bytes.length < 24 || !matchesAscii(bytes, 12, "IHDR")) {
+            return null;
+        }
+        return new ImageDimensions(readIntBigEndian(bytes, 16), readIntBigEndian(bytes, 20));
+    }
+
+    private ImageDimensions readJpegDimensions(byte[] bytes) {
+        int offset = 2;
+        while (offset + 3 < bytes.length) {
+            if ((bytes[offset] & 0xFF) != 0xFF) {
+                return null;
+            }
+            while (offset < bytes.length && (bytes[offset] & 0xFF) == 0xFF) {
+                offset++;
+            }
+            if (offset >= bytes.length) {
+                return null;
+            }
+
+            int marker = bytes[offset++] & 0xFF;
+            if (marker == 0xD8 || marker == 0xD9 || marker == 0x01
+                || (marker >= 0xD0 && marker <= 0xD7)) {
+                continue;
+            }
+            if (marker == 0xDA || offset + 2 > bytes.length) {
+                return null;
+            }
+
+            int segmentLength = readUnsignedShortBigEndian(bytes, offset);
+            if (segmentLength < 2 || offset + segmentLength > bytes.length) {
+                return null;
+            }
+            if (isJpegStartOfFrame(marker)) {
+                if (segmentLength < 7) {
+                    return null;
+                }
+                return new ImageDimensions(
+                    readUnsignedShortBigEndian(bytes, offset + 5),
+                    readUnsignedShortBigEndian(bytes, offset + 3));
+            }
+            offset += segmentLength;
+        }
+        return null;
+    }
+
+    private boolean isJpegStartOfFrame(int marker) {
+        return (marker >= 0xC0 && marker <= 0xC3)
+            || (marker >= 0xC5 && marker <= 0xC7)
+            || (marker >= 0xC9 && marker <= 0xCB)
+            || (marker >= 0xCD && marker <= 0xCF);
+    }
+
+    private ImageDimensions readWebpDimensions(byte[] bytes) {
+        if (bytes.length < 25) {
+            return null;
+        }
+        if (matchesAscii(bytes, 12, "VP8X")) {
+            if (bytes.length < 30) {
+                return null;
+            }
+            return new ImageDimensions(readInt24LittleEndian(bytes, 24) + 1,
+                readInt24LittleEndian(bytes, 27) + 1);
+        }
+        if (matchesAscii(bytes, 12, "VP8 ")) {
+            if (bytes.length < 30 || (bytes[23] & 0xFF) != 0x9D
+                || (bytes[24] & 0xFF) != 0x01 || (bytes[25] & 0xFF) != 0x2A) {
+                return null;
+            }
+            return new ImageDimensions(readUnsignedShortLittleEndian(bytes, 26) & 0x3FFF,
+                readUnsignedShortLittleEndian(bytes, 28) & 0x3FFF);
+        }
+        if (matchesAscii(bytes, 12, "VP8L")) {
+            if ((bytes[20] & 0xFF) != 0x2F) {
+                return null;
+            }
+            int bits = readIntLittleEndian(bytes, 21);
+            return new ImageDimensions((bits & 0x3FFF) + 1, ((bits >>> 14) & 0x3FFF) + 1);
+        }
+        return null;
+    }
+
+    private boolean matchesAscii(byte[] bytes, int offset, String value) {
+        if (offset + value.length() > bytes.length) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            if ((bytes[offset + i] & 0xFF) != value.charAt(i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private int readIntBigEndian(byte[] bytes, int offset) {
+        return ((bytes[offset] & 0xFF) << 24) | ((bytes[offset + 1] & 0xFF) << 16)
+            | ((bytes[offset + 2] & 0xFF) << 8) | (bytes[offset + 3] & 0xFF);
+    }
+
+    private int readIntLittleEndian(byte[] bytes, int offset) {
+        return (bytes[offset] & 0xFF) | ((bytes[offset + 1] & 0xFF) << 8)
+            | ((bytes[offset + 2] & 0xFF) << 16) | ((bytes[offset + 3] & 0xFF) << 24);
+    }
+
+    private int readInt24LittleEndian(byte[] bytes, int offset) {
+        return (bytes[offset] & 0xFF) | ((bytes[offset + 1] & 0xFF) << 8)
+            | ((bytes[offset + 2] & 0xFF) << 16);
+    }
+
+    private int readUnsignedShortBigEndian(byte[] bytes, int offset) {
+        return ((bytes[offset] & 0xFF) << 8) | (bytes[offset + 1] & 0xFF);
+    }
+
+    private int readUnsignedShortLittleEndian(byte[] bytes, int offset) {
+        return (bytes[offset] & 0xFF) | ((bytes[offset + 1] & 0xFF) << 8);
     }
 
     private void deleteQuietly(java.nio.file.Path filePath) {
@@ -445,6 +586,9 @@ public class AIController {
             return "image/webp";
         }
         return null;
+    }
+
+    private record ImageDimensions(int width, int height) {
     }
 
     // ==================== 食谱优化 ====================

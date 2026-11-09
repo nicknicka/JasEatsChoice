@@ -179,15 +179,43 @@ export const aiApi = {
    * 菜品识别
    * POST /v1/ai/dish-recognize
    * @param {string} filePath - 压缩后的图片临时路径
+   * @param {Object} [options] - 请求配置
+   * @param {number} [options.timeoutMs] - 来自 capabilities 的超时时间
+   * @param {Function} [options.onTask] - 上传任务回调，供页面取消
    * @returns {Promise} 返回统一响应结果
    */
-  recognizeDish: (filePath) => {
+  recognizeDish: (filePath, options = {}) => {
+    const timeoutMs = Number(options.timeoutMs)
+    const hasTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0
+
     return new Promise((resolve, reject) => {
       const token = uni.getStorageSync('token') || ''
-      uni.uploadFile({
+      let timeoutTimer = null
+      let timedOut = false
+      let settled = false
+
+      const finish = (callback, value) => {
+        if (settled) return
+        settled = true
+        if (timeoutTimer) {
+          clearTimeout(timeoutTimer)
+          timeoutTimer = null
+        }
+        callback(value)
+      }
+
+      const createTimeoutError = () => {
+        const seconds = Math.max(1, Math.round(timeoutMs / 1000))
+        const error = new Error(`识别超时（超过 ${seconds} 秒未完成），请重试`)
+        error.timedOut = true
+        return error
+      }
+
+      const task = uni.uploadFile({
         url: `${config.baseURL}${AI_API.RECOGNIZE_DISH}`,
         filePath,
         name: 'image',
+        ...(hasTimeout ? { timeout: timeoutMs } : {}),
         header: {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
@@ -196,20 +224,55 @@ export const aiApi = {
           try {
             result = JSON.parse(res.data)
           } catch (error) {
-            reject(new Error('识别响应解析失败，请重试'))
+            finish(reject, new Error('识别响应解析失败，请重试'))
             return
           }
           if (res.statusCode >= 200 && res.statusCode < 300 && result.success === true && result.data?.isDish === true) {
-            resolve(result.data)
+            finish(resolve, result.data)
             return
           }
           const error = new Error(result.message || '识别失败，请稍后重试')
           error.code = result.code
           error.nonDish = result.code === '4001' || result.code === 4001 || result.data?.isDish === false
-          reject(error)
+          finish(reject, error)
         },
-        fail: () => reject(new Error('图片上传失败，请重试'))
+        fail: (err) => {
+          const errMsg = err?.errMsg || ''
+          const timeoutFailure = /timeout/i.test(errMsg)
+          const timedOutNow = timedOut || timeoutFailure
+          const cancelled = !timedOutNow && /abort/i.test(errMsg)
+          const error = timedOutNow
+            ? createTimeoutError()
+            : cancelled
+              ? new Error('已取消识别')
+              : new Error('图片上传失败，请重试')
+          error.cancelled = cancelled
+          error.timedOut = timedOutNow
+          finish(reject, error)
+        },
       })
+
+      if (hasTimeout) {
+        timeoutTimer = setTimeout(() => {
+          timedOut = true
+          if (task && typeof task.abort === 'function') {
+            try {
+              task.abort()
+            } catch (error) {
+              console.warn('取消超时上传任务失败:', error)
+            }
+          }
+          finish(reject, createTimeoutError())
+        }, timeoutMs)
+        if (settled) {
+          clearTimeout(timeoutTimer)
+          timeoutTimer = null
+        }
+      }
+
+      if (typeof options.onTask === 'function') {
+        options.onTask(task)
+      }
     })
   },
 

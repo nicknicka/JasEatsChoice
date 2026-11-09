@@ -94,12 +94,23 @@ async function stubAiCapabilities(page, capabilities) {
         vision: false,
         functionCalling: true,
         agentic: true,
+        dishRecognitionTimeoutMs: 30000,
         recipeStreamTimeoutMs: 120000,
         unavailableMessage: '',
         ...capabilities
       }
     })
   }))
+}
+
+function pngHeader(width, height) {
+  const bytes = Buffer.alloc(24)
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bytes, 0)
+  bytes.writeUInt32BE(13, 8)
+  bytes.write('IHDR', 12, 'ascii')
+  bytes.writeUInt32BE(width, 16)
+  bytes.writeUInt32BE(height, 20)
+  return bytes
 }
 
 // 未配置流式模型时，食谱 tab 必须处于禁用降级态；这段断言不能因 skip 而丢失。
@@ -197,6 +208,30 @@ test.describe('模块八：AI助手与地址管理', () => {
       expect(gif.body.success).toBe(false)
       expect(gif.body.code).toBe('415')
 
+      const tooWide = await recognize({
+        name: 'too-wide.png',
+        mimeType: 'image/png',
+        buffer: pngHeader(9000, 100)
+      })
+      expect(tooWide.body.success).toBe(false)
+      expect(tooWide.body.code).toBe('IMAGE_DIMENSIONS_EXCEEDED')
+
+      const tooManyPixels = await recognize({
+        name: 'too-many-pixels.png',
+        mimeType: 'image/png',
+        buffer: pngHeader(6000, 6000)
+      })
+      expect(tooManyPixels.body.success).toBe(false)
+      expect(tooManyPixels.body.code).toBe('IMAGE_DIMENSIONS_EXCEEDED')
+
+      const unreadableDimensions = await recognize({
+        name: 'broken.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13])
+      })
+      expect(unreadableDimensions.body.success).toBe(false)
+      expect(unreadableDimensions.body.code).toBe('IMAGE_DIMENSIONS_INVALID')
+
       markPassed('8.2', '菜品识别接口契约、真实魔数与错误语义通过')
     } catch (e) { markFailed('8.2', e.message.slice(0, 50)); throw e }
   })
@@ -212,7 +247,13 @@ test.describe('模块八：AI助手与地址管理', () => {
             success: true,
             code: '200',
             message: '成功',
-            data: { available: true, vision: true, textChat: true, streaming: true }
+            data: {
+              available: true,
+              vision: true,
+              textChat: true,
+              streaming: true,
+              dishRecognitionTimeoutMs: 30000
+            }
           })
         })
       })
@@ -244,6 +285,71 @@ test.describe('模块八：AI助手与地址管理', () => {
     } catch (e) { markFailed('8.2b', e.message.slice(0, 50)); throw e }
   })
 
+  test('8.2d 桌面端取消识别会 abort 请求并回到可重试状态', async ({ page }) => {
+    markRunning('8.2d')
+    try {
+      await stubAiCapabilities(page, { vision: true, dishRecognitionTimeoutMs: 30000 })
+      await page.goto('/user/home/ai')
+      await expect(page.locator('#tab-btn-chat')).toHaveClass(/active/, { timeout: 10000 })
+      await page.locator('#tab-btn-recognition').click()
+      await expect(page.locator('.recognition-content-wrapper')).toBeVisible({ timeout: 10000 })
+
+      let releaseRoute = null
+      await page.route('**/v1/ai/dish-recognize', async (route) => {
+        await new Promise((resolve) => { releaseRoute = resolve })
+        await route.abort().catch(() => {})
+      })
+      const requestFailed = page.waitForEvent('requestfailed', {
+        predicate: (request) => request.url().includes('/v1/ai/dish-recognize')
+      })
+
+      await page.locator('#dish-image-upload').setInputFiles(require('path').resolve(__dirname, '../../apps/miniapp/src/static/banner1.jpg'))
+      await page.locator('.recognition-content-wrapper button.primary-btn').click()
+      await expect(page.locator('.recognition-content-wrapper .cancel-btn')).toBeVisible({ timeout: 10000 })
+      await expect.poll(() => typeof releaseRoute).toBe('function')
+
+      await page.locator('.recognition-content-wrapper .cancel-btn').click()
+      await requestFailed
+      releaseRoute()
+
+      await expect(page.locator('.recognition-error')).toContainText('识别已取消')
+      await expect(page.locator('.error-retry-btn')).toBeVisible()
+      await expect(page.locator('.recognition-content-wrapper button.primary-btn')).toBeEnabled()
+      markPassed('8.2d', '取消后真实 abort，页面回到可重试状态')
+    } catch (e) { markFailed('8.2d', e.message.slice(0, 50)); throw e }
+  })
+
+  test('8.2e 桌面端识别超时使用 capabilities 配置', async ({ page }) => {
+    markRunning('8.2e')
+    try {
+      await stubAiCapabilities(page, { vision: true, dishRecognitionTimeoutMs: 1000 })
+      await page.goto('/user/home/ai')
+      await expect(page.locator('#tab-btn-chat')).toHaveClass(/active/, { timeout: 10000 })
+      await page.locator('#tab-btn-recognition').click()
+      await expect(page.locator('.recognition-content-wrapper')).toBeVisible({ timeout: 10000 })
+
+      let releaseRoute = null
+      await page.route('**/v1/ai/dish-recognize', async (route) => {
+        await new Promise((resolve) => { releaseRoute = resolve })
+        await route.abort().catch(() => {})
+      })
+      const requestFailed = page.waitForEvent('requestfailed', {
+        predicate: (request) => request.url().includes('/v1/ai/dish-recognize')
+      })
+
+      await page.locator('#dish-image-upload').setInputFiles(require('path').resolve(__dirname, '../../apps/miniapp/src/static/banner1.jpg'))
+      await page.locator('.recognition-content-wrapper button.primary-btn').click()
+      await expect(page.locator('.recognition-error')).toContainText('识别超时（超过 1 秒未完成）', { timeout: 5000 })
+      await requestFailed
+      await expect.poll(() => typeof releaseRoute).toBe('function')
+      releaseRoute()
+
+      await expect(page.locator('.error-retry-btn')).toBeVisible()
+      await expect(page.locator('.recognition-content-wrapper button.primary-btn')).toBeEnabled()
+      markPassed('8.2e', '超时文案使用 capabilities 中的 1 秒配置')
+    } catch (e) { markFailed('8.2e', e.message.slice(0, 50)); throw e }
+  })
+
   test('8.2c 桌面端展示置信度、营养评分与估算提示', async ({ page }) => {
     markRunning('8.2c')
     try {
@@ -255,7 +361,13 @@ test.describe('模块八：AI助手与地址管理', () => {
             success: true,
             code: '200',
             message: '成功',
-            data: { available: true, vision: true, textChat: true, streaming: true }
+            data: {
+              available: true,
+              vision: true,
+              textChat: true,
+              streaming: true,
+              dishRecognitionTimeoutMs: 30000
+            }
           })
         })
       })

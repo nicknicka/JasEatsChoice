@@ -67,6 +67,12 @@ public class AiCapabilitiesDTO {
     private boolean agentic;
 
     /**
+     * 菜品识别的统一超时时间（毫秒）。
+     * 前端据此设置本次图片识别请求的超时与提示文案，避免与运行时视觉模型配置漂移。
+     */
+    private long dishRecognitionTimeoutMs;
+
+    /**
      * 食谱流式优化的统一超时时间（毫秒）。
      * 前端据此设置取消定时器，并给出与实际配置一致的超时提示。
      */

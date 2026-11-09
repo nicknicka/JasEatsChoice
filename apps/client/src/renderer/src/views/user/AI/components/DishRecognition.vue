@@ -107,6 +107,15 @@
         </button>
 
         <button
+          v-if="recognitionLoading"
+          type="button"
+          class="action-btn cancel-btn"
+          @click="cancelRecognition"
+        >
+          取消识别
+        </button>
+
+        <button
           v-if="recognitionResult || recognitionError"
           class="action-btn outline-btn"
           @click="reRecognize"
@@ -120,7 +129,15 @@
       </div>
 
       <div v-if="recognitionError" class="recognition-error">
-        <div class="error-title">{{ recognitionError.nonDish ? '未识别到食物' : '识别失败' }}</div>
+        <div class="error-title">
+          {{ recognitionError.nonDish
+            ? '未识别到食物'
+            : recognitionError.cancelled
+              ? '识别已取消'
+              : recognitionError.timedOut
+                ? '识别超时'
+                : '识别失败' }}
+        </div>
         <div class="error-message">{{ recognitionError.message }}</div>
         <button class="error-retry-btn" :disabled="recognitionLoading" @click="reRecognize">重试识别</button>
       </div>
@@ -271,6 +288,13 @@ defineOptions({
   name: 'DishRecognition'
 })
 
+const props = defineProps({
+  dishRecognitionTimeoutMs: {
+    type: Number,
+    default: 30000
+  }
+})
+
 // 数字滚动动画组件
 const AnimatedNumber = {
   props: ['value', 'suffix'],
@@ -325,8 +349,18 @@ const {
   setImageFile,
   clearImage,
   recognizeDish,
-  reRecognize
-} = useDishRecognitionTask()
+  reRecognize,
+  cancelRecognition,
+  setDishRecognitionTimeoutMs
+} = useDishRecognitionTask({
+  dishRecognitionTimeoutMs: props.dishRecognitionTimeoutMs
+})
+
+watch(
+  () => props.dishRecognitionTimeoutMs,
+  (timeoutMs) => setDishRecognitionTimeoutMs(timeoutMs),
+  { immediate: true }
+)
 
 const progressStageText = computed(() => {
   const p = recognitionProgress.value
@@ -901,6 +935,19 @@ const handleDrop = async (event) => {
       border-color: @nordic-accent;
       color: @nordic-accent;
       background: @nordic-accent-light;
+    }
+  }
+
+  &.cancel-btn {
+    flex: 0 0 auto;
+    padding: 0 24px;
+    border: 1px solid rgba(196, 90, 90, 0.28);
+    background: #fff7f7;
+    color: #a33d3d;
+
+    &:hover {
+      border-color: #a33d3d;
+      background: #fdecec;
     }
   }
 
