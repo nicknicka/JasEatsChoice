@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -25,8 +26,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -150,14 +153,15 @@ class AIControllerRecipeOptimizationTest {
 
     @Test
     void recipeOptimize_unknownGoal_returns400AndNeverTouchesService() {
-        ResponseResult<?> result = controller.recipeOptimize(
-            Map.of("recipe", "番茄炒蛋：鸡蛋2个、番茄2个", "goal", "keto"),
-            verifiedRequest("42"));
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+            () -> controller.recipeOptimize(
+                Map.of("recipe", "番茄炒蛋：鸡蛋2个、番茄2个", "goal", "keto"),
+                verifiedRequest("42")));
 
-        assertFalse(result.getSuccess());
-        assertEquals("400", result.getCode());
-        assertTrue(result.getMessage().contains("不支持的优化目标"));
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertTrue(exception.getReason().contains("不支持的优化目标"));
         verifyNoInteractions(aiAssistantService);
+        verifyNoInteractions(aiQuotaService);
     }
 
     @Test

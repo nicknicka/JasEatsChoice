@@ -1,5 +1,6 @@
 package com.xx.jaseatschoicejava.controller;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -79,6 +80,24 @@ class AIControllerAuthAndCapabilitiesIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"recipe\":\"番茄炒蛋\"}"))
             .andExpect(status().isForbidden());
+    }
+
+    /**
+     * 非法 goal 走完 Security -> Controller -> GlobalExceptionHandler 全链路：必须是真实 HTTP 400，
+     * 而不是 200 + body code；且在配额与模型调用之前就返回。
+     */
+    @Test
+    void illegalRecipeGoalReturnsHttp400() throws Exception {
+        String token = jwtUtil.generateToken("it492-user", "13000000000");
+
+        mockMvc.perform(post("/v1/ai/recipe")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"recipe\":\"番茄炒蛋\",\"goal\":\"keto\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.code").value("400"))
+            .andExpect(jsonPath("$.message").value(containsString("不支持的优化目标")));
     }
 
     @Test

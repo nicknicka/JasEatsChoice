@@ -490,7 +490,9 @@ public class AIController {
 
         String goal = resolveRecipeGoal(params.get("goal"));
         if (goal == null) {
-            return ResponseResult.fail("400", "不支持的优化目标：" + params.get("goal"));
+            // 非法目标用真实 HTTP 400 表达（不是 200 + body code），且发生在配额与模型调用之前。
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "不支持的优化目标：" + params.get("goal"));
         }
 
         if (!chatModelProvider.getCapabilities().isTextChat()) {
