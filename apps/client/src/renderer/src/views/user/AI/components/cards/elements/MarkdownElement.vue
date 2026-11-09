@@ -29,7 +29,7 @@ const sanitizedContent = computed(() => sanitizeAICardMarkdown(content.value))
 .markdown-content {
   font-size: 14px;
   line-height: 1.4;
-  color: #333;
+  color: var(--ink-700);
   word-break: break-word;
 }
 
@@ -37,7 +37,7 @@ const sanitizedContent = computed(() => sanitizeAICardMarkdown(content.value))
 .markdown-content :deep(h2),
 .markdown-content :deep(h3) {
   margin: 6px 0 4px;
-  color: #1a1a1a;
+  color: var(--ink-900);
 }
 
 .markdown-content :deep(p) {
@@ -51,15 +51,15 @@ const sanitizedContent = computed(() => sanitizeAICardMarkdown(content.value))
 }
 
 .markdown-content :deep(code) {
-  background: #f5f7fa;
+  background: var(--canvas-sunken);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 13px;
-  color: #c7254e;
+  color: var(--brand-700);
 }
 
 .markdown-content :deep(pre) {
-  background: #f5f7fa;
+  background: var(--canvas-sunken);
   padding: 6px;
   border-radius: 8px;
   overflow-x: auto;
@@ -67,9 +67,9 @@ const sanitizedContent = computed(() => sanitizeAICardMarkdown(content.value))
 }
 
 .markdown-content :deep(blockquote) {
-  border-left: 4px solid #667eea;
+  border-left: 4px solid var(--line-strong);
   padding-left: 12px;
   margin: 4px 0;
-  color: #666;
+  color: var(--ink-500);
 }
 </style>

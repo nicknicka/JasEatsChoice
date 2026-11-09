@@ -21,7 +21,7 @@ defineProps({
 
 .divider-line {
   height: 1px;
-  background: #e8e8f8;
+  background: var(--line);
   border-radius: 1px;
 }
 </style>

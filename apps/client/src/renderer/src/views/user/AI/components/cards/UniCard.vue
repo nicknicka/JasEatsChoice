@@ -80,27 +80,27 @@ const onAction = (payload) => {
 .uni-card {
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(31, 41, 55, 0.08);
-  border: 1px solid rgba(31, 41, 55, 0.06);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
-  background: white;
+  background: var(--surface);
 }
 
 .uni-card:hover {
-  box-shadow: 0 8px 24px rgba(31, 41, 55, 0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .uni-card-body {
   padding: 12px 16px;
-  background: white;
+  background: var(--surface);
 }
 
 .uni-card-fallback {
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(31, 41, 55, 0.08);
-  border: 1px solid rgba(31, 41, 55, 0.06);
-  background: white;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
   padding: 16px;
 }
 
@@ -108,7 +108,7 @@ const onAction = (payload) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #94a3b8;
+  color: var(--ink-400);
   font-size: 14px;
 }
 
@@ -120,6 +120,6 @@ const onAction = (payload) => {
   white-space: pre-wrap;
   word-break: break-all;
   line-height: 1.6;
-  color: #64748b;
+  color: var(--ink-500);
 }
 </style>

@@ -151,12 +151,13 @@ const handleCancel = () => {
 .order-guide-card {
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .card-header {
-  background: linear-gradient(135deg, #ff6b6b 0%, #38ada9 100%);
-  color: white;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-900);
   padding: 16px 20px;
 }
 
@@ -175,11 +176,11 @@ const handleCancel = () => {
 
 .header-summary {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--ink-500);
 }
 
 .card-content {
-  background: white;
+  background: var(--surface);
   padding: 20px;
 }
 
@@ -190,7 +191,7 @@ const handleCancel = () => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--ink-900);
   margin-bottom: 12px;
 }
 
@@ -202,10 +203,10 @@ const handleCancel = () => {
 }
 
 .dish-item {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
-  background: #fafafa;
+  background: var(--canvas-sunken);
 }
 
 .dish-header {
@@ -221,8 +222,8 @@ const handleCancel = () => {
   justify-content: center;
   width: 24px;
   height: 24px;
-  background: #667eea;
-  color: white;
+  background: var(--neutral-bg);
+  color: var(--neutral);
   border-radius: 50%;
   font-size: 12px;
   font-weight: 600;
@@ -231,7 +232,7 @@ const handleCancel = () => {
 .dish-name {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--ink-900);
 }
 
 .dish-details {
@@ -247,45 +248,45 @@ const handleCancel = () => {
 }
 
 .detail-row .label {
-  color: #666;
+  color: var(--ink-500);
   min-width: 80px;
 }
 
 .detail-row .value {
-  color: #333;
+  color: var(--ink-900);
   font-weight: 500;
 }
 
 .detail-row .value.price {
-  color: #f56c6c;
+  color: var(--ink-900);
   font-weight: 600;
 }
 
 .detail-row .value.code {
   font-family: 'Courier New', monospace;
   font-size: 12px;
-  color: #666;
+  color: var(--ink-500);
 }
 
 .not-found-section {
   margin-bottom: 16px;
   padding: 12px;
-  background: #fff3cd;
+  background: var(--warning-bg);
   border-radius: 8px;
-  border: 1px solid #ffc107;
+  border: 1px solid var(--warning);
 }
 
 .not-found-title {
   font-size: 14px;
   font-weight: 600;
-  color: #856404;
+  color: var(--warning);
   margin-bottom: 8px;
 }
 
 .not-found-list {
   margin: 0;
   padding-left: 20px;
-  color: #856404;
+  color: var(--warning);
 }
 
 .not-found-list li {
@@ -293,7 +294,7 @@ const handleCancel = () => {
 }
 
 .total-section {
-  background: #f0f9ff;
+  background: var(--canvas-sunken);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 16px;
@@ -312,24 +313,24 @@ const handleCancel = () => {
 
 .total-label {
   font-size: 15px;
-  color: #333;
+  color: var(--ink-900);
   font-weight: 500;
 }
 
 .total-amount {
   font-size: 20px;
-  color: #f56c6c;
+  color: var(--ink-900);
   font-weight: 700;
 }
 
 .total-value {
   font-size: 15px;
-  color: #333;
+  color: var(--ink-900);
   font-weight: 600;
 }
 
 .guide-section {
-  background: #e8f5e9;
+  background: var(--canvas-sunken);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 16px;
@@ -338,13 +339,13 @@ const handleCancel = () => {
 .guide-title {
   font-size: 15px;
   font-weight: 600;
-  color: #2e7d32;
+  color: var(--ink-900);
   margin-bottom: 8px;
 }
 
 .guide-content {
   font-size: 14px;
-  color: #333;
+  color: var(--ink-700);
   line-height: 1.6;
 }
 
@@ -362,7 +363,7 @@ const handleCancel = () => {
 }
 
 .tips-section {
-  background: #fff8e1;
+  background: var(--info-bg);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 20px;
@@ -371,7 +372,7 @@ const handleCancel = () => {
 .tips-title {
   font-size: 14px;
   font-weight: 600;
-  color: #f57f17;
+  color: var(--info);
   margin-bottom: 8px;
 }
 
@@ -382,7 +383,7 @@ const handleCancel = () => {
 
 .tips-list li {
   font-size: 13px;
-  color: #827717;
+  color: var(--ink-700);
   margin-bottom: 4px;
 }
 

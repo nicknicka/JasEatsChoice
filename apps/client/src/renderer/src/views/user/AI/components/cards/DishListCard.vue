@@ -44,7 +44,6 @@
                   v-model="dish.rating"
                   disabled
                   show-score
-                  text-color="#ff9900"
                   size="small"
                 />
               </div>
@@ -176,8 +175,9 @@ const handleAction = (actionType, dish) => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ff9f43 100%);
-  color: white;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-900);
   padding: 16px 20px;
 }
 
@@ -196,11 +196,11 @@ const handleAction = (actionType, dish) => {
 
 .header-summary {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--ink-500);
 }
 
 .card-content {
-  background: white;
+  background: var(--surface);
   padding: 16px;
 }
 
@@ -218,15 +218,15 @@ const handleAction = (actionType, dish) => {
   display: flex;
   gap: 16px;
   padding: 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--surface);
   transition: all 0.3s;
 }
 
 .dish-item:hover {
-  border-color: #ff9f43;
-  box-shadow: 0 4px 12px rgba(255, 159, 67, 0.15);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
   transform: translateX(4px);
 }
 
@@ -256,7 +256,7 @@ const handleAction = (actionType, dish) => {
 .dish-name {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--ink-900);
   flex: 1;
   line-height: 1.4;
 }
@@ -267,7 +267,7 @@ const handleAction = (actionType, dish) => {
 
 .dish-description {
   font-size: 14px;
-  color: #666;
+  color: var(--ink-500);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -285,7 +285,7 @@ const handleAction = (actionType, dish) => {
 .price {
   font-size: 22px;
   font-weight: 600;
-  color: #f56c6c;
+  color: var(--ink-900);
 }
 
 .dish-tags {

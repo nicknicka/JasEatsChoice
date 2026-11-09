@@ -42,14 +42,14 @@ const handleAction = (action) => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
-  background: #f8f9fa;
-  border-top: 1px solid #f0f2f5;
+  background: var(--canvas-sunken);
+  border-top: 1px solid var(--line);
   border-radius: 0 0 16px 16px;
 }
 
 .footer-text {
   font-size: 12px;
-  color: #8c93a0;
+  color: var(--ink-400);
   line-height: 1.5;
 }
 
@@ -65,14 +65,14 @@ const handleAction = (action) => {
   padding: 2px 4px;
   font-size: 12px;
   font-weight: 500;
-  color: #667eea;
+  color: var(--brand-500);
   cursor: pointer;
   transition: color 0.2s ease;
   white-space: nowrap;
 }
 
 .footer-link-btn:hover {
-  color: #5562d6;
+  color: var(--brand-600);
   text-decoration: underline;
 }
 </style>

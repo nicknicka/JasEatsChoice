@@ -9,7 +9,7 @@
       >
         <div class="stat-header">
           <span class="stat-label">{{ stat.label }}</span>
-          <span class="stat-value" :style="{ color: stat.color || '#667eea' }">
+          <span class="stat-value" :style="{ color: stat.color || 'var(--brand-500)' }">
             {{ stat.value }}{{ stat.unit || '' }}
           </span>
         </div>
@@ -18,7 +18,7 @@
             class="custom-progress-bar"
             :style="{
               width: (stat.percent || 0) + '%',
-              background: stat.color || '#667eea'
+              background: stat.color || 'var(--brand-500)'
             }"
           ></div>
         </div>
@@ -74,7 +74,7 @@ const stats = computed(() => props.element.stats || [])
 
 .stat-label {
   font-size: 13px;
-  color: #1f2937;
+  color: var(--ink-900);
   font-weight: 500;
 }
 
@@ -87,7 +87,7 @@ const stats = computed(() => props.element.stats || [])
 .custom-progress {
   width: 100%;
   height: 6px;
-  background: #f0f2f5;
+  background: var(--canvas-sunken);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -107,9 +107,9 @@ const stats = computed(() => props.element.stats || [])
   align-items: flex-start;
   gap: 8px;
   padding: 10px 14px;
-  background: #f0f4ff;
+  background: var(--info-bg);
   border-radius: 12px;
-  border: 1px solid rgba(102, 126, 234, 0.1);
+  border: 1px solid var(--line);
 }
 
 .suggestion-icon {
@@ -120,7 +120,7 @@ const stats = computed(() => props.element.stats || [])
 
 .suggestion-text {
   font-size: 13px;
-  color: #4a5568;
+  color: var(--ink-700);
   line-height: 1.5;
 }
 </style>

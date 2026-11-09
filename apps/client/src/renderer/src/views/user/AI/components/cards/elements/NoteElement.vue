@@ -40,28 +40,24 @@ const alertType = computed(() => {
   gap: 8px;
   padding: 10px 14px;
   border-radius: 12px;
-  border: 1px solid transparent;
+  border: 1px solid var(--line);
   transition: background 0.2s ease;
 }
 
 .note-card--info {
-  background: #f0f4ff;
-  border-color: rgba(102, 126, 234, 0.1);
+  background: var(--info-bg);
 }
 
 .note-card--warning {
-  background: #fffbf0;
-  border-color: rgba(255, 217, 61, 0.2);
+  background: var(--warning-bg);
 }
 
 .note-card--success {
-  background: #f0faf4;
-  border-color: rgba(86, 212, 143, 0.15);
+  background: var(--success-bg);
 }
 
 .note-card--error {
-  background: #fff5f5;
-  border-color: rgba(255, 107, 107, 0.15);
+  background: var(--danger-bg);
 }
 
 .note-icon {
@@ -72,7 +68,7 @@ const alertType = computed(() => {
 
 .note-content {
   font-size: 13px;
-  color: #4a5568;
+  color: var(--ink-700);
   line-height: 1.5;
 }
 </style>

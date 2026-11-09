@@ -57,8 +57,8 @@ const handleAction = (action) => {
   display: flex;
   gap: 12px;
   padding: 12px 20px;
-  background: white;
-  border-top: 1px solid #f0f2f5;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
   flex-wrap: wrap;
 }
 
@@ -79,56 +79,56 @@ const handleAction = (action) => {
 }
 
 .action-btn--primary {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  background: var(--brand-500);
+  color: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .action-btn--primary:hover {
-  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.45);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
 .action-btn--success {
-  background: linear-gradient(135deg, #56d48f, #38b26a);
-  color: white;
-  box-shadow: 0 2px 8px rgba(86, 212, 143, 0.3);
+  background: var(--success);
+  color: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .action-btn--success:hover {
-  box-shadow: 0 4px 14px rgba(86, 212, 143, 0.45);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
 .action-btn--warning {
-  background: linear-gradient(135deg, #ffd93d, #f0b429);
-  color: #6b5200;
-  box-shadow: 0 2px 8px rgba(255, 217, 61, 0.3);
+  background: var(--warning);
+  color: var(--ink-900);
+  box-shadow: var(--shadow-sm);
 }
 
 .action-btn--warning:hover {
-  box-shadow: 0 4px 14px rgba(255, 217, 61, 0.45);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
 .action-btn--danger {
-  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
-  color: white;
-  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+  background: var(--danger);
+  color: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .action-btn--danger:hover {
-  box-shadow: 0 4px 14px rgba(255, 107, 107, 0.45);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
 .action-btn--default {
-  background: #f0f2f5;
-  color: #1f2937;
+  background: var(--canvas-sunken);
+  color: var(--ink-700);
 }
 
 .action-btn--default:hover {
-  background: #e8eaee;
+  background: var(--neutral-bg);
   transform: translateY(-1px);
 }
 </style>
