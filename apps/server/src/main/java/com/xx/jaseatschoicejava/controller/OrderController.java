@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.OrderCreateDTO;
+import com.xx.jaseatschoicejava.dto.OrderDishBatchQueryDTO;
 import com.xx.jaseatschoicejava.dto.OrderDishVO;
 import com.xx.jaseatschoicejava.dto.ReorderResponseDTO;
 import com.xx.jaseatschoicejava.entity.Order;
@@ -104,6 +105,16 @@ public class OrderController {
     public ResponseResult<?> getOrderDishes(@PathVariable String orderId) {
         List<OrderDishVO> orderDishes = orderDishService.getOrderDishesWithDetails(orderId);
         return ResponseResult.success(orderDishes);
+    }
+
+    /**
+     * 批量获取多个订单的菜品列表（包含菜品详细信息）
+     */
+    @PostMapping("/dishes/batch")
+    public ResponseResult<?> getOrderDishesBatch(@RequestBody(required = false) OrderDishBatchQueryDTO query) {
+        List<String> orderIds = query != null ? query.getOrderIds() : null;
+        Map<String, List<OrderDishVO>> result = orderDishService.getOrderDishesWithDetailsBatch(orderIds);
+        return ResponseResult.success(result);
     }
 
     /**

@@ -426,24 +426,26 @@ const fetchOrders = async () => {
       const ordersData = response.data || []
       console.log('[Orders] 订单数量:', ordersData.length)
 
-      // 为每个订单获取菜品列表
-      for (const order of ordersData) {
+      // 一次性批量获取所有订单的菜品列表（避免逐单串行 N+1）
+      let dishMap = {}
+      if (ordersData.length > 0) {
         try {
-          const dishesResponse = await api.get(`/v1/orders/${order.id}/dishes`)
-          console.log('[Orders] 订单菜品API响应:', order.id, dishesResponse)
-          console.log('[Orders] 订单菜品数据:', JSON.stringify(dishesResponse.data, null, 2))
+          const dishesResponse = await api.post('/v1/orders/dishes/batch', {
+            orderIds: ordersData.map((order) => order.id)
+          })
+          console.log('[Orders] 批量订单菜品API响应:', dishesResponse)
           if (dishesResponse.success) {
-            order.orderDishes = dishesResponse.data || []
+            dishMap = dishesResponse.data || {}
           }
         } catch (error) {
-          console.error('[Orders] 获取订单菜品失败:', order.id, error)
-          order.orderDishes = []
+          console.error('[Orders] 批量获取订单菜品失败:', error)
         }
       }
 
       console.log('[Orders] 订单数据:', ordersData)
       orders.value = ordersData.map((order) => ({
         ...order,
+        orderDishes: dishMap[order.id] || [],
         status: normalizeOrderStatusCode(order.status)
       }))
       return true
