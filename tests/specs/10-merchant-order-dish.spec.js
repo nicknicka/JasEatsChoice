@@ -324,7 +324,8 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
     try {
       const temporary = await createTemporaryOrder(page, merchantId)
       orderId = temporary.orderId
-      await page.goto('/merchant/home/orders')
+      // 用订单号把列表收敛到目标记录，避免在共享库累积的整张长表里渲染/定位
+      await page.goto(`/merchant/home/orders?search=${encodeURIComponent(orderId)}`)
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       const row = page.locator('.order-item', { hasText: orderId })
       await expect(row).toBeVisible()
