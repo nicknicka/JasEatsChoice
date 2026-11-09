@@ -926,4 +926,9 @@ onMounted(() => {
 .topic-management-container :deep(.table-card > .el-card__body) {
   padding-top: var(--space-2);
 }
+
+/* §4.10：工具条控件归到 sm(32) 后，末行表单项不再叠加多余下边距，守住分页条 top < 900。 */
+.topic-management-container :deep(.search-card .el-form-item:last-child) {
+  margin-bottom: 0;
+}
 </style>

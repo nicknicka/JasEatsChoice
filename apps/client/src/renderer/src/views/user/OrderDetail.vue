@@ -1318,7 +1318,6 @@ const getActiveStep = () => {
 
     .action-btn {
       min-width: 160px;
-      height: 44px;
       font-size: var(--text-body);
       font-weight: var(--weight-semibold);
       border-radius: var(--radius-md);
@@ -1491,7 +1490,6 @@ const getActiveStep = () => {
       .action-btn {
         width: 100%;
         min-width: auto;
-        height: 44px;
         font-size: 15px;
       }
     }
