@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Wallet, List, Star, Bell, TrendCharts } from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
 import { useAuthStore } from '../../store/authStore'
 
@@ -29,42 +30,38 @@ if (!merchantId) {
   }
 }
 
-// 概览项导航配置（使用计算属性动态获取趋势）
-const overviewConfig = ref([
+// 概览项导航配置（使用计算属性动态获取趋势，图标统一 Element Plus 线性图标 §4.9）
+const overviewConfig = [
   {
     key: 'sales',
-    icon: '💰',
+    icon: Wallet,
     label: '营业额',
     onClick: () => router.push('/merchant/home/statistics'),
-    trendClass: 'trend-up',
     suffix: '¥',
     trendKey: 'salesTrend'
   },
   {
     key: 'orders',
-    icon: '🍽️',
+    icon: List,
     label: '订单数',
     onClick: () => router.push('/merchant/home/orders'),
-    trendClass: 'trend-up',
     trendKey: 'ordersTrend'
   },
   {
     key: 'newComments',
-    icon: '🌟',
+    icon: Star,
     label: '新增评价',
     onClick: () => router.push('/merchant/home/comments'),
-    trendClass: 'trend-down',
     trendKey: 'commentsTrend'
   },
   {
     key: 'unreadMessages',
-    icon: '📞',
+    icon: Bell,
     label: '未读消息',
     onClick: () => router.push('/merchant/home/messages'),
-    trendClass: 'trend-neutral',
     trendKey: 'messagesTrend'
   }
-])
+]
 
 // 获取趋势样式类
 const getTrendClass = (trend) => {
@@ -95,16 +92,18 @@ onMounted(() => {
 
 <template>
   <div class="overview-card">
-    <h3 class="card-title">📈 今日营业概览：</h3>
+    <h3 class="card-title">
+      <el-icon aria-hidden="true"><TrendCharts /></el-icon>
+      <span>今日营业概览：</span>
+    </h3>
     <div class="overview-grid">
       <div
         v-for="item in overviewConfig"
         :key="item.key"
         class="overview-item"
-        :class="item.key"
         @click="item.onClick"
       >
-        <div class="item-icon">{{ item.icon }}</div>
+        <el-icon class="item-icon" aria-hidden="true"><component :is="item.icon" /></el-icon>
         <div class="item-content">
           <div class="overview-label">{{ item.label }}</div>
           <div class="overview-value">
@@ -123,133 +122,112 @@ onMounted(() => {
 </template>
 
 <style scoped lang="less">
-@import '../../assets/css/nordic-theme.less';
-@import '../../assets/css/merchant-theme.less';
-
+/* 颜色、间距、圆角、字阶、动效全部取自 tokens.css（§3、§7.1），无裸色值、无彩色左框（§3.1）。 */
 .overview-card {
-  margin-bottom: @nordic-space-lg;
-  padding: @nordic-space-lg;
-  background: @merchant-surface;
-  border-radius: @nordic-radius-lg;
-  border: 1px solid @merchant-border;
-  border-left: 4px solid @merchant-success;
-  box-shadow: 0 1px 4px @merchant-shadow;
-  transition: all @nordic-transition-base ease;
+  margin-bottom: var(--space-5);
+}
 
-  &:hover {
-    box-shadow: 0 8px 24px @merchant-shadow-hover;
-    border-color: @merchant-primary;
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+
+  .el-icon {
+    color: var(--brand-500);
+    font-size: var(--text-h3);
   }
+}
 
-  .card-title {
-    .merchant-section-title();
+/* KPI：一个线性图标 + 数值 + 标签的浅底卡，L1 微质感，无双重边框（§4.8）。 */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--card-gap);
+
+  .overview-item {
     display: flex;
     align-items: center;
-    gap: @nordic-space-sm;
-    margin-bottom: @nordic-space-lg;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: var(--card-padding-compact);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: inset 0 1px 0 var(--surface-highlight);
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
 
-    &::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(to right, @merchant-border, transparent);
-      margin-left: @nordic-space-md;
+    &:hover {
+      border-color: var(--brand-400);
+      box-shadow: var(--shadow-sm);
     }
-  }
 
-  .overview-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: @nordic-space-sm;
+    &:focus-visible {
+      outline: 2px solid var(--brand-400);
+      outline-offset: 2px;
+    }
 
-    .overview-item {
-      display: flex;
+    .item-icon {
+      display: inline-flex;
       align-items: center;
-      gap: @nordic-space-sm;
-      padding: @nordic-space-md;
+      justify-content: center;
+      flex-shrink: 0;
+      width: var(--control-height-md);
+      height: var(--control-height-md);
+      border-radius: var(--radius-md);
+      background: var(--brand-50);
+      color: var(--brand-600);
+      font-size: var(--text-h2);
+    }
+
+    .item-content {
+      flex: 1;
       min-width: 0;
-      border-radius: @nordic-radius-lg;
-      background: @merchant-surface;
-      border: 1px solid @merchant-border;
-      transition: all @nordic-transition-base ease;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
 
-      // 左侧强调边框
-      &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        border-radius: @nordic-radius-lg 0 0 @nordic-radius-lg;
+      .overview-label {
+        margin-bottom: var(--space-1);
+        color: var(--ink-500);
+        font-size: var(--text-body-sm);
+        font-weight: var(--weight-medium);
       }
 
-      &.sales::before { background: @merchant-success; }
-      &.orders::before { background: @merchant-info; }
-      &.newComments::before { background: @merchant-warning; }
-      &.unreadMessages::before { background: @merchant-error; }
-
-      &:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 24px @merchant-shadow-hover;
-        border-color: @merchant-primary;
+      .overview-value {
+        margin-bottom: var(--space-1);
+        color: var(--ink-900);
+        font-family: var(--font-num);
+        font-size: var(--text-h1);
+        font-weight: var(--weight-bold);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: var(--tracking-tight);
+        line-height: 1.1;
       }
 
-      .item-icon {
-        font-size: 28px;
-        width: 52px;
-        height: 52px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: @nordic-radius-md;
-        background: @merchant-primary-light;
-      }
+      .item-trend {
+        display: inline-block;
+        padding: 2px var(--space-2);
+        border-radius: var(--radius-full);
+        font-size: var(--text-caption);
+        font-weight: var(--weight-semibold);
 
-      .item-content {
-        flex: 1;
-
-        .overview-label {
-          font-size: @nordic-text-sm;
-          color: @merchant-text-muted;
-          margin-bottom: 4px;
-          font-weight: 500;
+        &.trend-up {
+          color: var(--success);
+          background: var(--success-bg);
         }
 
-        .overview-value {
-          font-size: 24px;
-          font-weight: 700;
-          color: @merchant-text;
-          letter-spacing: @nordic-letter-tighter;
-          margin-bottom: 4px;
-          line-height: 1.1;
+        &.trend-down {
+          color: var(--danger);
+          background: var(--danger-bg);
         }
 
-        .item-trend {
-          font-size: @nordic-text-xs;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: @nordic-radius-pill;
-          display: inline-block;
-
-          &.trend-up {
-            color: @merchant-success;
-            background: @merchant-success-light;
-          }
-
-          &.trend-down {
-            color: @merchant-error;
-            background: @merchant-error-light;
-          }
-
-          &.trend-neutral {
-            color: @merchant-text-muted;
-            background: @merchant-divider;
-          }
+        &.trend-neutral {
+          color: var(--ink-500);
+          background: var(--neutral-bg);
         }
       }
     }
