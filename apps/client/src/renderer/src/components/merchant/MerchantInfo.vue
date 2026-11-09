@@ -742,8 +742,6 @@ const handleSaveAvatar = async () => {
               <span class="avatar-letter">{{ (merchantInfo.name || '店').charAt(0) }}</span>
             </div>
             <ElButton
-              type="primary"
-              size="small"
               circle
               class="avatar-edit-btn"
               @click="handleAvatarUpload"
@@ -767,7 +765,7 @@ const handleSaveAvatar = async () => {
                 {{ merchantInfo.status ? '营业中' : '已打烊' }}
               </ElTag>
             </div>
-            <ElButton type="primary" size="small" @click="handleEditClick" class="edit-button">
+            <ElButton class="edit-button" @click="handleEditClick">
               <ElIcon><Edit /></ElIcon>
               <span>编辑信息</span>
             </ElButton>
@@ -1036,8 +1034,6 @@ const handleSaveAvatar = async () => {
           v-model="editForm.status"
           active-text="营业中"
           inactive-text="已打烊"
-          active-color="#409eff"
-          inactive-color="#909399"
         />
       </div>
     </div>
@@ -1066,7 +1062,7 @@ const handleSaveAvatar = async () => {
           alt="头像预览"
         />
         <div v-else class="preview-avatar-placeholder">
-          <ShoppingBag style="font-size: 64px; color: #c0c4cc" />
+          <ShoppingBag style="font-size: 64px; color: var(--ink-400)" />
           <p>暂无头像</p>
         </div>
       </div>
@@ -1343,7 +1339,7 @@ const handleSaveAvatar = async () => {
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(74, 122, 77, 0.2);
+    box-shadow: var(--shadow-sm);
   }
 
   &.quick-tag-default {
@@ -1470,12 +1466,12 @@ const handleSaveAvatar = async () => {
   background: @merchant-primary;
   border: 1px solid @merchant-primary;
   color: @merchant-surface;
-  box-shadow: 0 2px 8px rgba(74, 122, 77, 0.2);
+  box-shadow: var(--shadow-sm);
 
   &:hover {
     background: @merchant-primary-dark;
     border-color: @merchant-primary-dark;
-    box-shadow: 0 4px 12px rgba(74, 122, 77, 0.3);
+    box-shadow: var(--shadow-md);
     transform: translateY(-1px);
   }
 }
@@ -1505,7 +1501,7 @@ const handleSaveAvatar = async () => {
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(74, 122, 77, 0.2);
+    box-shadow: var(--shadow-md);
   }
 }
 
@@ -1527,15 +1523,7 @@ const handleSaveAvatar = async () => {
   background: @merchant-surface;
   border-radius: @nordic-radius-lg;
   border: 1px solid @merchant-border;
-  border-left: 4px solid @merchant-secondary;
-  box-shadow: 0 1px 4px @merchant-shadow;
-  transition: all @nordic-transition-base ease;
-
-  &:hover {
-    box-shadow: 0 8px 24px @merchant-shadow-hover;
-    border-color: @merchant-primary;
-    transform: translateY(-3px);
-  }
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
 
   .loading-container {
     display: flex;
@@ -1589,10 +1577,7 @@ const handleSaveAvatar = async () => {
               font-size: 2rem;
               font-weight: 600;
               line-height: 1;
-              background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
-              -webkit-background-clip: text;
-              background-clip: text;
-              color: transparent;
+              color: var(--brand-600);
             }
           }
 
@@ -1600,17 +1585,21 @@ const handleSaveAvatar = async () => {
             position: absolute;
             bottom: 0;
             right: 0;
-            width: 28px;
-            height: 28px;
+            width: var(--control-height-sm);
+            height: var(--control-height-sm);
             padding: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid @merchant-surface;
-            box-shadow: 0 2px 8px @merchant-shadow;
+            background: var(--surface);
+            border: 1px solid var(--line-strong);
+            color: var(--brand-600);
+            box-shadow: var(--shadow-sm);
 
             &:hover {
-              transform: scale(1.1);
+              border-color: var(--brand-400);
+              color: var(--brand-600);
+              background: var(--surface);
             }
           }
         }
@@ -1718,20 +1707,23 @@ const handleSaveAvatar = async () => {
 
 // ===== 编辑按钮 =====
 .edit-button {
-  background: @merchant-primary;
-  border: 1px solid @merchant-primary;
-  color: @merchant-surface;
-  border-radius: @nordic-radius-sm;
-  padding: 8px @nordic-space-md;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(74, 122, 77, 0.2);
-  transition: all @nordic-transition-base ease;
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
+  font-weight: var(--weight-medium);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 
-  &:hover {
-    background: @merchant-primary-dark;
-    border-color: @merchant-primary-dark;
-    box-shadow: 0 4px 12px rgba(74, 122, 77, 0.3);
-    transform: translateY(-1px);
+  &:hover,
+  &:focus {
+    background: var(--surface);
+    border-color: var(--brand-400);
+    color: var(--brand-600);
   }
 }
 

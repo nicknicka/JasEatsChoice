@@ -2,6 +2,15 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import {
+  Tickets,
+  Document,
+  Clock,
+  View,
+  CircleCheck,
+  Bell,
+  ArrowRight
+} from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
 import { useAuthStore } from '../../store/authStore'
 import { normalizeOrderStatusCode } from '../../utils/orderStatus'
@@ -83,8 +92,8 @@ const viewOrderDetails = (order) => {
 // 获取下一个状态按钮文案（5状态系统）
 const getNextStatusText = (currentStatus) => {
   const statusFlow = {
-    1: '👉 开始制作',    // 待接单 -> 制作中
-    2: '✅ 完成订单',    // 制作中 -> 已完成
+    1: '开始制作', // 待接单 -> 制作中
+    2: '完成订单' // 制作中 -> 已完成
   }
   return statusFlow[currentStatus] || null
 }
@@ -230,7 +239,10 @@ onMounted(() => {
 <template>
   <div class="orders-card">
     <div class="orders-header">
-      <h3 class="card-title">📋 订单中心</h3>
+      <h3 class="card-title">
+        <el-icon aria-hidden="true"><Tickets /></el-icon>
+        <span>订单中心</span>
+      </h3>
       <div class="filter-section">
         <el-tag
           type="success"
@@ -285,23 +297,26 @@ onMounted(() => {
                 {{ orderStatusMap[order.status] || '未知状态' }}
               </el-tag>
             </div>
-            <div class="order-no">🍽️ 订单号：{{ order.id }}</div>
+            <div class="order-no">
+              <el-icon aria-hidden="true"><Document /></el-icon>
+              <span>订单号：{{ order.id }}</span>
+            </div>
             <div class="order-details">
               <span class="amount"
                 >¥{{ order.totalAmount ? order.totalAmount.toFixed(2) : '0.00' }}</span
               >
-              <span class="time">⏱️ {{ order.createdAt }}</span>
+              <span class="time">
+                <el-icon aria-hidden="true"><Clock /></el-icon>
+                <span>{{ order.createdAt }}</span>
+              </span>
             </div>
           </div>
 
           <!-- 中间：详情按钮 -->
           <div class="order-detail-section">
-            <el-button
-              type="primary"
-              size="small"
-              @click="viewOrderDetails(order)"
-            >
-              详情
+            <el-button @click="viewOrderDetails(order)">
+              <el-icon aria-hidden="true"><View /></el-icon>
+              <span>详情</span>
             </el-button>
           </div>
 
@@ -310,11 +325,11 @@ onMounted(() => {
             <!-- 更新状态按钮 -->
             <el-button
               v-if="canUpdateStatus(order.status)"
-              type="success"
-              size="small"
+              type="primary"
               @click="updateOrderStatus(order)"
             >
-              {{ getNextStatusText(order.status) }}
+              <el-icon aria-hidden="true"><CircleCheck /></el-icon>
+              <span>{{ getNextStatusText(order.status) }}</span>
             </el-button>
             <!-- 提醒按钮 -->
             <el-tooltip
@@ -324,12 +339,10 @@ onMounted(() => {
             >
               <el-button
                 v-if="canNotifyUser(order.status)"
-                type="warning"
-                size="small"
+                class="icon-btn"
                 @click="notifyUser(order)"
-                class="circle-icon-btn"
               >
-                🔔
+                <el-icon aria-hidden="true"><Bell /></el-icon>
               </el-button>
             </el-tooltip>
           </div>
@@ -337,13 +350,16 @@ onMounted(() => {
       </div>
       <!-- 🔧 移除Transition，避免高度跳动 -->
       <div v-if="filteredOrders.length === 0" class="no-orders">
-        <div class="empty-icon">📋</div>
+        <el-icon class="empty-icon" aria-hidden="true"><Tickets /></el-icon>
         <p>暂无订单数据</p>
       </div>
     </div>
 
     <div class="view-all">
-      <el-button type="text" @click="navigateToOrders">📤 查看全部订单</el-button>
+      <el-button link @click="navigateToOrders">
+        <el-icon aria-hidden="true"><ArrowRight /></el-icon>
+        <span>查看全部订单</span>
+      </el-button>
     </div>
   </div>
 </template>
@@ -352,12 +368,12 @@ onMounted(() => {
 @import '../../assets/css/merchant-theme.less';
 
 .orders-card {
-  margin-bottom: 24px;
-  padding: 20px;
-  background: @merchant-surface;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid @merchant-divider;
+  margin-bottom: var(--space-5);
+  padding: var(--card-padding-compact);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 var(--surface-highlight);
+  border: 1px solid var(--line);
 
   .orders-header {
     display: flex;
@@ -368,13 +384,17 @@ onMounted(() => {
     border-bottom: 1px solid @merchant-divider;
 
     .card-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: @merchant-text;
+      font-size: var(--text-h3);
+      font-weight: var(--weight-semibold);
+      color: var(--ink-900);
       margin: 0;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-2);
+
+      .el-icon {
+        color: var(--brand-500);
+      }
     }
 
     .filter-section {
@@ -476,18 +496,36 @@ onMounted(() => {
       grid-template-areas: 'info detail actions';
       gap: 12px;
       align-items: center;
-      padding: 16px;
+      padding: var(--space-4);
       background: @merchant-surface-alt;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       border: 1px solid @merchant-border;
       // 🔧 修复：只过渡hover相关的颜色属性
       transition: background 0.2s ease, border-color 0.2s ease;
       // 🔧 完全移除动画，避免布局跳动
       animation: none;
 
+      // 行内控件高度统一取 --control-height-sm（§3.4）
+      :deep(.el-button) {
+        height: var(--control-height-sm);
+        padding: 0 var(--space-3);
+        font-size: var(--text-body-sm);
+        border-radius: var(--radius-md);
+        transition:
+          background-color var(--duration-fast) var(--ease-out),
+          border-color var(--duration-fast) var(--ease-out),
+          color var(--duration-fast) var(--ease-out);
+
+        // 纯图标按钮样式
+        &.icon-btn {
+          padding: 0 var(--space-2);
+          min-width: var(--control-height-sm);
+        }
+      }
+
       &:hover {
         background: @merchant-surface;
-        border-color: @merchant-info;
+        border-color: var(--brand-400);
         // 🔧 移除box-shadow，避免影响布局计算
       }
 
@@ -523,18 +561,25 @@ onMounted(() => {
         }
 
         .order-no {
-          font-size: 14px;
-          font-weight: 600;
-          color: @merchant-text;
-          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: var(--space-2);
+          margin-bottom: var(--space-2);
+          font-size: var(--text-body);
+          font-weight: var(--weight-semibold);
+          color: var(--ink-900);
+
+          .el-icon {
+            color: var(--ink-400);
+          }
         }
 
         .order-details {
           display: flex;
           align-items: center;
-          gap: 12px;
-          font-size: 13px;
-          color: @merchant-text-sec;
+          gap: var(--space-3);
+          font-size: var(--text-body-sm);
+          color: var(--ink-500);
 
           .amount {
             font-weight: 600;
@@ -545,6 +590,11 @@ onMounted(() => {
           .time {
             display: flex;
             align-items: center;
+            gap: var(--space-1);
+
+            .el-icon {
+              color: var(--ink-400);
+            }
           }
         }
       }
@@ -555,70 +605,6 @@ onMounted(() => {
         gap: 8px;
         flex-shrink: 0;
         align-items: center;
-
-        :deep(.el-button) {
-          height: 32px;
-          padding: 0 12px;
-          font-size: 13px;
-          border-radius: 6px;
-          // 🔧 修复：只过渡颜色和背景，不过渡transform避免高度变化
-          transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-
-          // 纯图标按钮样式
-          &.icon-only-btn {
-            padding: 0 8px;
-            min-width: 36px;
-            font-size: 16px;
-          }
-
-          // 圆形图标按钮样式
-          &.circle-icon-btn {
-            width: 32px;
-            height: 32px;
-            padding: 0;
-            border-radius: 50%;
-            min-width: 32px;
-            font-size: 16px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-          }
-
-          &:hover {
-            // 🔧 移除transform，改用其他视觉反馈
-            filter: brightness(1.1);
-          }
-
-          &.el-button--primary {
-            background: @merchant-info;
-            border-color: @merchant-info;
-
-            &:hover {
-              background: lighten(@merchant-info, 10%);
-              border-color: lighten(@merchant-info, 10%);
-            }
-          }
-
-          &.el-button--success {
-            background: @merchant-success;
-            border-color: @merchant-success;
-
-            &:hover {
-              background: lighten(@merchant-success, 10%);
-              border-color: lighten(@merchant-success, 10%);
-            }
-          }
-
-          &.el-button--warning {
-            background: @merchant-warning;
-            border-color: @merchant-warning;
-
-            &:hover {
-              background: lighten(@merchant-warning, 10%);
-              border-color: lighten(@merchant-warning, 10%);
-            }
-          }
-        }
       }
     }
   }
@@ -630,12 +616,12 @@ onMounted(() => {
     text-align: center;
 
     :deep(.el-button) {
-      color: @merchant-info;
-      font-size: 14px;
-      transition: all 0.2s ease;
+      height: var(--control-height-sm);
+      color: var(--brand-600);
+      font-size: var(--text-body-sm);
 
       &:hover {
-        color: lighten(@merchant-info, 10%);
+        color: var(--brand-500);
       }
     }
   }
