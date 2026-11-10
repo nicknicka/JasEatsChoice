@@ -6,7 +6,7 @@
 #   make down        停栈（保留数据卷）
 #   make reset-db    删掉 MySQL 数据卷，空卷启动后由后端 Flyway 重新迁移（会清空现有数据）
 #   make web         构建 Web 版静态产物到 apps/client/dist-web
-#   make test        跑全部 114 条 Playwright 用例
+#   make test        跑全部 138 条 Playwright 用例
 #   make test-smoke  只跑 01/04/10 三条冒烟
 #   make check       静态防线：单测 + 路由漂移 + 小程序 API 调用 + lint 门禁（不起容器）
 #   make desktop     Electron 打包回归（build:mac）
