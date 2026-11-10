@@ -518,7 +518,8 @@ watch(recommendations, () => {
 }
 
 .filter-toggle {
-  padding: 8px 16px;
+  height: 28px;
+  padding: 0 16px;
   background: @nordic-surface;
   border: 1px solid @nordic-border;
   border-radius: @nordic-radius-md;
@@ -886,7 +887,8 @@ watch(recommendations, () => {
 }
 
 .act-btn {
-  padding: 6px 16px;
+  min-height: var(--control-height-sm);
+  padding: 4px 16px;
   border: 1px solid @nordic-border;
   background: transparent;
   border-radius: @nordic-radius-md;

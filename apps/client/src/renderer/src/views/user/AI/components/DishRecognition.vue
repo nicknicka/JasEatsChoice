@@ -879,7 +879,7 @@ const handleDrop = async (event) => {
 
 .action-btn {
   flex: 1;
-  height: 50px;
+  height: var(--control-height-md);
   border: none;
   border-radius: 14px;
   font-size: 15px;
