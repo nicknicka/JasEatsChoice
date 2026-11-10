@@ -1499,7 +1499,8 @@ watch(
         }
 
         .location-change-btn {
-          padding: 3px var(--space-2);
+          height: 28px;
+          padding: 0 var(--space-2);
           background: var(--card-glass-bg);
           border: 1px solid var(--card-glass-border-strong);
           border-radius: var(--radius-md);

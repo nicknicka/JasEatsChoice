@@ -421,7 +421,7 @@ const useHistory = (item) => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 46px;
+  height: var(--control-height-md);
   border: none;
   border-radius: 12px;
   background: linear-gradient(135deg, @merchant-primary, darken(@merchant-primary, 4%));

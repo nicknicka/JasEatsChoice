@@ -579,7 +579,8 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 9px 18px;
+    height: var(--control-height-sm);
+    padding: 0 18px;
     border: none;
     border-radius: 10px;
     font-size: 13px;

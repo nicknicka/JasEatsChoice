@@ -772,7 +772,8 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  height: var(--control-height-md);
+  padding: 0 20px;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
@@ -1235,7 +1236,7 @@ onUnmounted(() => {
 }
 
 .action-text {
-  height: 28px;
+  height: var(--control-height-sm);
   padding: 0 10px;
   border: 1px solid @nordic-green;
   border-radius: 8px;

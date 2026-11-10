@@ -508,11 +508,20 @@ onUnmounted(() => {
     flex: 1;
     min-width: 0;
   }
+
+  // 与同排「获取验证码」按钮同高（§3.4 控件行取 sm）
+  :deep(.el-input__wrapper) {
+    box-sizing: border-box;
+    height: var(--control-height-sm);
+    min-height: var(--control-height-sm);
+    padding-top: 0;
+    padding-bottom: 0;
+  }
 }
 
 .code-btn {
   flex-shrink: 0;
-  height: 36px;
+  height: var(--control-height-sm);
   padding: 0 14px;
   border: 1px solid var(--brand-500);
   border-radius: 10px;

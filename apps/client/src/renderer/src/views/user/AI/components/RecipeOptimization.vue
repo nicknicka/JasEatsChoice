@@ -738,7 +738,8 @@ const saveToMyRecipes = async () => {
 }
 
 .goal-pill {
-  padding: 8px 18px;
+  height: 28px;
+  padding: 0 18px;
   border-radius: 50px;
   border: 1px solid @nordic-border;
   background: @nordic-bg;
@@ -771,7 +772,7 @@ const saveToMyRecipes = async () => {
 
 .action-btn {
   width: 100%;
-  height: 52px;
+  height: var(--control-height-md);
   border: none;
   border-radius: 14px;
   font-size: 16px;
