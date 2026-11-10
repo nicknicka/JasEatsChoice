@@ -752,7 +752,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  height: var(--control-height-sm);
+  height: 28px;
   padding: 0 var(--space-3);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);

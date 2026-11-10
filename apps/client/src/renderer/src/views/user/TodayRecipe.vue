@@ -1171,7 +1171,8 @@ const filteredRecipes = computed(() => {
     }
 
     .meal-chip {
-      padding: 6px var(--space-4);
+      height: 28px;
+      padding: 0 var(--space-4);
       border: 1px solid var(--line);
       background: var(--surface);
       border-radius: var(--radius-full);
