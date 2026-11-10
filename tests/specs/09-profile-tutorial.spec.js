@@ -88,9 +88,12 @@ test.describe('模块九：个人中心与教程', () => {
       const dialog = page.getByRole('dialog')
       await expect(dialog.locator(`input[placeholder="给自己取个名字吧"]`)).toHaveValue(user.nickname)
       await expect(dialog.locator(`input[placeholder="example@email.com"]`)).toHaveValue(user.email)
-      // 地区字段走 el-cascader；有选中值时组件会清空内部 input 的 placeholder，
-      // 因此不能按 placeholder 定位（见 #162），改为按组件结构定位。
-      const locationInput = dialog.locator('.el-cascader input').first()
+      // 地区字段有两种渲染：级联数据就绪时是 el-cascader（有选中值会清空内部
+      // input 的 placeholder，不能按 placeholder 定位，见 #162）；高德数据不可用时
+      // 退回只读 el-input。CI 没有高德 key，两种形态都要能断到真实回填的所在地。
+      const locationInput = dialog
+        .locator('.el-cascader input, input[placeholder="选择省 / 市 / 区"]')
+        .first()
       const locationValue = await locationInput.inputValue()
       for (const part of user.location.split(' ')) {
         expect(locationValue).toContain(part)
