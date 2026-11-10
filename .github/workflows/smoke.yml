@@ -1,7 +1,7 @@
 name: smoke
 
 # PR 与主干推送跑冒烟用例（登录/下单/AI/商家侧），几分钟内给结论。
-# 全量 114 条走 regression.yml（定时或手动触发）。
+# 全量 138 条走 regression.yml（定时或手动触发）。
 
 on:
   pull_request:
