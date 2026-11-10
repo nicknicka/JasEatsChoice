@@ -53,6 +53,7 @@ jobs:
           name: regression-report
           path: |
             tests/reports/html
+            tests/reports/artifacts
             tests/reports/results.json
             tests/progress.txt
           retention-days: 14
