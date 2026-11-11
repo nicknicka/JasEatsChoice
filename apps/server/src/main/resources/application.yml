@@ -155,6 +155,14 @@ agent:
     dsh-profile-path: ${AGENT_DSH_PROFILE_PATH:}
     isolated-home: ${AGENT_ISOLATED_HOME:}
 
+# Agent Alert Bridge（只读轮询 dsh 本地 Management API）。默认关闭。
+agent:
+  bridge:
+    enabled: ${AGENT_BRIDGE_ENABLED:false}
+    poll-interval-ms: ${AGENT_BRIDGE_POLL_INTERVAL_MS:60000}
+  dsh:
+    base-url: ${DSH_MANAGEMENT_BASE_URL:http://127.0.0.1:8099}
+
 file:
   upload:
     path: ${FILE_UPLOAD_PATH:./uploads/}  # 文件上传保存路径
