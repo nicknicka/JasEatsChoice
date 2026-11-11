@@ -1,0 +1,76 @@
+# 专用 Agent 运行环境与账号隔离
+
+dsh-superagent 在这台机器上以**专用 OS 账号**运行，而不是开发者的账号。目的很直接：即使代理被
+诱导或出错，它也读不到你的 home、生产凭据或宿主机 root。
+
+> 边界：这台机器**不部署生产服务**。不要挂载生产数据库、生产上传卷、Docker socket，
+> 也不要把 `deploy/.env` 复制过来。
+
+## 账号与目录约定
+
+| 项 | 值 | 说明 |
+| --- | --- | --- |
+| OS 账号 | `dsh` | 系统账号，`nologin`，**不在 `docker` 组** |
+| 账号 home | `/var/lib/dsh-agent` | 权限 700，state / worktree / gh 配置 / 模型 key 都在这里 |
+| 日志目录 | `/var/log/dsh-agent` | 仅 `dsh` 可写 |
+| 仓库克隆 | `/srv/dsh-agent/repo` | dsh 自己的 clone 与 worktree 根 |
+| 面板 | `127.0.0.1:8099` | 只监听回环地址 |
+
+同一个仓库里，人的 clone 与 dsh 的 clone 是两份，互不共享 home。
+
+## 一次性初始化
+
+```bash
+sudo scripts/agent-runtime/install-account.sh
+```
+
+脚本幂等，只补齐缺失的账号与目录，`chmod 700` 收紧 home。它**不会**代填任何凭据。
+
+初始化后手工做两件事：
+
+1. 用专用 GitHub 账号登录 `gh`，配置落在 dsh 的 home，绝不复用个人登录：
+   ```bash
+   sudo -u dsh -H env HOME=/var/lib/dsh-agent gh auth login --hostname github.com
+   sudo -u dsh -H gh auth status
+   ```
+2. 把模型 key 写进 `/var/lib/dsh-agent/.config/model.key`（0600，属主 `dsh`）。
+   不要写进 `deploy/.env`，不要写进仓库。
+
+## 启动 / 停止 / 状态 / 日志
+
+启动命令由 `DSH_START_CMD` 提供（不同 dsh 版本 CLI 不同，不写死在仓库里）：
+
+```bash
+DSH_START_CMD="dsh panel --host 127.0.0.1 --port 8099" \
+  scripts/agent-runtime/dsh-ctl.sh start
+
+scripts/agent-runtime/dsh-ctl.sh status   # pid + 监听地址（非回环会判失败）
+scripts/agent-runtime/dsh-ctl.sh logs     # tail 日志
+scripts/agent-runtime/dsh-ctl.sh stop
+```
+
+`dsh-ctl.sh` 始终以 `HOME=/var/lib/dsh-agent` 调用，不继承调用者的 home。
+
+## 隔离验证清单
+
+```bash
+sudo scripts/agent-runtime/verify-isolation.sh
+```
+
+逐条检查并在失败时退出非零：
+
+- [ ] `dsh` 账号存在，且**不在** `docker` 组。
+- [ ] `/var/lib/dsh-agent` 权限为 `700`。
+- [ ] `dsh` 读不到开发者 home 下的文件（脚本放一个 canary 再尝试读取）。
+- [ ] `dsh` 读不到 `deploy/.env`。
+- [ ] `dsh` 访问不到 `/var/run/docker.sock`。
+- [ ] `/var/lib/dsh-agent/.ssh` 下没有私钥。
+- [ ] 面板端口只在 `127.0.0.1` / `::1` 监听。
+
+非 root 运行时，可读性探测会标记 `SKIP`；要用 `sudo` 复跑才能得到完整结论。
+
+## 与反馈闭环的关系
+
+- 反馈桥接（#536）只用专用 GitHub 账号在目标仓库开 Issue / PR，人体量的是 `dsh` 这个账号的提交与评论。
+- `ready-for-agent` 只是队列标签；真正启动代理仍需授权维护者在该 Issue 评论 `@agent`。
+- dsh 不开合并、不改标签、不部署、不碰生产数据；PR 一律由人审查合并。

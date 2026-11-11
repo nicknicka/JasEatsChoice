@@ -22,7 +22,7 @@ NPM := npm --no-audit --no-fund
 CHECK_SOURCE ?= auto
 
 .PHONY: doctor env deps up down ps logs reset-db web desktop screenshots test test-smoke lint \
-	check check-unit check-routes check-miniapp-api check-lint check-privacy build-miniapp nginx-test config-prod
+	check check-unit check-routes check-miniapp-api check-lint check-privacy build-miniapp nginx-test config-prod agent-check
 
 doctor:
 	@echo "== Docker =="
@@ -145,6 +145,11 @@ check-privacy:
 check-lint:
 	@cd apps/client && $(NPM) run lint:ci -- -f json -o $(ROOT)/.lint-report.json || true
 	@python3 scripts/check_lint.py --json $(ROOT)/.lint-report.json
+
+# 专用 Agent 账号隔离验证（需要该机器上已初始化 dsh 账号；一般用 sudo 跑）。
+# 不进 make check：CI 里没有也没必要有专用账号。
+agent-check:
+	scripts/agent-runtime/verify-isolation.sh
 
 # 只解析 compose，不启动
 config-prod:
