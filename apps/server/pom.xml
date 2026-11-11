@@ -307,7 +307,8 @@
                     <include>**/*.properties</include>
                     <include>**/*.json</include>
                     <include>**/*.sql</include>
-                    <include>static/uploads/**/*.png</include>
+                    <include>static/synthetic-assets/*.png</include>
+                    <include>static/synthetic-assets/**/*.png</include>
                 </includes>
             </resource>
         </resources>
