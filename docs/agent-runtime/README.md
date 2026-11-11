@@ -90,3 +90,25 @@ sudo scripts/agent-runtime/verify-isolation.sh
 - 供应商白名单：`openai-compatible`、`openai`、`anthropic`、`azure-openai`；白名单外的值直接 400。
 - 模型 key 只写文件型密钥存储（`AGENT_MODEL_KEY_DIR`），接口只回布尔与更新时间，日志与响应都不含明文。
 - `no-merge` / `no-deploy` / `no-production-data` 三条硬边界由代码固定为开启，页面无法关闭。
+
+## 版本锁定与升级 / 回退（#541）
+
+锁定值在 `scripts/agent-runtime/versions.env`：`DSH_SUPERAGENT_COMMIT`、`DSH_VERSION`、
+`NODE_MAJOR`、`PNPM_VERSION`。改它必须走升级流程，不允许"顺手升一下"。
+
+```bash
+# 升级：备份 -> 升级到锁定版本 -> 探针（健康/认证/Source/Policy/模型）-> 失败自动回退
+sudo scripts/agent-runtime/upgrade.sh
+
+# 手工回退：只恢复升级前备份，不做原地降级（新版迁移过的 state 旧版打不开）
+sudo scripts/agent-runtime/rollback.sh /var/log/dsh-agent/upgrade-backups/<ts>
+
+# 切换模型/插件前存快照，切回旧配置
+sudo scripts/agent-runtime/snapshot-config.sh model-switch
+sudo scripts/agent-runtime/restore-config.sh /var/log/dsh-agent/config-snapshots/<ts>-model-switch
+```
+
+- `versions.env` 里 dsh-superagent / DSH 仍是 `CHANGE_ME_*` 时，`upgrade.sh` 直接拒绝启动。
+- 升级、模型切换、回退都有可执行脚本；验证记录写到 `$DSH_LOG_DIR/upgrade-records/`，
+  模板见 `docs/agent-runtime/upgrade-record-template.md`。
+- 升级只在无开放 Ticket、无进行中派单的维护窗口进行。
