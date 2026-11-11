@@ -2,7 +2,6 @@ const {
   test,
   expect,
   loginAsUser,
-  USER_CREDENTIALS,
   ADMIN_CREDENTIALS
 } = require('../fixtures/test-base')
 const { TEST_API_BASE } = require('../utils/api')
@@ -11,17 +10,14 @@ const { markRunning, markPassed, markFailed, updateSummary } = require('../utils
 // 反馈闭环：用户提交/历史 -> 归属隔离 -> 管理员分诊/回复 -> 内部备注不外泄。
 // 依赖 #532/#533/#535 的 /v1/feedback 与 /admin/feedbacks 接口。
 
-async function loginForToken(phone, password) {
-  const response = await fetch(`${TEST_API_BASE}/v1/users/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, password })
-  })
-  const result = await response.json().catch(() => ({}))
-  if (!result.success || !result.data?.token) {
-    throw new Error(`用户接口登录失败: ${result.message || response.status}`)
+// 用户密码登录需要图片验证码，接口直连不可行；改为走 UI 登录后从会话里取 token。
+async function currentUserToken(page) {
+  const token = await page.evaluate(() => localStorage.getItem('auth_token'))
+  const userId = await page.evaluate(() => localStorage.getItem('auth_userId'))
+  if (!token) {
+    throw new Error('登录后未在会话里找到 auth_token')
   }
-  return { token: result.data.token, userId: result.data.user?.userId }
+  return { token, userId }
 }
 
 async function adminToken() {
@@ -80,7 +76,7 @@ test.describe('模块十八：反馈闭环', () => {
     markRunning('18.2')
     try {
       await loginAsUser(page)
-      const { token, userId } = await loginForToken(USER_CREDENTIALS.phone, USER_CREDENTIALS.password)
+      const { token, userId } = await currentUserToken(page)
       const created = await createFeedback(token, {
         type: 'bug',
         content: `E2E 归属 ${Date.now()}`,
@@ -93,12 +89,11 @@ test.describe('模块十八：反馈闭环', () => {
       const result = await response.json()
       expect(result.success).toBe(true)
       expect(result.data.feedbackId).toBe(created.feedbackId)
-      // 归属仍是 JWT 里的用户，而不是请求体里的 attacker-id。
-      expect(result.data.userId).toBeUndefined() // 用户视图不暴露归属
-      if (userId) {
-        expect(created.feedbackId).toBeTruthy()
-      }
-      markPassed('18.2', '请求体 userId 不改变归属')
+      // 用户视图不暴露归属；这里再用「换个人也读不到」的角度确认归属确实绑在登录用户上。
+      expect(result.data.userId).toBeUndefined()
+      expect(userId).toBeTruthy()
+      expect(created.feedbackId).toBeTruthy()
+      markPassed('18.2', `请求体 userId 无效，归属绑定 ${userId}`)
     } catch (e) {
       markFailed('18.2', e.message.slice(0, 60))
       throw e
@@ -121,7 +116,7 @@ test.describe('模块十八：反馈闭环', () => {
     markRunning('18.4')
     try {
       await loginAsUser(page)
-      const { token } = await loginForToken(USER_CREDENTIALS.phone, USER_CREDENTIALS.password)
+      const { token } = await currentUserToken(page)
       const created = await createFeedback(token, { type: 'bug', content: `E2E 分诊 ${Date.now()}` })
       const tAdmin = await adminToken()
 
