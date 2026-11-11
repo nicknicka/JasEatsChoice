@@ -74,3 +74,30 @@
 .el-descriptions {
   --el-descriptions-item-bordered-label-background: var(--canvas-sunken);
 }
+
+/* ============================================
+ * 文字按钮与表格密度
+ * §4.1：文字按钮取 --brand-600（EP 的 primary link 默认跟 brand-500，对比度只有 3.1:1）。
+ * §4.3：单元格单行内容行高冻结在 40px（size:small 会把 EP 压到 33px）；
+ *       斑马纹与悬停底色默认是组件库冷灰 #FAFAFA/#F5F7FA，收敛到暖调。
+ * ============================================ */
+
+.el-button.is-link.el-button--primary {
+  --el-button-text-color: var(--brand-600);
+  --el-button-hover-text-color: var(--brand-500);
+  --el-button-active-text-color: var(--brand-700);
+}
+
+.el-table {
+  --el-table-row-hover-bg-color: var(--canvas-sunken);
+}
+
+.el-table .el-table__cell {
+  height: 40px; /* 单行单元格行高冻结档（§4.3），横向内边距仍由 EP 的 .cell 提供 */
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: var(--canvas);
+}
