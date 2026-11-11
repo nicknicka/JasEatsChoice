@@ -267,4 +267,87 @@ class FeedbackServiceImplTest {
         assertEquals("ASSOCIATION", captor.getValue().getAction());
         assertEquals("7", captor.getValue().getActorId());
     }
+
+    @Test
+    void triage_whenIllegalTransition_shouldReject() {
+        Feedback resolved = new Feedback();
+        resolved.setFeedbackId("fb-1");
+        resolved.setStatus("resolved");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(resolved);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.triage(1L, "fb-1", "accepted"));
+        assertEquals("409", ex.getCode());
+    }
+
+    @Test
+    void triage_whenAcceptedFromTriaging_shouldWriteAudit() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("triaging");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+        when(feedbackAuditMapper.insert(any(FeedbackAudit.class))).thenReturn(1);
+
+        feedbackService.triage(1L, "fb-1", "accepted");
+
+        ArgumentCaptor<FeedbackAudit> captor = ArgumentCaptor.forClass(FeedbackAudit.class);
+        verify(feedbackAuditMapper).insert(captor.capture());
+        assertEquals("TRIAGE", captor.getValue().getAction());
+    }
+
+    @Test
+    void resolve_whenNotAccepted_shouldReject() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("triaging");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.resolve(1L, "fb-1", "fixed"));
+        assertEquals("409", ex.getCode());
+    }
+
+    @Test
+    void resolve_whenAccepted_shouldStoreResolutionCode() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("accepted");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+        when(feedbackAuditMapper.insert(any(FeedbackAudit.class))).thenReturn(1);
+
+        feedbackService.resolve(1L, "fb-1", "fixed");
+
+        ArgumentCaptor<FeedbackAudit> captor = ArgumentCaptor.forClass(FeedbackAudit.class);
+        verify(feedbackAuditMapper).insert(captor.capture());
+        assertEquals("RESOLVE", captor.getValue().getAction());
+    }
+
+    @Test
+    void addAdminMessage_defaultVisibilityIsUser() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+        when(feedbackMessageMapper.insert(any(FeedbackMessage.class))).thenReturn(1);
+
+        feedbackService.addAdminMessage(1L, "fb-1", "已处理", null);
+
+        ArgumentCaptor<FeedbackMessage> captor = ArgumentCaptor.forClass(FeedbackMessage.class);
+        verify(feedbackMessageMapper).insert(captor.capture());
+        assertEquals("USER", captor.getValue().getVisibility());
+        assertEquals("ADMIN", captor.getValue().getAuthorType());
+    }
+
+    @Test
+    void addAdminMessage_internalVisibilityHonored() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+        when(feedbackMessageMapper.insert(any(FeedbackMessage.class))).thenReturn(1);
+
+        feedbackService.addAdminMessage(1L, "fb-1", "内部排查", "INTERNAL");
+
+        ArgumentCaptor<FeedbackMessage> captor = ArgumentCaptor.forClass(FeedbackMessage.class);
+        verify(feedbackMessageMapper).insert(captor.capture());
+        assertEquals("INTERNAL", captor.getValue().getVisibility());
+    }
 }

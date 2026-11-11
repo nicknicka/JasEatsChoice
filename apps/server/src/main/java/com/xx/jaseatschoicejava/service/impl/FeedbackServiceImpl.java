@@ -15,6 +15,7 @@ import com.xx.jaseatschoicejava.entity.FeedbackMessage;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.enums.FeedbackAuthorType;
 import com.xx.jaseatschoicejava.enums.FeedbackMessageVisibility;
+import com.xx.jaseatschoicejava.enums.FeedbackResolutionCode;
 import com.xx.jaseatschoicejava.enums.FeedbackStatus;
 import com.xx.jaseatschoicejava.enums.FeedbackType;
 import com.xx.jaseatschoicejava.exception.BusinessException;
@@ -24,6 +25,7 @@ import com.xx.jaseatschoicejava.mapper.FeedbackMapper;
 import com.xx.jaseatschoicejava.mapper.FeedbackMessageMapper;
 import com.xx.jaseatschoicejava.service.FeedbackService;
 import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.vo.AdminFeedbackDetailVO;
 import com.xx.jaseatschoicejava.util.FileUploadUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 用户反馈应用服务实现：提交、消息、附件、归属校验、审计。
@@ -290,5 +293,141 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
             sb.append(k).append('=').append(v);
         });
         return sb.toString();
+    }
+
+    @Override
+    public IPage<Feedback> adminList(long page, long size, String status, String type,
+                                     String userId, String merchantId, String orderId) {
+        long safePage = Math.max(page, 1);
+        long safeSize = Math.min(Math.max(size, 1), 100);
+        LambdaQueryWrapper<Feedback> wrapper = new LambdaQueryWrapper<Feedback>()
+                .eq(hasText(status), Feedback::getStatus, status)
+                .eq(hasText(type), Feedback::getType, type)
+                .eq(hasText(userId), Feedback::getUserId, userId)
+                .eq(hasText(merchantId), Feedback::getMerchantId, merchantId)
+                .eq(hasText(orderId), Feedback::getOrderId, orderId)
+                .orderByDesc(Feedback::getCreatedAt);
+        return page(new Page<>(safePage, safeSize), wrapper);
+    }
+
+    @Override
+    public AdminFeedbackDetailVO adminDetail(String feedbackId) {
+        Feedback feedback = getById(feedbackId);
+        if (feedback == null) {
+            throw new BusinessException("404", "反馈不存在");
+        }
+        List<FeedbackMessage> messages = feedbackMessageMapper.selectList(new LambdaQueryWrapper<FeedbackMessage>()
+                .eq(FeedbackMessage::getFeedbackId, feedbackId)
+                .orderByAsc(FeedbackMessage::getCreatedAt));
+        List<FeedbackAttachment> attachments = listAttachments(feedbackId);
+        List<FeedbackAudit> audits = feedbackAuditMapper.selectList(new LambdaQueryWrapper<FeedbackAudit>()
+                .eq(FeedbackAudit::getFeedbackId, feedbackId)
+                .orderByAsc(FeedbackAudit::getCreatedAt));
+        return AdminFeedbackDetailVO.from(feedback, messages, attachments, audits);
+    }
+
+    @Override
+    public FeedbackMessage addAdminMessage(Long adminId, String feedbackId, String content, String visibility) {
+        Feedback feedback = getById(feedbackId);
+        if (feedback == null) {
+            throw new BusinessException("404", "反馈不存在");
+        }
+        String body = content == null ? "" : content.trim();
+        if (body.isEmpty()) {
+            throw new BusinessException("400", "消息内容不能为空");
+        }
+        if (body.length() > CONTENT_MAX_LENGTH) {
+            throw new BusinessException("400", "消息内容过长");
+        }
+        String visible = FeedbackMessageVisibility.INTERNAL.getCode()
+                .equalsIgnoreCase(visibility == null ? "" : visibility.trim())
+                ? FeedbackMessageVisibility.INTERNAL.getCode()
+                : FeedbackMessageVisibility.USER.getCode();
+
+        FeedbackMessage message = new FeedbackMessage();
+        message.setFeedbackId(feedbackId);
+        message.setAuthorType(FeedbackAuthorType.ADMIN.getCode());
+        message.setAuthorId(adminId == null ? null : String.valueOf(adminId));
+        message.setVisibility(visible);
+        message.setContent(body);
+        feedbackMessageMapper.insert(message);
+        writeAudit(feedbackId, "REPLY", adminId, "visibility=" + visible);
+        return message;
+    }
+
+    @Override
+    public Feedback triage(Long adminId, String feedbackId, String targetStatus) {
+        Feedback feedback = getById(feedbackId);
+        if (feedback == null) {
+            throw new BusinessException("404", "反馈不存在");
+        }
+        String target = targetStatus == null ? "" : targetStatus.trim().toLowerCase();
+        if (!TRIAGE_TARGETS.contains(target)) {
+            throw new BusinessException("400", "只支持 needs_info / accepted / rejected");
+        }
+        String current = feedback.getStatus();
+        if (!triageAllowed(current, target)) {
+            throw new BusinessException("409", "非法状态流转：" + current + " -> " + target);
+        }
+        lambdaUpdate()
+                .eq(Feedback::getFeedbackId, feedbackId)
+                .set(Feedback::getStatus, target)
+                .update();
+        writeAudit(feedbackId, "TRIAGE", adminId, "status=" + current + "->" + target);
+        return getById(feedbackId);
+    }
+
+    @Override
+    public Feedback resolve(Long adminId, String feedbackId, String resolutionCode) {
+        Feedback feedback = getById(feedbackId);
+        if (feedback == null) {
+            throw new BusinessException("404", "反馈不存在");
+        }
+        FeedbackResolutionCode code = FeedbackResolutionCode.fromCode(resolutionCode);
+        if (code == null) {
+            throw new BusinessException("400", "处理结果编码不合法");
+        }
+        if (!FeedbackStatus.ACCEPTED.getCode().equals(feedback.getStatus())) {
+            throw new BusinessException("409", "只有已接受的反馈才能解决");
+        }
+        lambdaUpdate()
+                .eq(Feedback::getFeedbackId, feedbackId)
+                .set(Feedback::getStatus, FeedbackStatus.RESOLVED.getCode())
+                .set(Feedback::getResolutionCode, code.getCode())
+                .update();
+        writeAudit(feedbackId, "RESOLVE", adminId, "resolution=" + code.getCode());
+        return getById(feedbackId);
+    }
+
+    private static final Set<String> TRIAGE_TARGETS =
+            Set.of(FeedbackStatus.NEEDS_INFO.getCode(), FeedbackStatus.ACCEPTED.getCode(), FeedbackStatus.REJECTED.getCode());
+
+    private static boolean triageAllowed(String current, String target) {
+        FeedbackStatus from = FeedbackStatus.fromCode(current);
+        if (from == null) {
+            return false;
+        }
+        return switch (from) {
+            case PENDING, TRIAGING -> FeedbackStatus.NEEDS_INFO.getCode().equals(target)
+                    || FeedbackStatus.ACCEPTED.getCode().equals(target)
+                    || FeedbackStatus.REJECTED.getCode().equals(target);
+            case NEEDS_INFO -> FeedbackStatus.ACCEPTED.getCode().equals(target)
+                    || FeedbackStatus.REJECTED.getCode().equals(target);
+            default -> false;
+        };
+    }
+
+    private void writeAudit(String feedbackId, String action, Long adminId, String detail) {
+        FeedbackAudit audit = new FeedbackAudit();
+        audit.setFeedbackId(feedbackId);
+        audit.setAction(action);
+        audit.setActorType("ADMIN");
+        audit.setActorId(adminId == null ? null : String.valueOf(adminId));
+        audit.setDetail(detail);
+        feedbackAuditMapper.insert(audit);
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

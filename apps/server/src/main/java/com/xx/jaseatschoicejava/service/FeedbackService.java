@@ -7,6 +7,7 @@ import com.xx.jaseatschoicejava.dto.FeedbackCreateDTO;
 import com.xx.jaseatschoicejava.entity.Feedback;
 import com.xx.jaseatschoicejava.entity.FeedbackAttachment;
 import com.xx.jaseatschoicejava.entity.FeedbackMessage;
+import com.xx.jaseatschoicejava.vo.AdminFeedbackDetailVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -55,4 +56,30 @@ public interface FeedbackService extends IService<Feedback> {
      * 管理员修正订单/商家关联，写入审计。
      */
     Feedback updateAssociation(Long adminId, String feedbackId, FeedbackAssociationUpdateDTO dto);
+
+    /**
+     * 管理端分页列表，可按状态/类型/用户/商家/订单筛选。
+     */
+    IPage<Feedback> adminList(long page, long size, String status, String type,
+                              String userId, String merchantId, String orderId);
+
+    /**
+     * 管理端详情：包含内部备注、全部消息、附件与审计。
+     */
+    AdminFeedbackDetailVO adminDetail(String feedbackId);
+
+    /**
+     * 管理员回复用户（USER）或写内部备注（INTERNAL），写入审计。
+     */
+    FeedbackMessage addAdminMessage(Long adminId, String feedbackId, String content, String visibility);
+
+    /**
+     * 分诊：只接受 needs_info / accepted / rejected，按状态机校验。
+     */
+    Feedback triage(Long adminId, String feedbackId, String targetStatus);
+
+    /**
+     * 解决：只允许 accepted -> resolved 并保存结果编码。
+     */
+    Feedback resolve(Long adminId, String feedbackId, String resolutionCode);
 }
