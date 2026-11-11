@@ -255,11 +255,8 @@ const submitFeedback = async () => {
       }
     }
 
-    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
-
-    // 提交反馈
+    // 归属由后端从可信 JWT 推导，请求体不再携带 userId
     await feedbackApi.submit({
-      userId,
       type: feedbackType.value,
       content: feedbackContent.value,
       images: uploadedImages,
@@ -306,25 +303,23 @@ const loadHistoryFeedback = async () => {
   }
 
   try {
-    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
     const res = await feedbackApi.getList({
-      userId,
       page: 1,
       size: 10
     })
 
-    const list = res.list || res.data?.list || []
+    const list = res.data?.list || res.list || []
     historyList.value = list.map(item => {
       const typeConfig = typeList.find(t => t.value === item.type)
       return {
         id: item.feedbackId || item.id,
         type: item.type,
-        typeText: typeConfig ? typeConfig.label : '其他',
+        typeText: item.typeLabel || (typeConfig ? typeConfig.label : '其他'),
         content: item.content,
         status: item.status,
-        statusText: getStatusText(item.status),
+        statusText: item.statusLabel || getStatusText(item.status),
         time: formatTime(item.createdAt),
-        reply: item.reply || null
+        reply: null
       }
     })
   } catch (error) {
@@ -340,10 +335,12 @@ const loadHistoryFeedback = async () => {
  */
 function getStatusText(status) {
   const statusMap = {
-    pending: '待处理',
-    processing: '处理中',
-    resolved: '已解决',
-    closed: '已关闭'
+    pending: '待分诊',
+    triaging: '分诊中',
+    needs_info: '待补充信息',
+    accepted: '已接受',
+    rejected: '已拒绝',
+    resolved: '已解决'
   }
   return statusMap[status] || '未知'
 }

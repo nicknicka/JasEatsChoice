@@ -1,0 +1,71 @@
+package com.xx.jaseatschoicejava.vo;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xx.jaseatschoicejava.entity.Feedback;
+import com.xx.jaseatschoicejava.enums.FeedbackResolutionCode;
+import com.xx.jaseatschoicejava.enums.FeedbackStatus;
+import com.xx.jaseatschoicejava.enums.FeedbackType;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+/**
+ * 用户可见的反馈视图。
+ *
+ * <p>只承载用户自己能看到的信息：不暴露内部备注、分诊审计与 GitHub 关联细节。
+ */
+@Data
+public class FeedbackVO {
+
+    private String feedbackId;
+    private String type;
+    private String typeLabel;
+    private String content;
+    private String status;
+    private String statusLabel;
+    private String resolutionCode;
+    private String orderId;
+    private String merchantId;
+    private String contact;
+    private Map<String, Object> deviceInfo;
+    private String environment;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    public static FeedbackVO from(Feedback feedback) {
+        FeedbackVO vo = new FeedbackVO();
+        vo.feedbackId = feedback.getFeedbackId();
+        vo.type = feedback.getType();
+        FeedbackType type = FeedbackType.fromCode(feedback.getType());
+        vo.typeLabel = type == null ? feedback.getType() : type.getLabel();
+        vo.content = feedback.getContent();
+        vo.status = feedback.getStatus();
+        FeedbackStatus status = FeedbackStatus.fromCode(feedback.getStatus());
+        vo.statusLabel = status == null ? feedback.getStatus() : status.getLabel();
+        FeedbackResolutionCode code = FeedbackResolutionCode.fromCode(feedback.getResolutionCode());
+        vo.resolutionCode = code == null ? feedback.getResolutionCode() : code.getCode();
+        vo.orderId = feedback.getOrderId();
+        vo.merchantId = feedback.getMerchantId();
+        vo.contact = feedback.getContact();
+        vo.deviceInfo = parseDeviceInfo(feedback.getDeviceInfo());
+        vo.environment = feedback.getEnvironment();
+        vo.createdAt = feedback.getCreatedAt();
+        vo.updatedAt = feedback.getUpdatedAt();
+        return vo;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> parseDeviceInfo(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return MAPPER.readValue(json, Map.class);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+}

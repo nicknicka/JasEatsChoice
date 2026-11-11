@@ -529,6 +529,7 @@ import {
 import CommonAvatar from '../../components/CommonAvatar.vue'
 import AppPageHeader from '../../components/common/AppPageHeader.vue'
 import api from '../../utils/api'
+import { createFeedback } from '../../api/feedback'
 import { API_CONFIG } from '../../config'
 import QRCode from 'qrcode'
 import { useCascaderLocationData } from '../../composables/useCascaderLocationData'
@@ -1030,22 +1031,20 @@ const submitFeedbackForm = async () => {
         try {
           submittingFeedback.value = true
 
-          const userId = parseInt(String(authStore.userId || 1), 10)
+          // 标题并入正文，归属由后端从可信 JWT 推导
+          const content = [feedbackForm.title, feedbackForm.content]
+            .map((part) => (part ? String(part).trim() : ''))
+            .filter(Boolean)
+            .join('\n\n')
 
-          // 准备提交数据
-          const submitData = {
-            userId,
+          const response = await createFeedback({
             type: feedbackForm.type,
-            title: feedbackForm.title,
-            content: feedbackForm.content,
-            contact: feedbackForm.contact,
+            content,
+            contact: feedbackForm.contact || undefined,
             images: feedbackForm.images.map(img => img.url || img.response?.data?.url || img.url)
-          }
+          })
 
-          // 发送POST请求提交反馈
-          const response = await api.post(API_CONFIG.user.feedback, submitData)
-
-          if (response.code === '200') {
+          if (response.success) {
             // 关闭对话框
             feedbackDialogVisible.value = false
             ElMessage.success('反馈已提交，感谢您的宝贵建议！')

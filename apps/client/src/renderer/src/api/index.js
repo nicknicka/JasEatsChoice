@@ -51,7 +51,7 @@ export const USER_API = {
 
   // 用户偏好
   PREFERENCES: '/v1/users/:userId/preferences',
-  FEEDBACK: '/v1/users/feedback',
+  FEEDBACK: '/v1/feedback',
 
   // 用户统计
   STATS: '/v1/user-statistics/:userId/overview',

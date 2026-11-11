@@ -89,8 +89,19 @@
           label-position="top"
           @submit.prevent
         >
-          <el-form-item label="标题" prop="title">
-            <el-input v-model="feedback.title" placeholder="请简要描述您的问题或建议（如：订单支付失败）" />
+          <el-form-item label="反馈类型" prop="type">
+            <el-select
+              v-model="feedback.type"
+              class="feedback-type-select"
+              placeholder="请选择反馈类型"
+            >
+              <el-option
+                v-for="item in typeOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="内容" prop="content">
             <el-input
@@ -98,6 +109,8 @@
               placeholder="请详细描述您遇到的问题、您的建议或其他反馈内容..."
               type="textarea"
               :rows="5"
+              maxlength="2000"
+              show-word-limit
             />
           </el-form-item>
           <el-form-item label="联系方式" prop="contact">
@@ -115,12 +128,34 @@
           </el-form-item>
         </el-form>
       </AppCard>
+
+      <AppCard class="feedback-history-card">
+        <header class="section-header">
+          <div class="section-title">
+            <el-icon><Message /></el-icon>
+            <h2>我的反馈</h2>
+          </div>
+        </header>
+
+        <div v-if="historyLoading" class="history-empty">加载中…</div>
+        <div v-else-if="history.length === 0" class="history-empty">还没有反馈记录</div>
+        <ul v-else class="feedback-history">
+          <li v-for="item in history" :key="item.feedbackId" class="feedback-history__item">
+            <div class="feedback-history__head">
+              <span class="feedback-history__type">{{ item.typeLabel || item.type }}</span>
+              <el-tag size="small" effect="plain">{{ item.statusLabel || item.status }}</el-tag>
+            </div>
+            <p class="feedback-history__content">{{ item.content }}</p>
+            <div class="feedback-history__meta">{{ formatTime(item.createdAt) }}</div>
+          </li>
+        </ul>
+      </AppCard>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Clock,
@@ -134,15 +169,29 @@ import {
 import AppCard from '../../components/common/AppCard.vue'
 import AppPageHeader from '../../components/common/AppPageHeader.vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
+import { createFeedback, listFeedbacks } from '../../api/feedback'
+
+// 反馈类型与后端 FeedbackType 一一对应
+const typeOptions = [
+  { value: 'bug', label: '功能异常' },
+  { value: 'feature', label: '功能建议' },
+  { value: 'ui', label: '界面问题' },
+  { value: 'performance', label: '性能问题' },
+  { value: 'order', label: '订单问题' },
+  { value: 'payment', label: '支付问题' },
+  { value: 'other', label: '其他问题' }
+]
 
 // 反馈表单数据
 const feedback = ref({
-  title: '',
+  type: '',
   content: '',
   contact: ''
 })
 
 const isSubmitting = ref(false)
+const history = ref([])
+const historyLoading = ref(false)
 
 // 复制联系方式后给出即时反馈
 const copyContact = async (text, label) => {
@@ -155,31 +204,38 @@ const copyContact = async (text, label) => {
   }
 }
 
-// 提交反馈
-const submitFeedback = () => {
+// 提交反馈：归属由后端从可信 JWT 推导，这里只提交业务字段
+const submitFeedback = async () => {
   if (isSubmitting.value) return
 
-  // 表单验证
-  if (!feedback.value.title || !feedback.value.content) {
-    ElMessage.warning('请填写反馈标题和内容')
+  if (!feedback.value.type) {
+    ElMessage.warning('请选择反馈类型')
+    return
+  }
+  if (!feedback.value.content || !feedback.value.content.trim()) {
+    ElMessage.warning('请填写反馈内容')
     return
   }
 
   isSubmitting.value = true
-
   try {
-    // 模拟提交反馈
-    console.log('提交的反馈:', feedback.value)
-
-    // 重置表单
-    resetForm()
-
-    // 提示成功
-    ElMessage.success({
-      message: '✅ 反馈已提交成功！我们会尽快处理您的反馈，并通过邮件或电话回复您。',
-      duration: 3000,
-      showClose: true
+    const response = await createFeedback({
+      type: feedback.value.type,
+      content: feedback.value.content.trim(),
+      contact: feedback.value.contact ? feedback.value.contact.trim() : undefined,
+      deviceInfo: { platform: 'desktop', system: window.navigator?.userAgent || '' }
     })
+
+    if (response.success) {
+      ElMessage.success('反馈已提交，我们会跟进处理')
+      resetForm()
+      await loadHistory()
+    } else {
+      ElMessage.error(response.message || '反馈提交失败')
+    }
+  } catch (error) {
+    console.error('提交反馈失败:', error)
+    ElMessage.error(error.message || '反馈提交失败，请稍后重试')
   } finally {
     isSubmitting.value = false
   }
@@ -188,11 +244,34 @@ const submitFeedback = () => {
 // 重置表单
 const resetForm = () => {
   feedback.value = {
-    title: '',
+    type: '',
     content: '',
     contact: ''
   }
 }
+
+// 加载自己的反馈历史
+const loadHistory = async () => {
+  historyLoading.value = true
+  try {
+    const response = await listFeedbacks({ page: 1, size: 10 })
+    history.value = response?.data?.list ?? []
+  } catch (error) {
+    console.error('加载反馈历史失败:', error)
+    history.value = []
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+const formatTime = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleString('zh-CN', { hour12: false })
+}
+
+onMounted(loadHistory)
 </script>
 
 <style scoped lang="less">
@@ -332,4 +411,57 @@ const resetForm = () => {
     min-height: var(--control-height-md);
   }
 }
+
+/* 反馈类型下拉占满一行；历史列表用卡片内轻分隔，不引入新控件。 */
+.feedback-type-select {
+  width: 100%;
+}
+
+.history-empty {
+  padding: var(--space-4) 0;
+  color: var(--text-secondary);
+  font-size: var(--text-body);
+}
+
+.feedback-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.feedback-history__item {
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+
+.feedback-history__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.feedback-history__type {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.feedback-history__content {
+  margin: 0 0 var(--space-2);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.feedback-history__meta {
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+}
+
 </style>

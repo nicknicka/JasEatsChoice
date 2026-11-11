@@ -110,6 +110,7 @@ public class SecurityConfig {
             .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests
             .requestMatchers("/v1/content-extraction/**").authenticated() // 内容提取一律要求登录
+            .requestMatchers("/v1/feedback/**").authenticated() // 用户反馈一律要求登录（归属取自可信 JWT）
             .requestMatchers(
                 "/v1/ai/dish-recognize",
                 "/v1/ai/dish-recognize-url",

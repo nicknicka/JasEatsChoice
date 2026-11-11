@@ -116,9 +116,15 @@ export const API_CONFIG = {
     updatePassword: '/v1/users/{userId}/password',
     uploadAvatar: '/v1/users/{userId}/avatar/base64',
     preferences: '/v1/users/{userId}/preferences',
-    feedback: '/v1/users/feedback',
     sendSmsCode: '/v1/users/send-sms-code',
     sendEmailCode: '/v1/users/send-email-code'
+  },
+
+  // 用户反馈API端点（统一契约：/v1/feedback，归属只取可信 JWT）
+  feedback: {
+    create: '/v1/feedback',
+    list: '/v1/feedback',
+    detail: '/v1/feedback/{feedbackId}'
   },
 
   // 食谱API端点
