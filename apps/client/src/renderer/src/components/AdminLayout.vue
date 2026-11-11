@@ -478,13 +478,14 @@ watch(
         }
       }
 
+      /* 侧栏选中态是品牌识别的一部分，必须用主色，不得回落到 Element 默认蓝（§3.1、§8）。 */
       .el-menu-item.is-active {
-        background: #409eff !important;
+        background: var(--brand-500) !important;
         color: #fff;
       }
 
       .el-sub-menu.is-active > .el-sub-menu__title {
-        color: #409eff;
+        color: var(--brand-400);
       }
     }
   }

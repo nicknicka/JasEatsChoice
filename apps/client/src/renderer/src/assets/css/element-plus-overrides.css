@@ -53,3 +53,24 @@
 .el-button--large {
   --el-button-size: var(--control-height-md);
 }
+
+/* ============================================
+ * 复选框圆角
+ * EP 把 --el-checkbox-border-radius 接到 --el-border-radius-small，而本基线把它映射成
+ * --radius-sm(6px)；__inner 只有 12px，6px 圆角等于半个身位，方框会退化成圆点、
+ * 和单选框混淆（EP 默认 2px）。这里只收紧复选框自身，单选框走自己的 100% 圆形不受影响。
+ * ============================================ */
+
+.el-checkbox {
+  --el-checkbox-border-radius: 3px;
+}
+
+/* ============================================
+ * 描述表标签列
+ * EP 的 --el-descriptions-item-bordered-label-background 默认接 --el-fill-color-light
+ * (#F5F7FA 冷灰)，在暖白画布上是全页唯一的冷色面；收敛到暖色 sunken 面。
+ * ============================================ */
+
+.el-descriptions {
+  --el-descriptions-item-bordered-label-background: var(--canvas-sunken);
+}
