@@ -3,6 +3,7 @@ package com.xx.jaseatschoicejava.controller;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.AgentRuntimeConfigDTO;
 import com.xx.jaseatschoicejava.dto.AgentRuntimeHealthVO;
+import com.xx.jaseatschoicejava.entity.AgentRuntimeConfigHistory;
 import com.xx.jaseatschoicejava.service.AgentRuntimeConfigService;
 import com.xx.jaseatschoicejava.util.SecurityUtil;
 import io.swagger.annotations.Api;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -39,6 +41,13 @@ public class AdminAgentRuntimeController {
     @PreAuthorize("hasAnyAuthority('admin:agent:runtime')")
     public ResponseResult<AgentRuntimeHealthVO> update(@RequestBody AgentRuntimeConfigDTO dto) {
         return ResponseResult.success(agentRuntimeConfigService.update(dto, SecurityUtil.getCurrentPhone()));
+    }
+
+    @ApiOperation("获取配置版本历史")
+    @GetMapping("/history")
+    @PreAuthorize("hasAnyAuthority('admin:agent:runtime')")
+    public ResponseResult<List<AgentRuntimeConfigHistory>> history() {
+        return ResponseResult.success(agentRuntimeConfigService.listHistory());
     }
 
     @ApiOperation("轮换模型 key（只写不可读）")

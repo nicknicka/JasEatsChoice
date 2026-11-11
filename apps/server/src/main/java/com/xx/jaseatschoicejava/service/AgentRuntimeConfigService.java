@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.config.GitHubBridgeProperties;
 import com.xx.jaseatschoicejava.dto.AgentRuntimeConfigDTO;
 import com.xx.jaseatschoicejava.dto.AgentRuntimeHealthVO;
 import com.xx.jaseatschoicejava.entity.AgentRuntimeConfig;
+import com.xx.jaseatschoicejava.entity.AgentRuntimeConfigHistory;
 import com.xx.jaseatschoicejava.exception.BusinessException;
 import com.xx.jaseatschoicejava.mapper.AgentRuntimeConfigMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,7 +72,7 @@ public class AgentRuntimeConfigService {
 
         boolean endpointReady = hasText(config.getEndpoint()) && keyStore().exists(KEY_SLOT);
         vo.setGithub(new AgentRuntimeHealthVO.Health("GitHub", gitHubBridgeProperties.isConfigured(),
-                gitHubBridgeProperties.isConfigured() ? "token 与仓库已配置" : "未配置 GITHUB_BRIDGE_TOKEN/REPO"));
+                gitHubBridgeProperties.isConfigured() ? "token 与仓库已配置" : "未配置 token 与仓库"));
         vo.setDshProfile(new AgentRuntimeHealthVO.Health("DSH profile", pathExists(dshProfilePath),
                 pathExists(dshProfilePath) ? "profile 目录存在" : "未找到 DSH profile"));
         vo.setModelHealth(new AgentRuntimeHealthVO.Health("模型", endpointReady,
@@ -109,6 +110,13 @@ public class AgentRuntimeConfigService {
         configMapper.insertHistory(UUID.randomUUID().toString().replace("-", ""), CONFIG_ID, nextVersion,
                 config.getProvider(), config.getModel(), config.getEndpoint(), config.getDataPolicyAck(), adminName);
         return getHealth();
+    }
+
+    /**
+     * 配置版本历史（倒序，最多 20 条）。只返回配置值，不含密钥。
+     */
+    public List<AgentRuntimeConfigHistory> listHistory() {
+        return configMapper.selectHistory(CONFIG_ID);
     }
 
     /**
