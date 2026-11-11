@@ -9,4 +9,7 @@ import lombok.Data;
 public class FeedbackTriageDTO {
 
     private String status;
+
+    /** 接受时是否判定为平台系统问题（决定能否进入 GitHub 桥接）。 */
+    private Boolean platformSystem;
 }

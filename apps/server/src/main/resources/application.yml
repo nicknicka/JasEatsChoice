@@ -141,6 +141,13 @@ captcha:
     fixed-code: ${CAPTCHA_TEST_FIXED_CODE:}
 
 # 文件上传配置
+# GitHub Issue 桥接（用户反馈研发队列）：repo 可公开，token 只从环境注入。
+github:
+  bridge:
+    repo: ${GITHUB_BRIDGE_REPO:}
+    token: ${GITHUB_BRIDGE_TOKEN:}
+    api-base: ${GITHUB_BRIDGE_API_BASE:https://api.github.com}
+
 file:
   upload:
     path: ${FILE_UPLOAD_PATH:./uploads/}  # 文件上传保存路径

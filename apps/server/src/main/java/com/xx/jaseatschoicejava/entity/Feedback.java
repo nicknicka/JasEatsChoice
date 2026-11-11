@@ -49,6 +49,9 @@ public class Feedback {
     /** 环境摘要（平台 / 系统 / 版本），供脱敏桥接模板使用。 */
     private String environment;
 
+    /** 是否被分诊判定为平台系统问题（只有这类反馈才能进研发队列）。 */
+    private Boolean platformSystem;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 

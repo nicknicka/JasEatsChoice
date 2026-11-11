@@ -8,9 +8,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
 import com.xx.jaseatschoicejava.dto.FeedbackAssociationUpdateDTO;
 import com.xx.jaseatschoicejava.dto.FeedbackCreateDTO;
+import com.xx.jaseatschoicejava.dto.FeedbackIssueDraftDTO;
+import com.xx.jaseatschoicejava.dto.FeedbackTriageDTO;
 import com.xx.jaseatschoicejava.entity.Feedback;
 import com.xx.jaseatschoicejava.entity.FeedbackAttachment;
 import com.xx.jaseatschoicejava.entity.FeedbackAudit;
+import com.xx.jaseatschoicejava.entity.FeedbackIssueLink;
 import com.xx.jaseatschoicejava.entity.FeedbackMessage;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.enums.FeedbackAuthorType;
@@ -25,6 +28,7 @@ import com.xx.jaseatschoicejava.mapper.FeedbackMapper;
 import com.xx.jaseatschoicejava.mapper.FeedbackMessageMapper;
 import com.xx.jaseatschoicejava.service.FeedbackService;
 import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.service.bridge.FeedbackIssueBridge;
 import com.xx.jaseatschoicejava.vo.AdminFeedbackDetailVO;
 import com.xx.jaseatschoicejava.util.FileUploadUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +64,9 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private FeedbackIssueBridge feedbackIssueBridge;
 
     @Autowired
     private FileUploadConfig fileUploadConfig;
@@ -356,12 +363,12 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
     }
 
     @Override
-    public Feedback triage(Long adminId, String feedbackId, String targetStatus) {
+    public Feedback triage(Long adminId, String feedbackId, FeedbackTriageDTO dto) {
         Feedback feedback = getById(feedbackId);
         if (feedback == null) {
             throw new BusinessException("404", "反馈不存在");
         }
-        String target = targetStatus == null ? "" : targetStatus.trim().toLowerCase();
+        String target = dto == null || dto.getStatus() == null ? "" : dto.getStatus().trim().toLowerCase();
         if (!TRIAGE_TARGETS.contains(target)) {
             throw new BusinessException("400", "只支持 needs_info / accepted / rejected");
         }
@@ -369,12 +376,55 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
         if (!triageAllowed(current, target)) {
             throw new BusinessException("409", "非法状态流转：" + current + " -> " + target);
         }
+        boolean accepted = FeedbackStatus.ACCEPTED.getCode().equals(target);
         lambdaUpdate()
                 .eq(Feedback::getFeedbackId, feedbackId)
                 .set(Feedback::getStatus, target)
+                .set(accepted, Feedback::getPlatformSystem,
+                        accepted && Boolean.TRUE.equals(dto.getPlatformSystem()))
                 .update();
         writeAudit(feedbackId, "TRIAGE", adminId, "status=" + current + "->" + target);
         return getById(feedbackId);
+    }
+
+    @Override
+    public FeedbackIssueLink createIssue(Long adminId, String feedbackId, FeedbackIssueDraftDTO draft) {
+        Feedback feedback = getById(feedbackId);
+        if (feedback == null) {
+            throw new BusinessException("404", "反馈不存在");
+        }
+        if (!FeedbackStatus.ACCEPTED.getCode().equals(feedback.getStatus())) {
+            throw new BusinessException("409", "只有已接受的反馈才能创建 Issue");
+        }
+        if (!Boolean.TRUE.equals(feedback.getPlatformSystem())) {
+            throw new BusinessException("409", "只有平台系统问题才能创建 Issue");
+        }
+        FeedbackIssueLink link = feedbackIssueBridge.createOrGet(feedback, draft);
+        writeAudit(feedbackId, "BRIDGE", adminId, "issue=" + link.getRepo() + "#" + link.getIssueNumber());
+        return link;
+    }
+
+    @Override
+    public Feedback syncIssueState(String feedbackId, String state) {
+        FeedbackIssueLink link = feedbackIssueBridge.syncState(feedbackId, state);
+        Feedback feedback = getById(feedbackId);
+        if (feedback == null) {
+            throw new BusinessException("404", "反馈不存在");
+        }
+        if ("closed".equals(link.getState()) && FeedbackStatus.ACCEPTED.getCode().equals(feedback.getStatus())) {
+            FeedbackMessage message = new FeedbackMessage();
+            message.setFeedbackId(feedbackId);
+            message.setAuthorType(FeedbackAuthorType.SYSTEM.getCode());
+            message.setVisibility(FeedbackMessageVisibility.USER.getCode());
+            message.setContent("该反馈对应的研发任务已完成处理。");
+            feedbackMessageMapper.insert(message);
+            lambdaUpdate()
+                    .eq(Feedback::getFeedbackId, feedbackId)
+                    .set(Feedback::getStatus, FeedbackStatus.RESOLVED.getCode())
+                    .update();
+            return getById(feedbackId);
+        }
+        return feedback;
     }
 
     @Override

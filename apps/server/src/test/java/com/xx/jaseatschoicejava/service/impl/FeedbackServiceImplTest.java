@@ -5,9 +5,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.dto.FeedbackCreateDTO;
+import com.xx.jaseatschoicejava.dto.FeedbackTriageDTO;
+import com.xx.jaseatschoicejava.dto.FeedbackIssueDraftDTO;
 import com.xx.jaseatschoicejava.entity.Feedback;
 import com.xx.jaseatschoicejava.entity.FeedbackAttachment;
 import com.xx.jaseatschoicejava.entity.FeedbackAudit;
+import com.xx.jaseatschoicejava.entity.FeedbackIssueLink;
 import com.xx.jaseatschoicejava.entity.FeedbackMessage;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.exception.BusinessException;
@@ -16,6 +19,7 @@ import com.xx.jaseatschoicejava.mapper.FeedbackAuditMapper;
 import com.xx.jaseatschoicejava.mapper.FeedbackMapper;
 import com.xx.jaseatschoicejava.mapper.FeedbackMessageMapper;
 import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.service.bridge.FeedbackIssueBridge;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,6 +59,9 @@ class FeedbackServiceImplTest {
     @Mock
     private OrderService orderService;
 
+    @Mock
+    private FeedbackIssueBridge feedbackIssueBridge;
+
     @InjectMocks
     private FeedbackServiceImpl feedbackService;
 
@@ -65,6 +72,12 @@ class FeedbackServiceImplTest {
         TableInfoHelper.initTableInfo(
             new MapperBuilderAssistant(new MybatisConfiguration(), ""), Feedback.class);
         ReflectionTestUtils.setField(feedbackService, "baseMapper", feedbackMapper);
+    }
+
+    private static FeedbackTriageDTO triageDto(String status) {
+        FeedbackTriageDTO dto = new FeedbackTriageDTO();
+        dto.setStatus(status);
+        return dto;
     }
 
     private static FeedbackCreateDTO dto(String type, String content) {
@@ -276,7 +289,7 @@ class FeedbackServiceImplTest {
         when(feedbackMapper.selectById("fb-1")).thenReturn(resolved);
 
         BusinessException ex = assertThrows(BusinessException.class,
-                () -> feedbackService.triage(1L, "fb-1", "accepted"));
+                () -> feedbackService.triage(1L, "fb-1", triageDto("accepted")));
         assertEquals("409", ex.getCode());
     }
 
@@ -288,7 +301,7 @@ class FeedbackServiceImplTest {
         when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
         when(feedbackAuditMapper.insert(any(FeedbackAudit.class))).thenReturn(1);
 
-        feedbackService.triage(1L, "fb-1", "accepted");
+        feedbackService.triage(1L, "fb-1", triageDto("accepted"));
 
         ArgumentCaptor<FeedbackAudit> captor = ArgumentCaptor.forClass(FeedbackAudit.class);
         verify(feedbackAuditMapper).insert(captor.capture());
@@ -349,5 +362,50 @@ class FeedbackServiceImplTest {
         ArgumentCaptor<FeedbackMessage> captor = ArgumentCaptor.forClass(FeedbackMessage.class);
         verify(feedbackMessageMapper).insert(captor.capture());
         assertEquals("INTERNAL", captor.getValue().getVisibility());
+    }
+
+    @Test
+    void createIssue_whenNotAccepted_shouldReject() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("triaging");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.createIssue(1L, "fb-1", new FeedbackIssueDraftDTO()));
+        assertEquals("409", ex.getCode());
+    }
+
+    @Test
+    void createIssue_whenNotPlatformSystem_shouldReject() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("accepted");
+        fb.setPlatformSystem(false);
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.createIssue(1L, "fb-1", new FeedbackIssueDraftDTO()));
+        assertEquals("409", ex.getCode());
+    }
+
+    @Test
+    void createIssue_whenEligible_shouldDelegateToBridge() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("accepted");
+        fb.setPlatformSystem(true);
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+        FeedbackIssueLink link = new FeedbackIssueLink();
+        link.setFeedbackId("fb-1");
+        link.setRepo("o/r");
+        link.setIssueNumber("42");
+        when(feedbackIssueBridge.createOrGet(any(Feedback.class), any(FeedbackIssueDraftDTO.class))).thenReturn(link);
+        when(feedbackAuditMapper.insert(any(FeedbackAudit.class))).thenReturn(1);
+
+        FeedbackIssueLink result = feedbackService.createIssue(1L, "fb-1", new FeedbackIssueDraftDTO());
+
+        assertEquals("42", result.getIssueNumber());
+        verify(feedbackIssueBridge).createOrGet(any(Feedback.class), any(FeedbackIssueDraftDTO.class));
     }
 }

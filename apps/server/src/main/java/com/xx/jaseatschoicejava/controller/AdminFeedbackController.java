@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.AdminFeedbackMessageDTO;
 import com.xx.jaseatschoicejava.dto.FeedbackAssociationUpdateDTO;
+import com.xx.jaseatschoicejava.dto.FeedbackIssueDraftDTO;
 import com.xx.jaseatschoicejava.dto.FeedbackResolveDTO;
 import com.xx.jaseatschoicejava.dto.FeedbackTriageDTO;
 import com.xx.jaseatschoicejava.entity.Feedback;
+import com.xx.jaseatschoicejava.entity.FeedbackIssueLink;
 import com.xx.jaseatschoicejava.service.FeedbackService;
 import com.xx.jaseatschoicejava.util.AdminContext;
 import com.xx.jaseatschoicejava.vo.AdminFeedbackDetailVO;
@@ -76,7 +78,17 @@ public class AdminFeedbackController {
             @RequestBody FeedbackTriageDTO dto) {
         Long adminId = AdminContext.getAdminId();
         return ResponseResult.success(FeedbackVO.from(
-                feedbackService.triage(adminId, feedbackId, dto == null ? null : dto.getStatus())));
+                feedbackService.triage(adminId, feedbackId, dto)));
+    }
+
+    @ApiOperation("创建 GitHub Issue 关联")
+    @PostMapping("/{feedbackId}/issue")
+    @PreAuthorize("hasAnyAuthority('admin:feedback:triage')")
+    public ResponseResult<FeedbackIssueLink> createIssue(
+            @PathVariable String feedbackId,
+            @RequestBody FeedbackIssueDraftDTO draft) {
+        Long adminId = AdminContext.getAdminId();
+        return ResponseResult.success(feedbackService.createIssue(adminId, feedbackId, draft));
     }
 
     @ApiOperation("解决反馈")

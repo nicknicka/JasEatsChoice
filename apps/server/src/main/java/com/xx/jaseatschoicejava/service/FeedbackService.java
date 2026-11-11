@@ -4,8 +4,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.xx.jaseatschoicejava.dto.FeedbackAssociationUpdateDTO;
 import com.xx.jaseatschoicejava.dto.FeedbackCreateDTO;
+import com.xx.jaseatschoicejava.dto.FeedbackIssueDraftDTO;
+import com.xx.jaseatschoicejava.dto.FeedbackTriageDTO;
 import com.xx.jaseatschoicejava.entity.Feedback;
 import com.xx.jaseatschoicejava.entity.FeedbackAttachment;
+import com.xx.jaseatschoicejava.entity.FeedbackIssueLink;
 import com.xx.jaseatschoicejava.entity.FeedbackMessage;
 import com.xx.jaseatschoicejava.vo.AdminFeedbackDetailVO;
 import org.springframework.web.multipart.MultipartFile;
@@ -74,9 +77,20 @@ public interface FeedbackService extends IService<Feedback> {
     FeedbackMessage addAdminMessage(Long adminId, String feedbackId, String content, String visibility);
 
     /**
-     * 分诊：只接受 needs_info / accepted / rejected，按状态机校验。
+     * 分诊：只接受 needs_info / accepted / rejected，按状态机校验；
+     * 接受时可判定为平台系统问题。
      */
-    Feedback triage(Long adminId, String feedbackId, String targetStatus);
+    Feedback triage(Long adminId, String feedbackId, FeedbackTriageDTO dto);
+
+    /**
+     * 为已接受的平台系统反馈创建（或复用）GitHub Issue 关联。
+     */
+    FeedbackIssueLink createIssue(Long adminId, String feedbackId, FeedbackIssueDraftDTO draft);
+
+    /**
+     * 用 GitHub 侧状态回写反馈：关闭时把已接受的反馈置为已解决并留一条用户可见说明。
+     */
+    Feedback syncIssueState(String feedbackId, String state);
 
     /**
      * 解决：只允许 accepted -> resolved 并保存结果编码。
