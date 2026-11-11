@@ -1776,6 +1776,13 @@ export function getAgentRuntime() {
 }
 
 /**
+ * 获取配置版本历史（不含密钥）
+ */
+export function getAgentRuntimeHistory() {
+  return api.get(API_CONFIG.agentRuntime.history)
+}
+
+/**
  * 更新供应商/模型/endpoint/数据政策
  */
 export function updateAgentRuntime(payload) {

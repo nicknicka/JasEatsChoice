@@ -141,6 +141,7 @@ export const API_CONFIG = {
   // Agent 运行时配置API端点
   agentRuntime: {
     current: '/admin/agent/runtime',
+    history: '/admin/agent/runtime/history',
     key: '/admin/agent/runtime/key',
     keyTest: '/admin/agent/runtime/key/test'
   },
