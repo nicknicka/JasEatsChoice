@@ -14,6 +14,7 @@ import com.xx.jaseatschoicejava.vo.AdminFeedbackDetailVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户反馈应用服务：协调反馈聚合、消息、附件、分诊与对外端口。
@@ -65,6 +66,11 @@ public interface FeedbackService extends IService<Feedback> {
      */
     IPage<Feedback> adminList(long page, long size, String status, String type,
                               String userId, String merchantId, String orderId);
+
+    /**
+     * 各状态反馈条数，供管理端分诊队列摘要使用。
+     */
+    Map<String, Long> adminStatusCounts();
 
     /**
      * 管理端详情：包含内部备注、全部消息、附件与审计。

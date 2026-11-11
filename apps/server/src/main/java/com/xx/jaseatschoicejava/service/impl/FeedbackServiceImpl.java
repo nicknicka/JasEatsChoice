@@ -318,6 +318,17 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
     }
 
     @Override
+    public Map<String, Long> adminStatusCounts() {
+        // 逐状态 count：不 SELECT status 列，避免全局 JsonTypeHandler 把状态串当 JSON 解析
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (FeedbackStatus status : FeedbackStatus.values()) {
+            counts.put(status.getCode(), count(new LambdaQueryWrapper<Feedback>()
+                    .eq(Feedback::getStatus, status.getCode())));
+        }
+        return counts;
+    }
+
+    @Override
     public AdminFeedbackDetailVO adminDetail(String feedbackId) {
         Feedback feedback = getById(feedbackId);
         if (feedback == null) {

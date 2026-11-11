@@ -22,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 管理员-反馈管理控制器：列表、详情、分诊、回复、解决与关联修正。
@@ -49,6 +50,13 @@ public class AdminFeedbackController {
         IPage<Feedback> result = feedbackService.adminList(page, size, status, type, userId, merchantId, orderId);
         List<FeedbackVO> list = result.getRecords().stream().map(FeedbackVO::from).toList();
         return ResponseResult.success(new FeedbackPageVO(list, result.getTotal(), result.getCurrent(), result.getSize()));
+    }
+
+    @ApiOperation("各状态反馈条数（分诊队列摘要）")
+    @GetMapping("/stats")
+    @PreAuthorize("hasAnyAuthority('admin:feedback:list')")
+    public ResponseResult<Map<String, Long>> stats() {
+        return ResponseResult.success(feedbackService.adminStatusCounts());
     }
 
     @ApiOperation("反馈详情")
