@@ -512,6 +512,18 @@ const router = createRouter({
           meta: { title: '公告管理' }
         },
         {
+          path: 'feedback',
+          name: 'admin-feedback',
+          component: () => import('../views/admin/FeedbackManagement.vue'),
+          meta: { title: '反馈管理' }
+        },
+        {
+          path: 'agent/runtime',
+          name: 'admin-agent-runtime',
+          component: () => import('../views/admin/AgentRuntime.vue'),
+          meta: { title: 'Agent 运行时' }
+        },
+        {
           path: 'finance/withdrawals',
           name: 'admin-withdrawals',
           component: () => import('../views/admin/WithdrawalAudit.vue'),

@@ -71,6 +71,16 @@
           <el-menu-item index="/admin/announcements">公告管理</el-menu-item>
         </el-sub-menu>
 
+        <el-menu-item index="/admin/feedback">
+          <el-icon><ChatDotSquare /></el-icon>
+          <template #title>反馈管理</template>
+        </el-menu-item>
+
+        <el-menu-item index="/admin/agent/runtime">
+          <el-icon><Cpu /></el-icon>
+          <template #title>Agent 运行时</template>
+        </el-menu-item>
+
         <el-sub-menu index="finance">
           <template #title>
             <el-icon><Wallet /></el-icon>
@@ -211,6 +221,8 @@ import {
   Food,
   VideoCamera,
   ChatLineSquare,
+  ChatDotSquare,
+  Cpu,
   Wallet,
   Setting,
   TrendCharts,

@@ -5,6 +5,7 @@
 
 import api from '../utils/api'
 import API, { buildUrl } from './index'
+import { API_CONFIG } from '../config'
 
 // ==================== 管理员认证 ====================
 
@@ -1710,3 +1711,95 @@ export function activateAiConfig(candidate) {
       throw error
     })
 }
+
+// ==================== 反馈管理 ====================
+
+const feedbackUrl = (template, feedbackId) =>
+  template.replace('{feedbackId}', encodeURIComponent(feedbackId))
+
+/**
+ * 反馈列表（可按状态/类型/用户/商家/订单筛选）
+ */
+export function listFeedbacks(params = {}) {
+  return api.get(API_CONFIG.adminFeedback.list, { params })
+}
+
+/**
+ * 反馈详情（含内部备注、附件与审计）
+ */
+export function getFeedbackDetail(feedbackId) {
+  return api.get(feedbackUrl(API_CONFIG.adminFeedback.detail, feedbackId))
+}
+
+/**
+ * 回复用户（USER）或写内部备注（INTERNAL）
+ */
+export function replyFeedback(feedbackId, content, visibility = 'USER') {
+  return api.post(feedbackUrl(API_CONFIG.adminFeedback.messages, feedbackId), { content, visibility })
+}
+
+/**
+ * 分诊：needs_info / accepted / rejected；接受时可标记平台系统问题
+ */
+export function triageFeedback(feedbackId, status, platformSystem = false) {
+  return api.post(feedbackUrl(API_CONFIG.adminFeedback.triage, feedbackId), { status, platformSystem })
+}
+
+/**
+ * 解决：只允许 accepted -> resolved
+ */
+export function resolveFeedback(feedbackId, resolutionCode) {
+  return api.post(feedbackUrl(API_CONFIG.adminFeedback.resolve, feedbackId), { resolutionCode })
+}
+
+/**
+ * 修正订单/商家关联（写审计）
+ */
+export function updateFeedbackAssociation(feedbackId, { orderId, merchantId }) {
+  return api.put(feedbackUrl(API_CONFIG.adminFeedback.association, feedbackId), { orderId, merchantId })
+}
+
+/**
+ * 为已接受的平台系统反馈创建（或复用）GitHub Issue 关联
+ */
+export function createFeedbackIssue(feedbackId, draft) {
+  return api.post(feedbackUrl(API_CONFIG.adminFeedback.issue, feedbackId), draft)
+}
+
+// ==================== Agent 运行时配置 ====================
+
+/**
+ * 获取运行时配置、健康与硬边界
+ */
+export function getAgentRuntime() {
+  return api.get(API_CONFIG.agentRuntime.current)
+}
+
+/**
+ * 更新供应商/模型/endpoint/数据政策
+ */
+export function updateAgentRuntime(payload) {
+  return api.put(API_CONFIG.agentRuntime.current, payload)
+}
+
+/**
+ * 轮换模型 key（只写不可读）
+ */
+export function rotateAgentRuntimeKey(key) {
+  return api.post(API_CONFIG.agentRuntime.key, { key })
+}
+
+/**
+ * 测试模型连接
+ */
+export function testAgentRuntimeKey() {
+  return api.post(API_CONFIG.agentRuntime.keyTest)
+}
+
+/**
+ * 独立吊销模型 key
+ */
+export function revokeAgentRuntimeKey() {
+  return api.delete(API_CONFIG.agentRuntime.key)
+}
+

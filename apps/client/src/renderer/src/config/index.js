@@ -127,6 +127,24 @@ export const API_CONFIG = {
     detail: '/v1/feedback/{feedbackId}'
   },
 
+  // 管理端反馈API端点
+  adminFeedback: {
+    list: '/admin/feedbacks',
+    detail: '/admin/feedbacks/{feedbackId}',
+    messages: '/admin/feedbacks/{feedbackId}/messages',
+    triage: '/admin/feedbacks/{feedbackId}/triage',
+    resolve: '/admin/feedbacks/{feedbackId}/resolve',
+    association: '/admin/feedbacks/{feedbackId}/association',
+    issue: '/admin/feedbacks/{feedbackId}/issue'
+  },
+
+  // Agent 运行时配置API端点
+  agentRuntime: {
+    current: '/admin/agent/runtime',
+    key: '/admin/agent/runtime/key',
+    keyTest: '/admin/agent/runtime/key/test'
+  },
+
   // 食谱API端点
   recipe: {
     today: '/v1/recipe/today',
