@@ -24,7 +24,7 @@
       <ul class="health-list">
         <li v-for="item in healthItems" :key="item.name" class="health-item">
           <el-icon class="health-icon" :class="item.ok ? 'health-icon--ok' : 'health-icon--bad'">
-            <component :is="item.ok ? CircleCheckFilled : WarningFilled" />
+            <component :is="item.ok ? CircleCheck : Warning" />
           </el-icon>
           <div class="health-text">
             <span class="health-name">{{ item.name }}</span>
@@ -33,10 +33,10 @@
         </li>
       </ul>
 
-      <!-- 诊断到修复之间的入口：只把本页能改的那一项接到表单上 -->
-      <div v-if="!healthSummary.ok" class="health-next">
-        <span class="health-next__text">下一步：补齐模型与 Endpoint，健康检查里的「模型」才会转正常。</span>
-        <el-button link type="primary" @click="focusModelConfig">去配置</el-button>
+      <!-- 诊断到修复之间的入口：说清缺什么，并跳到该改的那张卡 -->
+      <div v-if="nextStep" class="health-next">
+        <span class="health-next__text">{{ nextStep.text }}</span>
+        <el-button link type="primary" @click="focusModelConfig">{{ nextStep.action }}</el-button>
       </div>
     </el-card>
 
@@ -91,13 +91,13 @@
     </AppFormContainer>
 
     <!-- 密钥：只写不可读 -->
-    <el-card class="key-card" shadow="never">
+    <el-card ref="keyCardRef" class="key-card" shadow="never">
       <template #header>
         <div class="card-header">
           <span class="card-title">模型密钥</span>
           <span class="key-state">
             <StatusTag
-              :status="runtime.modelKeyConfigured ? 'healthy' : 'none'"
+              :status="runtime.modelKeyConfigured ? 'healthy' : 'pending'"
               :text="runtime.modelKeyConfigured ? '已配置' : '未配置'"
             />
             <span v-if="runtime.modelKeyUpdatedAt" class="card-note cell-num">
@@ -192,7 +192,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown, CircleCheckFilled, Clock, Lock, Refresh, WarningFilled } from '@element-plus/icons-vue'
+import { ArrowDown, CircleCheck, Clock, Lock, Refresh, Warning } from '@element-plus/icons-vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppEmptyState from '@/components/common/AppEmptyState.vue'
 import AppFormContainer from '@/components/common/AppFormContainer.vue'
@@ -235,7 +235,7 @@ const healthItems = computed(() =>
     .map((item) => ({
       name: HEALTH_NAME_LABELS[item.name] || item.name,
       ok: !!item.ok,
-      detail: item.detail
+      detail: modelHealthDetail(item)
     }))
 )
 
@@ -244,6 +244,20 @@ const configReady = computed(() =>
   !!form.model.trim() && !!form.endpoint.trim() && form.dataPolicyAck
 )
 
+// 后端给的是笼统的「缺少 endpoint 或模型 key」，这里按当前配置说清到底缺哪一个
+const modelHealthDetail = (item) => {
+  if (item !== runtime.value.modelHealth || item.ok) return item.detail
+  return runtime.value.endpoint ? '模型 key 未配置' : '缺少 Endpoint 或模型 key'
+}
+
+const nextStep = computed(() => {
+  if (healthSummary.value.ok) return null
+  if (runtime.value.endpoint && !runtime.value.modelKeyConfigured) {
+    return { text: '下一步：模型 key 还没配置，健康检查里的「模型」不会转正常。', action: '去配置密钥' }
+  }
+  return { text: '下一步：先补齐模型与 Endpoint，健康检查里的「模型」才会转正常。', action: '去配置' }
+})
+
 const healthSummary = computed(() => {
   const items = healthItems.value
   const bad = items.filter((item) => !item.ok).length
@@ -251,9 +265,14 @@ const healthSummary = computed(() => {
 })
 
 const modelInputRef = ref(null)
+const keyCardRef = ref(null)
 
 // 健康卡「去配置」：滚到模型配置并聚焦模型输入，把诊断和修复接起来
 const focusModelConfig = () => {
+  if (runtime.value.endpoint && !runtime.value.modelKeyConfigured) {
+    keyCardRef.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return
+  }
   modelInputRef.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   modelInputRef.value?.focus()
 }
@@ -266,12 +285,12 @@ const historyRows = computed(() => {
   return rows.map((row, index) => {
     const previous = rows[index + 1]
     if (!previous) {
-      return { ...row, change: `初始版本：${providerLabel(row.provider)} · ${row.model || '—'}` }
+      return { ...row, change: `初始：${providerLabel(row.provider)} · ${row.model || '—'}` }
     }
     const changes = []
-    if (previous.provider !== row.provider) changes.push('供应商')
-    if (previous.model !== row.model) changes.push(`模型 ${previous.model || '—'} → ${row.model || '—'}`)
-    if (previous.endpoint !== row.endpoint) changes.push('Endpoint')
+    if (previous.model !== row.model) changes.push(`模型 → ${row.model || '（清空）'}`)
+    if (previous.provider !== row.provider) changes.push(`供应商 → ${providerLabel(row.provider)}`)
+    if (previous.endpoint !== row.endpoint) changes.push('Endpoint 变更')
     if (!!previous.dataPolicyAck !== !!row.dataPolicyAck) changes.push('数据政策确认')
     return { ...row, change: changes.length ? changes.join('、') : '无字段变化' }
   })

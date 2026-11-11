@@ -410,7 +410,8 @@ const issueVisible = ref(false)
 // 分诊队列：各状态条数，来自 /admin/feedbacks/stats
 const stats = ref({})
 
-const filters = reactive({ status: '', type: '', userId: '', merchantId: '', orderId: '' })
+// 默认落在待分诊：客服打开这页要看到的是待办队列，不是全量归档
+const filters = reactive({ status: 'pending', type: '', userId: '', merchantId: '', orderId: '' })
 const pagination = reactive({ page: 1, size: 10, total: 0 })
 
 const replyForm = reactive({ visibility: 'USER', content: '' })
@@ -691,6 +692,11 @@ onMounted(() => {
   background: var(--canvas);
 }
 
+/* 首屏是硬预算（§4.10），页头下边距在这里收一档 */
+.app-page-header {
+  margin-bottom: var(--space-2);
+}
+
 .filter-card {
   margin-bottom: var(--card-gap-compact);
   border-radius: var(--radius-lg);
@@ -701,7 +707,7 @@ onMounted(() => {
     align-items: flex-end;
     gap: var(--space-3) var(--space-4);
     margin: 0;
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-2) var(--space-4);
     border-radius: var(--radius-md);
     background: var(--canvas-sunken);
 
@@ -1059,7 +1065,13 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  align-items: center;
   justify-content: flex-end;
+}
+
+/* 抽屉里的主动作走 md 档，次级保持 sm（§3.4、§4.1） */
+:deep(.el-drawer__footer .el-button--primary) {
+  height: var(--control-height-md);
 }
 
 .form-hint {
