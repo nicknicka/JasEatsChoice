@@ -74,3 +74,19 @@ sudo scripts/agent-runtime/verify-isolation.sh
 - 反馈桥接（#536）只用专用 GitHub 账号在目标仓库开 Issue / PR，人体量的是 `dsh` 这个账号的提交与评论。
 - `ready-for-agent` 只是队列标签；真正启动代理仍需授权维护者在该 Issue 评论 `@agent`。
 - dsh 不开合并、不改标签、不部署、不碰生产数据；PR 一律由人审查合并。
+
+## 运行时配置页（#538）
+
+后台「Agent 运行时」页面对 `admin:agent:runtime` 开放，接口在 `/admin/agent/runtime`：
+
+| 方法 | 路径 | 作用 |
+| --- | --- | --- |
+| GET | `/admin/agent/runtime` | 配置 + 健康（GitHub / DSH profile / 模型 / 隔离账号）+ 硬边界 |
+| PUT | `/admin/agent/runtime` | 更新供应商（白名单）、模型、endpoint、数据政策，写版本历史 |
+| POST | `/admin/agent/runtime/key` | 轮换模型 key（只写不可读） |
+| POST | `/admin/agent/runtime/key/test` | 测试模型连接 |
+| DELETE | `/admin/agent/runtime/key` | 独立吊销模型 key |
+
+- 供应商白名单：`openai-compatible`、`openai`、`anthropic`、`azure-openai`；白名单外的值直接 400。
+- 模型 key 只写文件型密钥存储（`AGENT_MODEL_KEY_DIR`），接口只回布尔与更新时间，日志与响应都不含明文。
+- `no-merge` / `no-deploy` / `no-production-data` 三条硬边界由代码固定为开启，页面无法关闭。

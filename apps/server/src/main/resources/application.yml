@@ -148,6 +148,13 @@ github:
     token: ${GITHUB_BRIDGE_TOKEN:}
     api-base: ${GITHUB_BRIDGE_API_BASE:https://api.github.com}
 
+# Agent 运行时（管理端配置页）：模型 key 只写不可读，落在专用密钥目录。
+agent:
+  runtime:
+    key-dir: ${AGENT_MODEL_KEY_DIR:}
+    dsh-profile-path: ${AGENT_DSH_PROFILE_PATH:}
+    isolated-home: ${AGENT_ISOLATED_HOME:}
+
 file:
   upload:
     path: ${FILE_UPLOAD_PATH:./uploads/}  # 文件上传保存路径
