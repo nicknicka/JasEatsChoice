@@ -101,3 +101,8 @@
 .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
   background: var(--canvas);
 }
+
+/* §4.7：页头动作区控件走 --control-height-md，工具条/行内动作仍是 sm */
+.app-page-header__actions .el-button {
+  height: var(--control-height-md);
+}

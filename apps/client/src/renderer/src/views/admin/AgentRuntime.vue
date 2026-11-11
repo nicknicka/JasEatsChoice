@@ -30,6 +30,10 @@
             <span class="health-name">{{ item.name }}</span>
             <span class="health-detail">{{ item.detail }}</span>
           </div>
+          <!-- 每条异常都给出归属：本页能改的指到表单，改不了的说明在主机侧 -->
+          <span v-if="!item.ok" class="health-owner" :class="{ 'health-owner--here': item.name === '模型' }">
+            {{ item.name === '模型' ? '本页可配' : '主机侧处理' }}
+          </span>
         </li>
       </ul>
 
@@ -164,7 +168,11 @@
         <el-table-column label="版本" width="70">
           <template #default="{ row }"><span class="cell-num">v{{ row.version }}</span></template>
         </el-table-column>
-        <el-table-column label="相对上一版的变化" min-width="220" prop="change" show-overflow-tooltip />
+        <el-table-column label="相对上一版的变化" min-width="220">
+          <template #default="{ row }">
+            <span class="history-change">{{ row.change }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="修改时间" width="168">
           <template #default="{ row }"><span class="cell-num">{{ formatTime(row.createdAt) }}</span></template>
         </el-table-column>
@@ -172,7 +180,7 @@
         <el-table-column label="操作" width="80">
           <template #default="{ row }">
             <span v-if="row.version === (runtime.version || 0)" class="history-current">当前版本</span>
-            <el-button v-else link type="primary" @click="loadVersion(row)">载入</el-button>
+            <el-button v-else link type="primary" @click="loadVersion(row)">回填表单</el-button>
           </template>
         </el-table-column>
         <template #empty>
@@ -247,13 +255,13 @@ const configReady = computed(() =>
 // 后端给的是笼统的「缺少 endpoint 或模型 key」，这里按当前配置说清到底缺哪一个
 const modelHealthDetail = (item) => {
   if (item !== runtime.value.modelHealth || item.ok) return item.detail
-  return runtime.value.endpoint ? '模型 key 未配置' : '缺少 Endpoint 或模型 key'
+  return runtime.value.endpoint ? '模型密钥未配置' : '缺少 Endpoint 或模型密钥'
 }
 
 const nextStep = computed(() => {
   if (healthSummary.value.ok) return null
   if (runtime.value.endpoint && !runtime.value.modelKeyConfigured) {
-    return { text: '下一步：模型 key 还没配置，健康检查里的「模型」不会转正常。', action: '去配置密钥' }
+    return { text: '下一步：模型密钥还没配置，健康检查里的「模型」不会转正常。', action: '去配置密钥' }
   }
   return { text: '下一步：先补齐模型与 Endpoint，健康检查里的「模型」才会转正常。', action: '去配置' }
 })
@@ -285,10 +293,10 @@ const historyRows = computed(() => {
   return rows.map((row, index) => {
     const previous = rows[index + 1]
     if (!previous) {
-      return { ...row, change: `初始：${providerLabel(row.provider)} · ${row.model || '—'}` }
+      return { ...row, change: `初始版本：${providerLabel(row.provider)} · ${row.model || '—'}` }
     }
     const changes = []
-    if (previous.model !== row.model) changes.push(`模型 → ${row.model || '（清空）'}`)
+    if (previous.model !== row.model) changes.push(`模型 ${previous.model || '—'} → ${row.model || '（清空）'}`)
     if (previous.provider !== row.provider) changes.push(`供应商 → ${providerLabel(row.provider)}`)
     if (previous.endpoint !== row.endpoint) changes.push('Endpoint 变更')
     if (!!previous.dataPolicyAck !== !!row.dataPolicyAck) changes.push('数据政策确认')
@@ -305,9 +313,9 @@ const providerLabel = (value) =>
 const loadVersion = async (row) => {
   try {
     await ElMessageBox.confirm(
-      `会把 v${row.version} 的供应商、模型与 Endpoint 覆盖到表单。载入本身不生效，需要你再点「保存配置」。`,
-      `载入 v${row.version}`,
-      { confirmButtonText: '载入到表单', cancelButtonText: '取消' }
+      `会把 v${row.version} 的供应商、模型与 Endpoint 覆盖到表单，不会直接生效；需要你再点「保存配置」。`,
+      `回填 v${row.version} 到表单`,
+      { confirmButtonText: '回填到表单', cancelButtonText: '取消' }
     )
   } catch {
     return
@@ -317,7 +325,7 @@ const loadVersion = async (row) => {
   form.endpoint = row.endpoint || ''
   form.dataPolicyAck = !!row.dataPolicyAck
   historyVisible.value = false
-  ElMessage.success(`已把 v${row.version} 载入表单，确认后点「保存配置」生效`)
+  ElMessage.success(`已把 v${row.version} 回填到表单，确认后点「保存配置」生效`)
 }
 
 const handleKeyCommand = (command) => {
@@ -556,6 +564,18 @@ onMounted(loadRuntime)
   color: var(--ink-500);
 }
 
+/* 健康项归属：本页可配 / 主机侧处理，避免每条异常都指向同一个入口 */
+.health-owner {
+  flex-shrink: 0;
+  color: var(--ink-400);
+  font-size: var(--text-caption);
+  white-space: nowrap;
+}
+
+.health-owner--here {
+  color: var(--brand-600);
+}
+
 /* 健康卡底部：诊断到修复的下一步 */
 .health-next {
   display: flex;
@@ -573,6 +593,13 @@ onMounted(loadRuntime)
 
 :deep(.el-table .history-row--current td.el-table__cell) {
   background: var(--brand-50);
+}
+
+.history-change {
+  display: block;
+  color: var(--ink-700);
+  line-height: 18px;
+  white-space: normal;
 }
 
 .history-current {
