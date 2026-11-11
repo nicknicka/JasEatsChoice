@@ -130,6 +130,7 @@ export const API_CONFIG = {
   // 管理端反馈API端点
   adminFeedback: {
     list: '/admin/feedbacks',
+    stats: '/admin/feedbacks/stats',
     detail: '/admin/feedbacks/{feedbackId}',
     messages: '/admin/feedbacks/{feedbackId}/messages',
     triage: '/admin/feedbacks/{feedbackId}/triage',

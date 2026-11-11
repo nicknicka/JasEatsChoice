@@ -1725,6 +1725,13 @@ export function listFeedbacks(params = {}) {
 }
 
 /**
+ * 各状态反馈条数（分诊队列摘要）
+ */
+export function getFeedbackStats() {
+  return api.get(API_CONFIG.adminFeedback.stats)
+}
+
+/**
  * 反馈详情（含内部备注、附件与审计）
  */
 export function getFeedbackDetail(feedbackId) {

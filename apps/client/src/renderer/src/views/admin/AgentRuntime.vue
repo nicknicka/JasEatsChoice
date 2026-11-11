@@ -1,6 +1,6 @@
 <template>
   <div class="agent-runtime-container">
-    <AppPageHeader title="Agent 运行时" subtitle="模型配置、密钥与健康状态" :compact="true">
+    <AppPageHeader class="runtime-header" title="Agent 运行时" subtitle="模型配置、密钥与健康状态" :compact="true">
       <template #actions>
         <el-button :icon="Refresh" :loading="loading" @click="loadRuntime">刷新</el-button>
       </template>
@@ -30,9 +30,14 @@
             <span class="health-name">{{ item.name }}</span>
             <span class="health-detail">{{ item.detail }}</span>
           </div>
-          <StatusTag :status="item.ok ? 'healthy' : 'unhealthy'" :text="item.ok ? '正常' : '异常'" />
         </li>
       </ul>
+
+      <!-- 诊断到修复之间的入口：只把本页能改的那一项接到表单上 -->
+      <div v-if="!healthSummary.ok" class="health-next">
+        <span class="health-next__text">下一步：补齐模型与 Endpoint，健康检查里的「模型」才会转正常。</span>
+        <el-button link type="primary" @click="focusModelConfig">去配置</el-button>
+      </div>
     </el-card>
 
     <!-- 模型配置：本页唯一实心主按钮就在这里（保存配置） -->
@@ -56,7 +61,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="模型">
-          <el-input v-model="form.model" class="form-control" placeholder="如 gpt-4o-mini" />
+          <el-input ref="modelInputRef" v-model="form.model" class="form-control" placeholder="如 gpt-4o-mini" />
         </el-form-item>
         <el-form-item label="Endpoint">
           <el-input v-model="form.endpoint" placeholder="https://api.example.com/v1/models" />
@@ -111,8 +116,19 @@
           placeholder="输入新的模型 key"
           class="key-input"
         />
-        <el-button :disabled="!newKey" :loading="submitting" @click="rotateKey">轮换</el-button>
-        <el-button type="danger" plain :loading="submitting" @click="revokeKey">吊销</el-button>
+        <el-button :disabled="!newKey" :loading="submitting" @click="rotateKey">
+          {{ runtime.modelKeyConfigured ? '轮换' : '保存密钥' }}
+        </el-button>
+        <el-dropdown trigger="click" @command="handleKeyCommand">
+          <el-button :loading="submitting">
+            更多<el-icon class="key-more-icon"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="revoke" class="key-danger-item">吊销密钥</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
 
       <p class="form-hint">密钥只写不可读：保存后接口与日志都不会回显明文，轮换与吊销互不影响其它配置。</p>
@@ -130,27 +146,35 @@
       <ul class="boundary-list">
         <li v-for="item in runtime.boundaries || []" :key="item.code" class="boundary-item">
           <el-icon class="boundary-icon"><Lock /></el-icon>
-          <div class="boundary-text">
-            <span class="boundary-code">{{ item.code }}</span>
-            <span class="boundary-desc">{{ item.description }}</span>
-          </div>
+          <span class="boundary-code">{{ item.code }}</span>
+          <span class="boundary-desc">{{ item.description }}</span>
           <StatusTag status="active" text="已生效" />
         </li>
       </ul>
     </el-card>
     </div>
 
-    <el-drawer v-model="historyVisible" title="配置版本历史" size="660px">
-      <el-table v-loading="historyLoading" :data="history" stripe>
+    <el-drawer v-model="historyVisible" title="配置版本历史" size="760px">
+      <el-table
+        v-loading="historyLoading"
+        :data="historyRows"
+        :row-class-name="historyRowClass"
+        stripe
+      >
         <el-table-column label="版本" width="70">
           <template #default="{ row }"><span class="cell-num">v{{ row.version }}</span></template>
         </el-table-column>
-        <el-table-column label="供应商" width="120" prop="provider" />
-        <el-table-column label="模型" min-width="130" prop="model" show-overflow-tooltip />
-        <el-table-column label="修改时间" width="140">
+        <el-table-column label="相对上一版的变化" min-width="220" prop="change" show-overflow-tooltip />
+        <el-table-column label="修改时间" width="168">
           <template #default="{ row }"><span class="cell-num">{{ formatTime(row.createdAt) }}</span></template>
         </el-table-column>
-        <el-table-column label="修改人" width="100" prop="updatedBy" />
+        <el-table-column label="修改人" width="80" prop="updatedBy" />
+        <el-table-column label="操作" width="80">
+          <template #default="{ row }">
+            <span v-if="row.version === (runtime.version || 0)" class="history-current">当前版本</span>
+            <el-button v-else link type="primary" @click="loadVersion(row)">载入</el-button>
+          </template>
+        </el-table-column>
         <template #empty>
           <AppEmptyState
             compact
@@ -168,7 +192,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { CircleCheckFilled, Clock, Lock, Refresh, WarningFilled } from '@element-plus/icons-vue'
+import { ArrowDown, CircleCheckFilled, Clock, Lock, Refresh, WarningFilled } from '@element-plus/icons-vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppEmptyState from '@/components/common/AppEmptyState.vue'
 import AppFormContainer from '@/components/common/AppFormContainer.vue'
@@ -202,10 +226,17 @@ const history = ref([])
 
 const form = reactive({ provider: 'openai-compatible', model: '', endpoint: '', dataPolicyAck: false })
 
+// 后端给的 name 是英文缩写，页面上换成人话
+const HEALTH_NAME_LABELS = { 'DSH profile': 'DSH 运行环境' }
+
 const healthItems = computed(() =>
   [runtime.value.github, runtime.value.dshProfile, runtime.value.modelHealth, runtime.value.isolatedAccount]
     .filter(Boolean)
-    .map((item) => ({ name: item.name, ok: !!item.ok, detail: item.detail }))
+    .map((item) => ({
+      name: HEALTH_NAME_LABELS[item.name] || item.name,
+      ok: !!item.ok,
+      detail: item.detail
+    }))
 )
 
 // 本页表单负责的三个必填项：模型、Endpoint、数据政策确认
@@ -218,6 +249,61 @@ const healthSummary = computed(() => {
   const bad = items.filter((item) => !item.ok).length
   return { ok: bad === 0, text: bad === 0 ? '全部正常' : `${bad} / ${items.length} 项异常` }
 })
+
+const modelInputRef = ref(null)
+
+// 健康卡「去配置」：滚到模型配置并聚焦模型输入，把诊断和修复接起来
+const focusModelConfig = () => {
+  modelInputRef.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  modelInputRef.value?.focus()
+}
+
+// 把某个历史版本载回表单；不直接落库，由管理员确认后再点保存
+// 供应商在库里存的是编码，展示换成中文
+// 版本历史：desc 序，下一条就是上一版；用它算出“这一版改了什么”
+const historyRows = computed(() => {
+  const rows = history.value || []
+  return rows.map((row, index) => {
+    const previous = rows[index + 1]
+    if (!previous) {
+      return { ...row, change: `初始版本：${providerLabel(row.provider)} · ${row.model || '—'}` }
+    }
+    const changes = []
+    if (previous.provider !== row.provider) changes.push('供应商')
+    if (previous.model !== row.model) changes.push(`模型 ${previous.model || '—'} → ${row.model || '—'}`)
+    if (previous.endpoint !== row.endpoint) changes.push('Endpoint')
+    if (!!previous.dataPolicyAck !== !!row.dataPolicyAck) changes.push('数据政策确认')
+    return { ...row, change: changes.length ? changes.join('、') : '无字段变化' }
+  })
+})
+
+const historyRowClass = ({ row }) =>
+  row.version === (runtime.value.version || 0) ? 'history-row--current' : ''
+
+const providerLabel = (value) =>
+  providerOptions.find((item) => item.value === value)?.label || value || '—'
+
+const loadVersion = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `会把 v${row.version} 的供应商、模型与 Endpoint 覆盖到表单。载入本身不生效，需要你再点「保存配置」。`,
+      `载入 v${row.version}`,
+      { confirmButtonText: '载入到表单', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  form.provider = row.provider || 'openai-compatible'
+  form.model = row.model || ''
+  form.endpoint = row.endpoint || ''
+  form.dataPolicyAck = !!row.dataPolicyAck
+  historyVisible.value = false
+  ElMessage.success(`已把 v${row.version} 载入表单，确认后点「保存配置」生效`)
+}
+
+const handleKeyCommand = (command) => {
+  if (command === 'revoke') revokeKey()
+}
 
 const openHistory = async () => {
   historyVisible.value = true
@@ -335,6 +421,15 @@ onMounted(loadRuntime)
   background: var(--canvas);
 }
 
+/* 页头与主体共用同一条 720px 中轴（§4.4、§4.7） */
+.runtime-header {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--form-width-settings);
+  margin-right: auto;
+  margin-left: auto;
+}
+
 /* 配置页是设置类页面：整页一列，宽度取 --form-width-settings（§4.4、§8） */
 .settings-column {
   display: flex;
@@ -442,6 +537,38 @@ onMounted(loadRuntime)
   color: var(--ink-500);
 }
 
+/* 健康卡底部：诊断到修复的下一步 */
+.health-next {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.health-next__text {
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+}
+
+:deep(.el-table .history-row--current td.el-table__cell) {
+  background: var(--brand-50);
+}
+
+.history-current {
+  color: var(--ink-500);
+  font-size: var(--text-caption);
+}
+
+.key-more-icon {
+  margin-left: var(--space-1);
+}
+
+.key-danger-item {
+  color: var(--danger);
+}
+
 .save-hint {
   margin: 0 0 var(--space-3);
   color: var(--ink-500);
@@ -487,6 +614,7 @@ onMounted(loadRuntime)
 .cell-num {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap; /* §4.3：时间列不允许折行 */
 }
 
 .boundary-list {
@@ -500,9 +628,9 @@ onMounted(loadRuntime)
 
 .boundary-item {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--canvas-sunken);
 }
@@ -512,9 +640,7 @@ onMounted(loadRuntime)
   font-size: 16px;
 }
 
-.boundary-text {
-  display: flex;
-  flex-direction: column;
+.boundary-desc {
   margin-right: auto;
 }
 

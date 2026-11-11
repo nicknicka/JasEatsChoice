@@ -8,12 +8,25 @@
 
     <!-- 筛选：admin 规则 §4.3，底槽用 --canvas-sunken 与表格分层 -->
     <el-card class="filter-card" shadow="never">
+      <!-- 分诊队列：按状态聚合计数，点一下即筛选，不必先开详情判断先处理谁 -->
+      <div class="queue-strip" role="tablist" aria-label="按状态筛选反馈">
+        <button
+          v-for="item in queueItems"
+          :key="item.value || 'all'"
+          type="button"
+          role="tab"
+          class="queue-chip"
+          :class="{ 'queue-chip--active': filters.status === item.value }"
+          :aria-selected="filters.status === item.value"
+          @click="selectStatus(item.value)"
+        >
+          <span class="queue-chip__dot" :class="`queue-chip__dot--${item.tone}`"></span>
+          <span>{{ item.label }}</span>
+          <b class="queue-chip__count cell-num">{{ item.count }}</b>
+        </button>
+      </div>
+
       <el-form class="filter-form" label-position="top" @submit.prevent="handleSearch">
-        <el-form-item label="状态">
-          <el-select v-model="filters.status" placeholder="全部" clearable class="filter-control">
-            <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="类型">
           <el-select v-model="filters.type" placeholder="全部" clearable class="filter-control">
             <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -75,6 +88,12 @@
             </template>
           </el-table-column>
 
+          <el-table-column label="停留" width="96">
+            <template #default="{ row }">
+              <span class="cell-age" :class="{ 'cell-age--stale': isStale(row) }">{{ ageLabel(row) }}</span>
+            </template>
+          </el-table-column>
+
           <el-table-column label="提交时间" width="160">
             <template #default="{ row }">
               <span class="cell-num">{{ formatTime(row.createdAt) }}</span>
@@ -89,6 +108,7 @@
         </el-table>
 
         <div v-if="pagination.total > pagination.size" class="pagination-container">
+          <el-config-provider :locale="zhCn">
           <el-pagination
             v-model:current-page="pagination.page"
             v-model:page-size="pagination.size"
@@ -98,16 +118,23 @@
             @current-change="loadList"
             @size-change="handleSearch"
           />
+          </el-config-provider>
         </div>
       </template>
     </el-card>
 
-    <el-drawer v-model="detailVisible" title="反馈详情" size="60%" class="feedback-drawer">
+    <el-drawer v-model="detailVisible" title="反馈详情" size="760px" class="feedback-drawer">
       <div v-if="detail" class="detail-body">
         <div class="detail-head">
-          <span class="detail-id cell-num">{{ detail.feedbackId }}</span>
-          <StatusTag :status="statusKey(detail.status)" :text="detail.statusLabel || detail.status" />
-          <span class="detail-type">{{ detail.typeLabel || detail.type }}</span>
+          <div class="detail-head__meta">
+            <StatusTag :status="statusKey(detail.status)" :text="detail.statusLabel || detail.status" />
+            <span class="detail-type">{{ detail.typeLabel || detail.type }}</span>
+            <span v-if="!['resolved', 'rejected'].includes(detail.status)" class="detail-stay">
+              已停留 {{ ageLabel(detail) }}
+            </span>
+          </div>
+          <h3 class="detail-title">{{ detail.content }}</h3>
+          <span class="detail-id cell-num">ID {{ detail.feedbackId }}</span>
         </div>
 
         <section class="detail-section">
@@ -131,17 +158,13 @@
         </section>
 
         <section class="detail-section">
-          <h4 class="section-title">反馈内容</h4>
-          <p class="detail-content">{{ detail.content }}</p>
-        </section>
-
-        <section class="detail-section">
           <h4 class="section-title">消息历史</h4>
           <p class="section-hint">内部备注只在后台可见，不会出现在用户端。</p>
           <ul v-if="detail.messages && detail.messages.length" class="message-list">
             <li v-for="msg in detail.messages" :key="msg.messageId" class="message-item">
               <div class="message-head">
                 <span class="message-badge" :class="msg.visibility === 'INTERNAL' ? 'message-badge--internal' : 'message-badge--user'">
+                  <el-icon v-if="msg.visibility === 'INTERNAL'" class="message-badge__icon"><Lock /></el-icon>
                   {{ msg.visibility === 'INTERNAL' ? '内部备注' : '用户可见' }}
                 </span>
                 <span class="message-author">{{ authorLabel(msg.authorType) }}</span>
@@ -166,7 +189,9 @@
             v-else
             compact
             :icon="Paperclip"
-            description="这条反馈没有附件（附件由用户提交时上传，后台不代为上传）"
+            description="这条反馈没有附件，用户提交时才会带图；需要补充信息可在「回复 / 备注」里说明"
+            action-text="去回复 / 备注"
+            @action="openReply"
           />
         </section>
 
@@ -179,7 +204,7 @@
                 {{ audit.actorType === 'ADMIN' ? '管理员' : audit.actorType }} {{ audit.actorId || '' }} ·
                 <span class="cell-num">{{ formatTime(audit.createdAt) }}</span>
               </span>
-              <p v-if="audit.detail" class="audit-detail">{{ audit.detail }}</p>
+              <p v-if="audit.detail" class="audit-detail">{{ auditDetailLabel(audit) }}</p>
             </li>
           </ul>
           <p v-else class="section-empty">还没有操作记录。</p>
@@ -188,12 +213,24 @@
 
       <template #footer>
         <div class="drawer-actions">
-          <el-button v-if="nextAction" type="primary" @click="runAction(nextAction.key)">
-            {{ nextAction.label }}
+          <el-button v-if="footerActions.primary" type="primary" @click="runAction(footerActions.primary.key)">
+            {{ footerActions.primary.label }}
           </el-button>
-          <el-button v-for="action in secondaryActions" :key="action.key" @click="runAction(action.key)">
-            {{ action.label }}
+          <el-button v-if="footerActions.secondary" @click="runAction(footerActions.secondary.key)">
+            {{ footerActions.secondary.label }}
           </el-button>
+          <el-dropdown v-if="footerActions.more.length" trigger="click" @command="runAction">
+            <el-button>
+              更多<el-icon class="drawer-more-icon"><ArrowDown /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-for="action in footerActions.more" :key="action.key" :command="action.key">
+                  {{ action.label }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </template>
     </el-drawer>
@@ -299,7 +336,8 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ChatDotSquare, Paperclip, Refresh } from '@element-plus/icons-vue'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import { ArrowDown, ChatDotSquare, Lock, Paperclip, Refresh } from '@element-plus/icons-vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppEmptyState from '@/components/common/AppEmptyState.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
@@ -308,6 +346,7 @@ import { formatTime } from '../../utils/formatters'
 import {
   createFeedbackIssue,
   getFeedbackDetail,
+  getFeedbackStats,
   listFeedbacks,
   replyFeedback,
   resolveFeedback,
@@ -350,7 +389,7 @@ const statusKey = (status) => ({
   pending: 'pending',
   triaging: 'processing',
   needs_info: 'pendingreview',
-  accepted: 'approved',
+  accepted: 'accepted',
   rejected: 'rejected',
   resolved: 'resolved'
 }[status] || 'neutral')
@@ -367,6 +406,9 @@ const triageVisible = ref(false)
 const resolveVisible = ref(false)
 const associationVisible = ref(false)
 const issueVisible = ref(false)
+
+// 分诊队列：各状态条数，来自 /admin/feedbacks/stats
+const stats = ref({})
 
 const filters = reactive({ status: '', type: '', userId: '', merchantId: '', orderId: '' })
 const pagination = reactive({ page: 1, size: 10, total: 0 })
@@ -385,6 +427,52 @@ const issueFormValid = computed(() =>
     .every((key) => String(issueForm[key] || '').trim().length > 0)
 )
 
+// 状态 → 语义点：胶囊底色只表达“是否选中”，语义交给小圆点，和表格标签同色系
+const QUEUE_TONES = {
+  pending: 'warning',
+  needs_info: 'warning',
+  triaging: 'info',
+  accepted: 'info',
+  resolved: 'success',
+  rejected: 'danger'
+}
+
+const queueItems = computed(() => {
+  const total = statusOptions.reduce((sum, item) => sum + (stats.value[item.value] || 0), 0)
+  return [
+    { value: '', label: '全部', count: total, tone: 'none' },
+    ...statusOptions.map((item) => ({
+      ...item,
+      count: stats.value[item.value] || 0,
+      tone: QUEUE_TONES[item.value] || 'neutral'
+    }))
+  ]
+})
+
+const selectStatus = (value) => {
+  filters.status = value
+  handleSearch()
+}
+
+const HOUR_MS = 3600 * 1000
+// 未结案且停留超过 24h：在队列里压太久了，需要先看
+const OPEN_STATUSES = ['pending', 'triaging', 'needs_info', 'accepted']
+
+const ageMs = (row) => {
+  const started = new Date(row?.createdAt).getTime()
+  return Number.isFinite(started) ? Date.now() - started : NaN
+}
+
+const ageLabel = (row) => {
+  const ms = ageMs(row)
+  if (!Number.isFinite(ms) || ms < 0) return '—'
+  const hours = Math.floor(ms / HOUR_MS)
+  if (hours < 1) return '刚刚'
+  return hours < 24 ? `${hours} 小时` : `${Math.floor(hours / 24)} 天`
+}
+
+const isStale = (row) => OPEN_STATUSES.includes(row?.status) && ageMs(row) >= 24 * HOUR_MS
+
 const activeFilterText = computed(() => {
   const labels = []
   if (filters.status) labels.push(`状态：${statusOptions.find((i) => i.value === filters.status)?.label || filters.status}`)
@@ -395,38 +483,71 @@ const activeFilterText = computed(() => {
   return labels.join(' · ')
 })
 
-// 每屏一个主动作：由当前状态决定「下一步」，其余动作降级为描边（§0 原则 3）
-const nextAction = computed(() => {
-  const status = detail.value?.status
-  if (status === 'pending' || status === 'triaging') return { key: 'triage', label: '分诊' }
-  if (status === 'needs_info') return { key: 'reply', label: '回复用户' }
-  if (status === 'accepted') return { key: 'issue', label: '建 GitHub Issue' }
-  return null
-})
+// 详情底栏只留 1 主 + 1 次，其余收进「更多」，避免五个动作平起平坐（§4.1）
+const SECONDARY_BY_STATUS = {
+  pending: 'reply',
+  triaging: 'reply',
+  needs_info: 'triage',
+  accepted: 'resolve',
+  rejected: 'association',
+  resolved: 'association'
+}
 
-const secondaryActions = computed(() => {
-  const all = [
-    { key: 'reply', label: '回复 / 备注' },
-    { key: 'triage', label: '分诊' },
-    { key: 'resolve', label: '解决' },
-    { key: 'association', label: '修正关联' },
-    { key: 'issue', label: '建 GitHub Issue' }
-  ]
-  const primaryKey = nextAction.value?.key
+const footerActions = computed(() => {
   const status = detail.value?.status
-  return all.filter((action) => {
-    if (action.key === primaryKey) return false
-    if (action.key === 'resolve' && status !== 'accepted') return false
-    if (action.key === 'issue' && status !== 'accepted') return false
-    if (action.key === 'triage' && ['rejected', 'resolved'].includes(status)) return false
-    return true
-  })
+  const items = [{ key: 'reply', label: status === 'needs_info' ? '回复用户' : '回复 / 备注' }]
+  if (!['rejected', 'resolved'].includes(status)) {
+    items.push({ key: 'triage', label: '分诊' })
+  }
+  if (status === 'accepted') {
+    items.push({ key: 'resolve', label: '解决' })
+    items.push({ key: 'issue', label: '建 GitHub Issue' })
+  }
+  items.push({ key: 'association', label: '修正关联' })
+
+  // 主动作按状态取最高频的下一步：先分诊，之后都是沟通
+  const primaryKey = ['pending', 'triaging'].includes(status) ? 'triage' : 'reply'
+  const primary = items.find((item) => item.key === primaryKey)
+  const rest = items.filter((item) => item.key !== primaryKey)
+  const secondary = rest.find((item) => item.key === SECONDARY_BY_STATUS[status]) || rest[0]
+  return { primary, secondary, more: rest.filter((item) => item !== secondary) }
 })
 
 const authorLabel = (type) => authorLabels[type] || type
 const auditLabel = (action) => auditLabels[action] || action
 const resolutionLabel = (code) =>
   code ? (resolutionOptions.find((item) => item.value === code)?.label || code) : '—'
+
+// 审计详情由后端按 status=…/visibility=… 原始串落库，展示层转成中文，不改存储格式
+const auditDetailLabel = (audit) => {
+  const raw = audit?.detail || ''
+  const sep = raw.indexOf('=')
+  if (sep < 0) return raw
+  const key = raw.slice(0, sep)
+  const value = raw.slice(sep + 1)
+  const statusText = (code) => statusOptions.find((item) => item.value === code)?.label || code
+  if (key === 'status') {
+    const [from, to] = value.split('->')
+    return `状态：${statusText(from)} → ${statusText(to)}`
+  }
+  if (key === 'visibility') return value === 'INTERNAL' ? '范围：内部备注' : '范围：用户可见'
+  if (key === 'resolution') return `结果：${resolutionOptions.find((item) => item.value === value)?.label || value}`
+  if (key === 'orderId') {
+    const [from, to] = value.split('->')
+    return `订单归属：${from || '未关联'} → ${to || '未关联'}`
+  }
+  if (key === 'issue') return `研发单：${value}`
+  return raw
+}
+
+const loadStats = async () => {
+  try {
+    const response = await getFeedbackStats()
+    stats.value = response?.data || {}
+  } catch (error) {
+    console.error('加载分诊队列计数失败:', error)
+  }
+}
 
 const loadList = async () => {
   loading.value = true
@@ -516,7 +637,7 @@ const withSubmit = async (action, successMessage, closeDialog) => {
     ElMessage.success(successMessage)
     closeDialog?.()
     await refreshDetail()
-    await loadList()
+    await Promise.all([loadList(), loadStats()])
   } catch (error) {
     ElMessage.error(error.message || '操作失败')
   } finally {
@@ -552,7 +673,10 @@ const submitIssue = () => withSubmit(
   'Issue 已创建或已存在', () => { issueVisible.value = false }
 )
 
-onMounted(loadList)
+onMounted(() => {
+  loadStats()
+  loadList()
+})
 </script>
 
 <style scoped lang="less">
@@ -577,7 +701,7 @@ onMounted(loadList)
     align-items: flex-end;
     gap: var(--space-3) var(--space-4);
     margin: 0;
-    padding: var(--space-4);
+    padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-md);
     background: var(--canvas-sunken);
 
@@ -603,7 +727,7 @@ onMounted(loadList)
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--space-2);
     color: var(--ink-500);
     font-size: var(--text-body-sm);
   }
@@ -640,6 +764,103 @@ onMounted(loadList)
   color: var(--ink-700);
 }
 
+/* 分诊队列：一眼看清各状态积压，点一下即筛选 */
+.queue-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+
+/* 筛选只有一行，吃掉 el-form-item 默认的下外边距，把纵向预算让给表格（§4.10） */
+.filter-form :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.queue-chip__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--ink-400);
+}
+
+.queue-chip__dot--none {
+  display: none;
+}
+
+.queue-chip__dot--warning {
+  background: var(--warning);
+}
+
+.queue-chip__dot--info {
+  background: var(--info);
+}
+
+.queue-chip__dot--success {
+  background: var(--success);
+}
+
+.queue-chip__dot--danger {
+  background: var(--danger);
+}
+
+.queue-chip--active .queue-chip__dot {
+  background: var(--surface);
+}
+
+.queue-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height-sm);
+  padding: 0 var(--space-4);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  color: var(--ink-700);
+  cursor: pointer;
+  background: var(--canvas-sunken);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+}
+
+.queue-chip:hover {
+  border-color: var(--line-strong);
+}
+
+.queue-chip:focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 1px;
+}
+
+.queue-chip--active {
+  color: var(--surface);
+  background: var(--brand-500);
+}
+
+.queue-chip__count {
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.queue-chip--active .queue-chip__count {
+  opacity: 0.9;
+}
+
+/* 停留时长：超 24h 未结案才提示，避免整列都在喊 */
+.cell-age {
+  color: var(--ink-700);
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-age--stale {
+  color: var(--warning);
+  font-weight: var(--weight-medium);
+}
+
 .pagination-container {
   display: flex;
   justify-content: flex-end;
@@ -654,21 +875,41 @@ onMounted(loadList)
 
 .detail-head {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-2);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--line);
 }
 
-.detail-id {
-  color: var(--ink-900);
-  font-weight: var(--weight-semibold);
+.detail-head__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
-.detail-type {
-  margin-left: auto;
+/* 抽屉主角是用户遇到的问题，不是单据号 */
+.detail-title {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-900);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 24px;
+}
+
+.detail-id {
+  color: var(--ink-400);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+}
+
+.detail-type,
+.detail-stay {
   color: var(--ink-500);
   font-size: var(--text-body-sm);
+}
+
+.detail-stay {
+  margin-left: auto;
 }
 
 .detail-section {
@@ -694,18 +935,6 @@ onMounted(loadList)
   margin: 0;
   color: var(--ink-500);
   font-size: var(--text-body-sm);
-}
-
-.detail-content {
-  margin: 0;
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--canvas-sunken);
-  color: var(--ink-700);
-  font-size: var(--text-body);
-  line-height: 22px;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .message-list,
@@ -743,6 +972,15 @@ onMounted(loadList)
 .message-badge--user {
   color: var(--ink-500);
   background: var(--neutral-bg);
+}
+
+.message-badge__icon {
+  margin-right: var(--space-1);
+  vertical-align: -1px;
+}
+
+.drawer-more-icon {
+  margin-left: var(--space-1);
 }
 
 .message-badge--internal {
