@@ -140,7 +140,6 @@ captcha:
     fixed-code-enabled: ${CAPTCHA_TEST_FIXED_CODE_ENABLED:false}
     fixed-code: ${CAPTCHA_TEST_FIXED_CODE:}
 
-# 文件上传配置
 # GitHub Issue 桥接（用户反馈研发队列）：repo 可公开，token 只从环境注入。
 github:
   bridge:
@@ -148,21 +147,21 @@ github:
     token: ${GITHUB_BRIDGE_TOKEN:}
     api-base: ${GITHUB_BRIDGE_API_BASE:https://api.github.com}
 
-# Agent 运行时（管理端配置页）：模型 key 只写不可读，落在专用密钥目录。
+# Agent 运行时与事件桥接。
+#   runtime：管理端配置页，模型 key 只写不可读，落在专用密钥目录。
+#   bridge / dsh：只读轮询 dsh 本地 Management API，默认关闭。
 agent:
   runtime:
     key-dir: ${AGENT_MODEL_KEY_DIR:}
     dsh-profile-path: ${AGENT_DSH_PROFILE_PATH:}
     isolated-home: ${AGENT_ISOLATED_HOME:}
-
-# Agent Alert Bridge（只读轮询 dsh 本地 Management API）。默认关闭。
-agent:
   bridge:
     enabled: ${AGENT_BRIDGE_ENABLED:false}
     poll-interval-ms: ${AGENT_BRIDGE_POLL_INTERVAL_MS:60000}
   dsh:
     base-url: ${DSH_MANAGEMENT_BASE_URL:http://127.0.0.1:8099}
 
+# 文件上传配置
 file:
   upload:
     path: ${FILE_UPLOAD_PATH:./uploads/}  # 文件上传保存路径
