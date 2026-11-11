@@ -6,8 +6,16 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xx.jaseatschoicejava.dto.FeedbackCreateDTO;
 import com.xx.jaseatschoicejava.entity.Feedback;
+import com.xx.jaseatschoicejava.entity.FeedbackAttachment;
+import com.xx.jaseatschoicejava.entity.FeedbackAudit;
+import com.xx.jaseatschoicejava.entity.FeedbackMessage;
+import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.exception.BusinessException;
+import com.xx.jaseatschoicejava.mapper.FeedbackAttachmentMapper;
+import com.xx.jaseatschoicejava.mapper.FeedbackAuditMapper;
 import com.xx.jaseatschoicejava.mapper.FeedbackMapper;
+import com.xx.jaseatschoicejava.mapper.FeedbackMessageMapper;
+import com.xx.jaseatschoicejava.service.OrderService;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +24,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Map;
@@ -24,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,6 +42,18 @@ class FeedbackServiceImplTest {
 
     @Mock
     private FeedbackMapper feedbackMapper;
+
+    @Mock
+    private FeedbackMessageMapper feedbackMessageMapper;
+
+    @Mock
+    private FeedbackAttachmentMapper feedbackAttachmentMapper;
+
+    @Mock
+    private FeedbackAuditMapper feedbackAuditMapper;
+
+    @Mock
+    private OrderService orderService;
 
     @InjectMocks
     private FeedbackServiceImpl feedbackService;
@@ -134,5 +156,115 @@ class FeedbackServiceImplTest {
         assertTrue(result.getRecords().isEmpty());
         assertTrue(result.getSize() <= 50);
         assertTrue(result.getCurrent() >= 1);
+    }
+
+    @Test
+    void create_whenOrderBelongsToOtherUser_shouldReject() {
+        Order order = new Order();
+        order.setId("o-1");
+        order.setUserId("someone-else");
+        order.setMerchantId("m-1");
+        when(orderService.getById("o-1")).thenReturn(order);
+
+        FeedbackCreateDTO input = dto("order", "订单出问题");
+        input.setOrderId("o-1");
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.create("user-1", input));
+        assertEquals("400", ex.getCode());
+    }
+
+    @Test
+    void create_whenOwnOrderProvided_shouldDeriveMerchant() {
+        when(feedbackMapper.insert(any(Feedback.class))).thenReturn(1);
+        Order order = new Order();
+        order.setId("o-1");
+        order.setUserId("user-1");
+        order.setMerchantId("m-1");
+        when(orderService.getById("o-1")).thenReturn(order);
+
+        FeedbackCreateDTO input = dto("payment", "支付异常");
+        input.setOrderId("o-1");
+
+        feedbackService.create("user-1", input);
+
+        ArgumentCaptor<Feedback> captor = ArgumentCaptor.forClass(Feedback.class);
+        verify(feedbackMapper).insert(captor.capture());
+        assertEquals("o-1", captor.getValue().getOrderId());
+        assertEquals("m-1", captor.getValue().getMerchantId());
+    }
+
+    @Test
+    void appendUserMessage_shouldForceUserVisibility() {
+        Feedback mine = new Feedback();
+        mine.setFeedbackId("fb-1");
+        mine.setUserId("user-1");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(mine);
+        when(feedbackMessageMapper.insert(any(FeedbackMessage.class))).thenReturn(1);
+
+        feedbackService.appendUserMessage("user-1", "fb-1", "  补充信息  ");
+
+        ArgumentCaptor<FeedbackMessage> captor = ArgumentCaptor.forClass(FeedbackMessage.class);
+        verify(feedbackMessageMapper).insert(captor.capture());
+        assertEquals("USER", captor.getValue().getVisibility());
+        assertEquals("补充信息", captor.getValue().getContent());
+    }
+
+    @Test
+    void appendUserMessage_whenNotOwner_shouldReject() {
+        Feedback other = new Feedback();
+        other.setFeedbackId("fb-1");
+        other.setUserId("someone-else");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(other);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.appendUserMessage("user-1", "fb-1", "hi"));
+        assertEquals("404", ex.getCode());
+    }
+
+    @Test
+    void addAttachment_whenNotImage_shouldReject() {
+        Feedback mine = new Feedback();
+        mine.setFeedbackId("fb-1");
+        mine.setUserId("user-1");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(mine);
+        MockMultipartFile file = new MockMultipartFile("file", "a.txt", "text/plain", "x".getBytes());
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.addAttachment("user-1", "fb-1", file));
+        assertEquals("400", ex.getCode());
+    }
+
+    @Test
+    void addAttachment_whenLimitReached_shouldReject() {
+        Feedback mine = new Feedback();
+        mine.setFeedbackId("fb-1");
+        mine.setUserId("user-1");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(mine);
+        when(feedbackAttachmentMapper.selectCount(any())).thenReturn(3L);
+        MockMultipartFile file = new MockMultipartFile("file", "a.png", "image/png", "x".getBytes());
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.addAttachment("user-1", "fb-1", file));
+        assertEquals("400", ex.getCode());
+    }
+
+    @Test
+    void updateAssociation_shouldWriteAudit() {
+        Feedback feedback = new Feedback();
+        feedback.setFeedbackId("fb-1");
+        feedback.setUserId("user-1");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(feedback);
+        when(feedbackAuditMapper.insert(any(FeedbackAudit.class))).thenReturn(1);
+
+        com.xx.jaseatschoicejava.dto.FeedbackAssociationUpdateDTO dto =
+                new com.xx.jaseatschoicejava.dto.FeedbackAssociationUpdateDTO();
+        dto.setMerchantId("m-9");
+        feedbackService.updateAssociation(7L, "fb-1", dto);
+
+        ArgumentCaptor<FeedbackAudit> captor = ArgumentCaptor.forClass(FeedbackAudit.class);
+        verify(feedbackAuditMapper).insert(captor.capture());
+        assertEquals("ASSOCIATION", captor.getValue().getAction());
+        assertEquals("7", captor.getValue().getActorId());
     }
 }

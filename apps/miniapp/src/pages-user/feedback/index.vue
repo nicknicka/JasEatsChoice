@@ -234,38 +234,29 @@ const submitFeedback = async () => {
   })
 
   try {
-    // U-027: 实现图片上传API
-    const uploadedImages = []
-    for (const imagePath of imageList.value) {
-      try {
-        // 导入上传工具
-        const { upload } = await import('@/utils/request')
-
-        // 上传图片到服务器
-        const uploadRes = await upload('/api/upload/image', imagePath, {
-          type: 'feedback'
-        })
-
-        if (uploadRes && uploadRes.url) {
-          uploadedImages.push(uploadRes.url)
-        }
-      } catch (error) {
-        console.error('图片上传失败:', error)
-        // 继续上传其他图片，不中断流程
-      }
-    }
-
-    // 归属由后端从可信 JWT 推导，请求体不再携带 userId
-    await feedbackApi.submit({
+    // 先创建反馈，再把图片作为附件挂到这条反馈下（归属由后端从可信 JWT 推导）
+    const createRes = await feedbackApi.submit({
       type: feedbackType.value,
       content: feedbackContent.value,
-      images: uploadedImages,
       contact: contactInfo.value,
       deviceInfo: {
         platform: uni.getSystemInfoSync().platform,
         system: uni.getSystemInfoSync().system
       }
     })
+
+    const feedbackId = createRes?.data?.feedbackId
+    if (feedbackId) {
+      const { upload } = await import('@/utils/request')
+      for (const imagePath of imageList.value) {
+        try {
+          await upload(`/v1/feedback/${feedbackId}/attachments`, imagePath)
+        } catch (error) {
+          console.error('图片上传失败:', error)
+          // 继续上传其他图片，不中断流程
+        }
+      }
+    }
 
     uni.hideLoading()
 

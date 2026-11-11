@@ -310,7 +310,7 @@ export const upload = (url, filePath, formData = {}) => {
     const token = uni.getStorageSync('token') || ''
 
     uni.uploadFile({
-      url: API_CONFIG.baseURL + url,
+      url: config.baseURL + url,
       filePath,
       name: 'file',
       formData,

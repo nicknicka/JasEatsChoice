@@ -8,6 +8,7 @@ import com.xx.jaseatschoicejava.enums.FeedbackType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,10 +33,17 @@ public class FeedbackVO {
     private String environment;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<FeedbackMessageVO> messages;
+    private List<FeedbackAttachmentVO> attachments;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public static FeedbackVO from(Feedback feedback) {
+        return from(feedback, List.of(), List.of());
+    }
+
+    public static FeedbackVO from(Feedback feedback, List<FeedbackMessageVO> messages,
+                                  List<FeedbackAttachmentVO> attachments) {
         FeedbackVO vo = new FeedbackVO();
         vo.feedbackId = feedback.getFeedbackId();
         vo.type = feedback.getType();
@@ -54,6 +62,8 @@ public class FeedbackVO {
         vo.environment = feedback.getEnvironment();
         vo.createdAt = feedback.getCreatedAt();
         vo.updatedAt = feedback.getUpdatedAt();
+        vo.messages = messages == null ? List.of() : messages;
+        vo.attachments = attachments == null ? List.of() : attachments;
         return vo;
     }
 
