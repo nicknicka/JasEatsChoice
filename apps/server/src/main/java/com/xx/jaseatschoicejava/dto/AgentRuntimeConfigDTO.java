@@ -15,4 +15,10 @@ public class AgentRuntimeConfigDTO {
     private String endpoint;
 
     private Boolean dataPolicyAck;
+
+    /**
+     * 回填来源版本：仅当本次保存是由「回填表单」发起时带上，
+     * 用于把这条历史标成 rollback 而不是 manual。
+     */
+    private Integer sourceVersion;
 }

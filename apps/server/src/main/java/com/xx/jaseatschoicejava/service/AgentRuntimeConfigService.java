@@ -98,6 +98,13 @@ public class AgentRuntimeConfigService {
         if (!hasText(dto.getModel())) {
             throw new BusinessException("400", "模型不能为空");
         }
+        Integer sourceVersion = dto.getSourceVersion();
+        if (sourceVersion != null && sourceVersion <= 0) {
+            throw new BusinessException("400", "回填来源版本非法");
+        }
+        // 带来源版本即视为回滚留痕；不带则是一次手工修改
+        String changeKind = sourceVersion == null ? "manual" : "rollback";
+
         AgentRuntimeConfig config = current();
         int nextVersion = (config.getVersion() == null ? 0 : config.getVersion()) + 1;
         config.setProvider(dto.getProvider());
@@ -108,7 +115,8 @@ public class AgentRuntimeConfigService {
         config.setUpdatedBy(adminName);
         save(config);
         configMapper.insertHistory(UUID.randomUUID().toString().replace("-", ""), CONFIG_ID, nextVersion,
-                config.getProvider(), config.getModel(), config.getEndpoint(), config.getDataPolicyAck(), adminName);
+                config.getProvider(), config.getModel(), config.getEndpoint(), config.getDataPolicyAck(),
+                changeKind, sourceVersion, adminName);
         return getHealth();
     }
 

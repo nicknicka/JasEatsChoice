@@ -13,6 +13,7 @@ import com.xx.jaseatschoicejava.entity.FeedbackMessage;
 import com.xx.jaseatschoicejava.vo.AdminFeedbackDetailVO;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -65,7 +66,12 @@ public interface FeedbackService extends IService<Feedback> {
      * 管理端分页列表，可按状态/类型/用户/商家/订单筛选。
      */
     IPage<Feedback> adminList(long page, long size, String status, String type,
-                              String userId, String merchantId, String orderId);
+                              String userId, String merchantId, String orderId, String priority);
+
+    /**
+     * 批量解析负责人展示名：real_name 回落 username；查不到的 id 不出现在结果里。
+     */
+    Map<Long, String> resolveAssigneeNames(Collection<Long> assigneeIds);
 
     /**
      * 各状态反馈条数，供管理端分诊队列摘要使用。

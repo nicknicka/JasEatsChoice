@@ -23,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -86,7 +88,39 @@ class AgentRuntimeConfigServiceTest {
         assertEquals(1, vo.getVersion());
         verify(configMapper).updateById(any(AgentRuntimeConfig.class));
         verify(configMapper).insertHistory(anyString(), eq("default"), eq(1),
-                eq("openai-compatible"), eq("gpt-4o-mini"), anyString(), eq(true), eq("admin"));
+                eq("openai-compatible"), eq("gpt-4o-mini"), anyString(), eq(true),
+                eq("manual"), isNull(), eq("admin"));
+    }
+
+    @Test
+    void update_withSourceVersion_shouldMarkHistoryAsRollback() {
+        AgentRuntimeConfig existing = new AgentRuntimeConfig();
+        existing.setConfigId("default");
+        existing.setVersion(5);
+        when(configMapper.selectById("default")).thenReturn(existing);
+        when(configMapper.updateById(any(AgentRuntimeConfig.class))).thenReturn(1);
+
+        AgentRuntimeConfigDTO request = dto("openai-compatible");
+        request.setSourceVersion(2);
+
+        service.update(request, "admin");
+
+        // 带来源版本即回滚留痕，而不是一次普通修改
+        verify(configMapper).insertHistory(anyString(), eq("default"), eq(6),
+                eq("openai-compatible"), eq("gpt-4o-mini"), anyString(), eq(true),
+                eq("rollback"), eq(2), eq("admin"));
+    }
+
+    @Test
+    void update_withNonPositiveSourceVersion_shouldReject() {
+        AgentRuntimeConfigDTO request = dto("openai-compatible");
+        request.setSourceVersion(0);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> service.update(request, "admin"));
+        assertEquals("400", ex.getCode());
+        verify(configMapper, never()).insertHistory(anyString(), anyString(), anyInt(), anyString(),
+                anyString(), anyString(), anyBoolean(), anyString(), any(), anyString());
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.xx.jaseatschoicejava.entity.FeedbackIssueLink;
 import com.xx.jaseatschoicejava.service.FeedbackService;
 import com.xx.jaseatschoicejava.util.AdminContext;
 import com.xx.jaseatschoicejava.vo.AdminFeedbackDetailVO;
+import com.xx.jaseatschoicejava.vo.AdminFeedbackVO;
 import com.xx.jaseatschoicejava.vo.FeedbackMessageVO;
 import com.xx.jaseatschoicejava.vo.FeedbackPageVO;
 import com.xx.jaseatschoicejava.vo.FeedbackVO;
@@ -39,17 +40,29 @@ public class AdminFeedbackController {
     @ApiOperation("反馈列表")
     @GetMapping("")
     @PreAuthorize("hasAnyAuthority('admin:feedback:list')")
-    public ResponseResult<FeedbackPageVO> list(
+    public ResponseResult<FeedbackPageVO<AdminFeedbackVO>> list(
             @RequestParam(defaultValue = "1") long page,
             @RequestParam(defaultValue = "10") long size,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String merchantId,
-            @RequestParam(required = false) String orderId) {
-        IPage<Feedback> result = feedbackService.adminList(page, size, status, type, userId, merchantId, orderId);
-        List<FeedbackVO> list = result.getRecords().stream().map(FeedbackVO::from).toList();
-        return ResponseResult.success(new FeedbackPageVO(list, result.getTotal(), result.getCurrent(), result.getSize()));
+            @RequestParam(required = false) String orderId,
+            @RequestParam(required = false) String priority) {
+        IPage<Feedback> result = feedbackService.adminList(
+                page, size, status, type, userId, merchantId, orderId, priority);
+        // 管理端列表额外带分诊优先级与负责人；负责人名字在这里一次性解析，避免前端多拉一次名单
+        Map<Long, String> assigneeNames = feedbackService.resolveAssigneeNames(
+                result.getRecords().stream().map(Feedback::getAssigneeId).toList());
+        List<AdminFeedbackVO> list = result.getRecords().stream()
+                // 注意：assigneeNames 可能是 Map.of()（不可变），而 get(null) 会抛 NPE，
+                // 未认领的反馈 assigneeId 就是 null，必须先判空。
+                .map(item -> AdminFeedbackVO.of(item, item.getAssigneeId() == null
+                        ? null
+                        : assigneeNames.get(item.getAssigneeId())))
+                .toList();
+        return ResponseResult.success(
+                new FeedbackPageVO<>(list, result.getTotal(), result.getCurrent(), result.getSize()));
     }
 
     @ApiOperation("各状态反馈条数（分诊队列摘要）")

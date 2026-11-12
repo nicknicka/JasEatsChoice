@@ -1748,8 +1748,9 @@ export function replyFeedback(feedbackId, content, visibility = 'USER') {
 /**
  * 分诊：needs_info / accepted / rejected；接受时可标记平台系统问题
  */
-export function triageFeedback(feedbackId, status, platformSystem = false) {
-  return api.post(feedbackUrl(API_CONFIG.adminFeedback.triage, feedbackId), { status, platformSystem })
+export function triageFeedback(feedbackId, status, platformSystem = false, extra = {}) {
+  // extra 承接分诊决策字段：priority 与 assigneeId（#546）
+  return api.post(feedbackUrl(API_CONFIG.adminFeedback.triage, feedbackId), { status, platformSystem, ...extra })
 }
 
 /**
