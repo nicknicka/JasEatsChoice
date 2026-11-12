@@ -85,7 +85,7 @@ sudo scripts/agent-runtime/verify-isolation.sh
 | GET | `/admin/agent/runtime` | 主机侧健康（GitHub / DSH profile / 隔离账号）+ 硬边界 |
 
 - **agent 的模型 / 密钥 / 策略配置在 DSH（另一个运行时）**，JAS 不再保存，也没有写接口；产品 AI 的模型 key 走后台「系统设置 → AI 配置」（`/admin/settings/ai`）。
-- `no-merge` / `no-deploy` / `no-production-data` 三条硬边界固定开启，页面无法关闭；**真实生效依赖 DSH 部署与 agent 账号权限**。
+- `no-deploy` / `no-production-data` 两条硬边界固定开启，页面无法关闭；**合并按 dsh 的 Delivery requirements**（指定 merge 账号，条件为 PR 就绪 + 必需审批覆盖 head commit + 增删合计 <200 行），未点名或条件不满足时人工合并；硬边界的真实生效依赖 DSH 部署与 agent 账号权限。
 
 ## 版本锁定与升级 / 回退（#541）
 

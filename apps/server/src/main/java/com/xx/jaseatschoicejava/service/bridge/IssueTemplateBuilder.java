@@ -43,7 +43,7 @@ public final class IssueTemplateBuilder {
         if (hasText(draft.getForbiddenScope())) {
             sb.append("## 禁止范围\n\n").append(block(draft.getForbiddenScope())).append("\n\n");
         }
-        sb.append("## 队列\n\n本 Issue 只是研发队列条目；只有授权维护者评论 `@agent` 才会启动代理。\n\n");
+        sb.append("## 队列\n\n本 Issue 只是研发队列条目；`@agent` 的显式请求是否放行，由 dsh 的 Source 与 Policy 判定。\n\n");
         sb.append(hiddenMarker(feedback.getFeedbackId())).append("\n");
         return sb.toString();
     }

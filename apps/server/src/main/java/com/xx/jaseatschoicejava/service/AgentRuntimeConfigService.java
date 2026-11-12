@@ -47,9 +47,9 @@ public class AgentRuntimeConfigService {
                 isolatedOk ? "专用账号 home 存在" : "未找到专用账号 home"));
 
         // 硬边界固定为开启（enabled=true 表示限制生效），页面不能关闭。
+        // 合并不再由 JAS 限制：按 ADR 0012，合并走 dsh 的 Delivery requirements。
         // 真实生效依赖 DSH 部署与 agent 账号权限，本页只做展示。
         vo.setBoundaries(List.of(
-                new AgentRuntimeHealthVO.Boundary("no-merge", "禁止代理合并 PR", true),
                 new AgentRuntimeHealthVO.Boundary("no-deploy", "禁止代理部署", true),
                 new AgentRuntimeHealthVO.Boundary("no-production-data", "禁止访问生产数据", true)));
         return vo;

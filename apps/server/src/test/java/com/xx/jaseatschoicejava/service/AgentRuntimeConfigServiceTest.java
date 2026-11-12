@@ -39,11 +39,11 @@ class AgentRuntimeConfigServiceTest {
 
         AgentRuntimeHealthVO vo = service.getHealth();
 
-        assertEquals(3, vo.getBoundaries().size());
+        assertEquals(2, vo.getBoundaries().size());
         assertTrue(vo.getBoundaries().stream().allMatch(AgentRuntimeHealthVO.Boundary::isEnabled));
-        assertTrue(vo.getBoundaries().stream().anyMatch(b -> "no-merge".equals(b.getCode())));
         assertTrue(vo.getBoundaries().stream().anyMatch(b -> "no-deploy".equals(b.getCode())));
         assertTrue(vo.getBoundaries().stream().anyMatch(b -> "no-production-data".equals(b.getCode())));
+        assertFalse(vo.getBoundaries().stream().anyMatch(b -> "no-merge".equals(b.getCode())));
     }
 
     @Test
