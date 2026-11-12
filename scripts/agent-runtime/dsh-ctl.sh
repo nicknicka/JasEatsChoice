@@ -47,7 +47,7 @@ cmd_start() {
   as_dsh sh -c "nohup $DSH_START_CMD >>'$DSH_LOG_FILE' 2>&1 & echo \$! >'$DSH_PID_FILE'"
   sleep 1
   if is_running; then
-    echo "dsh 已启动（pid $(cat "$DSH_PID_FILE")，面板 $DSH_PANEL_HOST:$DSH_PANEL_PORT）"
+    echo "dsh 已启动（pid $(cat "$DSH_PID_FILE")，面板 ${DSH_PANEL_HOST}:${DSH_PANEL_PORT}）"
   else
     echo "dsh 启动后立即退出，请看 $DSH_LOG_FILE" >&2
     return 1
@@ -78,7 +78,7 @@ cmd_status() {
   else
     echo "未运行"
   fi
-  echo "监听检查（只应看到 $DSH_PANEL_HOST:$DSH_PANEL_PORT）："
+  echo "监听检查（只应看到 ${DSH_PANEL_HOST}:${DSH_PANEL_PORT}）："
   if command -v ss >/dev/null 2>&1; then
     ss -ltnp 2>/dev/null | grep ":$DSH_PANEL_PORT" || echo "  端口 $DSH_PANEL_PORT 未监听"
   elif command -v lsof >/dev/null 2>&1; then
