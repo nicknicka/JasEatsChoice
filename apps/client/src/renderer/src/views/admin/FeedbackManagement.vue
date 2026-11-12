@@ -66,9 +66,11 @@
 
       <template v-else>
         <el-table v-loading="loading" :data="list" stripe class="feedback-table">
-          <el-table-column label="反馈ID" width="170" show-overflow-tooltip>
+          <el-table-column label="反馈ID" width="130">
             <template #default="{ row }">
-              <span class="cell-num">{{ row.feedbackId }}</span>
+              <el-tooltip :content="row.feedbackId" placement="top">
+                <span class="cell-num cell-id">{{ shortId(row.feedbackId) }}</span>
+              </el-tooltip>
             </template>
           </el-table-column>
 
@@ -82,21 +84,31 @@
             </template>
           </el-table-column>
 
+          <el-table-column label="优先级" width="90">
+            <template #default="{ row }">
+              <StatusTag :status="priorityKey(row.priority)" :text="row.priorityLabel || '普通'" />
+            </template>
+          </el-table-column>
+
           <el-table-column label="状态" width="120">
             <template #default="{ row }">
               <StatusTag :status="statusKey(row.status)" :text="row.statusLabel || row.status" />
             </template>
           </el-table-column>
 
-          <el-table-column label="停留" width="96">
+          <el-table-column label="负责人" width="110">
             <template #default="{ row }">
-              <span class="cell-age" :class="{ 'cell-age--stale': isStale(row) }">{{ ageLabel(row) }}</span>
+              <span v-if="row.assigneeName">{{ row.assigneeName }}</span>
+              <span v-else class="cell-muted">未认领</span>
             </template>
           </el-table-column>
 
-          <el-table-column label="提交时间" width="160">
+          <!-- 停留时长是分诊排序的主信号，绝对提交时间收进悬浮，腾出 §4.10 的首屏预算 -->
+          <el-table-column label="停留" width="104">
             <template #default="{ row }">
-              <span class="cell-num">{{ formatTime(row.createdAt) }}</span>
+              <el-tooltip :content="`提交于 ${formatTime(row.createdAt)}`" placement="top">
+                <span class="cell-age" :class="{ 'cell-age--stale': isStale(row) }">{{ ageLabel(row) }}</span>
+              </el-tooltip>
             </template>
           </el-table-column>
 
@@ -264,6 +276,24 @@
             <el-radio-button value="rejected">拒绝</el-radio-button>
           </el-radio-group>
         </el-form-item>
+        <el-form-item label="优先级">
+          <el-radio-group v-model="triageForm.priority">
+            <el-radio-button v-for="item in priorityOptions" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="负责人">
+          <el-select v-model="triageForm.assigneeId" placeholder="暂不指派" clearable class="form-control">
+            <el-option
+              v-for="item in adminOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+          <p class="form-hint">留空表示还没人认领，列表里会显示「未认领」。</p>
+        </el-form-item>
         <el-form-item v-if="triageForm.status === 'accepted'" label="任务类型">
           <el-checkbox v-model="triageForm.platformSystem">属于平台系统问题</el-checkbox>
           <p class="form-hint">只有平台系统问题才能创建 GitHub Issue。</p>
@@ -345,6 +375,7 @@ import RowActions from '@/components/common/RowActions.vue'
 import { formatTime } from '../../utils/formatters'
 import {
   createFeedbackIssue,
+  getAdminList,
   getFeedbackDetail,
   getFeedbackStats,
   listFeedbacks,
@@ -361,6 +392,13 @@ const statusOptions = [
   { value: 'accepted', label: '已接受' },
   { value: 'rejected', label: '已拒绝' },
   { value: 'resolved', label: '已解决' }
+]
+
+// 取值沿用 admin 公告的优先级词汇（决策 1A），不新立一套
+const priorityOptions = [
+  { value: 'normal', label: '普通' },
+  { value: 'important', label: '重要' },
+  { value: 'urgent', label: '紧急' }
 ]
 
 const typeOptions = [
@@ -394,6 +432,13 @@ const statusKey = (status) => ({
   resolved: 'resolved'
 }[status] || 'neutral')
 
+// 优先级 → 语义色：紧急=danger、重要=warning、普通=中性（沿用 §3.1 状态表语义）
+const priorityKey = (priority) => ({
+  urgent: 'rejected',
+  important: 'pendingreview',
+  normal: 'none'
+}[priority] || 'none')
+
 const loading = ref(false)
 const submitting = ref(false)
 const list = ref([])
@@ -414,8 +459,24 @@ const stats = ref({})
 const filters = reactive({ status: 'pending', type: '', userId: '', merchantId: '', orderId: '' })
 const pagination = reactive({ page: 1, size: 10, total: 0 })
 
+// 负责人下拉：来自 /admin/list（IPage 原始结构，取 records）
+const adminOptions = ref([])
+const loadAdmins = async () => {
+  try {
+    const response = await getAdminList({ page: 1, pageSize: 100 })
+    adminOptions.value = (response?.records || [])
+      .filter((item) => item.status !== 'DELETED')
+      .map((item) => ({
+        value: Number(item.adminId),
+        label: item.realName || item.username || String(item.adminId)
+      }))
+  } catch (error) {
+    console.error('加载管理员名单失败:', error)
+  }
+}
+
 const replyForm = reactive({ visibility: 'USER', content: '' })
-const triageForm = reactive({ status: 'accepted', platformSystem: false })
+const triageForm = reactive({ status: 'accepted', platformSystem: false, priority: 'normal', assigneeId: null })
 const resolveForm = reactive({ resolutionCode: 'fixed' })
 const associationForm = reactive({ orderId: '', merchantId: '' })
 const issueForm = reactive({
@@ -472,7 +533,14 @@ const ageLabel = (row) => {
   return hours < 24 ? `${hours} 小时` : `${Math.floor(hours / 24)} 天`
 }
 
-const isStale = (row) => OPEN_STATUSES.includes(row?.status) && ageMs(row) >= 24 * HOUR_MS
+// 决策 4A：时限不落库，前端按优先级取阈值判定是否超时
+const SLA_HOURS = { urgent: 4, important: 24, normal: 72 }
+
+const isStale = (row) => {
+  if (!OPEN_STATUSES.includes(row?.status)) return false
+  const limit = (SLA_HOURS[row?.priority] || SLA_HOURS.normal) * HOUR_MS
+  return ageMs(row) >= limit
+}
 
 const activeFilterText = computed(() => {
   const labels = []
@@ -540,6 +608,9 @@ const auditDetailLabel = (audit) => {
   if (key === 'issue') return `研发单：${value}`
   return raw
 }
+
+// 19 位反馈 ID 在列表里读不出信息，只留尾部便于人工比对，全量在悬浮里
+const shortId = (id) => (id && id.length > 8 ? `…${id.slice(-8)}` : id || '—')
 
 const loadStats = async () => {
   try {
@@ -612,7 +683,13 @@ const runAction = (key) => {
 }
 
 const openReply = () => { replyForm.visibility = 'USER'; replyForm.content = ''; replyVisible.value = true }
-const openTriage = () => { triageForm.status = 'accepted'; triageForm.platformSystem = false; triageVisible.value = true }
+const openTriage = () => {
+  triageForm.status = 'accepted'
+  triageForm.platformSystem = false
+  triageForm.priority = detail.value?.priority || 'normal'
+  triageForm.assigneeId = detail.value?.assigneeId ?? null
+  triageVisible.value = true
+}
 const openResolve = () => { resolveForm.resolutionCode = 'fixed'; resolveVisible.value = true }
 const openAssociation = () => {
   associationForm.orderId = detail.value?.orderId || ''
@@ -652,7 +729,8 @@ const submitReply = () => withSubmit(
 )
 
 const submitTriage = () => withSubmit(
-  () => triageFeedback(currentId.value, triageForm.status, triageForm.platformSystem),
+  () => triageFeedback(currentId.value, triageForm.status, triageForm.platformSystem,
+    { priority: triageForm.priority, assigneeId: triageForm.assigneeId }),
   '分诊完成', () => { triageVisible.value = false }
 )
 
@@ -676,6 +754,7 @@ const submitIssue = () => withSubmit(
 
 onMounted(() => {
   loadStats()
+  loadAdmins()
   loadList()
 })
 </script>
@@ -860,6 +939,14 @@ onMounted(() => {
 .cell-age {
   color: var(--ink-700);
   font-variant-numeric: tabular-nums;
+}
+
+.cell-id {
+  color: var(--ink-500);
+}
+
+.cell-muted {
+  color: var(--ink-400);
 }
 
 .cell-age--stale {

@@ -80,6 +80,9 @@
         </el-form-item>
       </el-form>
 
+      <p v-if="sourceVersion" class="save-hint save-hint--rollback">
+        已回填 v{{ sourceVersion }}；保存后这条历史会记为「回滚自 v{{ sourceVersion }}」。
+      </p>
       <p v-if="!configReady" class="save-hint">填写模型与 Endpoint、并勾选数据政策确认后才能保存。</p>
       <p v-if="testResult" class="key-result">
         <StatusTag :status="testResult.ok ? 'healthy' : 'unhealthy'" :text="testResult.ok ? '连接正常' : '连接失败'" />
@@ -273,6 +276,8 @@ const healthSummary = computed(() => {
 })
 
 const modelInputRef = ref(null)
+// 回填来源版本：保存时带给后端，让这条历史记成 rollback（决策 6B）
+const sourceVersion = ref(null)
 const keyCardRef = ref(null)
 
 // 健康卡「去配置」：滚到模型配置并聚焦模型输入，把诊断和修复接起来
@@ -300,7 +305,8 @@ const historyRows = computed(() => {
     if (previous.provider !== row.provider) changes.push(`供应商 → ${providerLabel(row.provider)}`)
     if (previous.endpoint !== row.endpoint) changes.push('Endpoint 变更')
     if (!!previous.dataPolicyAck !== !!row.dataPolicyAck) changes.push('数据政策确认')
-    return { ...row, change: changes.length ? changes.join('、') : '无字段变化' }
+    const prefix = row.changeKind === 'rollback' ? `回滚自 v${row.sourceVersion ?? '—'}：` : ''
+    return { ...row, change: prefix + (changes.length ? changes.join('、') : '无字段变化') }
   })
 })
 
@@ -324,6 +330,7 @@ const loadVersion = async (row) => {
   form.model = row.model || ''
   form.endpoint = row.endpoint || ''
   form.dataPolicyAck = !!row.dataPolicyAck
+  sourceVersion.value = row.version
   historyVisible.value = false
   ElMessage.success(`已把 v${row.version} 回填到表单，确认后点「保存配置」生效`)
 }
@@ -374,8 +381,9 @@ const saveConfig = async () => {
   }
   submitting.value = true
   try {
-    const response = await updateAgentRuntime({ ...form })
+    const response = await updateAgentRuntime({ ...form, sourceVersion: sourceVersion.value })
     apply(response.data)
+    sourceVersion.value = null
     ElMessage.success('配置已保存')
   } catch (error) {
     ElMessage.error(error.message || '保存配置失败')
@@ -593,6 +601,10 @@ onMounted(loadRuntime)
 
 :deep(.el-table .history-row--current td.el-table__cell) {
   background: var(--brand-50);
+}
+
+.save-hint--rollback {
+  color: var(--brand-600);
 }
 
 .history-change {

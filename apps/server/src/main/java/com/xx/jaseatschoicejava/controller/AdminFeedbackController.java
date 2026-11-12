@@ -55,7 +55,11 @@ public class AdminFeedbackController {
         Map<Long, String> assigneeNames = feedbackService.resolveAssigneeNames(
                 result.getRecords().stream().map(Feedback::getAssigneeId).toList());
         List<AdminFeedbackVO> list = result.getRecords().stream()
-                .map(item -> AdminFeedbackVO.of(item, assigneeNames.get(item.getAssigneeId())))
+                // 注意：assigneeNames 可能是 Map.of()（不可变），而 get(null) 会抛 NPE，
+                // 未认领的反馈 assigneeId 就是 null，必须先判空。
+                .map(item -> AdminFeedbackVO.of(item, item.getAssigneeId() == null
+                        ? null
+                        : assigneeNames.get(item.getAssigneeId())))
                 .toList();
         return ResponseResult.success(
                 new FeedbackPageVO<>(list, result.getTotal(), result.getCurrent(), result.getSize()));

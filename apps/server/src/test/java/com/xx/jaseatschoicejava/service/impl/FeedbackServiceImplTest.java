@@ -297,10 +297,11 @@ class FeedbackServiceImplTest {
     void triage_whenPriorityUnknown_shouldReject() {
         Feedback fb = new Feedback();
         fb.setFeedbackId("fb-1");
-        fb.setStatus("pending");
+        // 必须是合法流转，否则会先被状态机拦下，测不到优先级校验
+        fb.setStatus("triaging");
         when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
 
-        FeedbackTriageDTO dto = triageDto("triaging");
+        FeedbackTriageDTO dto = triageDto("accepted");
         dto.setPriority("extremely-urgent");
 
         BusinessException ex = assertThrows(BusinessException.class,
