@@ -52,6 +52,12 @@ public class Feedback {
     /** 是否被分诊判定为平台系统问题（只有这类反馈才能进研发队列）。 */
     private Boolean platformSystem;
 
+    /** 分诊优先级：normal / important / urgent，默认 normal。 */
+    private String priority;
+
+    /** 当前负责人 sys_admin.admin_id；未认领为空。 */
+    private Long assigneeId;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 

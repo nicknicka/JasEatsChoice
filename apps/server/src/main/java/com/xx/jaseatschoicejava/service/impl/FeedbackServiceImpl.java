@@ -10,6 +10,7 @@ import com.xx.jaseatschoicejava.dto.FeedbackAssociationUpdateDTO;
 import com.xx.jaseatschoicejava.dto.FeedbackCreateDTO;
 import com.xx.jaseatschoicejava.dto.FeedbackIssueDraftDTO;
 import com.xx.jaseatschoicejava.dto.FeedbackTriageDTO;
+import com.xx.jaseatschoicejava.entity.Admin;
 import com.xx.jaseatschoicejava.entity.Feedback;
 import com.xx.jaseatschoicejava.entity.FeedbackAttachment;
 import com.xx.jaseatschoicejava.entity.FeedbackAudit;
@@ -18,10 +19,12 @@ import com.xx.jaseatschoicejava.entity.FeedbackMessage;
 import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.enums.FeedbackAuthorType;
 import com.xx.jaseatschoicejava.enums.FeedbackMessageVisibility;
+import com.xx.jaseatschoicejava.enums.FeedbackPriority;
 import com.xx.jaseatschoicejava.enums.FeedbackResolutionCode;
 import com.xx.jaseatschoicejava.enums.FeedbackStatus;
 import com.xx.jaseatschoicejava.enums.FeedbackType;
 import com.xx.jaseatschoicejava.exception.BusinessException;
+import com.xx.jaseatschoicejava.mapper.AdminMapper;
 import com.xx.jaseatschoicejava.mapper.FeedbackAttachmentMapper;
 import com.xx.jaseatschoicejava.mapper.FeedbackAuditMapper;
 import com.xx.jaseatschoicejava.mapper.FeedbackMapper;
@@ -36,9 +39,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -61,6 +66,9 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
 
     @Autowired
     private FeedbackAuditMapper feedbackAuditMapper;
+
+    @Autowired
+    private AdminMapper adminMapper;
 
     @Autowired
     private OrderService orderService;
@@ -304,12 +312,13 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
 
     @Override
     public IPage<Feedback> adminList(long page, long size, String status, String type,
-                                     String userId, String merchantId, String orderId) {
+                                     String userId, String merchantId, String orderId, String priority) {
         long safePage = Math.max(page, 1);
         long safeSize = Math.min(Math.max(size, 1), 100);
         LambdaQueryWrapper<Feedback> wrapper = new LambdaQueryWrapper<Feedback>()
                 .eq(hasText(status), Feedback::getStatus, status)
                 .eq(hasText(type), Feedback::getType, type)
+                .eq(hasText(priority), Feedback::getPriority, priority)
                 .eq(hasText(userId), Feedback::getUserId, userId)
                 .eq(hasText(merchantId), Feedback::getMerchantId, merchantId)
                 .eq(hasText(orderId), Feedback::getOrderId, orderId)
@@ -326,6 +335,23 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
                     .eq(Feedback::getStatus, status.getCode())));
         }
         return counts;
+    }
+
+    @Override
+    public Map<Long, String> resolveAssigneeNames(Collection<Long> assigneeIds) {
+        List<Long> ids = assigneeIds == null ? List.of()
+                : assigneeIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        List<Admin> admins = adminMapper.selectList(
+                new LambdaQueryWrapper<Admin>().in(Admin::getAdminId, ids));
+        Map<Long, String> names = new LinkedHashMap<>();
+        for (Admin admin : admins) {
+            names.put(admin.getAdminId(),
+                    hasText(admin.getRealName()) ? admin.getRealName() : admin.getUsername());
+        }
+        return names;
     }
 
     @Override
@@ -387,13 +413,27 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
         if (!triageAllowed(current, target)) {
             throw new BusinessException("409", "非法状态流转：" + current + " -> " + target);
         }
+        FeedbackPriority priority = null;
+        if (hasText(dto.getPriority())) {
+            priority = FeedbackPriority.fromCode(dto.getPriority());
+            if (priority == null) {
+                throw new BusinessException("400", "优先级只支持 normal / important / urgent");
+            }
+        }
         boolean accepted = FeedbackStatus.ACCEPTED.getCode().equals(target);
-        lambdaUpdate()
+        var update = lambdaUpdate()
                 .eq(Feedback::getFeedbackId, feedbackId)
                 .set(Feedback::getStatus, target)
                 .set(accepted, Feedback::getPlatformSystem,
-                        accepted && Boolean.TRUE.equals(dto.getPlatformSystem()))
-                .update();
+                        accepted && Boolean.TRUE.equals(dto.getPlatformSystem()));
+        if (priority != null) {
+            update.set(Feedback::getPriority, priority.getCode());
+        }
+        if (dto.getAssigneeId() != null) {
+            // 0 表示取消认领；其余按 sys_admin.admin_id 落库
+            update.set(Feedback::getAssigneeId, dto.getAssigneeId() == 0L ? null : dto.getAssigneeId());
+        }
+        update.update();
         writeAudit(feedbackId, "TRIAGE", adminId, "status=" + current + "->" + target);
         return getById(feedbackId);
     }

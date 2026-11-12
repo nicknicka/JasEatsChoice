@@ -31,5 +31,11 @@ public class AgentRuntimeConfigHistory {
 
     private String updatedBy;
 
+    /** 变更来源：manual-手工修改, rollback-回填旧版后保存。 */
+    private String changeKind;
+
+    /** 回滚来源版本；changeKind=rollback 时有效。 */
+    private Integer sourceVersion;
+
     private LocalDateTime createdAt;
 }

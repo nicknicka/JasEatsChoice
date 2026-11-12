@@ -294,6 +294,21 @@ class FeedbackServiceImplTest {
     }
 
     @Test
+    void triage_whenPriorityUnknown_shouldReject() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("pending");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+
+        FeedbackTriageDTO dto = triageDto("triaging");
+        dto.setPriority("extremely-urgent");
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.triage(1L, "fb-1", dto));
+        assertEquals("400", ex.getCode());
+    }
+
+    @Test
     void triage_whenAcceptedFromTriaging_shouldWriteAudit() {
         Feedback fb = new Feedback();
         fb.setFeedbackId("fb-1");

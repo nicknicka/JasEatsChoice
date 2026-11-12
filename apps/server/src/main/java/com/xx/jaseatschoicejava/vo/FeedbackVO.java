@@ -45,26 +45,33 @@ public class FeedbackVO {
     public static FeedbackVO from(Feedback feedback, List<FeedbackMessageVO> messages,
                                   List<FeedbackAttachmentVO> attachments) {
         FeedbackVO vo = new FeedbackVO();
-        vo.feedbackId = feedback.getFeedbackId();
-        vo.type = feedback.getType();
-        FeedbackType type = FeedbackType.fromCode(feedback.getType());
-        vo.typeLabel = type == null ? feedback.getType() : type.getLabel();
-        vo.content = feedback.getContent();
-        vo.status = feedback.getStatus();
-        FeedbackStatus status = FeedbackStatus.fromCode(feedback.getStatus());
-        vo.statusLabel = status == null ? feedback.getStatus() : status.getLabel();
-        FeedbackResolutionCode code = FeedbackResolutionCode.fromCode(feedback.getResolutionCode());
-        vo.resolutionCode = code == null ? feedback.getResolutionCode() : code.getCode();
-        vo.orderId = feedback.getOrderId();
-        vo.merchantId = feedback.getMerchantId();
-        vo.contact = feedback.getContact();
-        vo.deviceInfo = parseDeviceInfo(feedback.getDeviceInfo());
-        vo.environment = feedback.getEnvironment();
-        vo.createdAt = feedback.getCreatedAt();
-        vo.updatedAt = feedback.getUpdatedAt();
+        vo.fill(feedback);
         vo.messages = messages == null ? List.of() : messages;
         vo.attachments = attachments == null ? List.of() : attachments;
         return vo;
+    }
+
+    /**
+     * 把用户可见字段填进来。子类（管理端视图）复用它，避免两处逻辑漂移。
+     */
+    protected void fill(Feedback feedback) {
+        this.feedbackId = feedback.getFeedbackId();
+        this.type = feedback.getType();
+        FeedbackType type = FeedbackType.fromCode(feedback.getType());
+        this.typeLabel = type == null ? feedback.getType() : type.getLabel();
+        this.content = feedback.getContent();
+        this.status = feedback.getStatus();
+        FeedbackStatus status = FeedbackStatus.fromCode(feedback.getStatus());
+        this.statusLabel = status == null ? feedback.getStatus() : status.getLabel();
+        FeedbackResolutionCode code = FeedbackResolutionCode.fromCode(feedback.getResolutionCode());
+        this.resolutionCode = code == null ? feedback.getResolutionCode() : code.getCode();
+        this.orderId = feedback.getOrderId();
+        this.merchantId = feedback.getMerchantId();
+        this.contact = feedback.getContact();
+        this.deviceInfo = parseDeviceInfo(feedback.getDeviceInfo());
+        this.environment = feedback.getEnvironment();
+        this.createdAt = feedback.getCreatedAt();
+        this.updatedAt = feedback.getUpdatedAt();
     }
 
     @SuppressWarnings("unchecked")
