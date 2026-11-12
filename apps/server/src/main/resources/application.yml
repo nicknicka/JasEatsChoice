@@ -147,12 +147,11 @@ github:
     token: ${GITHUB_BRIDGE_TOKEN:}
     api-base: ${GITHUB_BRIDGE_API_BASE:https://api.github.com}
 
-# Agent 运行时与事件桥接。
-#   runtime：管理端配置页，模型 key 只写不可读，落在专用密钥目录。
+# Agent 运行时状态与事件桥接。
+#   runtime：管理端只读状态页（agent 的配置在 DSH，不在此）。
 #   bridge / dsh：只读轮询 dsh 本地 Management API，默认关闭。
 agent:
   runtime:
-    key-dir: ${AGENT_MODEL_KEY_DIR:}
     dsh-profile-path: ${AGENT_DSH_PROFILE_PATH:}
     isolated-home: ${AGENT_ISOLATED_HOME:}
   bridge:

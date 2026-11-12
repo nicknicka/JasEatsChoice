@@ -1774,47 +1774,13 @@ export function createFeedbackIssue(feedbackId, draft) {
   return api.post(feedbackUrl(API_CONFIG.adminFeedback.issue, feedbackId), draft)
 }
 
-// ==================== Agent 运行时配置 ====================
+// ==================== Agent 运行时状态（只读） ====================
 
 /**
- * 获取运行时配置、健康与硬边界
+ * 获取运行状态与硬边界
  */
 export function getAgentRuntime() {
   return api.get(API_CONFIG.agentRuntime.current)
 }
 
-/**
- * 获取配置版本历史（不含密钥）
- */
-export function getAgentRuntimeHistory() {
-  return api.get(API_CONFIG.agentRuntime.history)
-}
-
-/**
- * 更新供应商/模型/endpoint/数据政策
- */
-export function updateAgentRuntime(payload) {
-  return api.put(API_CONFIG.agentRuntime.current, payload)
-}
-
-/**
- * 轮换模型 key（只写不可读）
- */
-export function rotateAgentRuntimeKey(key) {
-  return api.post(API_CONFIG.agentRuntime.key, { key })
-}
-
-/**
- * 测试模型连接
- */
-export function testAgentRuntimeKey() {
-  return api.post(API_CONFIG.agentRuntime.keyTest)
-}
-
-/**
- * 独立吊销模型 key
- */
-export function revokeAgentRuntimeKey() {
-  return api.delete(API_CONFIG.agentRuntime.key)
-}
 
