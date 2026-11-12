@@ -139,12 +139,9 @@ export const API_CONFIG = {
     issue: '/admin/feedbacks/{feedbackId}/issue'
   },
 
-  // Agent 运行时配置API端点
+  // Agent 运行时状态API端点（只读）
   agentRuntime: {
-    current: '/admin/agent/runtime',
-    history: '/admin/agent/runtime/history',
-    key: '/admin/agent/runtime/key',
-    keyTest: '/admin/agent/runtime/key/test'
+    current: '/admin/agent/runtime'
   },
 
   // 食谱API端点

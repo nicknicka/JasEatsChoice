@@ -76,21 +76,16 @@ sudo scripts/agent-runtime/verify-isolation.sh
 - dsh 不改标签、不部署、不碰生产数据；合并按 Delivery requirements 的 auto-merge 条件，由指定的 merge 账号执行，未点名或条件不满足时人工合并。
 - 决策见 `docs/adr/0012-agent-admission-and-merge-follow-dsh.md`。
 
-## 运行时配置页（#538）
+## 运行时状态页（#538 / #552）
 
-后台「Agent 运行时」页面对 `admin:agent:runtime` 开放，接口在 `/admin/agent/runtime`：
+后台「Agent 运行时」页面**只读**，对 `admin:agent:runtime` 开放；接口只有一个：
 
 | 方法 | 路径 | 作用 |
 | --- | --- | --- |
-| GET | `/admin/agent/runtime` | 配置 + 健康（GitHub / DSH profile / 模型 / 隔离账号）+ 硬边界 |
-| PUT | `/admin/agent/runtime` | 更新供应商（白名单）、模型、endpoint、数据政策，写版本历史 |
-| POST | `/admin/agent/runtime/key` | 轮换模型 key（只写不可读） |
-| POST | `/admin/agent/runtime/key/test` | 测试模型连接 |
-| DELETE | `/admin/agent/runtime/key` | 独立吊销模型 key |
+| GET | `/admin/agent/runtime` | 主机侧健康（GitHub / DSH profile / 隔离账号）+ 硬边界 |
 
-- 供应商白名单：`openai-compatible`、`openai`、`anthropic`、`azure-openai`；白名单外的值直接 400。
-- 模型 key 只写文件型密钥存储（`AGENT_MODEL_KEY_DIR`），接口只回布尔与更新时间，日志与响应都不含明文。
-- `no-deploy` / `no-production-data` 两条硬边界由代码固定为开启，页面无法关闭；合并只允许 Delivery requirements 指定的 merge 账号按门槛执行。
+- **agent 的模型 / 密钥 / 策略配置在 DSH（另一个运行时）**，JAS 不再保存，也没有写接口；产品 AI 的模型 key 走后台「系统设置 → AI 配置」（`/admin/settings/ai`）。
+- `no-deploy` / `no-production-data` 两条硬边界固定开启，页面无法关闭；**合并按 dsh 的 Delivery requirements**（指定 merge 账号，条件为 PR 就绪 + 必需审批覆盖 head commit + 增删合计 <200 行），未点名或条件不满足时人工合并；硬边界的真实生效依赖 DSH 部署与 agent 账号权限。
 
 ## 版本锁定与升级 / 回退（#541）
 
