@@ -7,9 +7,9 @@ apps/miniapp/unpackage/
 apps/miniapp/dist/
 
 # 运行时数据与生成物
+# 任何名为 uploads 的目录都是运行时上传数据，永不入库；
+# 合成素材统一放 apps/server/src/main/resources/static/synthetic-assets/。
 uploads/
-!apps/server/src/main/resources/static/uploads/
-!apps/server/src/main/resources/static/uploads/**
 output/
 *.log
 *.dump

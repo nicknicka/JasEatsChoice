@@ -53,3 +53,56 @@
 .el-button--large {
   --el-button-size: var(--control-height-md);
 }
+
+/* ============================================
+ * 复选框圆角
+ * EP 把 --el-checkbox-border-radius 接到 --el-border-radius-small，而本基线把它映射成
+ * --radius-sm(6px)；__inner 只有 12px，6px 圆角等于半个身位，方框会退化成圆点、
+ * 和单选框混淆（EP 默认 2px）。这里只收紧复选框自身，单选框走自己的 100% 圆形不受影响。
+ * ============================================ */
+
+.el-checkbox {
+  --el-checkbox-border-radius: 3px;
+}
+
+/* ============================================
+ * 描述表标签列
+ * EP 的 --el-descriptions-item-bordered-label-background 默认接 --el-fill-color-light
+ * (#F5F7FA 冷灰)，在暖白画布上是全页唯一的冷色面；收敛到暖色 sunken 面。
+ * ============================================ */
+
+.el-descriptions {
+  --el-descriptions-item-bordered-label-background: var(--canvas-sunken);
+}
+
+/* ============================================
+ * 文字按钮与表格密度
+ * §4.1：文字按钮取 --brand-600（EP 的 primary link 默认跟 brand-500，对比度只有 3.1:1）。
+ * §4.3：单元格单行内容行高冻结在 40px（size:small 会把 EP 压到 33px）；
+ *       斑马纹与悬停底色默认是组件库冷灰 #FAFAFA/#F5F7FA，收敛到暖调。
+ * ============================================ */
+
+.el-button.is-link.el-button--primary {
+  --el-button-text-color: var(--brand-600);
+  --el-button-hover-text-color: var(--brand-500);
+  --el-button-active-text-color: var(--brand-700);
+}
+
+.el-table {
+  --el-table-row-hover-bg-color: var(--canvas-sunken);
+}
+
+.el-table .el-table__cell {
+  height: 40px; /* 单行单元格行高冻结档（§4.3），横向内边距仍由 EP 的 .cell 提供 */
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: var(--canvas);
+}
+
+/* §4.7：页头动作区控件走 --control-height-md，工具条/行内动作仍是 sm */
+.app-page-header__actions .el-button {
+  height: var(--control-height-md);
+}

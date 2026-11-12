@@ -348,6 +348,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, ElDialog, ElInput, ElForm, ElFormItem } from 'element-plus'
 import { User, Monitor, Bell, Lock, InfoFilled } from '@element-plus/icons-vue'
 import api from '../../utils/api.js'
+import { createFeedback } from '../../api/feedback'
 import { API_CONFIG } from '../../config/index.js'
 import pinia from '../../store'
 import { useAuthStore } from '../../store/authStore'
@@ -1270,11 +1271,11 @@ const submitFeedbackForm = async () => {
   }
 
   try {
-    const userId = authStore.userId || '1'
-    const response = await api.post(API_CONFIG.user.feedback, {
-      userId: userId,
+    // 归属由后端从可信 JWT 推导；类型缺省归入「其他问题」
+    const response = await createFeedback({
+      type: 'other',
       content: feedbackForm.value.content,
-      contact: feedbackForm.value.contact || ''
+      contact: feedbackForm.value.contact || undefined
     })
 
     const isSuccess = response.code === '200' || response.success

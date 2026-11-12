@@ -76,12 +76,13 @@ export const feedbackApi = {
   append: (id, data) => post(`/v1/feedback/${id}/append`, data),
 
   /**
-   * 上传反馈图片
-   * POST /v1/feedback/images
+   * 上传反馈附件
+   * POST /v1/feedback/{feedbackId}/attachments
+   * @param {string} feedbackId - 反馈ID
    * @param {FormData} formData - 图片文件
    * @returns {Promise} 返回上传结果
    */
-  uploadImage: (formData) => post('/v1/feedback/images', formData),
+  uploadImage: (feedbackId, formData) => post(`/v1/feedback/${feedbackId}/attachments`, formData),
 
   /**
    * 获取反馈分类

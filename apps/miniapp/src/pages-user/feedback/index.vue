@@ -234,41 +234,29 @@ const submitFeedback = async () => {
   })
 
   try {
-    // U-027: 实现图片上传API
-    const uploadedImages = []
-    for (const imagePath of imageList.value) {
-      try {
-        // 导入上传工具
-        const { upload } = await import('@/utils/request')
-
-        // 上传图片到服务器
-        const uploadRes = await upload('/api/upload/image', imagePath, {
-          type: 'feedback'
-        })
-
-        if (uploadRes && uploadRes.url) {
-          uploadedImages.push(uploadRes.url)
-        }
-      } catch (error) {
-        console.error('图片上传失败:', error)
-        // 继续上传其他图片，不中断流程
-      }
-    }
-
-    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
-
-    // 提交反馈
-    await feedbackApi.submit({
-      userId,
+    // 先创建反馈，再把图片作为附件挂到这条反馈下（归属由后端从可信 JWT 推导）
+    const createRes = await feedbackApi.submit({
       type: feedbackType.value,
       content: feedbackContent.value,
-      images: uploadedImages,
       contact: contactInfo.value,
       deviceInfo: {
         platform: uni.getSystemInfoSync().platform,
         system: uni.getSystemInfoSync().system
       }
     })
+
+    const feedbackId = createRes?.data?.feedbackId
+    if (feedbackId) {
+      const { upload } = await import('@/utils/request')
+      for (const imagePath of imageList.value) {
+        try {
+          await upload(`/v1/feedback/${feedbackId}/attachments`, imagePath)
+        } catch (error) {
+          console.error('图片上传失败:', error)
+          // 继续上传其他图片，不中断流程
+        }
+      }
+    }
 
     uni.hideLoading()
 
@@ -306,25 +294,23 @@ const loadHistoryFeedback = async () => {
   }
 
   try {
-    const userId = userStore.userInfo?.userId || userStore.userInfo?.id
     const res = await feedbackApi.getList({
-      userId,
       page: 1,
       size: 10
     })
 
-    const list = res.list || res.data?.list || []
+    const list = res.data?.list || res.list || []
     historyList.value = list.map(item => {
       const typeConfig = typeList.find(t => t.value === item.type)
       return {
         id: item.feedbackId || item.id,
         type: item.type,
-        typeText: typeConfig ? typeConfig.label : '其他',
+        typeText: item.typeLabel || (typeConfig ? typeConfig.label : '其他'),
         content: item.content,
         status: item.status,
-        statusText: getStatusText(item.status),
+        statusText: item.statusLabel || getStatusText(item.status),
         time: formatTime(item.createdAt),
-        reply: item.reply || null
+        reply: null
       }
     })
   } catch (error) {
@@ -340,10 +326,12 @@ const loadHistoryFeedback = async () => {
  */
 function getStatusText(status) {
   const statusMap = {
-    pending: '待处理',
-    processing: '处理中',
-    resolved: '已解决',
-    closed: '已关闭'
+    pending: '待分诊',
+    triaging: '分诊中',
+    needs_info: '待补充信息',
+    accepted: '已接受',
+    rejected: '已拒绝',
+    resolved: '已解决'
   }
   return statusMap[status] || '未知'
 }

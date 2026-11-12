@@ -116,9 +116,35 @@ export const API_CONFIG = {
     updatePassword: '/v1/users/{userId}/password',
     uploadAvatar: '/v1/users/{userId}/avatar/base64',
     preferences: '/v1/users/{userId}/preferences',
-    feedback: '/v1/users/feedback',
     sendSmsCode: '/v1/users/send-sms-code',
     sendEmailCode: '/v1/users/send-email-code'
+  },
+
+  // 用户反馈API端点（统一契约：/v1/feedback，归属只取可信 JWT）
+  feedback: {
+    create: '/v1/feedback',
+    list: '/v1/feedback',
+    detail: '/v1/feedback/{feedbackId}'
+  },
+
+  // 管理端反馈API端点
+  adminFeedback: {
+    list: '/admin/feedbacks',
+    stats: '/admin/feedbacks/stats',
+    detail: '/admin/feedbacks/{feedbackId}',
+    messages: '/admin/feedbacks/{feedbackId}/messages',
+    triage: '/admin/feedbacks/{feedbackId}/triage',
+    resolve: '/admin/feedbacks/{feedbackId}/resolve',
+    association: '/admin/feedbacks/{feedbackId}/association',
+    issue: '/admin/feedbacks/{feedbackId}/issue'
+  },
+
+  // Agent 运行时配置API端点
+  agentRuntime: {
+    current: '/admin/agent/runtime',
+    history: '/admin/agent/runtime/history',
+    key: '/admin/agent/runtime/key',
+    keyTest: '/admin/agent/runtime/key/test'
   },
 
   // 食谱API端点

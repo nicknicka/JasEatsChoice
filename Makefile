@@ -22,7 +22,7 @@ NPM := npm --no-audit --no-fund
 CHECK_SOURCE ?= auto
 
 .PHONY: doctor env deps up down ps logs reset-db web desktop screenshots test test-smoke lint \
-	check check-unit check-routes check-miniapp-api check-lint build-miniapp nginx-test config-prod
+	check check-unit check-routes check-miniapp-api check-lint check-privacy build-miniapp nginx-test config-prod agent-check
 
 doctor:
 	@echo "== Docker =="
@@ -121,7 +121,7 @@ lint:
 
 # 静态防线：不起容器、不打桩，一分钟内把机械性问题挡在跑 5 分钟端到端之前。
 # CI 与本地共用这三个目标，命令不在两处各自演化。
-check: check-unit check-routes check-miniapp-api check-lint
+check: check-unit check-routes check-miniapp-api check-lint check-privacy
 
 check-unit:
 	python3 -m unittest discover -s scripts -p 'test_*.py'
@@ -135,11 +135,21 @@ check-routes:
 check-miniapp-api:
 	python3 scripts/check_miniapp_api.py
 
+# 隐私守卫（规格里的 privacy:check）：跟踪路径不得含 uploads/ 目录段，
+# 跟踪文本文件不得含高置信度私钥 / 云厂商 / 平台令牌。
+check-privacy:
+	python3 scripts/check_privacy.py
+
 # eslint 自己会因 error 数非零退出 1，所以这里容忍它的退出码，
 # 由 check_lint.py 拿冻结基线去判“有没有变差”。
 check-lint:
 	@cd apps/client && $(NPM) run lint:ci -- -f json -o $(ROOT)/.lint-report.json || true
 	@python3 scripts/check_lint.py --json $(ROOT)/.lint-report.json
+
+# 专用 Agent 账号隔离验证（需要该机器上已初始化 dsh 账号；一般用 sudo 跑）。
+# 不进 make check：CI 里没有也没必要有专用账号。
+agent-check:
+	scripts/agent-runtime/verify-isolation.sh
 
 # 只解析 compose，不启动
 config-prod:
