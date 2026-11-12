@@ -46,6 +46,7 @@ sudo -u "$DSH_USER" -H env HOME="$DSH_HOME" bash -c "
   corepack enable >/dev/null 2>&1 || true
   corepack prepare pnpm@$PNPM_VERSION --activate >/dev/null 2>&1 || true
   pnpm install --frozen-lockfile
+  pnpm build
 "
 
 echo "==> 3/5 运行探针"
@@ -69,7 +70,7 @@ cat > "$RECORD_DIR/$TS.md" <<REC
 - Node major: $NODE_MAJOR
 - pnpm: $PNPM_VERSION
 - 备份目录: $BACKUP_DIR
-- 探针: 健康/认证/Source/Policy/模型 全部通过
+- 探针: dsh 可用 / 服务在跑 / Management API(state+sources) 全部通过
 
 回退方式：scripts/agent-runtime/rollback.sh $BACKUP_DIR（不原地降级）
 REC

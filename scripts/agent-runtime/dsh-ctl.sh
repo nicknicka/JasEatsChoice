@@ -4,8 +4,8 @@
 #   scripts/agent-runtime/dsh-ctl.sh start|stop|status|logs
 #
 # dsh 以专用账号运行，面板只监听 127.0.0.1，日志落在 DSH_LOG_DIR。
-# 具体启动命令由 DSH_START_CMD 提供（不同 dsh 版本 CLI 不同，不写死在仓库里）：
-#   DSH_START_CMD="dsh panel --host 127.0.0.1 --port 8099"
+# dsh 用 profile 承载：启动就是 `dsh --profile <名字>`，没有 `dsh panel` 子命令。
+# 默认 DSH_START_CMD 即 `dsh --profile $DSH_PROFILE`，可用 DSH_BIN/DSH_PROFILE/DSH_START_CMD 覆盖。
 set -euo pipefail
 
 DSH_USER="${DSH_USER:-dsh}"
@@ -13,7 +13,9 @@ DSH_HOME="${DSH_HOME:-/var/lib/dsh-agent}"
 DSH_LOG_DIR="${DSH_LOG_DIR:-/var/log/dsh-agent}"
 DSH_PID_FILE="${DSH_PID_FILE:-$DSH_LOG_DIR/dsh.pid}"
 DSH_LOG_FILE="${DSH_LOG_FILE:-$DSH_LOG_DIR/dsh.log}"
-DSH_START_CMD="${DSH_START_CMD:-}"
+DSH_BIN="${DSH_BIN:-dsh}"
+DSH_PROFILE="${DSH_PROFILE:-superagent}"
+DSH_START_CMD="${DSH_START_CMD:-$DSH_BIN --profile $DSH_PROFILE}"
 DSH_PANEL_HOST="${DSH_PANEL_HOST:-127.0.0.1}"
 DSH_PANEL_PORT="${DSH_PANEL_PORT:-8099}"
 
@@ -40,7 +42,7 @@ cmd_start() {
   fi
   if [[ -z "$DSH_START_CMD" ]]; then
     echo "未设置 DSH_START_CMD，拒绝盲目启动。示例：" >&2
-    echo '  DSH_START_CMD="dsh panel --host 127.0.0.1 --port 8099" scripts/agent-runtime/dsh-ctl.sh start' >&2
+    echo '  DSH_START_CMD="dsh --profile superagent" scripts/agent-runtime/dsh-ctl.sh start' >&2
     return 2
   fi
   # shellcheck disable=SC2086  # 允许 DSH_START_CMD 带参数
