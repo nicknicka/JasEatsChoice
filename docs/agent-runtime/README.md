@@ -38,16 +38,17 @@ sudo scripts/agent-runtime/install-account.sh
 
 ## 启动 / 停止 / 状态 / 日志
 
-启动命令由 `DSH_START_CMD` 提供（不同 dsh 版本 CLI 不同，不写死在仓库里）：
+dsh 用 **profile** 承载：启动就是 `dsh --profile <名字>`，**没有 `dsh panel` 这种子命令**。
+`dsh-ctl.sh` 默认就用 `dsh --profile superagent`，可用 `DSH_BIN` / `DSH_PROFILE` / `DSH_START_CMD` 覆盖。
 
 ```bash
-DSH_START_CMD="dsh panel --host 127.0.0.1 --port 8099" \
-  scripts/agent-runtime/dsh-ctl.sh start
-
+scripts/agent-runtime/dsh-ctl.sh start    # 默认 dsh --profile superagent
 scripts/agent-runtime/dsh-ctl.sh status   # pid + 监听地址（非回环会判失败）
 scripts/agent-runtime/dsh-ctl.sh logs     # tail 日志
 scripts/agent-runtime/dsh-ctl.sh stop
 ```
+
+升级/安装的构建由 dsh-superagent 负责：`pnpm install && pnpm build`，再 `dsh plugin --profile superagent add "link:<repo>"`。
 
 `dsh-ctl.sh` 始终以 `HOME=/var/lib/dsh-agent` 调用，不继承调用者的 home。
 
