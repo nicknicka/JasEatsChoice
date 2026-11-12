@@ -87,13 +87,13 @@ class AgentAlertBridgeTest {
 
     @Test
     void pollOnce_shouldDedupeExistingEvents() {
-        when(dshManagementClient.fetchState()).thenReturn(Map.of());
-        when(dshManagementClient.fetchTickets()).thenReturn(List.of(
-                Map.of("id", "T-1", "status", "waiting_for_human"),
-                Map.of("id", "T-2", "status", "failed")));
-        // T-1 已存在，T-2 是新事件。
-        when(eventMapper.selectById("dsh:ticket:T-1:waiting_for_human")).thenReturn(event("warning"));
-        when(eventMapper.selectById("dsh:ticket:T-2:failed")).thenReturn(null);
+        when(dshManagementClient.fetchState()).thenReturn(Map.of(
+                "health", Map.of("evals", Map.of("state", "error"))));
+        when(dshManagementClient.fetchSources()).thenReturn(List.of(
+                Map.of("id", "github", "state", "error")));
+        // evals 组件与 github source 各一条事件；其中一条已存在 → 只新增 1。
+        when(eventMapper.selectById("dsh:health:evals:error")).thenReturn(event("critical"));
+        when(eventMapper.selectById("dsh:source:github:error")).thenReturn(null);
         ReflectionTestUtils.setField(bridge, "channels", List.<NotificationChannel>of());
 
         int ingested = bridge.pollOnce();

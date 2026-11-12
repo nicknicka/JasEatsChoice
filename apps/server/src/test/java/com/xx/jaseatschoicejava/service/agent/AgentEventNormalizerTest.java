@@ -13,46 +13,50 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AgentEventNormalizerTest {
 
     @Test
-    void normalize_waitingTicket_shouldMapToWarningEvent() {
-        List<AgentEvent> events = AgentEventNormalizer.normalize(
-                Map.of(),
-                List.of(Map.of("id", "T-1", "status", "waiting_for_human")));
+    void healthError_becomesCriticalSystemErrorAndHidesRawText() {
+        Map<String, Object> state = Map.of("health", Map.of(
+                "evals", Map.of("state", "error", "detail", "boom"),
+                "sources", Map.of("state", "ready")));
+
+        List<AgentEvent> events = AgentEventNormalizer.normalize(state, List.of());
 
         assertEquals(1, events.size());
-        AgentEvent event = events.get(0);
-        assertEquals("waiting_for_human", event.getEventType());
-        assertEquals("warning", event.getSeverity());
-        assertEquals("T-1", event.getTicketId());
-        assertTrue(event.getSummary().contains("T-1"));
+        AgentEvent e = events.get(0);
+        assertEquals("dsh:health:evals:error", e.getEventId());
+        assertEquals("system_error", e.getEventType());
+        assertEquals("critical", e.getSeverity());
+        // 不复制 dsh 侧原始文本
+        assertFalse(e.getSummary().contains("boom"));
     }
 
     @Test
-    void normalize_failedTicket_shouldBeCritical() {
-        List<AgentEvent> events = AgentEventNormalizer.normalize(
-                Map.of(),
-                List.of(Map.of("id", "T-2", "status", "failed")));
+    void paused_becomesWarning() {
+        List<AgentEvent> events = AgentEventNormalizer.normalize(Map.of("paused", true), List.of());
 
-        assertEquals("critical", events.get(0).getSeverity());
-        assertEquals("ticket_failed", events.get(0).getEventType());
-    }
-
-    @Test
-    void normalize_shouldNotCopyArbitraryContent() {
-        // dsh 侧即便带了原始正文，规范化也只取 id/status，摘要由固定文案拼装。
-        List<AgentEvent> events = AgentEventNormalizer.normalize(
-                Map.of("raw", "13800000000 的订单 order-secret 报错"),
-                List.of(Map.of("id", "T-3", "status", "blocked",
-                        "title", "用户 13800000000 反馈", "body", "order-secret")));
-
-        String serialized = events.toString();
-        assertFalse(serialized.contains("13800000000"));
-        assertFalse(serialized.contains("order-secret"));
-    }
-
-    @Test
-    void normalize_stateWaitingFlag_shouldProduceStateEvent() {
-        List<AgentEvent> events = AgentEventNormalizer.normalize(Map.of("waiting_for_human", true), List.of());
         assertEquals(1, events.size());
-        assertEquals("waiting_for_human", events.get(0).getEventType());
+        assertEquals("dsh:state:paused", events.get(0).getEventId());
+        assertEquals("warning", events.get(0).getSeverity());
+    }
+
+    @Test
+    void sourceProblems_onlyForProblemStates() {
+        List<Map<String, Object>> sources = List.of(
+                Map.of("id", "github", "state", "error"),
+                Map.of("id", "feishu", "state", "ready"),
+                Map.of("id", "weird", "state", "setup"),
+                Map.of("id", "off-one", "state", "off"));
+
+        List<AgentEvent> events = AgentEventNormalizer.normalize(Map.of(), sources);
+
+        assertEquals(2, events.size());
+        List<String> ids = events.stream().map(AgentEvent::getEventId).toList();
+        assertTrue(ids.contains("dsh:source:github:error"));
+        assertTrue(ids.contains("dsh:source:weird:setup"));
+    }
+
+    @Test
+    void emptyInputs_produceNoEvents() {
+        assertTrue(AgentEventNormalizer.normalize(null, null).isEmpty());
+        assertTrue(AgentEventNormalizer.normalize(Map.of(), List.of()).isEmpty());
     }
 }
