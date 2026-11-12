@@ -72,8 +72,9 @@ sudo scripts/agent-runtime/verify-isolation.sh
 ## 与反馈闭环的关系
 
 - 反馈桥接（#536）只用专用 GitHub 账号在目标仓库开 Issue / PR，人体量的是 `dsh` 这个账号的提交与评论。
-- `ready-for-agent` 只是队列标签；真正启动代理仍需授权维护者在该 Issue 评论 `@agent`。
-- dsh 不开合并、不改标签、不部署、不碰生产数据；PR 一律由人审查合并。
+- `ready-for-agent` 只是队列标签，不参与准入；准入与选任务由 dsh 的 Source 与 Policy 决定，起步用 `observe`。
+- dsh 不改标签、不部署、不碰生产数据；合并按 Delivery requirements 的 auto-merge 条件，由指定的 merge 账号执行，未点名或条件不满足时人工合并。
+- 决策见 `docs/adr/0012-agent-admission-and-merge-follow-dsh.md`。
 
 ## 运行时配置页（#538）
 
@@ -89,7 +90,7 @@ sudo scripts/agent-runtime/verify-isolation.sh
 
 - 供应商白名单：`openai-compatible`、`openai`、`anthropic`、`azure-openai`；白名单外的值直接 400。
 - 模型 key 只写文件型密钥存储（`AGENT_MODEL_KEY_DIR`），接口只回布尔与更新时间，日志与响应都不含明文。
-- `no-merge` / `no-deploy` / `no-production-data` 三条硬边界由代码固定为开启，页面无法关闭。
+- `no-deploy` / `no-production-data` 两条硬边界由代码固定为开启，页面无法关闭；合并只允许 Delivery requirements 指定的 merge 账号按门槛执行。
 
 ## 版本锁定与升级 / 回退（#541）
 
