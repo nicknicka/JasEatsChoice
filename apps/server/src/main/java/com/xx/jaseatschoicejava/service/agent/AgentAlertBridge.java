@@ -34,13 +34,13 @@ public class AgentAlertBridge {
     private List<NotificationChannel> channels;
 
     /**
-     * 轮询一次：拉取 state/tickets，去重落库并把新事件扇出到各通道。返回新事件数。
+     * 轮询一次：拉取 state/sources，去重落库并把新事件扇出到各通道。返回新事件数。
      */
     public int pollOnce() {
         Map<String, Object> state = dshManagementClient.fetchState();
-        List<Map<String, Object>> tickets = dshManagementClient.fetchTickets();
+        List<Map<String, Object>> sources = dshManagementClient.fetchSources();
         int ingested = 0;
-        for (AgentEvent event : AgentEventNormalizer.normalize(state, tickets)) {
+        for (AgentEvent event : AgentEventNormalizer.normalize(state, sources)) {
             if (isDuplicate(event.getEventId())) {
                 continue;
             }
