@@ -94,13 +94,20 @@ server {
     }
 
     # 上传文件由 Nginx 直接服务
+    # 注意：location 内一旦出现 add_header，server 级的 security-headers.conf 就不再继承，
+    # 所以这里必须把安全头补齐，避免上传资源成为无 nosniff / 无 frame 防护的直出面。
+    # CSP 用 sandbox 兜底：即使历史遗留的伪装文件被判成 html，也无法执行脚本。
     location /api/uploads/ {
         alias /data/uploads/;
         expires 7d;
         add_header Cache-Control "public, immutable";
         add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'none'; img-src 'self' data:; media-src 'self'; sandbox" always;
 
-        location ~* \.(php|jsp|py|sh|cgi)$ {
+        # 可执行脚本与被浏览器当页面直出的标记语言（html/htm/svg/xml/js）一律拒绝
+        location ~* \.(php|phtml|jsp|jspx|asp|aspx|py|sh|cgi|pl|html?|xhtml|shtml|svg|xml|js|mjs)$ {
             deny all;
         }
 
@@ -113,8 +120,11 @@ server {
         expires 7d;
         add_header Cache-Control "public, immutable";
         add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'none'; img-src 'self' data:; media-src 'self'; sandbox" always;
 
-        location ~* \.(php|jsp|py|sh|cgi)$ {
+        location ~* \.(php|phtml|jsp|jspx|asp|aspx|py|sh|cgi|pl|html?|xhtml|shtml|svg|xml|js|mjs)$ {
             deny all;
         }
 

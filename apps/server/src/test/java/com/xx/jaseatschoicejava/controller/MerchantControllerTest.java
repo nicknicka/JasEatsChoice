@@ -7,11 +7,15 @@ import com.xx.jaseatschoicejava.service.MerchantService;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.util.CaptchaUtil;
 import com.xx.jaseatschoicejava.util.JwtUtil;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -105,5 +109,62 @@ class MerchantControllerTest {
 
         assertFalse(result.getSuccess());
         assertEquals("500", result.getCode());
+    }
+
+    @Test
+    void uploadMerchantAlbum_withoutVerifiedUser_shouldReturn401() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+
+        ResponseResult<?> result = controller.uploadMerchantAlbum("M-1", new MultipartFile[0], "environment", request);
+
+        assertFalse(result.getSuccess());
+        assertEquals("401", result.getCode());
+    }
+
+    @Test
+    void uploadMerchantAlbum_forOtherMerchant_shouldReturn403() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(UserIdentityUtil.VERIFIED_USER_ID_ATTRIBUTE, "user-1");
+        User user = new User();
+        user.setUserId("user-1");
+        user.setMerchantId("M-2");
+        when(userService.getById("user-1")).thenReturn(user);
+
+        ResponseResult<?> result = controller.uploadMerchantAlbum("M-1", new MultipartFile[0], "environment", request);
+
+        assertFalse(result.getSuccess());
+        assertEquals("403", result.getCode());
+    }
+
+    @Test
+    void uploadMerchantAlbum_withInvalidAlbumType_shouldReturn400() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(UserIdentityUtil.VERIFIED_USER_ID_ATTRIBUTE, "user-1");
+        User user = new User();
+        user.setUserId("user-1");
+        user.setMerchantId("M-1");
+        when(userService.getById("user-1")).thenReturn(user);
+
+        ResponseResult<?> result = controller.uploadMerchantAlbum(
+            "M-1", new MultipartFile[] {new MockMultipartFile("images", "a.png", "image/png", new byte[] {1})}, "banner", request);
+
+        assertFalse(result.getSuccess());
+        assertEquals("400", result.getCode());
+    }
+
+    @Test
+    void uploadMerchantAlbum_withHtmlImage_shouldReturn400() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(UserIdentityUtil.VERIFIED_USER_ID_ATTRIBUTE, "user-1");
+        User user = new User();
+        user.setUserId("user-1");
+        user.setMerchantId("M-1");
+        when(userService.getById("user-1")).thenReturn(user);
+
+        ResponseResult<?> result = controller.uploadMerchantAlbum(
+            "M-1", new MultipartFile[] {new MockMultipartFile("images", "a.html", "image/png", "<html>".getBytes())}, "environment", request);
+
+        assertFalse(result.getSuccess());
+        assertEquals("400", result.getCode());
     }
 }

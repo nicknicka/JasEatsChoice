@@ -60,6 +60,9 @@ public class MerchantController {
 
     private static final Logger logger = LoggerFactory.getLogger(MerchantController.class);
 
+    /** 相册单张图片大小上限 */
+    private static final long MAX_ALBUM_IMAGE_SIZE = 10L * 1024 * 1024;
+
     @Autowired
     private MerchantService merchantService;
 
@@ -501,11 +504,47 @@ public class MerchantController {
 
     /**
      * 上传店铺相册照片
+     *
+     * <p>相册属于商家自有数据：只有已登录且与该 merchantId 绑定的用户（或管理员）可以写入。
      */
     @PostMapping("/{merchantId}/album")
     public ResponseResult<?> uploadMerchantAlbum(@PathVariable String merchantId,
                                                 @RequestParam("images") MultipartFile[] images,
-                                                @RequestParam("albumType") String albumType) {
+                                                @RequestParam("albumType") String albumType,
+                                                jakarta.servlet.http.HttpServletRequest request) {
+        // 只认 JWT 校验通过的用户ID，不采信 X-User-Id 等可伪造请求头
+        String currentUserId = com.xx.jaseatschoicejava.util.UserIdentityUtil.extractVerifiedUserId(request);
+        if (currentUserId == null) {
+            return ResponseResult.fail("401", "请先登录");
+        }
+        if (!canManageMerchant(currentUserId, merchantId)) {
+            return ResponseResult.fail("403", "无权操作该商家相册");
+        }
+
+        if (!"environment".equals(albumType) && !"dishes".equals(albumType)) {
+            return ResponseResult.fail("400", "albumType 只能是 environment 或 dishes");
+        }
+        if (images == null || images.length == 0) {
+            return ResponseResult.fail("400", "请选择要上传的图片");
+        }
+        // 先做准入校验，避免非法文件进入后续的查库/写盘流程
+        for (MultipartFile image : images) {
+            if (image == null || image.isEmpty()) {
+                return ResponseResult.fail("400", "图片不能为空");
+            }
+            if (image.getSize() > MAX_ALBUM_IMAGE_SIZE) {
+                return ResponseResult.fail("400", "单张图片大小不能超过10MB");
+            }
+            try {
+                // 扩展名白名单：只允许图片类型，拒绝 html/svg 等可直出脚本的文件
+                com.xx.jaseatschoicejava.util.FileUploadUtil.resolveSafeExtension(
+                    image.getOriginalFilename(),
+                    com.xx.jaseatschoicejava.util.FileUploadUtil.IMAGE_EXTENSIONS);
+            } catch (com.xx.jaseatschoicejava.exception.BusinessException e) {
+                return ResponseResult.fail("400", e.getMessage());
+            }
+        }
+
         // 从配置中获取上传目录
         String uploadDir = fileUploadConfig.getUploadPath();
 
@@ -535,13 +574,20 @@ public class MerchantController {
             }
 
             // 获取对应类型的相册数组
-            ArrayNode albumArray = (ArrayNode) albumObject.get(albumType);
+            JsonNode existingArray = albumObject.get(albumType);
+            ArrayNode albumArray = existingArray instanceof ArrayNode
+                ? (ArrayNode) existingArray
+                : objectMapper.createArrayNode();
+            albumObject.set(albumType, albumArray);
 
             // 实际上传图片并保存
             for (MultipartFile image : images) {
+                // 扩展名白名单：只允许图片类型，拒绝 html/svg 等可直出脚本的文件
+                String fileExtension = com.xx.jaseatschoicejava.util.FileUploadUtil.resolveSafeExtension(
+                    image.getOriginalFilename(),
+                    com.xx.jaseatschoicejava.util.FileUploadUtil.IMAGE_EXTENSIONS);
+
                 // 生成唯一文件名，避免覆盖
-                String originalFilename = image.getOriginalFilename();
-                String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
                 String uniqueFilename = System.currentTimeMillis() + "-" + UUID.randomUUID().toString() + fileExtension;
 
                 // 保存文件到磁盘
@@ -577,10 +623,36 @@ public class MerchantController {
             // 返回上传的图片URL
             return ResponseResult.success(albumArray);
 
+        } catch (com.xx.jaseatschoicejava.exception.BusinessException e) {
+            logger.warn("相册图片校验失败：merchantId={}, {}", merchantId, e.getMessage());
+            return ResponseResult.fail("400", e.getMessage());
         } catch (Exception e) {
             logger.error("上传相册照片失败：{}", e.getMessage(), e);
             return ResponseResult.fail("500", "上传失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 判断当前登录者能否管理该商家的相册：管理员，或用户档案绑定的 merchantId 与路径一致。
+     */
+    private boolean canManageMerchant(String currentUserId, String merchantId) {
+        if (currentUserId == null || currentUserId.isBlank() || merchantId == null) {
+            return false;
+        }
+
+        org.springframework.security.core.Authentication authentication =
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)
+                && authentication.getAuthorities().stream()
+                    .anyMatch(authority -> authority.getAuthority() != null
+                        && authority.getAuthority().startsWith("admin:"))) {
+            return true;
+        }
+
+        User currentUser = userService.getById(currentUserId);
+        return currentUser != null && merchantId.equals(currentUser.getMerchantId());
     }
 
     /**
