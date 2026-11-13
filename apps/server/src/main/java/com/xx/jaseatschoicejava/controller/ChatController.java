@@ -105,6 +105,9 @@ public class ChatController {
             result.put("fullUrl", fullUrl);
 
             return ResponseResult.success(result);
+        } catch (com.xx.jaseatschoicejava.exception.BusinessException e) {
+            // 扩展名不在白名单等准入校验失败属于客户端错误
+            return ResponseResult.fail("400", e.getMessage());
         } catch (Exception e) {
             return ResponseResult.fail("500", "图片上传失败: " + e.getMessage());
         }
@@ -143,6 +146,9 @@ public class ChatController {
             result.put("fullUrl", fullUrl);
 
             return ResponseResult.success(result);
+        } catch (com.xx.jaseatschoicejava.exception.BusinessException e) {
+            // 扩展名不在白名单（如 .html/.svg）属于客户端错误
+            return ResponseResult.fail("400", e.getMessage());
         } catch (Exception e) {
             return ResponseResult.fail("500", "文件上传失败: " + e.getMessage());
         }

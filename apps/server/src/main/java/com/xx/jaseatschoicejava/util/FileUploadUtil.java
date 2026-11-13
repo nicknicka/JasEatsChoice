@@ -4,6 +4,8 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLConnection;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,11 +13,33 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.xx.jaseatschoicejava.config.FileUploadConfig;
+import com.xx.jaseatschoicejava.exception.BusinessException;
 
 import cn.hutool.http.HttpUtil;
 
 @Component
 public class FileUploadUtil {
+
+    /** 图片白名单：仅允许这些扩展名落盘 */
+    public static final Set<String> IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
+
+    /** 聊天文件白名单：文档、压缩包与音视频，显式排除 html/htm/svg/xml/js 等可直出脚本的类型 */
+    public static final Set<String> FILE_EXTENSIONS = Set.of(
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv", "md",
+        "zip", "rar", "7z",
+        "mp3", "m4a", "wav", "aac", "flac", "ogg",
+        "mp4", "mov", "webm", "mkv", "avi"
+    );
+
+    /**
+     * 任何位置出现都不允许的扩展名（大小写不敏感）。
+     * 除末位扩展名外还要检查中间段，避免 a.html.txt 这类多后缀绕过。
+     */
+    private static final Set<String> FORBIDDEN_EXTENSIONS = Set.of(
+        "html", "htm", "xhtml", "shtml", "svg", "xml", "js", "mjs",
+        "php", "php3", "php5", "jsp", "jspx", "asp", "aspx", "cgi",
+        "sh", "bat", "cmd", "exe", "jar", "war"
+    );
 
     private static FileUploadConfig fileUploadConfig;
 
@@ -33,6 +57,69 @@ public class FileUploadUtil {
      * @return 相对URL路径（相对于uploads目录）
      */
     public static String uploadFile(MultipartFile file, String category, String userId) throws IOException {
+        return doUploadFile(file, category, userId, FILE_EXTENSIONS);
+    }
+
+    /**
+     * 生成安全扩展名：只允许白名单内的扩展名，任何位置出现脚本/标记类扩展名一律拒绝。
+     *
+     * <p>判断顺序：取原始文件名的最后一段路径（去掉 Windows/Unix 目录前缀）→ 转小写 →
+     * 检查每个 "." 分段是否命中黑名单（拦截 a.html.txt 这类多后缀）→ 校验末位扩展名在白名单内。
+     * 返回带点的小写扩展名（如 ".png"）。
+     *
+     * @param originalFilename 原始文件名
+     * @param allowedExtensions 允许的扩展名白名单（不含点，小写）
+     * @return 归一化后的扩展名，如 ".jpg"
+     * @throws BusinessException 文件名为空、无扩展名或扩展名不在白名单内
+     */
+    public static String resolveSafeExtension(String originalFilename, Set<String> allowedExtensions) {
+        String fileName = normalizeFileName(originalFilename).toLowerCase(Locale.ROOT);
+
+        String[] segments = fileName.split("\\.", -1);
+        if (segments.length < 2 || segments[segments.length - 1].isEmpty()) {
+            throw new BusinessException("UPLOAD_EXTENSION_NOT_ALLOWED", "文件缺少扩展名，仅支持：" + describeExtensions(allowedExtensions));
+        }
+
+        // 从第一个 "." 之后逐段检查，覆盖 a.html.txt 这类多后缀绕过
+        for (int i = 1; i < segments.length; i++) {
+            if (FORBIDDEN_EXTENSIONS.contains(segments[i])) {
+                throw new BusinessException("UPLOAD_EXTENSION_NOT_ALLOWED", "不允许上传该类型的文件：" + segments[i]);
+            }
+        }
+
+        String extension = segments[segments.length - 1];
+        if (!allowedExtensions.contains(extension)) {
+            throw new BusinessException("UPLOAD_EXTENSION_NOT_ALLOWED", "不支持的文件类型：" + extension + "，仅支持：" + describeExtensions(allowedExtensions));
+        }
+        return "." + extension;
+    }
+
+    /**
+     * 去掉客户端文件名中的目录前缀与控制字符，避免路径穿越和空字节截断。
+     */
+    private static String normalizeFileName(String originalFilename) {
+        if (originalFilename == null) {
+            throw new BusinessException("UPLOAD_FILE_NAME_EMPTY", "文件名不能为空");
+        }
+        String fileName = originalFilename.replace('\\', '/');
+        int slashIndex = fileName.lastIndexOf('/');
+        if (slashIndex >= 0) {
+            fileName = fileName.substring(slashIndex + 1);
+        }
+        fileName = fileName.trim();
+        if (fileName.isEmpty() || ".".equals(fileName) || "..".equals(fileName) || fileName.indexOf('\0') >= 0) {
+            throw new BusinessException("UPLOAD_FILE_NAME_EMPTY", "文件名不能为空");
+        }
+        return fileName;
+    }
+
+    private static String describeExtensions(Set<String> allowedExtensions) {
+        return allowedExtensions.stream().sorted().collect(java.util.stream.Collectors.joining("/"));
+    }
+
+    private static String doUploadFile(MultipartFile file, String category, String userId, Set<String> allowedExtensions) throws IOException {
+        String suffix = resolveSafeExtension(file.getOriginalFilename(), allowedExtensions);
+
         // 获取配置的上传基础路径
         String baseUploadPath = fileUploadConfig.getUploadPath();
 
@@ -48,12 +135,7 @@ public class FileUploadUtil {
             directory.mkdirs();
         }
 
-        // 生成新的文件名
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || originalFilename.isEmpty()) {
-            throw new IllegalArgumentException("文件名不能为空");
-        }
-        String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
+        // 生成新的文件名（扩展名已归一化，不会包含客户端传入的路径或非法字符）
         String fileName = UUID.randomUUID().toString() + suffix;
 
         // 保存文件
@@ -89,13 +171,13 @@ public class FileUploadUtil {
      * @throws IOException 文件上传异常
      */
     public static String uploadImage(MultipartFile file, String category, String userId) throws IOException {
-        // 验证图片类型
+        // Content-Type 来自请求头、可伪造，仅作辅助校验；真正的准入以扩展名白名单为准
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new IllegalArgumentException("文件不是有效的图片类型");
         }
 
-        return uploadFile(file, category, userId);
+        return doUploadFile(file, category, userId, IMAGE_EXTENSIONS);
     }
 
     /**
