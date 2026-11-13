@@ -17,7 +17,9 @@ DSH_BIN="${DSH_BIN:-dsh}"
 DSH_PROFILE="${DSH_PROFILE:-superagent}"
 DSH_START_CMD="${DSH_START_CMD:-$DSH_BIN --profile $DSH_PROFILE}"
 DSH_PANEL_HOST="${DSH_PANEL_HOST:-127.0.0.1}"
-DSH_PANEL_PORT="${DSH_PANEL_PORT:-8099}"
+# 本机按项目分实例：JAS 用 3083、bilistu 用 3082。8099 只属于 Linux 目标形态，
+# 不是这台机器的端口——照它去查一律"未监听"。
+DSH_PANEL_PORT="${DSH_PANEL_PORT:-3083}"
 
 as_dsh() {
   # HOME 必须显式指向专用 home，避免继承调用者的 home。
