@@ -144,7 +144,8 @@ public class UserController {
 
                 // 严格验证验证码
                 if (!smsCode.equals(storedCode)) {
-                    log.warn("验证码错误！输入：{}，存储：{}", smsCode, storedCode);
+                    // 日志只记录校验失败，不打印验证码明文，避免日志泄露可用的登录凭据
+                    log.warn("短信验证码校验未通过，手机号: {}", account);
                     return ResponseResult.fail("400", "验证码错误");
                 }
 

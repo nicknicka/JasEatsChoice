@@ -12,6 +12,7 @@ import com.xx.jaseatschoicejava.entity.PaymentRecord;
 import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.service.PaymentPasswordService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.WalletService;
 import com.xx.jaseatschoicejava.util.NotificationUtil;
@@ -40,6 +41,7 @@ public class OrderController {
     private final PaymentService paymentService;
     private final WalletService walletService;
     private final OrderDishService orderDishService;
+    private final PaymentPasswordService paymentPasswordService;
 
     /**
      * 创建订单(支持菜品列表)
@@ -321,7 +323,8 @@ public class OrderController {
     public ResponseResult<?> payOrder(
         @PathVariable String orderId,
         @ApiParam("用户ID") @RequestParam String userId,
-        @ApiParam("支付方式") @RequestParam(defaultValue = "wallet") String paymentMethod
+        @ApiParam("支付方式") @RequestParam(defaultValue = "wallet") String paymentMethod,
+        @ApiParam("支付密码") @RequestParam(required = false) String paymentPassword
     ) {
         try {
             // 获取订单信息
@@ -341,6 +344,15 @@ public class OrderController {
             }
             if (!"wallet".equals(paymentMethod)) {
                 return ResponseResult.fail("400", "仅支持平台币支付");
+            }
+
+            // 支付密码为必填项：缺失或错误一律 400，不允许无密码直接扣款
+            if (paymentPassword == null || paymentPassword.isBlank()) {
+                return ResponseResult.fail("400", "请输入支付密码");
+            }
+            if (!paymentPasswordService.verifyPaymentPassword(order.getUserId(), paymentPassword)) {
+                log.warn("订单支付密码校验失败，订单ID：{}", orderId);
+                return ResponseResult.fail("400", "支付密码错误");
             }
 
             // 检查余额

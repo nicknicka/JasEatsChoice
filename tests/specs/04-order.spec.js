@@ -37,6 +37,46 @@ async function setOrderStatus(api, orderId, status) {
   await apiRequest(api, 'PUT', `/v1/orders/${orderId}/status`, { status })
 }
 
+// 支付接口已强制校验支付密码，4.2 之前必须先把测试账号的密码设为固定值，方便重复执行。
+const PAYMENT_PASSWORD = '123456'
+
+async function authHeaders(page) {
+  const token = await page.evaluate(() => localStorage.getItem('auth_token'))
+  if (!token) throw new Error('未在 localStorage 中找到 auth_token，无法设置支付密码')
+  return { Authorization: `Bearer ${token}` }
+}
+
+async function ensurePaymentPassword(page, api) {
+  const headers = await authHeaders(page)
+  const setupResponse = await api.fetch(
+    `${TEST_API_BASE}/v1/payment-password/setup?password=${encodeURIComponent(PAYMENT_PASSWORD)}`,
+    { method: 'POST', headers }
+  )
+  const setupBody = await setupResponse.json().catch(() => null)
+  if (setupResponse.ok() && setupBody?.success) return
+
+  const message = setupBody?.message || String(setupResponse.status())
+  // setup 只允许首次设置；已设置过时用 change 把固定密码回写，保证用例可重跑。
+  if (!message.includes('已设置')) {
+    throw new Error(`设置支付密码失败：${message}`)
+  }
+  const changeResponse = await api.fetch(
+    `${TEST_API_BASE}/v1/payment-password/change?oldPassword=${encodeURIComponent(PAYMENT_PASSWORD)}&newPassword=${encodeURIComponent(PAYMENT_PASSWORD)}`,
+    { method: 'POST', headers }
+  )
+  const changeBody = await changeResponse.json().catch(() => null)
+  if (!changeResponse.ok() || !changeBody?.success) {
+    throw new Error(`回写支付密码失败：${changeBody?.message || changeResponse.status()}`)
+  }
+}
+
+async function submitPaymentPassword(page) {
+  const prompt = page.locator('.el-message-box').filter({ hasText: '请输入 6 位支付密码' })
+  await expect(prompt).toBeVisible({ timeout: 10000 })
+  await prompt.locator('.el-message-box__input input').fill(PAYMENT_PASSWORD)
+  await prompt.locator('button:has-text("确认支付")').click()
+}
+
 async function createGroupWithSession(api, groupName) {
   const userId = await getUserId()
   const group = await apiRequest(api, 'POST', '/v1/groups', {
@@ -89,6 +129,7 @@ test.describe('模块四：订单流程', () => {
   test('4.2 订单支付', async ({ page, request }) => {
     markRunning('4.2')
     try {
+      await ensurePaymentPassword(page, request)
       const userId = await getUserId()
       const orderId = await createOrder(request, 0)
       const order = await getOrder({ orderId })
@@ -111,6 +152,7 @@ test.describe('模块四：订单流程', () => {
       const payButton = card.locator('button:has-text("支付")')
       await expect(payButton).toBeVisible()
       await payButton.click()
+      await submitPaymentPassword(page)
 
       await expect.poll(async () => (await getOrder({ orderId })).status).toBe(1)
       const walletAfterPayment = await apiRequest(request, 'GET', `/v1/wallet/info/${userId}`)
@@ -131,6 +173,7 @@ test.describe('模块四：订单流程', () => {
       const detailPayButton = page.locator('.order-actions button:has-text("支付")')
       await expect(detailPayButton).toBeVisible()
       await detailPayButton.click()
+      await submitPaymentPassword(page)
       await expect.poll(async () => (await getOrder({ orderId: detailOrderId })).status).toBe(1)
       await expect(page.locator('.status-header .el-tag')).toContainText('待接单')
       const walletAfterDetailPayment = await apiRequest(request, 'GET', `/v1/wallet/info/${userId}`)
@@ -146,6 +189,7 @@ test.describe('模块四：订单流程', () => {
         response.url().includes(`/v1/orders/${blockedOrderId}/pay`)
       )
       await blockedPayButton.click()
+      await submitPaymentPassword(page)
       const blockedHttpResponse = await blockedResponse
       const blockedBody = await blockedHttpResponse.json()
       expect(blockedBody.success).toBe(false)

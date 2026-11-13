@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.entity.PaymentRecord;
 import com.xx.jaseatschoicejava.entity.UserCoupon;
 import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.service.PaymentPasswordService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.UserCouponService;
 import io.swagger.annotations.Api;
@@ -32,6 +33,7 @@ public class PaymentController {
     private final OrderService orderService;
     private final PaymentService paymentService;
     private final UserCouponService userCouponService;
+    private final PaymentPasswordService paymentPasswordService;
 
     /**
      * 获取订单支付信息
@@ -217,13 +219,16 @@ public class PaymentController {
                 return ResponseResult.fail("400", "支付状态异常");
             }
 
-            // 如果提供了支付密码，使用带密码验证的支付方式
-            boolean success;
-            if (paymentPassword != null && !paymentPassword.isEmpty()) {
-                success = paymentService.walletPaymentWithPassword(paymentNo, paymentPassword);
-            } else {
-                success = paymentService.walletPayment(paymentNo);
+            // 支付密码为必填项：缺失或错误一律 400，不再提供无密码直付分支
+            if (paymentPassword == null || paymentPassword.isBlank()) {
+                return ResponseResult.fail("400", "请输入支付密码");
             }
+            if (!paymentPasswordService.verifyPaymentPassword(paymentRecord.getUserId(), paymentPassword)) {
+                log.warn("余额支付支付密码校验失败，支付流水号：{}", paymentNo);
+                return ResponseResult.fail("400", "支付密码错误");
+            }
+
+            boolean success = paymentService.walletPayment(paymentNo);
 
             Map<String, Object> result = new HashMap<>();
             result.put("paymentNo", paymentNo);

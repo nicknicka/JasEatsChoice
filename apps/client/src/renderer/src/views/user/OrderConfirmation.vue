@@ -1004,6 +1004,24 @@ const confirmOrder = async () => {
           return
         }
 
+        // 支付密码：后端强制校验，缺失或错误一律 400。
+        // 只在本次请求内持有，不落 localStorage、不写日志。
+        let paymentPassword
+        try {
+          const { value } = await ElMessageBox.prompt('请输入 6 位支付密码', '支付验证', {
+            confirmButtonText: '确认支付',
+            cancelButtonText: '取消',
+            inputType: 'password',
+            inputPattern: /^\d{6}$/,
+            inputErrorMessage: '支付密码为 6 位数字'
+          })
+          paymentPassword = value
+        } catch {
+          submitting.value = false
+          ElMessage.info('已取消支付')
+          return
+        }
+
         console.log('开始创建订单...', {
           orderId: orderInfo.value.orderId,
           userId: String(userId),
@@ -1062,7 +1080,12 @@ const confirmOrder = async () => {
         console.log('订单创建成功，订单ID:', actualOrderId)
 
         // 调用支付API
-        const response = await paymentApi.payOrder(actualOrderId, String(userId), 'wallet')
+        const response = await paymentApi.payOrder(
+          actualOrderId,
+          String(userId),
+          'wallet',
+          paymentPassword
+        )
         console.log('支付结果:', response)
 
         if (response.code === '200') {

@@ -37,7 +37,8 @@ public class VerificationServiceImpl implements VerificationService {
             // 发送短信
             aliyunSMSService.sendSmsVerifyCode(phone, code);
 
-            System.out.println("验证码已发送：手机号=" + phone + "，验证码=" + code + "，类型=" + type);
+            // 只记录手机号与类型，不打印验证码明文，避免读日志即可绕过验证
+            System.out.println("验证码已发送：手机号=" + phone + "，类型=" + type);
             return true;
         } catch (Exception e) {
             System.err.println("发送验证码失败：" + e.getMessage());
@@ -63,7 +64,8 @@ public class VerificationServiceImpl implements VerificationService {
             stringRedisTemplate.delete(redisKey);
             System.out.println("验证码验证成功：手机号=" + phone);
         } else {
-            System.out.println("验证码错误：手机号=" + phone + "，期望=" + savedCode + "，实际=" + code);
+            // 校验失败只记手机号与类型，不打印验证码明文
+            System.out.println("验证码错误：手机号=" + phone + "，类型=" + type);
         }
 
         return valid;
