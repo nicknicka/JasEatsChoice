@@ -1,9 +1,11 @@
 package com.xx.jaseatschoicejava.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.xx.jaseatschoicejava.constants.VerificationType;
 import com.xx.jaseatschoicejava.entity.User;
 import com.xx.jaseatschoicejava.mapper.UserMapper;
 import com.xx.jaseatschoicejava.service.PaymentPasswordService;
+import com.xx.jaseatschoicejava.service.VerificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentPasswordServiceImpl implements PaymentPasswordService {
 
     private final UserMapper userMapper;
+    private final VerificationService verificationService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
@@ -112,10 +115,6 @@ public class PaymentPasswordServiceImpl implements PaymentPasswordService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void resetPaymentPassword(String userId, String newPassword, String verificationCode) {
-        // TODO: 实现验证码验证逻辑
-        // 这里需要调用短信服务验证验证码是否正确
-        // 暂时跳过验证码验证，直接重置密码
-
         // 查询用户
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(User::getUserId, userId);
@@ -123,6 +122,17 @@ public class PaymentPasswordServiceImpl implements PaymentPasswordService {
 
         if (user == null) {
             throw new RuntimeException("用户不存在");
+        }
+
+        // 校验短信验证码：复用 VerificationService 的 payment 类型验证码存储
+        // （前端「通过手机验证码重置」发送的正是该类型），校验通过后由它删除已使用的验证码。
+        if (verificationCode == null || verificationCode.isBlank()) {
+            throw new IllegalArgumentException("短信验证码不能为空");
+        }
+        if (user.getPhone() == null || user.getPhone().isBlank()
+                || !verificationService.verifyCode(user.getPhone(), verificationCode, VerificationType.PAYMENT)) {
+            log.warn("用户{}重置支付密码失败：短信验证码校验未通过", userId);
+            throw new IllegalArgumentException("短信验证码错误或已过期");
         }
 
         // 加密新密码

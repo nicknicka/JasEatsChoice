@@ -132,8 +132,23 @@ function viewOrderDetails(order) {
  * 支付订单
  */
 async function payOrder(order) {
+  // 支付密码只在本次请求内持有，不落 localStorage、不写日志
+  let paymentPassword
   try {
-    const response = await paymentApi.payOrder(order.id, getUserId(), 'wallet')
+    const { value } = await ElMessageBox.prompt('请输入 6 位支付密码', '支付验证', {
+      confirmButtonText: '确认支付',
+      cancelButtonText: '取消',
+      inputType: 'password',
+      inputPattern: /^\d{6}$/,
+      inputErrorMessage: '支付密码为 6 位数字'
+    })
+    paymentPassword = value
+  } catch {
+    return
+  }
+
+  try {
+    const response = await paymentApi.payOrder(order.id, getUserId(), 'wallet', paymentPassword)
 
     if (response?.success) {
       updateOrderStatus(order.id, 1)

@@ -7,6 +7,7 @@ import com.xx.jaseatschoicejava.entity.Admin;
 import com.xx.jaseatschoicejava.service.AdminService;
 import com.xx.jaseatschoicejava.util.AdminContext;
 import com.xx.jaseatschoicejava.util.FileUploadUtil;
+import com.xx.jaseatschoicejava.vo.AdminVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -82,10 +83,13 @@ public class AdminController {
 
     /**
      * 获取管理员列表（分页）
+     * 注意：{@code hasAnyAuthority} 只有在 JwtAuthenticationFilter 不再给所有 token 授予
+     * ROLE_ADMIN、并按 token 内的权限下发 authority 之后才真正生效。
      */
     @ApiOperation("获取管理员列表")
     @GetMapping("/list")
-    public ResponseEntity<IPage<Admin>> getAdminList(
+    @PreAuthorize("hasAnyAuthority('admin:setting:role:list')")
+    public ResponseEntity<IPage<AdminVO>> getAdminList(
             @ApiParam("页码") @RequestParam(defaultValue = "1") Integer page,
             @ApiParam("每页数量") @RequestParam(defaultValue = "10") Integer pageSize,
             @ApiParam("用户名") @RequestParam(required = false) String username,
@@ -95,7 +99,8 @@ public class AdminController {
         Page<Admin> pageParam = new Page<>(page, pageSize);
         IPage<Admin> result = adminService.getAdminPage(pageParam, username, status, roleId);
 
-        return ResponseEntity.ok(result);
+        // 转 VO：实体里的 password / salt 不允许出现在响应里
+        return ResponseEntity.ok(result.convert(AdminVO::from));
     }
 
     /**

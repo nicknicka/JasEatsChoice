@@ -3,7 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import AppPageHeader from '../../components/common/AppPageHeader.vue'
 import CommonBackButton from '../../components/common/CommonBackButton.vue'
 import { reviewAPI } from '../../api/review.js'
@@ -300,9 +300,24 @@ watch(
 
 // 支付订单
 const payOrder = async (order) => {
+  // 支付密码只在本次请求内持有，不落 localStorage、不写日志
+  let paymentPassword
+  try {
+    const { value } = await ElMessageBox.prompt('请输入 6 位支付密码', '支付验证', {
+      confirmButtonText: '确认支付',
+      cancelButtonText: '取消',
+      inputType: 'password',
+      inputPattern: /^\d{6}$/,
+      inputErrorMessage: '支付密码为 6 位数字'
+    })
+    paymentPassword = value
+  } catch {
+    return
+  }
+
   paying.value = true
   try {
-    const response = await paymentApi.payOrder(order.id, getUserId(), 'wallet')
+    const response = await paymentApi.payOrder(order.id, getUserId(), 'wallet', paymentPassword)
 
     if (response?.success) {
       ElMessage.success(response.message || '支付成功')

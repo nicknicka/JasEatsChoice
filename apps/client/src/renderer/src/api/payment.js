@@ -6,10 +6,14 @@ import api from '../utils/api'
 export default {
   /**
    * 订单支付
+   * @param {string} orderId 订单ID
+   * @param {string} userId 用户ID
+   * @param {string} paymentMethod 支付方式
+   * @param {string} paymentPassword 支付密码（后端强制校验，缺失或错误返回 400）
    */
-  payOrder(orderId, userId, paymentMethod = 'wallet') {
+  payOrder(orderId, userId, paymentMethod = 'wallet', paymentPassword) {
     return api.post(`/v1/orders/${orderId}/pay`, null, {
-      params: { userId, paymentMethod }
+      params: { userId, paymentMethod, paymentPassword }
     })
   },
 

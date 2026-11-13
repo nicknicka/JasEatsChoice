@@ -33,6 +33,13 @@ public class CaptchaController {
     @Value("${captcha.test.fixed-code:8888}")
     private String fixedCode;
 
+    /**
+     * 是否在响应里回显图片验证码的真实答案。默认关闭：任何环境都能凭答案绕过图形验证，
+     * 只在自建联调/自动化环境通过 CAPTCHA_EXPOSE_ANSWER=true 显式打开。
+     */
+    @Value("${captcha.test.expose-answer:false}")
+    private boolean exposeAnswer;
+
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
@@ -71,8 +78,10 @@ public class CaptchaController {
             Map<String, String> result = new HashMap<>();
             result.put("checkCode", captchaBase64);
             result.put("checkCodeKey", checkCodeKey);
-            // 返回图片对应的真实答案，仅用于开发环境或测试环境快速验证
-            result.put("captchaAnswer", captchaResult);
+            // 真实答案只在显式开启时回显（联调/自动化），生产环境不得返回
+            if (exposeAnswer) {
+                result.put("captchaAnswer", captchaResult);
+            }
             result.put("fixedCaptchaEnabled", String.valueOf(fixedCodeEnabled));
             if (fixedCodeEnabled) {
                 result.put("fixedCaptchaCode", fixedCode);

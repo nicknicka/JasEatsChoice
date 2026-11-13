@@ -139,6 +139,9 @@ captcha:
     # 仅允许本地开发与自动化测试开启，公网部署必须保持 false。
     fixed-code-enabled: ${CAPTCHA_TEST_FIXED_CODE_ENABLED:false}
     fixed-code: ${CAPTCHA_TEST_FIXED_CODE:}
+    # 开启后 /captcha 会在响应里回显图片验证码的真实答案，等价于关闭图形验证。
+    # 公网部署必须保持 false，只有本地联调/自动化才显式打开。
+    expose-answer: ${CAPTCHA_EXPOSE_ANSWER:false}
 
 # GitHub Issue 桥接（用户反馈研发队列）：repo 可公开，token 只从环境注入。
 github:

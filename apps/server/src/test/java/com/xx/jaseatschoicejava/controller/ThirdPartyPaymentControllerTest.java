@@ -6,6 +6,7 @@ import com.xx.jaseatschoicejava.entity.Order;
 import com.xx.jaseatschoicejava.service.GroupOrderService;
 import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
+import com.xx.jaseatschoicejava.service.PaymentPasswordService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.UserCouponService;
 import com.xx.jaseatschoicejava.service.WalletService;
@@ -29,7 +30,9 @@ public class ThirdPartyPaymentControllerTest {
         OrderService orderService = mock(OrderService.class);
         PaymentService paymentService = mock(PaymentService.class);
         UserCouponService userCouponService = mock(UserCouponService.class);
-        PaymentController controller = new PaymentController(orderService, paymentService, userCouponService);
+        PaymentPasswordService paymentPasswordService = mock(PaymentPasswordService.class);
+        PaymentController controller =
+                new PaymentController(orderService, paymentService, userCouponService, paymentPasswordService);
 
         ResponseResult<Map<String, Object>> createResult = controller.createPayment(Map.of("paymentMethod", "wechat"));
         ResponseResult<Map<String, Object>> wechatResult = controller.wechatPay(Map.of());
@@ -66,7 +69,9 @@ public class ThirdPartyPaymentControllerTest {
         PaymentService paymentService = mock(PaymentService.class);
         WalletService walletService = mock(WalletService.class);
         OrderDishService orderDishService = mock(OrderDishService.class);
-        OrderController controller = new OrderController(orderService, paymentService, walletService, orderDishService);
+        PaymentPasswordService paymentPasswordService = mock(PaymentPasswordService.class);
+        OrderController controller = new OrderController(
+                orderService, paymentService, walletService, orderDishService, paymentPasswordService);
 
         Order order = new Order();
         order.setId("order-1");
@@ -74,7 +79,7 @@ public class ThirdPartyPaymentControllerTest {
         order.setStatus(0);
         when(orderService.getById("order-1")).thenReturn(order);
 
-        ResponseResult<?> result = controller.payOrder("order-1", "user-1", "wechat");
+        ResponseResult<?> result = controller.payOrder("order-1", "user-1", "wechat", "123456");
 
         assertFalse(result.getSuccess());
         assertEquals("400", result.getCode());
