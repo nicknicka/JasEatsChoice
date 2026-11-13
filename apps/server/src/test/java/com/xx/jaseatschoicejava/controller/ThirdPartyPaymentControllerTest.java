@@ -112,7 +112,8 @@ public class ThirdPartyPaymentControllerTest {
 
         ResponseResult<?> result = controller.payGroupOrder(
                 "group-order-1",
-                Map.of("userId", "user-1", "paymentMethod", "wechat")
+                Map.of("paymentMethod", "wechat"),
+                verifiedRequest("user-1")
         );
 
         assertFalse(result.getSuccess());

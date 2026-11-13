@@ -488,6 +488,26 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
     }
   })
 
+  test('10.15 相册删除需本人或管理员（#573）', async ({ page }) => {
+    markRunning('10.15')
+    const merchantId = await getMerchantId()
+    try {
+      // 商家账号 token 删除自己的相册，应越过归属判定（不再 403 拦住），进入查库流程
+      const token = await page.evaluate(() => localStorage.getItem('auth_token') || localStorage.getItem('token'))
+      const response = await fetch(
+        `${TEST_API_BASE}/v1/merchant/${encodeURIComponent(merchantId)}/album?imageUrl=${encodeURIComponent('https://cdn.example.com/album/1.jpg')}&albumType=environment`,
+        { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      )
+      const body = await response.json().catch(() => null)
+      expect(String(body?.code)).not.toBe('403')
+      expect(String(body?.code)).not.toBe('401')
+      markPassed('10.15', `商家删除本人相册未被归属判定拦截（code=${body?.code}）`)
+    } catch (e) {
+      markFailed('10.15', e.message.slice(0, 50))
+      throw e
+    }
+  })
+
   test.afterAll(() => {
     updateSummary()
   })

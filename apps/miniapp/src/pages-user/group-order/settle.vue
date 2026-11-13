@@ -364,6 +364,37 @@ const recalculateAmount = () => {
 }
 
 /**
+ * 请求支付密码：跳过或格式非法返回空串，由调用方直接终止流程
+ */
+const requestPaymentPassword = () => {
+  return new Promise((resolve) => {
+    uni.showModal({
+      title: '支付验证',
+      content: '请输入6位支付密码',
+      editable: true,
+      placeholderText: '支付密码',
+      success: (res) => {
+        if (!res.confirm) {
+          resolve('')
+          return
+        }
+        const password = String(res.content || '').trim()
+        if (!/^\d{6}$/.test(password)) {
+          uni.showToast({
+            title: '支付密码为6位数字',
+            icon: 'none'
+          })
+          resolve('')
+          return
+        }
+        resolve(password)
+      },
+      fail: () => resolve('')
+    })
+  })
+}
+
+/**
  * GROUP-004: 处理支付
  */
 const processPayment = async () => {
@@ -407,6 +438,12 @@ const processPayment = async () => {
     return
   }
 
+  // 群订单与普通订单共用余额，后端强制校验支付密码
+  const paymentPassword = await requestPaymentPassword()
+  if (!paymentPassword) {
+    return
+  }
+
   try {
     uni.showLoading({
       title: '支付中...',
@@ -418,7 +455,8 @@ const processPayment = async () => {
       userId: userId.value,
       paymentType: 'single',
       paymentMethod: paymentMethod.value,
-      couponId: selectedCoupon.value ? selectedCoupon.value.id : ''
+      couponId: selectedCoupon.value ? selectedCoupon.value.id : '',
+      paymentPassword
     })
 
     if (res.code === 200 && res.data) {

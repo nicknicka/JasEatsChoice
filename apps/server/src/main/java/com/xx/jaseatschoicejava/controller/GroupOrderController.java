@@ -16,11 +16,14 @@ import com.xx.jaseatschoicejava.service.GroupChatService;
 import com.xx.jaseatschoicejava.service.GroupOrderService;
 import com.xx.jaseatschoicejava.service.GroupService;
 import com.xx.jaseatschoicejava.service.MerchantService;
+import com.xx.jaseatschoicejava.service.PaymentPasswordService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.UserCouponService;
 import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.service.WalletService;
 import com.xx.jaseatschoicejava.util.NotificationUtil;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +73,9 @@ public class GroupOrderController {
 
     @Autowired
     private WalletService walletService;
+
+    @Autowired
+    private PaymentPasswordService paymentPasswordService;
 
     /**
      * 获取或创建群组的草稿订单
@@ -409,24 +415,24 @@ public class GroupOrderController {
 
     /**
      * 创建群订单支付
+     *
+     * <p>付款人只认令牌身份（请求体里的 {@code userId} 不再采信），并强制校验支付密码：
+     * 群订单支付和普通订单支付共用同一个余额，密码口径必须一致。
      */
     @PostMapping("/group-orders/{groupOrderId}/pay")
     public ResponseResult<?> payGroupOrder(@PathVariable String groupOrderId,
-                                           @RequestBody Map<String, Object> params) {
+                                           @RequestBody Map<String, Object> params,
+                                           HttpServletRequest request) {
+        String userId = UserIdentityUtil.requireVerifiedUserId(request);
         GroupOrder groupOrder = groupOrderService.getGroupOrderDetail(groupOrderId);
         if (groupOrder == null) {
             return ResponseResult.fail("404", "群订单不存在");
         }
 
-        String userId = getStringValue(params.get("userId"));
         String paymentType = getStringValue(params.get("paymentType"));
         String paymentMethod = getStringValue(params.get("paymentMethod"));
         String couponId = getStringValue(params.get("couponId"));
         String paymentPassword = getStringValue(params.get("paymentPassword"));
-
-        if (userId == null || userId.isBlank()) {
-            return ResponseResult.fail("400", "userId不能为空");
-        }
 
         if (paymentMethod == null || paymentMethod.isBlank()) {
             paymentMethod = "balance";
@@ -467,6 +473,15 @@ public class GroupOrderController {
             return ResponseResult.fail("400", "当前没有可支付的拼单金额");
         }
 
+        // 支付密码为必填项：缺失或错误一律 400，且此时尚未创建支付流水、未扣款、未动群订单状态。
+        if (paymentPassword == null || paymentPassword.isBlank()) {
+            return ResponseResult.fail("400", "请输入支付密码");
+        }
+        if (!paymentPasswordService.verifyPaymentPassword(userId, paymentPassword)) {
+            logger.warn("群订单支付密码校验失败 - groupOrderId: {}, userId: {}", groupOrderId, userId);
+            return ResponseResult.fail("400", "支付密码错误");
+        }
+
         boolean couponUsed = false;
         try {
             if (couponId != null && !couponId.isBlank()) {
@@ -496,7 +511,7 @@ public class GroupOrderController {
             paymentService.updateById(paymentRecord);
 
             if ("wallet".equals(normalizedPaymentMethod)) {
-                handleGroupOrderWalletPayment(groupOrder, paymentRecord, paymentType, paymentPassword);
+                handleGroupOrderWalletPayment(groupOrder, paymentRecord, paymentType);
                 return ResponseResult.success(buildPaymentResponse(paymentRecord, paymentMethod, Map.of(
                         "type", "balance",
                         "status", "success"
@@ -908,15 +923,15 @@ public class GroupOrderController {
         return totalAmount;
     }
 
+    /**
+     * 钱包支付群订单。
+     *
+     * <p>调用前 {@code payGroupOrder} 已校验支付密码，这里不再重复校验，
+     * 也不再接收密码参数，避免出现「传了密码但没校验」的假入口。
+     */
     private void handleGroupOrderWalletPayment(GroupOrder groupOrder,
                                                PaymentRecord paymentRecord,
-                                               String paymentType,
-                                               String paymentPassword) {
-        if (paymentPassword != null && !paymentPassword.isBlank()) {
-            // 当前群订单页没有输入支付密码能力，这里仅保留兼容入口。
-            // 如后续前端补密码输入，可直接在此接入校验逻辑。
-        }
-
+                                               String paymentType) {
         if (!walletService.checkBalance(paymentRecord.getUserId(), paymentRecord.getAmount())) {
             paymentRecord.setPaymentStatus("failed");
             paymentRecord.setUpdatedAt(LocalDateTime.now());
