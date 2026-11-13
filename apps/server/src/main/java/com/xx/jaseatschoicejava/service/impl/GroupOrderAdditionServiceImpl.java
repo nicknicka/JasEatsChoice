@@ -204,7 +204,33 @@ public class GroupOrderAdditionServiceImpl
             throw new RuntimeException("群订单不存在");
         }
 
-        // 3. 为每个加菜创建订单
+        // 3. 校验加菜用户余额（按用户汇总，任一不足则整单失败且不创建订单）
+        Map<String, BigDecimal> requiredByUser = new java.util.LinkedHashMap<>();
+        for (GroupOrderAddition addition : additions) {
+            if (addition.getTotalAmount() != null && addition.getTotalAmount().signum() > 0) {
+                requiredByUser.merge(addition.getUserId(), addition.getTotalAmount(), BigDecimal::add);
+            }
+        }
+        for (Map.Entry<String, BigDecimal> entry : requiredByUser.entrySet()) {
+            if (!walletService.checkBalance(entry.getKey(), entry.getValue())) {
+                log.warn("加菜池支付失败，用户余额不足 - groupOrderId: {}, userId: {}, 需支付: {}",
+                        groupOrderId, entry.getKey(), entry.getValue());
+                return false;
+            }
+        }
+
+        // 4. 扣减余额并写入资金流水（扣款失败会抛异常，事务回滚，不会产生订单）
+        for (GroupOrderAddition addition : additions) {
+            if (addition.getTotalAmount() != null && addition.getTotalAmount().signum() > 0) {
+                walletService.deductBalance(
+                        addition.getUserId(),
+                        addition.getTotalAmount(),
+                        "群订单加菜支付 - " + addition.getId()
+                );
+            }
+        }
+
+        // 5. 为每个加菜创建订单
         for (GroupOrderAddition addition : additions) {
             Order additionOrder = new Order();
             additionOrder.setUserId(addition.getUserId());
@@ -229,7 +255,7 @@ public class GroupOrderAdditionServiceImpl
 
         updateBatchById(additions);
 
-        // 4. 通知商家
+        // 6. 通知商家
         createNotification(
                 groupOrder.getMerchantId(),
                 "新加菜订单",
