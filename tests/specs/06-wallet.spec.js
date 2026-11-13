@@ -6,8 +6,12 @@ const { getUserId } = require('../utils/real-data')
 const API_BASE = TEST_API_BASE.replace(/\/$/, '')
 let testUserId
 
-async function getJson(path) {
-  const response = await fetch(`${API_BASE}${path}`)
+// 钱包接口已收口到本人身份：用例带上登录态令牌，不再匿名读。
+async function getJson(page, path) {
+  const token = await page.evaluate(() => localStorage.getItem('auth_token') || '')
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  })
   const body = await response.json()
   if (!response.ok || body.success !== true) {
     throw new Error(`GET ${path} 失败：${body.message || response.statusText}`)
@@ -31,7 +35,7 @@ test.describe('模块六：钱包与支付', () => {
   test('6.1 钱包信息', async ({ page }) => {
     markRunning('6.1')
     try {
-      const wallet = await getJson(`/v1/wallet/info/${testUserId}`)
+      const wallet = await getJson(page, `/v1/wallet/info/${testUserId}`)
       await page.goto('/user/home/wallet-management')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
@@ -47,7 +51,7 @@ test.describe('模块六：钱包与支付', () => {
   test('6.2 充值', async ({ page }) => {
     markRunning('6.2')
     try {
-      const wallet = await getJson(`/v1/wallet/info/${testUserId}`)
+      const wallet = await getJson(page, `/v1/wallet/info/${testUserId}`)
       await page.goto('/user/home/wallet-management')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
@@ -65,22 +69,25 @@ test.describe('模块六：钱包与支付', () => {
       await dialog.locator('button').filter({ hasText: '取消' }).click()
       await expect(dialog).toBeHidden()
 
+      await expect(dialog.locator('.el-alert')).toContainText('在线充值通道暂未开放')
+
       await rechargeButton.click()
       dialog = page.locator('.el-dialog').filter({ hasText: '充值说明' })
       await expect(dialog).toBeVisible()
       await dialog.locator('button').filter({ hasText: '立即充值' }).click()
-      await expect(page.locator('.el-message').filter({ hasText: '请输入有效的充值金额' })).toBeVisible()
+      await expect(page.locator('.el-message').filter({ hasText: '在线充值通道暂未开放，请联系客服' })).toBeVisible()
 
-      const after = await getJson(`/v1/wallet/info/${testUserId}`)
+      // 用户侧不再有自助加余额的入口，余额必须保持不变
+      const after = await getJson(page, `/v1/wallet/info/${testUserId}`)
       expect(Number(after.balance)).toBe(Number(wallet.balance))
-      markPassed('6.2', `充值金额与校验交互正确，余额保持 ${wallet.balance}`)
+      markPassed('6.2', `充值入口只提示走客服，余额保持 ${wallet.balance}`)
     } catch (e) { markFailed('6.2', e.message.slice(0, 50)); throw e }
   })
 
   test('6.3 提现', async ({ page }) => {
     markRunning('6.3')
     try {
-      const wallet = await getJson(`/v1/wallet/info/${testUserId}`)
+      const wallet = await getJson(page, `/v1/wallet/info/${testUserId}`)
       await page.goto('/user/home/wallet-management')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
@@ -102,8 +109,8 @@ test.describe('模块六：钱包与支付', () => {
   test('6.4 交易记录', async ({ page }) => {
     markRunning('6.4')
     try {
-      const wallet = await getJson(`/v1/wallet/info/${testUserId}`)
-      const history = await getJson(`/v1/consume-history?userId=${testUserId}&type=all&page=1&pageSize=20`)
+      const wallet = await getJson(page, `/v1/wallet/info/${testUserId}`)
+      const history = await getJson(page, `/v1/consume-history?userId=${testUserId}&type=all&page=1&pageSize=20`)
       await page.goto('/user/home/wallet-transactions')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
@@ -128,7 +135,7 @@ test.describe('模块六：钱包与支付', () => {
   test('6.5 支付密码设置', async ({ page }) => {
     markRunning('6.5')
     try {
-      const passwordStatus = await getJson(`/v1/payment-password/check/${testUserId}`)
+      const passwordStatus = await getJson(page, `/v1/payment-password/check/${testUserId}`)
       await page.goto('/user/home/payment-password-setup')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 
@@ -145,8 +152,8 @@ test.describe('模块六：钱包与支付', () => {
   test('6.6 钱包安全', async ({ page }) => {
     markRunning('6.6')
     try {
-      const settings = await getJson(`/v1/wallet/security-settings?userId=${testUserId}`)
-      const passwordStatus = await getJson(`/v1/payment-password/check/${testUserId}`)
+      const settings = await getJson(page, `/v1/wallet/security-settings?userId=${testUserId}`)
+      const passwordStatus = await getJson(page, `/v1/payment-password/check/${testUserId}`)
       await page.goto('/user/home/wallet-security')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
 

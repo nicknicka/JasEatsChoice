@@ -3,6 +3,8 @@ package com.xx.jaseatschoicejava.controller;
 import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.*;
 import com.xx.jaseatschoicejava.service.AddDishService;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +29,9 @@ public class AddDishController {
      */
     @PostMapping("/request")
     public ResponseResult<?> createAddDishRequest(@RequestBody CreateAddDishDTO dto,
-                                                   @RequestHeader("X-User-Id") String userId) {
+                                                   HttpServletRequest request) {
         try {
+            String userId = UserIdentityUtil.requireVerifiedUserId(request);
             String requestId = addDishService.createAddDishRequest(dto, userId);
             return ResponseResult.success(requestId);
         } catch (Exception e) {
@@ -70,8 +73,9 @@ public class AddDishController {
      */
     @DeleteMapping("/request/{requestId}")
     public ResponseResult<?> withdrawRequest(@PathVariable String requestId,
-                                              @RequestHeader("X-User-Id") String userId) {
+                                              HttpServletRequest request) {
         try {
+            String userId = UserIdentityUtil.requireVerifiedUserId(request);
             boolean success = addDishService.withdrawRequest(requestId, userId);
             return ResponseResult.success(success);
         } catch (Exception e) {

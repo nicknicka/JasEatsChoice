@@ -8,12 +8,16 @@ import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.service.PaymentPasswordService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.UserCouponService;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -110,10 +114,12 @@ public class PaymentController {
      */
     @ApiOperation("创建平台币支付订单")
     @PostMapping("/create")
-    public ResponseResult<Map<String, Object>> createPayment(@RequestBody Map<String, Object> request) {
+    public ResponseResult<Map<String, Object>> createPayment(@RequestBody Map<String, Object> request,
+                                                             HttpServletRequest httpRequest) {
+        // 付款人只认令牌里的身份：请求体里的 userId 不再采信，避免拿别人的账户付款。
+        String userId = UserIdentityUtil.requireVerifiedUserId(httpRequest);
         try {
             String orderId = (String) request.get("orderId");
-            String userId = (String) request.get("userId");
             String paymentMethod = (String) request.get("paymentMethod");
             String couponId = (String) request.get("couponId");
 
@@ -128,6 +134,12 @@ public class PaymentController {
             Order order = orderService.getById(orderId);
             if (order == null) {
                 return ResponseResult.fail("404", "订单不存在");
+            }
+
+            // 只能为自己的订单付款
+            if (order.getUserId() != null && !order.getUserId().equals(userId)) {
+                log.warn("拒绝代付他人订单，操作者：{}，订单：{}", userId, orderId);
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "只能支付本人订单");
             }
 
             // 检查订单状态

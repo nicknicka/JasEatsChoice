@@ -1,73 +1,37 @@
 package com.xx.jaseatschoicejava.util;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 用户身份识别工具类
- * 从请求中提取用户ID，支持多种方式
+ * 用户身份识别工具类。
+ * <p>
+ * 唯一可信来源是 {@code JwtAuthenticationFilter} 验签通过后写入的请求属性；
+ * 不再采信 {@code X-User-Id} 等可伪造请求头，也不在工具类里第二次解析令牌。
+ * 未携带有效令牌时一律返回 null，由调用方按需转成 401。
  */
 public class UserIdentityUtil {
-
-    private static final String HEADER_USER_ID = "X-User-Id";
-    private static final String HEADER_AUTHORIZATION = "Authorization";
 
     /**
      * 请求属性名：JwtAuthenticationFilter 校验通过 JWT 后写入的可信用户ID。
      */
     public static final String VERIFIED_USER_ID_ATTRIBUTE = "jaseats.verifiedUserId";
 
-    // JWT工具类实例（Spring注入）
-    private static JwtUtil jwtUtil;
-
     /**
-     * 设置JWT工具类实例（由Spring调用）
-     */
-    public static void setJwtUtil(JwtUtil util) {
-        jwtUtil = util;
-    }
-
-    /**
-     * 从请求中获取用户ID
-     * 优先级：X-User-Id请求头 > JWT Token解析
+     * 从请求中获取用户ID。
+     * <p>
+     * 仅为兼容既有调用方保留的方法名，语义等同 {@link #extractVerifiedUserId(HttpServletRequest)}。
      *
      * @param request HTTP请求
-     * @return 用户ID，如果无法获取则返回null
+     * @return 已验证的用户ID，未登录或令牌无效时返回 null
      */
     public static String extractUserId(HttpServletRequest request) {
-        if (request == null) {
-            return null;
-        }
-
-        // 1. 优先从X-User-Id请求头获取（前端传递）
-        String userId = request.getHeader(HEADER_USER_ID);
-        if (userId != null && !userId.isEmpty() && !"null".equals(userId)) {
-            return userId;
-        }
-
-        // 2. 从JWT Token中解析（备选方案）
-        String authHeader = request.getHeader(HEADER_AUTHORIZATION);
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            try {
-                if (jwtUtil != null) {
-                    String userIdFromToken = jwtUtil.extractUserId(token);
-                    if (userIdFromToken != null && !userIdFromToken.isEmpty()) {
-                        return userIdFromToken;
-                    }
-                }
-            } catch (Exception e) {
-                // JWT解析失败，返回null
-                return null;
-            }
-        }
-
-        return null;
+        return extractVerifiedUserId(request);
     }
 
     /**
-     * 从请求中获取可信用户ID：只认 JwtAuthenticationFilter 校验通过的 JWT 写入的用户ID，
-     * 不采信任何请求头。内容提取等需要强身份的接口使用该入口；其它模块仍沿用
-     * {@link #extractUserId(HttpServletRequest)}。
+     * 从请求中获取可信用户ID：只认 JwtAuthenticationFilter 校验通过的 JWT 写入的用户ID。
      *
      * @param request HTTP请求
      * @return 已验证的用户ID，未登录或令牌无效时返回 null
@@ -101,5 +65,20 @@ public class UserIdentityUtil {
             }
         }
         return null;
+    }
+
+    /**
+     * 取已认证身份；未登录或令牌无效时直接 401。
+     *
+     * @param request HTTP请求
+     * @return 已验证的用户ID（非 null）
+     * @throws ResponseStatusException 未登录或令牌无效
+     */
+    public static String requireVerifiedUserId(HttpServletRequest request) {
+        String userId = extractVerifiedUserId(request);
+        if (userId == null || userId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "未登录");
+        }
+        return userId;
     }
 }

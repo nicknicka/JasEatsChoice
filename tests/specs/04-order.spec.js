@@ -3,10 +3,18 @@ const { markRunning, markPassed, markFailed, updateSummary } = require('../utils
 const { getOrder, getUserId, getMerchant, getMerchantId, getDish, getDishId, deleteCoupon } = require('../utils/real-data')
 const { TEST_API_BASE } = require('../utils/api')
 
-async function apiRequest(api, method, path, data) {
+// 下单、钱包这些接口只认令牌身份，用例默认带上当前登录用户的管理端/用户端令牌。
+let userAuthHeaders = {}
+
+async function rememberUserAuth(page) {
+  userAuthHeaders = await authHeaders(page)
+}
+
+async function apiRequest(api, method, path, data, headers) {
   const response = await api.fetch(`${TEST_API_BASE}${path}`, {
     method,
-    data
+    data,
+    headers: { ...userAuthHeaders, ...(headers || {}) }
   })
   const body = await response.json().catch(() => null)
   if (!response.ok() || !body?.success) {
@@ -15,22 +23,51 @@ async function apiRequest(api, method, path, data) {
   return body.data
 }
 
+// 后端按菜品表重算金额，请求体里的 totalAmount 不再生效；
+// 需要更高金额时只能加数量（quantity 上限 99）。
 async function createOrder(api, status, totalAmount) {
   const userId = await getUserId()
   const merchantId = await getMerchantId()
   const dish = await getDish({ merchantId })
   const dishId = dish.id || dish.dishId
   const price = Number(dish.price)
+  const quantity = totalAmount && price > 0 ? Math.max(1, Math.min(99, Math.ceil(totalAmount / price))) : 1
   return apiRequest(api, 'POST', '/v1/orders', {
     order: {
       userId,
       merchantId,
-      totalAmount: totalAmount ?? price,
       status,
       address: '到店自取'
     },
-    dishes: [{ dishId: String(dishId), quantity: 1, price }]
+    dishes: [{ dishId: String(dishId), quantity, price }]
   })
+}
+
+// 钱包充值已收口到管理端：用例先换管理员令牌，再给测试账号入账。
+let cachedAdminToken = null
+async function adminHeaders(api) {
+  if (cachedAdminToken) return { Authorization: `Bearer ${cachedAdminToken}` }
+  const response = await api.fetch(`${TEST_API_BASE}/admin/login`, {
+    method: 'POST',
+    data: { username: process.env.TEST_ADMIN_USER || 'admin', password: process.env.TEST_ADMIN_PWD || 'admin123' }
+  })
+  const body = await response.json().catch(() => null)
+  if (!response.ok() || !body?.token) {
+    throw new Error(`管理员登录失败：${body?.message || response.status()}`)
+  }
+  cachedAdminToken = body.token
+  return { Authorization: `Bearer ${cachedAdminToken}` }
+}
+
+async function rechargeAsAdmin(api, userId, amount, rechargeNo) {
+  const headers = await adminHeaders(api)
+  return apiRequest(
+    api,
+    'POST',
+    `/v1/wallet/recharge?userId=${encodeURIComponent(userId)}&amount=${encodeURIComponent(amount)}&rechargeNo=${encodeURIComponent(rechargeNo)}`,
+    undefined,
+    headers
+  )
 }
 
 async function setOrderStatus(api, orderId, status) {
@@ -102,6 +139,7 @@ test.describe('模块四：订单流程', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsUser(page)
+    await rememberUserAuth(page)
   })
 
   test('4.1 创建订单', async ({ page }) => {
@@ -138,11 +176,7 @@ test.describe('模块四：订单流程', () => {
       // 充值后支付相同金额，既保证余额充足，也让钱包余额回到测试前水平。
       const walletBefore = await apiRequest(request, 'GET', `/v1/wallet/info/${userId}`)
       const rechargeNo = `e2e-order-pay-${Date.now()}`
-      await apiRequest(
-        request,
-        'POST',
-        `/v1/wallet/recharge?userId=${encodeURIComponent(userId)}&amount=${encodeURIComponent(amount)}&rechargeNo=${encodeURIComponent(rechargeNo)}`
-      )
+      await rechargeAsAdmin(request, userId, amount, rechargeNo)
       const walletAfterRecharge = await apiRequest(request, 'GET', `/v1/wallet/info/${userId}`)
 
       await page.goto('/user/home/orders?status=pending')
@@ -164,11 +198,7 @@ test.describe('模块四：订单流程', () => {
       const detailOrder = await getOrder({ orderId: detailOrderId })
       const detailAmount = Number(detailOrder.totalAmount)
       const detailRechargeNo = `e2e-order-detail-pay-${Date.now()}`
-      await apiRequest(
-        request,
-        'POST',
-        `/v1/wallet/recharge?userId=${encodeURIComponent(userId)}&amount=${encodeURIComponent(detailAmount)}&rechargeNo=${encodeURIComponent(detailRechargeNo)}`
-      )
+      await rechargeAsAdmin(request, userId, detailAmount, detailRechargeNo)
       await page.goto(`/user/home/order-detail/${detailOrderId}`)
       const detailPayButton = page.locator('.order-actions button:has-text("支付")')
       await expect(detailPayButton).toBeVisible()
@@ -508,11 +538,7 @@ test.describe('模块四：订单流程', () => {
 
       const rechargeNo = `E2E-ADD-DISH-${Date.now()}`
       const rechargeAmount = Math.max(Number(dish.price || 0), 1) + 10
-      await apiRequest(
-        request,
-        'POST',
-        `/v1/wallet/recharge?userId=${encodeURIComponent(userId)}&amount=${encodeURIComponent(rechargeAmount)}&rechargeNo=${encodeURIComponent(rechargeNo)}`
-      )
+      await rechargeAsAdmin(request, userId, rechargeAmount, rechargeNo)
 
       await page.goto('/user/home/chat')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)

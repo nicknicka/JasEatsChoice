@@ -24,8 +24,25 @@ import java.util.List;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    static final String ROLE_ADMIN = "ROLE_ADMIN";
+    static final String ROLE_USER = "ROLE_USER";
+    private static final String ADMIN_PERMISSION_PREFIX = "admin:";
+
     @Autowired
     private JwtUtil jwtUtil;
+
+    /**
+     * 判断令牌声明的权限里是否含管理端权限。
+     * 管理员令牌由 {@code AdminServiceImpl} 签发，权限一律以 {@code admin:} 开头；
+     * 用户令牌没有 permissions 声明，因此不会被授予管理员角色。
+     */
+    static boolean hasAdminPermission(List<String> permissions) {
+        if (permissions == null || permissions.isEmpty()) {
+            return false;
+        }
+        return permissions.stream()
+                .anyMatch(permission -> permission != null && permission.startsWith(ADMIN_PERMISSION_PREFIX));
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -66,8 +83,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             // System.out.println("Loaded " + permissions.size() + " permissions from token");
                         }
 
-                        // 添加 ADMIN 角色
-                        authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+                        // 角色只由令牌里签发的权限决定：ADMIN 角色仅发给带 admin:* 权限的管理端令牌。
+                        // 普通用户令牌没有 permissions 声明，拿到的是 ROLE_USER，调管理端接口应 403。
+                        authorities.add(new SimpleGrantedAuthority(ROLE_USER));
+                        if (hasAdminPermission(permissions)) {
+                            authorities.add(new SimpleGrantedAuthority(ROLE_ADMIN));
+                        }
                         // System.out.println("Total authorities: " + authorities.size());
 
                         // 创建认证信息

@@ -99,19 +99,6 @@ const resolveRequestUrl = (config) => {
   return `${baseURL.replace(/\/$/, '')}/${url.replace(/^\//, '')}`
 }
 
-const getUserIdFromToken = (token) => {
-  try {
-    if (!token || typeof token !== 'string') return ''
-    const payload = token.split('.')[1]
-    if (!payload) return ''
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
-    return JSON.parse(atob(padded))?.userId || ''
-  } catch {
-    return ''
-  }
-}
-
 export const addAuthorization = (config) => {
   if (!config || isPublicApi(config.url) || config.headers?.Authorization) {
     return config
@@ -121,8 +108,6 @@ export const addAuthorization = (config) => {
   if (token) {
     config.headers = config.headers || {}
     config.headers.Authorization = `Bearer ${token}`
-    const userId = getUserIdFromToken(token)
-    if (userId) config.headers['X-User-Id'] = userId
   }
   return config
 }

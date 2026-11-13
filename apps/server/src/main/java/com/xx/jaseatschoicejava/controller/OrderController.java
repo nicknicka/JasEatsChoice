@@ -16,9 +16,11 @@ import com.xx.jaseatschoicejava.service.PaymentPasswordService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.WalletService;
 import com.xx.jaseatschoicejava.util.NotificationUtil;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -45,13 +47,16 @@ public class OrderController {
 
     /**
      * 创建订单(支持菜品列表)
+     * <p>
+     * 下单人取令牌里的身份；金额按菜品表重算。请求体里的 userId / totalAmount 都不采信。
      */
     @PostMapping
-    public ResponseResult<?> createOrder(@RequestBody OrderCreateDTO orderCreateDTO) {
+    public ResponseResult<?> createOrder(@RequestBody OrderCreateDTO orderCreateDTO, HttpServletRequest request) {
         log.info("开始创建订单，订单信息：{}，菜品数量：{}",
                 orderCreateDTO != null ? orderCreateDTO.getOrder() : null,
                 orderCreateDTO != null && orderCreateDTO.getDishes() != null ? orderCreateDTO.getDishes().size() : 0);
 
+        String authenticatedUserId = UserIdentityUtil.requireVerifiedUserId(request);
         try {
             if (orderCreateDTO == null || orderCreateDTO.getOrder() == null) {
                 log.warn("创建订单缺少订单主体数据");
@@ -61,16 +66,21 @@ public class OrderController {
             // 使用事务方法同时创建订单和菜品
             boolean success = orderService.createOrderWithDishes(
                     orderCreateDTO.getOrder(),
-                    orderCreateDTO.getDishes()
+                    orderCreateDTO.getDishes(),
+                    authenticatedUserId
             );
 
             if (success) {
-                log.info("订单创建成功，订单ID：{}", orderCreateDTO.getOrder().getId());
+                log.info("订单创建成功，订单ID：{}，金额：{}",
+                        orderCreateDTO.getOrder().getId(), orderCreateDTO.getOrder().getTotalAmount());
                 return ResponseResult.success(orderCreateDTO.getOrder().getId());
             } else {
                 log.error("订单创建失败");
                 return ResponseResult.fail("500", "创建订单失败");
             }
+        } catch (IllegalArgumentException e) {
+            log.warn("创建订单参数不合法，用户ID：{}，原因：{}", authenticatedUserId, e.getMessage());
+            return ResponseResult.fail("400", e.getMessage());
         } catch (Exception e) {
             log.error("创建订单异常", e);
             return ResponseResult.fail("500", "创建订单失败：" + e.getMessage());
@@ -322,15 +332,23 @@ public class OrderController {
     @PostMapping("/{orderId}/pay")
     public ResponseResult<?> payOrder(
         @PathVariable String orderId,
-        @ApiParam("用户ID") @RequestParam String userId,
+        @ApiParam("用户ID（仅兼容旧前端，不参与鉴权）") @RequestParam(required = false) String userId,
         @ApiParam("支付方式") @RequestParam(defaultValue = "wallet") String paymentMethod,
-        @ApiParam("支付密码") @RequestParam(required = false) String paymentPassword
+        @ApiParam("支付密码") @RequestParam(required = false) String paymentPassword,
+        HttpServletRequest request
     ) {
+        String authenticatedUserId = UserIdentityUtil.requireVerifiedUserId(request);
         try {
             // 获取订单信息
             Order order = orderService.getById(orderId);
             if (order == null) {
                 return ResponseResult.fail("404", "订单不存在");
+            }
+
+            // 只允许为自己的订单付款
+            if (order.getUserId() != null && !order.getUserId().equals(authenticatedUserId)) {
+                log.warn("拒绝代付他人订单，操作者：{}，订单：{}", authenticatedUserId, orderId);
+                return ResponseResult.fail("403", "只能支付本人订单");
             }
 
             // 检查订单状态

@@ -17,6 +17,7 @@ import com.xx.jaseatschoicejava.service.OrderDishService;
 import com.xx.jaseatschoicejava.service.OrderService;
 import com.xx.jaseatschoicejava.enums.NotificationTypeEnum;
 import com.xx.jaseatschoicejava.util.NotificationUtil;
+import com.xx.jaseatschoicejava.util.OrderPricing;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,16 +46,30 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     /**
      * 创建订单并保存订单菜品(事务方法)
-     * @param order 订单信息
+     * <p>
+     * 下单人身份与金额都由服务端决定：userId 取自已验签的 JWT，
+     * 菜品单价取数据库、总额按单价 × 数量重算，请求体里的 totalAmount 直接丢弃。
+     *
+     * @param order 订单信息（userId、totalAmount 会被覆盖）
      * @param orderDishes 订单菜品列表
+     * @param authenticatedUserId 已认证的下单人
      * @return 是否创建成功
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean createOrderWithDishes(Order order, List<OrderDish> orderDishes) {
+    public boolean createOrderWithDishes(Order order, List<OrderDish> orderDishes, String authenticatedUserId) {
         if (order == null) {
-            throw new RuntimeException("订单信息不能为空");
+            throw new IllegalArgumentException("订单信息不能为空");
         }
+        if (authenticatedUserId == null || authenticatedUserId.isBlank()) {
+            throw new IllegalArgumentException("缺少下单人身份");
+        }
+
+        // 下单人只认令牌里的身份，不接受请求体里的 userId
+        order.setUserId(authenticatedUserId);
+
+        // 金额只认菜品表
+        repricingByDatabase(order, orderDishes);
 
         try {
             // 如果订单ID为空，自动生成
@@ -99,6 +114,28 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             log.error("创建订单和菜品失败,订单ID: {}", order.getId(), e);
             throw new RuntimeException("创建订单和菜品失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 按菜品表重算订单金额：请求体里的单价与总额都不参与计算。
+     */
+    private void repricingByDatabase(Order order, List<OrderDish> orderDishes) {
+        if (orderDishes == null || orderDishes.isEmpty()) {
+            throw new IllegalArgumentException("订单至少包含一个菜品");
+        }
+
+        List<String> dishIds = orderDishes.stream()
+                .map(OrderDish::getDishId)
+                .filter(dishId -> dishId != null && !dishId.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<String, Dish> dishesById = dishIds.isEmpty()
+                ? new HashMap<>()
+                : dishService.listByIds(dishIds).stream()
+                        .collect(Collectors.toMap(Dish::getId, dish -> dish, (first, second) -> first));
+
+        OrderPricing.applyServerPrices(order, orderDishes, dishesById);
     }
 
     /**

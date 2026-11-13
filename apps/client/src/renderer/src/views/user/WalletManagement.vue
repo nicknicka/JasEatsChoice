@@ -116,16 +116,16 @@
     <el-dialog v-model="rechargeDialogVisible" title="充值" width="450px" center>
       <el-alert
         title="充值说明"
-        type="success"
+        type="warning"
         :closable="false"
         show-icon
         style="margin-bottom: 20px"
       >
         <template #default>
           <ul style="margin: 5px 0; padding-left: 20px">
-            <li>充值即时到账，无手续费</li>
+            <li>在线充值通道暂未开放，需充值请联系客服</li>
             <li>1平台币 = 1元人民币</li>
-            <li>当前仅支持平台币余额充值</li>
+            <li>客服充值由管理端入账，到账后余额实时刷新</li>
             <li>充值遇到问题请联系客服</li>
           </ul>
         </template>
@@ -401,38 +401,10 @@ const setRechargeAmount = (amount) => {
 }
 
 // 确认充值
+// 后端已把钱包充值收口到管理端：用户侧没有可验证的资金到账渠道，
+// 放开自助充值等于凭空造余额，这里只给出说明，不再调用接口。
 const confirmRecharge = async () => {
-  if (!rechargeForm.value.amount || rechargeForm.value.amount <= 0) {
-    ElMessage.warning('请输入有效的充值金额')
-    return
-  }
-
-  const userId = authStore.userId
-  if (!userId || userId === '0') {
-    ElMessage.error('用户未登录，请重新登录')
-    return
-  }
-
-  recharging.value = true
-  try {
-    const rechargeNo = 'RCH' + new Date().getTime() + Math.floor(Math.random() * 1000)
-
-    const response = await walletApi.recharge(userId, rechargeForm.value.amount, rechargeNo)
-
-    if (response.code === '200') {
-      ElMessage.success(`充值成功！已到账${rechargeForm.value.amount}平台币`)
-      rechargeDialogVisible.value = false
-      rechargeForm.value.amount = null
-      await fetchWalletInfo()
-    } else {
-      ElMessage.error(response.message || '充值失败，请重试')
-    }
-  } catch (error) {
-    console.error('充值失败:', error)
-    ElMessage.error(error.message || '充值失败，请重试')
-  } finally {
-    recharging.value = false
-  }
+  ElMessage.warning('在线充值通道暂未开放，请联系客服充值')
 }
 
 // 显示提现对话框
