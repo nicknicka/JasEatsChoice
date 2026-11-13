@@ -1,6 +1,6 @@
 import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 import { clearAuthState } from '../utils/authSession'
-import { decodeJwtToken, isTokenExpired } from '../utils/tokenCleaner'
+import { isSessionUsable } from '../utils/tokenCleaner'
 
 const useFileProtocolHistory =
   typeof window !== 'undefined' && window.location && window.location.protocol === 'file:'
@@ -587,15 +587,6 @@ const router = createRouter({
     }
   ]
 })
-
-// 判断本地登录态是否可用：无 token 视为失效；能解析且已过期视为失效；
-// 无法解析的 token 交给后端 401 兜底，避免误伤非标准 token
-const isSessionUsable = (token) => {
-  if (!token) return false
-  const payload = decodeJwtToken(token)
-  if (!payload || !payload.exp) return true
-  return !isTokenExpired(token)
-}
 
 const runWindowAction = async (action, timeout = 1500) => {
   if (!action) return

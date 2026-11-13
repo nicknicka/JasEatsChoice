@@ -18,7 +18,16 @@
         <div class="result-time">
           {{ result.formattedTime || result.time }}
         </div>
-        <div class="result-content" v-html="result.highlightedContent"></div>
+        <!-- 消息原文只作纯文本渲染，命中关键词的片段用 <mark> 包住（见 #567） -->
+        <div class="result-content">
+          <template
+            v-for="(segment, segmentIndex) in result.highlightSegments"
+            :key="segmentIndex"
+          >
+            <mark v-if="segment.highlight">{{ segment.text }}</mark>
+            <template v-else>{{ segment.text }}</template>
+          </template>
+        </div>
       </div>
     </div>
   </div>

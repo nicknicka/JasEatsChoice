@@ -22,7 +22,8 @@
     "test:merchant-ai-history": "node --test scripts/test-merchant-ai-history.mjs",
     "test:merchant-ai-multi-card-stream": "node --test scripts/test-merchant-ai-multi-card-stream.mjs",
     "test:recipe-stream": "node --test scripts/test-recipe-stream.mjs",
-    "test:merchant-ai-card-hardening": "node --import ./scripts/register-test-import-meta-env.mjs --test scripts/test-merchant-ai-card-hardening.mjs"
+    "test:merchant-ai-card-hardening": "node --import ./scripts/register-test-import-meta-env.mjs --test scripts/test-merchant-ai-card-hardening.mjs",
+    "test:renderer-security": "node --test scripts/test-renderer-security.mjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
