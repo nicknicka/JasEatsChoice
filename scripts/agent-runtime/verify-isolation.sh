@@ -5,12 +5,18 @@
 #
 # 逐条验证专用账号 dsh 读不到它不该读的东西，并确认面板只监听回环地址。
 # 任一条 FAIL 退出非零。非 root 运行时会跳过需要 sudo -u dsh 的探测并标记 SKIP。
+#
+# 注意：本机实际形态是按项目分账号，不是脚本默认的 `dsh` + /var/lib/dsh-agent。
+# 在 macOS 上跑 JAS 实例的隔离检查请显式覆盖账号与 home：
+#   DSH_USER=jas-agent DSH_HOME=/Users/jas-agent DSH_PANEL_PORT=3083 \
+#     scripts/agent-runtime/verify-isolation.sh
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DSH_USER="${DSH_USER:-dsh}"
 DSH_HOME="${DSH_HOME:-/var/lib/dsh-agent}"
-DSH_PANEL_PORT="${DSH_PANEL_PORT:-8099}"
+# JAS=3083、bilistu=3082；8099 只属于 Linux 目标形态。
+DSH_PANEL_PORT="${DSH_PANEL_PORT:-3083}"
 DEV_ENV_PATH="${DEV_ENV_PATH:-$REPO_ROOT/deploy/.env}"
 DEV_HOME="${DEV_HOME:-$HOME}"
 DOCKER_SOCK="${DOCKER_SOCK:-/var/run/docker.sock}"

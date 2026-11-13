@@ -6,6 +6,31 @@ dsh-superagent 在这台机器上以**专用 OS 账号**运行，而不是开发
 > 边界：这台机器**不部署生产服务**。不要挂载生产数据库、生产上传卷、Docker socket，
 > 也不要把 `deploy/.env` 复制过来。
 
+## 本机现状与目标形态不一致（先读这段）
+
+下面「账号与目录约定」是**目标形态**，脚本按 Linux 写的（`install-account.sh` 用 `useradd`）。
+macOS 上没装这套，实际跑的是**按项目分账号**的形态。两套不要混着查：
+
+| 项 | JAS 实例 | bilistu 实例 |
+| --- | --- | --- |
+| OS 账号 | `jas-agent`（uid 504） | `bilistu-agent`（uid 502） |
+| home / state | `/Users/jas-agent`，state 在 `~/.dsh/state/jas` | `/Users/bilistu-agent` |
+| profile | `jas` | `superagent` |
+| **面板端口** | **`127.0.0.1:3083`** | **`127.0.0.1:3082`** |
+| 拉起方式 | LaunchDaemon `com.jas-agent.dsh-superagent` → `scripts/dsh-superagent --profile jas start`（tmux 内常驻） | 同形状 |
+
+**`8099` 在这台机器上不存在**，它只属于上面的 Linux 目标形态。查端口不要凭记忆：
+
+```bash
+grep -ho 'DSH_SUPERAGENT_URL</key><string>[^<]*' /Library/LaunchDaemons/*dsh*.plist
+sudo launchctl print system/com.jas-agent.dsh-superagent | grep -A3 program
+```
+
+面板只监听回环且需要签名 cookie：直接开 `http://127.0.0.1:3083/` 会得到
+`401 dsh web authentication required; reopen the URL printed by dsh web.`。
+可用入口是 dsh 启动时打印的带 token 的 URL，取法与「不进面板查状态」的管理 API 见
+《使用手册》「三之二、dsh 面板与状态查询（本机实际）」。
+
 ## 账号与目录约定
 
 | 项 | 值 | 说明 |
@@ -14,7 +39,7 @@ dsh-superagent 在这台机器上以**专用 OS 账号**运行，而不是开发
 | 账号 home | `/var/lib/dsh-agent` | 权限 700，state / worktree / gh 配置 / 模型 key 都在这里 |
 | 日志目录 | `/var/log/dsh-agent` | 仅 `dsh` 可写 |
 | 仓库克隆 | `/srv/dsh-agent/repo` | dsh 自己的 clone 与 worktree 根 |
-| 面板 | `127.0.0.1:8099` | 只监听回环地址 |
+| 面板 | `127.0.0.1:8099` | 目标形态；本机实际是 `3083`（JAS）/ `3082`（bilistu），见上 |
 
 同一个仓库里，人的 clone 与 dsh 的 clone 是两份，互不共享 home。
 
