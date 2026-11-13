@@ -143,14 +143,35 @@ public class WalletServiceImpl implements WalletService {
             throw new RuntimeException("钱包已冻结，无法进行交易");
         }
 
-        // 检查余额
-        if (!checkBalance(userId, amount)) {
-            throw new RuntimeException("余额不足");
+        // 检查余额：申请提现即扣减，余额不足直接拒绝（避免同一余额支撑多笔申请）
+        if (wallet.getBalance().compareTo(amount) < 0) {
+            log.warn("用户{}余额不足，提现申请被拒绝，余额：{}，申请金额：{}",
+                userId, wallet.getBalance(), amount);
+            return false;
         }
 
-        // 🔧 修改：不再直接扣款，而是创建提现记录等待审核
-        // 前端或调用方需要通过 WithdrawRecordService 创建提现记录
-        log.info("用户{}申请提现，金额：{}，流水号：{}，等待审核", userId, amount, withdrawNo);
+        // 扣减余额并累计提现金额
+        wallet.setBalance(wallet.getBalance().subtract(amount));
+        wallet.setTotalWithdraw(wallet.getTotalWithdraw().add(amount));
+        wallet.setUpdatedAt(LocalDateTime.now());
+
+        // 更新数据库（使用乐观锁）
+        int rows = walletMapper.updateById(wallet);
+        if (rows == 0) {
+            throw new RuntimeException("提现扣款失败，请重试");
+        }
+
+        // 记录资金流水
+        ConsumeHistory history = new ConsumeHistory();
+        history.setUserId(userId);
+        history.setType("withdraw");
+        history.setAmount(amount);
+        history.setDescription("提现申请 - " + withdrawNo);
+        history.setStatus("success");
+        history.setCreatedAt(LocalDateTime.now());
+        consumeHistoryService.save(history);
+
+        log.info("用户{}提现申请已扣款，金额：{}，流水号：{}", userId, amount, withdrawNo);
         return true;
     }
 

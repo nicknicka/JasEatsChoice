@@ -42,11 +42,11 @@ public interface WalletService {
     boolean deductBalance(String userId, BigDecimal amount, String description);
 
     /**
-     * 提现
+     * 提现（申请即扣减余额，余额不足不扣款）
      * @param userId 用户ID
      * @param amount 提现金额
      * @param withdrawNo 提现流水号
-     * @return 是否成功
+     * @return 是否扣款成功，余额不足时返回 false
      */
     boolean withdraw(String userId, BigDecimal amount, String withdrawNo);
 

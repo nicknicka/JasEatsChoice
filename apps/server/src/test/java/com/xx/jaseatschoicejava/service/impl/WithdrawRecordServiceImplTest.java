@@ -17,6 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -79,6 +80,44 @@ class WithdrawRecordServiceImplTest {
 
         assertThrows(IllegalStateException.class,
             () -> withdrawRecordService.processWithdraw("withdraw-1", "REJECT", "资料不完整", 9L));
+        verify(walletService, never()).refund(any(), any(), any());
+    }
+
+    @Test
+    void createWithdrawRequest_shouldDeductWalletBeforeSavingPendingRecord() {
+        when(walletService.withdraw("user-1", new BigDecimal("88.00"), "WTH-1")).thenReturn(true);
+        when(withdrawRecordMapper.insert(any(WithdrawRecord.class))).thenReturn(1);
+
+        WithdrawRecord record = withdrawRecordService.createWithdrawRequest(
+            "user-1", new BigDecimal("88.00"), "WTH-1", "wechat", "微信钱包");
+
+        assertEquals("pending", record.getWithdrawStatus());
+        verify(walletService).withdraw("user-1", new BigDecimal("88.00"), "WTH-1");
+        verify(withdrawRecordMapper).insert(any(WithdrawRecord.class));
+    }
+
+    @Test
+    void createWithdrawRequest_whenBalanceNotEnough_shouldFailWithoutRecord() {
+        when(walletService.withdraw("user-1", new BigDecimal("88.00"), "WTH-1")).thenReturn(false);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () ->
+            withdrawRecordService.createWithdrawRequest(
+                "user-1", new BigDecimal("88.00"), "WTH-1", "wechat", "微信钱包"));
+
+        assertEquals("余额不足", error.getMessage());
+        verify(withdrawRecordMapper, never()).insert(any(WithdrawRecord.class));
+    }
+
+    @Test
+    void approve_shouldNotMoveMoneyTwice() {
+        WithdrawRecord record = pendingRecord();
+        when(withdrawRecordMapper.selectById("withdraw-1")).thenReturn(record);
+        when(withdrawRecordMapper.updateById(any(WithdrawRecord.class))).thenReturn(1);
+
+        assertTrue(withdrawRecordService.processWithdraw("withdraw-1", "APPROVE", "审核通过", 9L));
+
+        // 资金在申请时已扣减，审核通过不能再扣一次或退款
+        verify(walletService, never()).withdraw(any(), any(), any());
         verify(walletService, never()).refund(any(), any(), any());
     }
 
