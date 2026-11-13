@@ -657,11 +657,23 @@ public class MerchantController {
 
     /**
      * 删除店铺相册照片
+     *
+     * <p>与上传同一口径：相册属于商家自有数据，只有与该 merchantId 绑定的用户（或管理员）可以删除。
      */
     @DeleteMapping("/{merchantId}/album")
     public ResponseResult<?> deleteMerchantAlbum(@PathVariable String merchantId,
                                                 @RequestParam("imageUrl") String imageUrl,
-                                                @RequestParam("albumType") String albumType) {
+                                                @RequestParam("albumType") String albumType,
+                                                jakarta.servlet.http.HttpServletRequest request) {
+        // 只认 JWT 校验通过的用户ID，不采信 X-User-Id 等可伪造请求头
+        String currentUserId = com.xx.jaseatschoicejava.util.UserIdentityUtil.extractVerifiedUserId(request);
+        if (currentUserId == null) {
+            return ResponseResult.fail("401", "请先登录");
+        }
+        if (!canManageMerchant(currentUserId, merchantId)) {
+            return ResponseResult.fail("403", "无权操作该商家相册");
+        }
+
         try {
             // 使用原生SQL直接查询album字段（避免JacksonTypeHandler的bug）
             String albumJson = jdbcTemplate.queryForObject(

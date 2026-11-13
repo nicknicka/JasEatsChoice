@@ -667,11 +667,31 @@ const refreshGroupOrderSettlement = async (userId) => {
 
 const payGroupOrder = async (userId, methodId) => {
   const paymentType = methodId === 2 ? 'all' : 'single'
+
+  // 群订单和普通订单共用余额，后端同样强制校验支付密码。
+  // 密码只在本次请求内持有，不落 localStorage、不写日志。
+  let paymentPassword
+  try {
+    const { value } = await ElMessageBox.prompt('请输入 6 位支付密码', '支付验证', {
+      confirmButtonText: '确认支付',
+      cancelButtonText: '取消',
+      inputType: 'password',
+      inputPattern: /^\d{6}$/,
+      inputErrorMessage: '支付密码为 6 位数字'
+    })
+    paymentPassword = value
+  } catch {
+    submitting.value = false
+    ElMessage.info('已取消支付')
+    return
+  }
+
   const response = await groupOrderApi.pay(groupOrderId.value, {
     userId,
     paymentType,
     paymentMethod: 'balance',
-    couponId: selectedDiscount.value?.id || ''
+    couponId: selectedDiscount.value?.id || '',
+    paymentPassword
   })
 
   if (!(response.code === '200' || response.code === 200 || response.success)) {

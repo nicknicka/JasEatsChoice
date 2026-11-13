@@ -509,10 +509,38 @@ test.describe('模块四：订单流程', () => {
       expect(settlement.orderId).toBe(groupOrderId)
       expect(settlement.totalAmount).toBe(confirmed.totalAmount)
 
+      // 群订单支付与普通订单共用余额，密码口径一致：缺失或错误都不得推进支付（#573）
+      const payGroupOrderRaw = async (extra) => {
+        const response = await request.fetch(
+          `${TEST_API_BASE}/v1/group-orders/group-orders/${groupOrderId}/pay`,
+          {
+            method: 'POST',
+            headers: userAuthHeaders,
+            data: { paymentMethod: 'balance', paymentType: 'single', ...extra }
+          }
+        )
+        return response.json()
+      }
+
+      const payWithoutPassword = await payGroupOrderRaw({})
+      expect(String(payWithoutPassword.code)).toBe('400')
+      expect(payWithoutPassword.message).toContain('支付密码')
+
+      const payWithWrongPassword = await payGroupOrderRaw({ paymentPassword: '000000' })
+      expect(String(payWithWrongPassword.code)).toBe('400')
+      expect(payWithWrongPassword.message).toContain('支付密码')
+
+      const afterRejectedPay = await apiRequest(
+        request,
+        'GET',
+        `/v1/group-orders/group-orders/${groupOrderId}?userId=${userId}`
+      )
+      expect(afterRejectedPay.groupOrder?.currentUserPaid).toBeFalsy()
+
       await page.goto('/user/home/chat')
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
       await expect(page.locator('.conversation-item').filter({ hasText: groupName })).toBeVisible({ timeout: 10000 })
-      markPassed('4.11', `群订单 ${groupOrderId} 确认后结算金额一致`)
+      markPassed('4.11', `群订单 ${groupOrderId} 确认后结算金额一致，免密/错密支付均被拒`)
     } catch (e) {
       markFailed('4.11', e.message.slice(0, 50))
       throw e
@@ -574,10 +602,12 @@ test.describe('模块四：订单流程', () => {
         dishes: [{ dishId: String(dishId), quantity: 1, customization: 'E2E 加菜前置' }]
       })
       await apiRequest(request, 'POST', `/v1/group-orders/group-orders/${groupOrderId}/confirm`, { userId })
+      // 群订单支付与普通订单共用余额、强制密码；这里走 API 直调，补上 4.2 前已设置的固定密码
       await apiRequest(request, 'POST', `/v1/group-orders/group-orders/${groupOrderId}/pay`, {
         userId,
         paymentType: 'single',
-        paymentMethod: 'balance'
+        paymentMethod: 'balance',
+        paymentPassword: PAYMENT_PASSWORD
       })
 
       await page.evaluate((paidGroupOrderId) => {
