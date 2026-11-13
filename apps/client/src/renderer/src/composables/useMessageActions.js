@@ -24,15 +24,20 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
 
   /**
    * 搜索消息（带防抖）
+   * @param {string} [keywordInput] ChatAreaHeader 通过 @search 传来的关键词；
+   *   不传时回退到内部 searchKeyword（clearSearch 等场景）。
    */
-  const searchMessages = debounce(() => {
-    if (!searchKeyword.value.trim()) {
+  const searchMessages = debounce((keywordInput) => {
+    const keyword = (typeof keywordInput === 'string' ? keywordInput : searchKeyword.value)
+      .toLowerCase()
+      .trim()
+
+    if (!keyword) {
       isSearching.value = false
       messageSearchResults.value = []
       return
     }
 
-    const keyword = searchKeyword.value.toLowerCase().trim()
     const results = []
 
     chatMessages.value.forEach((msg, index) => {
