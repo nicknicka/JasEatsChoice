@@ -6,6 +6,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { MESSAGE_CONFIG, MESSAGE_STATUS } from '@/constants/chatConstants'
 import { debounce } from 'lodash-es'
 import api from '@/utils/api.js'
+import { buildHighlightSegments } from '@/utils/searchHighlight'
 
 export function useMessageActions({ chatHistory, chatMessages, userId, formatMessageTime }) {
   // 搜索相关
@@ -42,16 +43,11 @@ export function useMessageActions({ chatHistory, chatMessages, userId, formatMes
 
     chatMessages.value.forEach((msg, index) => {
       if (msg.content && msg.content.toLowerCase().includes(keyword)) {
-        // 高亮关键词
-        const highlightedContent = msg.content.replace(
-          new RegExp(`(${keyword})`, 'gi'),
-          '<mark>$1</mark>'
-        )
-
+        // 高亮关键词：只切分文本片段，渲染交给组件，不拼 HTML（见 #567）
         results.push({
           ...msg,
           originalIndex: index,
-          highlightedContent: highlightedContent
+          highlightSegments: buildHighlightSegments(msg.content, keyword)
         })
       }
     })

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { API_CONFIG } from '../config'
+import { shouldRetryRequest } from './apiRetry'
 
 // 解码JWT令牌以获取用户信息 - 简化的Electron版本
 const decodeJwt = (token) => {
@@ -115,15 +116,8 @@ api.interceptors.response.use(
     // 设置默认重试次数
     config.retryCount = config.retryCount || 0
 
-    // 判断是否需要重试
-    if (
-      config.retryCount < DEFAULT_RETRIES &&
-      // 可以重试的错误类型
-      (error.code === 'ETIMEDOUT' ||
-        error.code === 'ECONNABORTED' ||
-        error.code === 'NETWORK_ERROR' ||
-        (error.response && error.response.status >= 500))
-    ) {
+    // 判断是否需要重试：只重试幂等的 GET/HEAD（见 #567）
+    if (shouldRetryRequest({ config, error, maxRetries: DEFAULT_RETRIES })) {
       // 增加重试计数
       config.retryCount += 1
 

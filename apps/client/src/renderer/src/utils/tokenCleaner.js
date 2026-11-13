@@ -44,6 +44,20 @@ export const isTokenExpired = (token) => {
 }
 
 /**
+ * 会话 token 是否可用于放行路由。
+ *
+ * 解析失败（不是三段式 JWT、payload 不是合法 JSON、缺少 exp）一律视为不可用，
+ * 不再「交给后端 401 兜底」—— 手写一个假 token 就能进后台是明确的安全缺陷（见 #567）。
+ * @param {string} token
+ * @returns {boolean}
+ */
+export const isSessionUsable = (token) => {
+  const payload = decodeJwtToken(token)
+  if (!payload || !payload.exp) return false
+  return !isTokenExpired(token)
+}
+
+/**
  * 清理过期的 token
  * @returns {object} - 清理结果 { cleaned: boolean, tokens: string[] }
  */
@@ -133,6 +147,7 @@ export const getAllTokenStatus = () => {
 export default {
   decodeJwtToken,
   isTokenExpired,
+  isSessionUsable,
   cleanExpiredTokens,
   getTokenExpiration,
   getAllTokenStatus

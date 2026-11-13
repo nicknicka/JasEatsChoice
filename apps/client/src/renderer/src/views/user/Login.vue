@@ -102,9 +102,8 @@
           </div>
         </el-form-item>
 
-        <!-- 记住密码 + 忘记密码 -->
-        <div class="remember-row">
-          <el-checkbox v-model="rememberPassword">记住密码</el-checkbox>
+        <!-- 忘记密码 -->
+        <div class="forgot-row">
           <a class="forgot-link" @click="forgotPassword">忘记密码？</a>
         </div>
 
@@ -177,6 +176,11 @@ import WindowTitleBar from '../../components/WindowTitleBar.vue'
 import AppFormContainer from '../../components/common/AppFormContainer.vue'
 import { resolveAndStorePublicIp } from '../../utils/publicIp'
 import { safeRedirect } from '../../utils/authSession'
+import {
+  forgetAccount,
+  rememberAccount,
+  sanitizeSavedAccounts
+} from '../../utils/savedAccounts'
 
 const router = useRouter()
 const route = useRoute()
@@ -190,11 +194,8 @@ const loginForm = reactive({
   captcha: ''
 })
 
-// 保存的账号列表
+// 保存的账号列表（只有手机号，密码从不落盘，见 #567）
 const savedAccounts = ref([])
-
-// 记住密码选项
-const rememberPassword = ref(false)
 
 // 用户协议勾选
 const agreedToTerms = ref(false)
@@ -297,17 +298,11 @@ watch(
 const loadSavedAccounts = async () => {
   try {
     const accounts = await window.api.store.get('savedAccounts')
-    if (accounts && Array.isArray(accounts)) {
-      savedAccounts.value = accounts
-        .map((account) => {
-          if (account.username && !account.phone) {
-            return { phone: account.username, password: account.password || '' }
-          }
-          return account
-        })
-        .filter((account) => account.phone)
-    } else {
-      savedAccounts.value = []
+    const sanitized = sanitizeSavedAccounts(accounts)
+    savedAccounts.value = sanitized
+    // 历史版本把密码明文写进 savedAccounts；读到旧数据就立刻回写清掉（见 #567）
+    if (JSON.stringify(sanitized) !== JSON.stringify(accounts ?? [])) {
+      await window.api.store.set('savedAccounts', sanitized)
     }
   } catch (error) {
     console.error('读取保存的账号失败:', error)
@@ -315,16 +310,12 @@ const loadSavedAccounts = async () => {
   }
 }
 
-// 自动填充最后登录的账号
+// 自动填充最后登录的账号（只回填手机号）
 const autofillLastAccount = () => {
   if (savedAccounts.value.length > 0) {
     const lastAccount = savedAccounts.value[savedAccounts.value.length - 1]
     if (lastAccount && lastAccount.phone) {
       loginForm.phone = lastAccount.phone
-      if (lastAccount.password) {
-        loginForm.password = lastAccount.password
-        rememberPassword.value = true
-      }
     }
   }
 }
@@ -337,19 +328,12 @@ const querySearch = (queryString, cb) => {
   cb(results.map((account) => ({ value: account.phone, label: account.phone })))
 }
 
-// 当手机号变化或选择时，自动填充密码
+// 选择已保存的账号：只回填手机号，密码不保存也不回填（见 #567）
 const handlePhoneChange = (value) => {
   const selectedPhone = typeof value === 'object' ? value.value : value
   if (!selectedPhone) return
 
-  const account = savedAccounts.value.find((acc) => acc.phone === selectedPhone)
-  if (account) {
-    loginForm.password = account.password || ''
-    rememberPassword.value = !!account.password
-  } else {
-    loginForm.password = ''
-    rememberPassword.value = false
-  }
+  loginForm.password = ''
   clearFieldError('phone')
   clearFieldError('password')
   if (loginFormRef.value) {
@@ -359,10 +343,9 @@ const handlePhoneChange = (value) => {
 
 // 删除保存的账号
 const deleteSavedAccount = async (phone) => {
-  savedAccounts.value = savedAccounts.value.filter((account) => account.phone !== phone)
+  savedAccounts.value = forgetAccount(savedAccounts.value, phone)
   await window.api.store.set('savedAccounts', JSON.parse(JSON.stringify(savedAccounts.value)))
   loginForm.password = ''
-  rememberPassword.value = false
   if (loginForm.phone === phone) {
     loginForm.phone = ''
   }
@@ -424,16 +407,8 @@ const submitForm = async () => {
               console.warn('[定位] 登录后获取公网IP失败:', error?.message || error)
             })
 
-          // 保存账号信息
-          const accountIndex = savedAccounts.value.findIndex((acc) => acc.phone === loginForm.phone)
-          if (accountIndex !== -1) {
-            savedAccounts.value[accountIndex].password = rememberPassword.value ? loginForm.password : ''
-          } else {
-            savedAccounts.value.push({
-              phone: loginForm.phone,
-              password: rememberPassword.value ? loginForm.password : ''
-            })
-          }
+          // 保存账号信息：只记住手机号，密码永不落盘（见 #567）
+          savedAccounts.value = rememberAccount(savedAccounts.value, loginForm.phone)
           await window.api.store.set('savedAccounts', JSON.parse(JSON.stringify(savedAccounts.value)))
           ElMessage.success('登录成功！')
 
@@ -731,37 +706,13 @@ const thirdPartyLogin = (type) => {
   to { transform: rotate(360deg); }
 }
 
-// === 记住密码 + 忘记密码 ===
-.remember-row {
+// === 忘记密码 ===
+.forgot-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: var(--space-3);
   padding: 0 2px;
-
-  :deep(.el-checkbox__label) {
-    color: var(--ink-500);
-    font-size: var(--text-body-sm);
-  }
-
-  :deep(.el-checkbox__inner) {
-    background: transparent;
-    border-color: var(--line-strong);
-    border-radius: 3px;
-  }
-
-  :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-    background: var(--brand-500);
-    border-color: var(--brand-500);
-
-    &::after {
-      border-color: var(--surface);
-    }
-  }
-
-  :deep(.el-checkbox__input.is-checked + .el-checkbox__label) {
-    color: var(--ink-900);
-  }
 }
 
 .forgot-link {
