@@ -575,67 +575,14 @@ const selectRechargeAmount = (amount) => {
 
 /**
  * U-004: 确认充值
+ * 后端已把钱包充值收口到管理端：客户端没有可验证的资金到账渠道，
+ * 自助充值等于凭空造余额，这里只给出说明，不再调用接口。
  */
 const confirmRecharge = async () => {
-  if (!rechargeAmount.value) {
-    uni.showToast({
-      title: '请输入充值金额',
-      icon: 'none'
-    })
-    return
-  }
-
-  const amount = parseFloat(rechargeAmount.value)
-  if (amount <= 0) {
-    uni.showToast({
-      title: '充值金额必须大于0',
-      icon: 'none'
-    })
-    return
-  }
-
-  try {
-    uni.showLoading({
-      title: '提交中...'
-    })
-
-    // U-004: 调用充值API
-    const res = await walletApi.recharge({
-      userId: getCurrentUserId(),
-      amount: amount,
-      paymentMethod: paymentMethod.value
-    })
-
-    uni.hideLoading()
-
-    if (res.code === 200 || res.code === '200') {
-      // 如果需要支付，跳转到支付页面
-      if (res.data) {
-        // 平台币充值成功
-        applyWalletAmount(res.data)
-        uni.showToast({
-          title: '充值成功',
-          icon: 'success'
-        })
-
-        // 重新加载钱包数据
-        await loadWalletData()
-        await loadTransactions(false)
-
-        // 关闭弹窗
-        closeRechargePopup()
-      }
-    } else {
-      throw new Error(res.message || '充值失败')
-    }
-  } catch (error) {
-    console.error('充值失败:', error)
-    uni.hideLoading()
-    uni.showToast({
-      title: error.message || '充值失败，请重试',
-      icon: 'none'
-    })
-  }
+  uni.showToast({
+    title: '在线充值暂未开放，请联系客服',
+    icon: 'none'
+  })
 }
 
 /**

@@ -10,7 +10,9 @@ import com.xx.jaseatschoicejava.service.PaymentPasswordService;
 import com.xx.jaseatschoicejava.service.PaymentService;
 import com.xx.jaseatschoicejava.service.UserCouponService;
 import com.xx.jaseatschoicejava.service.WalletService;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 import org.junit.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.mockito.ArgumentMatchers;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -34,7 +36,8 @@ public class ThirdPartyPaymentControllerTest {
         PaymentController controller =
                 new PaymentController(orderService, paymentService, userCouponService, paymentPasswordService);
 
-        ResponseResult<Map<String, Object>> createResult = controller.createPayment(Map.of("paymentMethod", "wechat"));
+        ResponseResult<Map<String, Object>> createResult =
+                controller.createPayment(Map.of("paymentMethod", "wechat"), verifiedRequest("user-1"));
         ResponseResult<Map<String, Object>> wechatResult = controller.wechatPay(Map.of());
         ResponseResult<Map<String, Object>> alipayResult = controller.alipay(Map.of());
 
@@ -44,9 +47,8 @@ public class ThirdPartyPaymentControllerTest {
 
         ResponseResult<Map<String, Object>> balanceAliasResult = controller.createPayment(Map.of(
                 "paymentMethod", "balance",
-                "orderId", "missing-order",
-                "userId", "user-1"
-        ));
+                "orderId", "missing-order"
+        ), verifiedRequest("user-1"));
         assertFalse(balanceAliasResult.getSuccess());
         assertEquals("404", balanceAliasResult.getCode());
         assertEquals("订单不存在", balanceAliasResult.getMessage());
@@ -79,7 +81,7 @@ public class ThirdPartyPaymentControllerTest {
         order.setStatus(0);
         when(orderService.getById("order-1")).thenReturn(order);
 
-        ResponseResult<?> result = controller.payOrder("order-1", "user-1", "wechat", "123456");
+        ResponseResult<?> result = controller.payOrder("order-1", "user-1", "wechat", "123456", verifiedRequest("user-1"));
 
         assertFalse(result.getSuccess());
         assertEquals("400", result.getCode());
@@ -117,5 +119,11 @@ public class ThirdPartyPaymentControllerTest {
         assertEquals("501", result.getCode());
         assertEquals("微信支付暂未开放", result.getMessage());
         verifyNoInteractions(paymentService, userCouponService, walletService);
+    }
+
+    private MockHttpServletRequest verifiedRequest(String userId) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setAttribute(UserIdentityUtil.VERIFIED_USER_ID_ATTRIBUTE, userId);
+        return request;
     }
 }

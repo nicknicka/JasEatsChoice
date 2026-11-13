@@ -15,11 +15,15 @@ public interface OrderService extends IService<Order> {
 
     /**
      * 创建订单并保存订单菜品(事务方法)
-     * @param order 订单信息
+     * <p>
+     * 下单人身份与金额由服务端决定：userId 取已认证身份，金额按菜品表重算。
+     *
+     * @param order 订单信息（userId、totalAmount 会被覆盖）
      * @param orderDishes 订单菜品列表
+     * @param authenticatedUserId 已认证的下单人
      * @return 是否创建成功
      */
-    boolean createOrderWithDishes(Order order, List<OrderDish> orderDishes);
+    boolean createOrderWithDishes(Order order, List<OrderDish> orderDishes, String authenticatedUserId);
 
     /**
      * 物理删除订单及其菜品明细
