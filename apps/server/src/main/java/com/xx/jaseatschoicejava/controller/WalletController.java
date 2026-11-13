@@ -132,6 +132,9 @@ public class WalletController {
             );
 
             return ResponseResult.success(record, "提现申请已提交，等待审核");
+        } catch (IllegalArgumentException e) {
+            log.warn("提现申请被拒绝，用户ID：{}，金额：{}，原因：{}", userId, amount, e.getMessage());
+            return ResponseResult.fail("400", e.getMessage());
         } catch (Exception e) {
             log.error("提现申请失败，用户ID：{}，金额：{}", userId, amount, e);
             return ResponseResult.fail("500", "提现申请失败：" + e.getMessage());

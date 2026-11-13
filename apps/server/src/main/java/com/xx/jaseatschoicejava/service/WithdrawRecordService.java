@@ -42,11 +42,4 @@ public interface WithdrawRecordService extends IService<WithdrawRecord> {
      * @return 创建的提现记录
      */
     WithdrawRecord createWithdrawRequest(String userId, BigDecimal amount, String withdrawNo, String withdrawMethod, String accountInfo);
-
-    /**
-     * 执行提现扣款（审核通过后调用）
-     * @param withdrawId 提现记录ID
-     * @return 是否成功
-     */
-    boolean executeWithdrawDeduction(String withdrawId);
 }
