@@ -117,6 +117,7 @@
 import { ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { groupOrderApi } from '@/api/modules/group-order-api.js'
+import { merchantApi } from '@/api/modules/merchant.js'
 
 // 商家信息
 const merchantInfo = ref({
@@ -178,25 +179,29 @@ onShow(() => {
 })
 
 /**
- * 加载商家信息
+ * 加载商家信息（失败即报错，不用假商家顶替）
  */
 const loadMerchantInfo = async (merchantId) => {
   try {
-    // 这里假设有获取商家详情的API
-    // const res = await merchantApi.getDetail(merchantId)
-    // if (res.code === 200) {
-    //   merchantInfo.value = res.data
-    // }
+    const res = await merchantApi.getDetail(merchantId)
 
-    // 临时模拟数据
-    merchantInfo.value = {
-      id: merchantId,
-      name: '测试商家',
-      avatar: 'https://via.placeholder.com/100',
-      address: '测试地址123号'
+    if (res && res.code === 200 && res.data) {
+      merchantInfo.value = {
+        id: merchantId,
+        name: res.data.merchantName || res.data.name || '',
+        avatar: res.data.logo || res.data.avatar || '',
+        address: res.data.address || ''
+      }
+    } else {
+      throw new Error(res?.message || '未获取到商家信息')
     }
   } catch (error) {
     console.error('加载商家信息失败:', error)
+    merchantInfo.value = { id: '', name: '', avatar: '', address: '' }
+    uni.showToast({
+      title: error?.message || '商家信息加载失败',
+      icon: 'none'
+    })
   }
 }
 

@@ -199,6 +199,15 @@
         </view>
       </scroll-view>
     </view>
+
+    <!-- 提取失败空态 -->
+    <view class="extract-error" v-else-if="extractError">
+      <uni-icons type="info" size="40" color="#FF6B35"></uni-icons>
+      <text class="error-text">{{ extractError }}</text>
+      <button class="error-btn" @tap="startExtract" :disabled="extracting">
+        {{ extracting ? '重试中...' : '重新提取' }}
+      </button>
+    </view>
   </view>
 </template>
 
@@ -227,6 +236,7 @@ const extractOptions = ref({
 // 提取状态
 const extracting = ref(false)
 const extractResult = ref(null)
+const extractError = ref('')
 
 /**
  * 选择提取方式
@@ -367,6 +377,7 @@ const startExtract = async () => {
   }
 
   extracting.value = true
+  extractError.value = ''
 
   try {
     // 准备提取数据
@@ -435,38 +446,12 @@ const startExtract = async () => {
   } catch (error) {
     console.error('提取失败:', error)
 
-    // API调用失败时使用模拟数据
-    extractResult.value = {
-      dishName: '宫保鸡丁',
-      ingredients: [
-        { name: '鸡胸肉', amount: '300g' },
-        { name: '花生米', amount: '50g' },
-        { name: '干辣椒', amount: '10个' },
-        { name: '花椒', amount: '适量' },
-        { name: '葱', amount: '2根' },
-        { name: '姜', amount: '3片' },
-        { name: '蒜', amount: '3瓣' }
-      ],
-      steps: [
-        '鸡胸肉切丁，用料酒、生抽腌制15分钟',
-        '花生米炸酥脆，盛起备用',
-        '热锅下油，爆香花椒和干辣椒',
-        '下鸡丁炒至变色',
-        '加入葱姜蒜炒香',
-        '调入生抽、老抽、糖炒匀',
-        '最后加入花生米，翻炒均匀即可'
-      ],
-      nutrition: {
-        calories: '280',
-        protein: '25',
-        carbs: '12',
-        fat: '18'
-      },
-      confidence: 95
-    }
+    // 接口失败不回填任何示例数据：清空结果并展示错误，由重试入口兜底
+    extractResult.value = null
+    extractError.value = error?.message || '内容提取失败，请重试'
 
     uni.showToast({
-      title: '提取失败，已使用示例数据',
+      title: extractError.value,
       icon: 'none'
     })
   } finally {
@@ -876,6 +861,35 @@ const saveAsRecipe = async () => {
 .result-content {
   max-height: 800rpx;
   padding: 30rpx;
+}
+
+/* 提取失败空态 */
+.extract-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+  padding: 80rpx 40rpx;
+  margin: 20rpx;
+  background: #fff;
+  border-radius: 16rpx;
+}
+
+.error-text {
+  font-size: 28rpx;
+  color: #999;
+  text-align: center;
+}
+
+.error-btn {
+  min-width: 240rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  color: #fff;
+  font-size: 28rpx;
+  border-radius: 36rpx;
+  border: none;
 }
 
 .result-item {

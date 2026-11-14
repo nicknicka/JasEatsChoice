@@ -359,42 +359,6 @@ const calculateWaitTime = (orderTime) => {
 }
 
 /**
- * 生成模拟订单数据
- */
-const generateMockOrders = () => {
-  const orders = []
-  const count = Math.floor(Math.random() * 5) + 5
-
-  for (let i = 0; i < count; i++) {
-    const statusList = [1, 2, 3]
-    const status = activeFilter.value === 'all'
-      ? statusList[Math.floor(Math.random() * statusList.length)]
-      : activeFilter.value
-
-    const waitTimes = ['等待5分钟', '等待12分钟', '等待25分钟', '等待3分钟']
-    const tables = ['A01', 'A02', 'A05', 'B03', '外卖']
-
-    orders.push({
-      id: page.value * 20 + i,
-      orderNo: `OD${String(page.value * 20 + i).padStart(6, '0')}`,
-      status: status,
-      statusText: getStatusText(status),
-      dishes: [
-        { id: 1, name: '宫保鸡丁', specs: ['中辣'], quantity: 1 },
-        { id: 2, name: '鱼香肉丝', specs: [], quantity: 2 }
-      ],
-      remark: i % 3 === 0 ? '少放辣，多放葱花' : '',
-      tableNo: tables[Math.floor(Math.random() * tables.length)],
-      waitTime: waitTimes[Math.floor(Math.random() * waitTimes.length)],
-      orderTime: '12:30',
-      isUrgent: i % 5 === 0
-    })
-  }
-
-  return orders
-}
-
-/**
  * 获取状态文本
  */
 const getStatusText = (status) => {

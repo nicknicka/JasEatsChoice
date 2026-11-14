@@ -339,71 +339,18 @@ const loadComments = async (isRefresh = false) => {
   } catch (error) {
     console.error('加载评价失败:', error)
 
-    // API失败时使用模拟数据
-    // TODO: 生产环境应移除此模拟数据逻辑
-    setTimeout(() => {
-      const mockData = generateMockComments()
-      if (isRefresh) {
-        commentList.value = mockData
-      } else {
-        commentList.value = [...commentList.value, ...mockData]
-      }
-      if (mockData.length < pageSize) {
-        noMore.value = true
-      }
-
-      loading.value = false
-      refreshing.value = false
-    }, 500)
-  }
-}
-
-/**
- * 生成模拟评价数据
- */
-const generateMockComments = () => {
-  const comments = []
-  const count = Math.floor(Math.random() * 5) + 5
-
-  const users = [
-    { name: '张同学', avatar: 'https://via.placeholder.com/60/FF6B35/FFFFFF?text=张' },
-    { name: '李同学', avatar: 'https://via.placeholder.com/60/FF6B35/FFFFFF?text=李' },
-    { name: '王同学', avatar: 'https://via.placeholder.com/60/FF6B35/FFFFFF?text=王' }
-  ]
-
-  const contents = [
-    '味道非常不错，宫保鸡丁很正宗，分量也足，下次还会再来的！',
-    '配送速度快，菜品新鲜，包装也很好，就是有点辣，下次要微辣就好。',
-    '性价比很高，菜品味道好，价格实惠，强烈推荐给大家！',
-    '服务态度很好，老板很热情，菜品味道也OK，就是等待时间有点长。',
-    '非常满意的一次用餐体验，菜品丰富多样，味道正宗，值得推荐！'
-  ]
-
-  for (let i = 0; i < count; i++) {
-    const user = users[Math.floor(Math.random() * users.length)]
-    const hasReply = Math.random() > 0.3
-
-    comments.push({
-      id: page.value * 20 + i,
-      user: user,
-      rating: Math.floor(Math.random() * 2) + 4,
-      time: '2天前',
-      content: contents[Math.floor(Math.random() * contents.length)],
-      images: Math.random() > 0.7 ? ['https://via.placeholder.com/200/FF6B35/FFFFFF?text=1'] : [],
-      dish: {
-        id: 1,
-        name: '宫保鸡丁',
-        image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=1'
-      },
-      tags: ['口味好', '分量足'],
-      reply: hasReply ? {
-        content: '感谢您的好评！我们会继续努力提供更优质的服务和菜品。',
-        time: '1天前'
-      } : null
+    // 接口失败不回填任何假评价：清空列表并提示，交由空态与重试入口兜底
+    if (isRefresh) {
+      commentList.value = []
+    }
+    uni.showToast({
+      title: error.message || '评价列表加载失败',
+      icon: 'none'
     })
-  }
 
-  return comments
+    loading.value = false
+    refreshing.value = false
+  }
 }
 
 /**

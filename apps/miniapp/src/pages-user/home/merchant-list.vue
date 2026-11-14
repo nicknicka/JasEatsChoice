@@ -205,28 +205,6 @@ const loadMerchants = async (isRefresh = false) => {
   }
 }
 
-const generateMockData = () => {
-  const merchants = []
-  const count = Math.floor(Math.random() * 5) + 5
-  
-  for (let i = 0; i < count; i++) {
-    merchants.push({
-      id: page.value * 10 + i,
-      name: `美味餐厅${page.value}-${i}`,
-      image: 'https://picsum.photos/200/200?random=' + (page.value * 10 + i),
-      rating: (Math.random() * 2 + 3).toFixed(1),
-      monthlySales: Math.floor(Math.random() * 1000) + 100,
-      deliveryTime: `${Math.floor(Math.random() * 20) + 20}分钟`,
-      distance: `${(Math.random() * 5 + 0.5).toFixed(1)}km`,
-      minPrice: Math.floor(Math.random() * 20) + 10,
-      tags: i % 3 === 0 ? ['新店', '优惠'] : ['品牌'],
-      coupons: i % 2 === 0 ? [{ id: 1, name: '满30减5' }] : []
-    })
-  }
-  
-  return merchants
-}
-
 const loadMore = () => {
   if (!loading.value && !noMore.value) {
     page.value++

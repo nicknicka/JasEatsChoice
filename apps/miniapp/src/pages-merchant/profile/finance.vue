@@ -48,7 +48,7 @@
     <!-- 收入趋势 -->
     <view class="chart-section">
       <view class="section-header">
-        <text class="section-title">近7日收入趋势</text>
+        <text class="section-title">{{ trendDaysOptions[trendDaysIndex].label }}收入趋势</text>
         <picker
           :value="trendDaysIndex"
           :range="trendDaysOptions"
@@ -69,6 +69,15 @@
           :canvas2d="true"
           canvasId="incomeTrendChart"
         />
+      </view>
+      <view class="chart-state" v-if="loadingFinance">
+        <text class="state-text">加载中...</text>
+      </view>
+      <view class="chart-state" v-else-if="financeError || !hasChartData">
+        <text class="state-text">{{ financeError || '暂无收入趋势数据' }}</text>
+        <button class="state-btn" @tap="onTrendDaysChange({ detail: { value: trendDaysIndex } })">
+          重试
+        </button>
       </view>
     </view>
 
@@ -155,27 +164,29 @@ const transactionTypes = [
 
 const activeTransactionType = ref('all')
 
-// 财务数据
+// 财务数据（初始为 0；实际数值全部来自服务端，不再预置假余额）
 const financeData = ref({
-  totalBalance: '15860.50',
-  availableBalance: '15680.50',
-  frozenBalance: '180.00',
-  todayIncome: '528.00',
-  monthIncome: '12580.50',
-  todayOrders: 23,
-  monthOrders: 456
+  totalBalance: '0',
+  availableBalance: '0',
+  frozenBalance: '0',
+  todayIncome: '0',
+  monthIncome: '0',
+  todayOrders: 0,
+  monthOrders: 0
 })
 
-// 图表数据
-const chartData = computed(() => ({
-  categories: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-  series: [
-    {
-      name: '收入',
-      data: [428, 536, 485, 612, 528, 645, 589]
-    }
-  ]
-}))
+// 加载与错误状态
+const loadingFinance = ref(false)
+const financeError = ref('')
+
+// 图表数据（无服务端数据时为空态，不画假曲线）
+const chartData = ref({
+  categories: [],
+  series: [{ name: '收入', data: [] }]
+})
+
+// 是否存在可展示的趋势数据
+const hasChartData = computed(() => (chartData.value?.series?.[0]?.data || []).length > 0)
 
 const chartOpts = ref({
   color: ['#FF6B35'],
@@ -213,9 +224,11 @@ onMounted(async () => {
 })
 
 /**
- * M-012: 加载财务数据
+ * M-012: 加载财务数据（失败时归零并提示，不保留任何假余额）
  */
 const loadFinanceData = async () => {
+  loadingFinance.value = true
+  financeError.value = ''
   try {
     const res = await merchantApi.getFinanceData({ timeRange: 'month' })
     if (res.code === 200 && res.data) {
@@ -228,10 +241,27 @@ const loadFinanceData = async () => {
         todayOrders: res.data.todayOrders || 0,
         monthOrders: res.data.monthOrders || 0
       }
+    } else {
+      throw new Error(res?.message || '财务数据加载失败')
     }
   } catch (error) {
     console.error('加载财务数据失败:', error)
-    // 保持默认数据
+    financeError.value = error?.message || '财务数据加载失败'
+    financeData.value = {
+      totalBalance: '0',
+      availableBalance: '0',
+      frozenBalance: '0',
+      todayIncome: '0',
+      monthIncome: '0',
+      todayOrders: 0,
+      monthOrders: 0
+    }
+    uni.showToast({
+      title: financeError.value,
+      icon: 'none'
+    })
+  } finally {
+    loadingFinance.value = false
   }
 }
 
@@ -270,17 +300,8 @@ const loadTransactions = async (isRefresh = false) => {
         noMoreTransactions.value = true
       }
     } else {
-      // API调用失败，使用模拟数据
-      const mockData = generateMockTransactions()
-      if (isRefresh) {
-        transactionList.value = mockData
-      } else {
-        transactionList.value = [...transactionList.value, ...mockData]
-      }
-
-      if (mockData.length < transactionPageSize) {
-        noMoreTransactions.value = true
-      }
+      // 接口返回非成功码时不回填任何假流水，交由空态与重试入口兜底
+      throw new Error(res?.message || '交易记录加载失败')
     }
 
     loadingTransactions.value = false
@@ -288,51 +309,15 @@ const loadTransactions = async (isRefresh = false) => {
     console.error('加载交易记录失败:', error)
     loadingTransactions.value = false
 
-    // 出错时使用模拟数据
-    const mockData = generateMockTransactions()
     if (isRefresh) {
-      transactionList.value = mockData
-    } else {
-      transactionList.value = [...transactionList.value, ...mockData]
+      transactionList.value = []
     }
-  }
-}
-
-/**
- * 生成模拟交易数据
- */
-const generateMockTransactions = () => {
-  const transactions = []
-  const count = Math.floor(Math.random() * 5) + 5
-
-  const types = [
-    { type: 'order', title: '订单收入', amount: Math.floor(Math.random() * 100) + 20 },
-    { type: 'refund', title: '订单退款', amount: -(Math.floor(Math.random() * 50) + 10) },
-    { type: 'withdraw', title: '提现', amount: -(Math.floor(Math.random() * 500) + 100) }
-  ]
-
-  for (let i = 0; i < count; i++) {
-    const item = types[Math.floor(Math.random() * types.length)]
-    transactions.push({
-      id: transactionPage.value * 20 + i,
-      type: item.type,
-      title: item.title,
-      amount: item.amount,
-      time: getRandomTime(),
-      orderNo: `OD${Date.now()}${i}`
+    noMoreTransactions.value = true
+    uni.showToast({
+      title: error.message || '交易记录加载失败',
+      icon: 'none'
     })
   }
-
-  return transactions
-}
-
-/**
- * 随机时间
- */
-const getRandomTime = () => {
-  const hours = Math.floor(Math.random() * 12) + 1
-  const minutes = Math.floor(Math.random() * 60).toString().padStart(2, '0')
-  return `${hours}小时前`
 }
 
 /**
@@ -341,18 +326,27 @@ const getRandomTime = () => {
 const onTrendDaysChange = async (e) => {
   trendDaysIndex.value = e.detail.value
 
-  // M-014: 重新加载图表数据
   try {
     const days = trendDaysOptions[trendDaysIndex.value].value
-    const res = await merchantApi.getFinanceData({ timeRange: days === 7 ? 'week' : days === 15 ? 'week' : 'month' })
+    const timeRange = days === 7 ? 'week' : days === 15 ? 'week' : 'month'
+    const res = await merchantApi.getFinanceData({ timeRange })
 
-    if (res.code === 200 && res.data && res.data.chartData) {
-      // 更新图表数据
-      // 这里需要根据后端返回的数据格式调整
-      // chartData.value = res.data.chartData
+    const trend = res?.data?.chartData
+    if (res?.code === 200 && trend) {
+      // 后端返回趋势点位时直接使用；结构未约定前保持空态，不臆造曲线
+      chartData.value = {
+        categories: (trend.categories || []).map(String),
+        series: [{
+          name: '收入',
+          data: (trend.series?.[0]?.data || trend.data || []).map(v => Number(v) || 0)
+        }]
+      }
+    } else {
+      chartData.value = { categories: [], series: [{ name: '收入', data: [] }] }
     }
   } catch (error) {
     console.error('加载图表数据失败:', error)
+    chartData.value = { categories: [], series: [{ name: '收入', data: [] }] }
   }
 }
 
@@ -537,6 +531,33 @@ const formatMoney = (amount) => {
   padding: 30rpx;
   margin: 20rpx;
   border-radius: 16rpx;
+}
+
+/* 图表空态 / 错误态 */
+.chart-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20rpx;
+  padding: 40rpx 0;
+}
+
+.state-text {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.state-btn {
+  min-width: 200rpx;
+  height: 68rpx;
+  line-height: 68rpx;
+  text-align: center;
+  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  color: #fff;
+  font-size: 26rpx;
+  border-radius: 34rpx;
+  border: none;
+  padding: 0 30rpx;
 }
 
 .section-header {

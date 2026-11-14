@@ -73,6 +73,22 @@
 
         <!-- 分类问题列表 -->
         <view class="category-questions" v-else>
+          <!-- 加载中 -->
+          <view class="faq-state" v-if="loadingFaq">
+            <text class="faq-state-text">加载中...</text>
+          </view>
+
+          <!-- 加载失败 -->
+          <view class="faq-state" v-else-if="faqError">
+            <text class="faq-state-text">{{ faqError }}</text>
+            <button class="faq-retry-btn" @tap="loadFaqList">重试</button>
+          </view>
+
+          <!-- 接口暂无 FAQ 时使用内置说明，显式告知来源 -->
+          <view class="faq-fallback-tip" v-else-if="faqFromFallback">
+            <text class="faq-fallback-text">服务端暂无常见问题，以下为产品内置说明</text>
+          </view>
+
           <view
             class="faq-item"
             v-for="item in categoryQuestions"
@@ -86,6 +102,15 @@
               <text class="question-text">{{ item.question }}</text>
               <text class="question-arrow">›</text>
             </view>
+          </view>
+
+          <!-- 无数据空态 -->
+          <view class="empty-state" v-if="!loadingFaq && !faqError && categoryQuestions.length === 0">
+            <Empty
+              icon="🔍"
+              text="暂无常见问题"
+              description="可先通过意见反馈联系我们"
+            />
           </view>
         </view>
       </view>
@@ -198,6 +223,10 @@ const activeCategory = ref('all')
 
 // FAQ列表
 const faqList = ref([])
+// FAQ 加载/错误/兜底状态
+const loadingFaq = ref(false)
+const faqError = ref('')
+const faqFromFallback = ref(false)
 
 // 当前查看的FAQ
 const currentFaq = ref(null)
@@ -238,99 +267,72 @@ const categoryQuestions = computed(() => {
   return faqList.value.filter(item => item.category === activeCategory.value)
 })
 
+/** 内置兜底 FAQ：仅在后端暂无 FAQ 数据时使用（内容为产品说明，非业务数据） */
+const FALLBACK_FAQ = [
+  {
+    id: 1,
+    category: 'order',
+    question: '如何查看订单状态？',
+    answer: '您可以在"我的"页面点击"我的订单"，查看所有订单的状态。点击具体订单可以查看详细的配送进度和骑手信息。'
+  },
+  {
+    id: 2,
+    category: 'order',
+    question: '如何取消订单？',
+    answer: '订单在商家接单前可以取消。进入订单详情页，点击"取消订单"按钮即可。如果商家已接单，需要联系商家协商处理。'
+  },
+  {
+    id: 3,
+    category: 'payment',
+    question: '支持哪些支付方式？',
+    answer: '目前支持微信支付、支付宝、余额支付等多种支付方式。您可以在结算时选择您偏好的支付方式。'
+  },
+  {
+    id: 4,
+    category: 'delivery',
+    question: '配送时间一般是多久？',
+    answer: '一般情况下，配送时间为30-45分钟。具体时间会根据距离、天气、餐品制作时间等因素有所变化，请以APP显示的预计送达时间为准。'
+  },
+  {
+    id: 5,
+    category: 'account',
+    question: '如何修改个人资料？',
+    answer: '进入"我的"页面，点击头像进入个人中心，即可编辑昵称、头像、性别、生日等个人信息。'
+  },
+  {
+    id: 6,
+    category: 'other',
+    question: '如何联系客服？',
+    answer: '您可以通过帮助中心进入意见反馈页提交问题，也可以在消息中心查看订单通知和系统提醒。涉及账号或资料问题时，可先前往个人中心编辑资料或查看关于说明。'
+  }
+]
+
 /**
  * 加载FAQ列表
+ * 接口失败时展示空态 + 重试，不回填任何「看似来自服务端」的问答
  */
 const loadFaqList = async () => {
+  loadingFaq.value = true
+  faqError.value = ''
+
   try {
     // 调用feedbackApi获取FAQ
     const res = await feedbackApi.getFAQ()
 
-    if (res && res.data) {
-      faqList.value = res.data || []
+    if (res && Array.isArray(res.data) && res.data.length > 0) {
+      faqList.value = res.data
     } else {
-      // 使用模拟数据
-      faqList.value = [
-        {
-          id: 1,
-          category: 'order',
-          question: '如何查看订单状态？',
-          answer: '您可以在"我的"页面点击"我的订单"，查看所有订单的状态。点击具体订单可以查看详细的配送进度和骑手信息。'
-        },
-        {
-          id: 2,
-          category: 'order',
-          question: '如何取消订单？',
-          answer: '订单在商家接单前可以取消。进入订单详情页，点击"取消订单"按钮即可。如果商家已接单，需要联系商家协商处理。'
-        },
-        {
-          id: 3,
-          category: 'payment',
-          question: '支持哪些支付方式？',
-          answer: '目前支持微信支付、支付宝、余额支付等多种支付方式。您可以在结算时选择您偏好的支付方式。'
-        },
-        {
-          id: 4,
-          category: 'delivery',
-          question: '配送时间一般是多久？',
-          answer: '一般情况下，配送时间为30-45分钟。具体时间会根据距离、天气、餐品制作时间等因素有所变化，请以APP显示的预计送达时间为准。'
-        },
-        {
-          id: 5,
-          category: 'account',
-          question: '如何修改个人资料？',
-          answer: '进入"我的"页面，点击头像进入个人中心，即可编辑昵称、头像、性别、生日等个人信息。'
-        },
-        {
-          id: 6,
-          category: 'other',
-          question: '如何联系客服？',
-          answer: '您可以通过帮助中心进入意见反馈页提交问题，也可以在消息中心查看订单通知和系统提醒。涉及账号或资料问题时，可先前往个人中心编辑资料或查看关于说明。'
-        }
-      ]
+      // 接口成功但暂无 FAQ：使用内置产品说明作为兜底，并显式告知
+      faqList.value = FALLBACK_FAQ
+      faqFromFallback.value = true
     }
   } catch (error) {
     console.error('加载FAQ失败:', error)
-
-    // 使用模拟数据
-    faqList.value = [
-      {
-        id: 1,
-        category: 'order',
-        question: '如何查看订单状态？',
-        answer: '您可以在"我的"页面点击"我的订单"，查看所有订单的状态。点击具体订单可以查看详细的配送进度和骑手信息。'
-      },
-      {
-        id: 2,
-        category: 'order',
-        question: '如何取消订单？',
-        answer: '订单在商家接单前可以取消。进入订单详情页，点击"取消订单"按钮即可。如果商家已接单，需要联系商家协商处理。'
-      },
-      {
-        id: 3,
-        category: 'payment',
-        question: '支持哪些支付方式？',
-        answer: '目前支持微信支付、支付宝、余额支付等多种支付方式。您可以在结算时选择您偏好的支付方式。'
-      },
-      {
-        id: 4,
-        category: 'delivery',
-        question: '配送时间一般是多久？',
-        answer: '一般情况下，配送时间为30-45分钟。具体时间会根据距离、天气、餐品制作时间等因素有所变化，请以APP显示的预计送达时间为准。'
-      },
-      {
-        id: 5,
-        category: 'account',
-        question: '如何修改个人资料？',
-        answer: '进入"我的"页面，点击头像进入个人中心，即可编辑昵称、头像、性别、生日等个人信息。'
-      },
-      {
-        id: 6,
-        category: 'other',
-        question: '如何联系客服？',
-        answer: '您可以通过帮助中心进入意见反馈页提交问题，也可以在消息中心查看订单通知和系统提醒。涉及账号或资料问题时，可先前往个人中心编辑资料或查看关于说明。'
-      }
-    ]
+    // 接口失败：不回填内容，只展示错误态与重试
+    faqList.value = []
+    faqError.value = error?.message || '常见问题加载失败'
+  } finally {
+    loadingFaq.value = false
   }
 }
 
@@ -586,6 +588,43 @@ onMounted(() => {
 /* 空状态 */
 .empty-state {
   padding: 80rpx 0;
+}
+
+/* FAQ 加载/错误/兜底提示 */
+.faq-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  padding: 80rpx 0;
+}
+
+.faq-state-text {
+  font-size: $font-size-base;
+  color: $text-color-secondary;
+}
+
+.faq-retry-btn {
+  min-width: 200rpx;
+  height: 68rpx;
+  line-height: 68rpx;
+  background: linear-gradient(135deg, $primary-color, #FF8F61);
+  color: #fff;
+  font-size: $font-size-base;
+  border-radius: $border-radius-round;
+  border: none;
+}
+
+.faq-fallback-tip {
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-sm;
+  background-color: #FFF7F2;
+  border-radius: $border-radius-base;
+}
+
+.faq-fallback-text {
+  font-size: $font-size-sm;
+  color: #B36A3C;
 }
 
 /* 快捷入口 */

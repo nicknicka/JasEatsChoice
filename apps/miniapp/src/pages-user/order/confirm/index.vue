@@ -33,6 +33,12 @@
       <view class="order-dishes-section card">
         <view class="section-title">订单详情</view>
 
+        <!-- 无有效购物车数据：不回填任何假商品 -->
+        <view class="order-empty" v-if="orderItems.length === 0">
+          <text class="order-empty-text">未获取到订单商品</text>
+          <button class="order-empty-btn" @tap="goBack">返回选购</button>
+        </view>
+
         <view class="merchant-group" v-for="group in orderItems" :key="group.merchantId">
           <view class="merchant-info">
             <image class="merchant-logo" :src="group.merchant.logo" mode="aspectFill" />
@@ -202,54 +208,11 @@ const normalizeImage = (src, fallback) => {
   return src
 }
 
-// 订单商品（模拟数据）
-const orderItems = ref([
-  {
-    merchantId: '1',
-    merchant: {
-      id: '1',
-      name: '老王家常菜',
-      logo: DEFAULT_MERCHANT_IMAGE
-    },
-    items: [
-      {
-        dish: {
-          id: '1',
-          name: '宫保鸡丁',
-          price: 28,
-          image: DEFAULT_DISH_IMAGE
-        },
-        quantity: 2,
-        spec: ''
-      },
-      {
-        dish: {
-          id: '4',
-          name: '麻婆豆腐',
-          price: 18,
-          image: DEFAULT_DISH_IMAGE
-        },
-        quantity: 1,
-        spec: '微辣'
-      }
-    ],
-    packingFee: 3 // 每份1元包装费
-  }
-])
+// 订单商品（由上一页写入缓存，缺失时为空 → 走空态，避免提交假购物车）
+const orderItems = ref([])
 
-// 可用优惠券
-const availableCoupons = ref([
-  {
-    id: 1,
-    amount: 10,
-    condition: '满50可用'
-  },
-  {
-    id: 2,
-    amount: 5,
-    condition: '满30可用'
-  }
-])
+// 可用优惠券（仅由服务端填充）
+const availableCoupons = ref([])
 
 // 快捷备注
 const quickRemarks = ref([
@@ -436,6 +399,21 @@ const selectPayment = (method) => {
   pageDebug.state('切换支付方式', {
     paymentMethod: method
   })
+}
+
+/**
+ * 提交订单
+ */
+/**
+ * 返回选购页（空购物车时使用）
+ */
+const goBack = () => {
+  const pages = getCurrentPages()
+  if (pages.length > 1) {
+    uni.navigateBack()
+  } else {
+    uni.switchTab({ url: '/pages-user/home/index' })
+  }
 }
 
 /**
@@ -681,6 +659,31 @@ const loadDefaultAddress = async () => {
   background-color: $bg-color-white;
   margin-bottom: $spacing-md;
   padding: $spacing-md;
+}
+
+/* 空购物车空态 */
+.order-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+  padding: 80rpx 0;
+}
+
+.order-empty-text {
+  font-size: $font-size-base;
+  color: $text-color-secondary;
+}
+
+.order-empty-btn {
+  min-width: 240rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  background: linear-gradient(135deg, $primary-color, #FF8F61);
+  color: #fff;
+  font-size: $font-size-base;
+  border-radius: $border-radius-round;
+  border: none;
 }
 
 .section-label {

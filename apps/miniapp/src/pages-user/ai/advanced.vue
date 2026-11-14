@@ -34,8 +34,22 @@
     </view>
 
     <scroll-view class="content" scroll-y>
+      <!-- 加载 / 错误 / 空态：无服务端数据时不展示任何写死数值 -->
+      <view class="ai-state" v-if="loading">
+        <text class="ai-state-text">正在分析中...</text>
+      </view>
+      <view class="ai-state" v-else-if="loadError">
+        <text class="ai-state-text">{{ loadError }}</text>
+        <button class="ai-state-btn" @tap="loadNutritionData">重试</button>
+      </view>
+      <view class="ai-state" v-else-if="!hasData">
+        <text class="ai-state-text">暂无营养分析数据</text>
+        <text class="ai-state-desc">记录几餐饮食后，这里会生成你的专属分析</text>
+        <button class="ai-state-btn" @tap="loadNutritionData">刷新</button>
+      </view>
+
       <!-- 营养分析 -->
-      <view v-if="activeTab === 'nutrition'" class="nutrition-analysis">
+      <view v-else-if="activeTab === 'nutrition'" class="nutrition-analysis">
         <!-- 今日摄入 -->
         <view class="section-card">
           <view class="section-header">
@@ -145,7 +159,7 @@
       </view>
 
       <!-- 智能推荐 -->
-      <view v-if="activeTab === 'recommend'" class="smart-recommend">
+      <view v-else-if="activeTab === 'recommend'" class="smart-recommend">
         <!-- 推荐理由 -->
         <view class="section-card">
           <view class="section-header">
@@ -225,7 +239,7 @@
       </view>
 
       <!-- 健康报告 -->
-      <view v-if="activeTab === 'report'" class="health-report">
+      <view v-else-if="activeTab === 'report'" class="health-report">
         <!-- 健康评分 -->
         <view class="section-card">
           <view class="section-header">
@@ -365,124 +379,71 @@ const todayDate = computed(() => {
   return `${now.getMonth() + 1}月${now.getDate()}日`
 })
 
+// 加载与错误状态
+const loadError = ref('')
+
 // 今日热量
-const todayCalories = ref('1856')
+const todayCalories = ref('0')
 
-// 营养素数据
+// 是否已拿到任何服务端分析结果（为空则走空态，不展示写死数值）
+const hasData = computed(() => {
+  return !!nutrition.value && (Number(nutrition.value.protein) > 0 ||
+    Number(nutrition.value.carbs) > 0 ||
+    Number(nutrition.value.fat) > 0)
+})
+
+// 营养素数据（初始为 0，仅由接口填充）
 const nutrition = ref({
-  protein: 85,
+  protein: 0,
   proteinTarget: 100,
-  proteinPercent: 85,
-  carbs: 220,
+  proteinPercent: 0,
+  carbs: 0,
   carbsTarget: 280,
-  carbsPercent: 79,
-  fat: 58,
+  carbsPercent: 0,
+  fat: 0,
   fatTarget: 70,
-  fatPercent: 83,
-  fiber: 18,
+  fatPercent: 0,
+  fiber: 0,
   fiberTarget: 25,
-  fiberPercent: 72
+  fiberPercent: 0
 })
 
-// 微量元素
-const micronutrients = ref([
-  { name: '维生素A', value: 650, unit: 'μg', icon: 'A', status: 'normal', statusText: '正常' },
-  { name: '维生素C', value: 78, unit: 'mg', icon: 'C', status: 'lack', statusText: '偏低' },
-  { name: '钙', value: 850, unit: 'mg', icon: 'Ca', status: 'normal', statusText: '正常' },
-  { name: '铁', value: 15, unit: 'mg', icon: 'Fe', status: 'good', statusText: '充足' },
-  { name: '锌', value: 12, unit: 'mg', icon: 'Zn', status: 'normal', statusText: '正常' },
-  { name: '维生素D', value: 5, unit: 'μg', icon: 'D', status: 'lack', statusText: '不足' }
-])
+// 微量元素（仅由接口填充）
+const micronutrients = ref([])
 
-// AI 建议
-const suggestions = ref([
-  { type: 'warning', icon: 'alert', title: '维生素C摄入不足', desc: '建议增加西兰花、青椒、猕猴桃等富含维C的食物' },
-  { type: 'success', icon: 'checkmarkempty', title: '蛋白质摄入达标', desc: '您的蛋白质摄入量接近目标，继续保持' },
-  { type: 'info', icon: 'info', title: '建议补充维生素D', desc: '适当晒太阳或食用富含维D的食物如鱼类、蛋黄' }
-])
+// AI 建议（仅由接口填充）
+const suggestions = ref([])
 
-// 推荐菜品
-const recommendDishes = ref([
-  {
-    id: 1,
-    name: '西兰花炒虾仁',
-    image: 'https://via.placeholder.com/200x150/4CAF50/FFFFFF?text=西兰花虾仁',
-    tags: ['高蛋白', '低脂', '补充维C'],
-    calories: 180,
-    protein: 28,
-    matchScore: 95
-  },
-  {
-    id: 2,
-    name: '番茄牛腩汤',
-    image: 'https://via.placeholder.com/200x150/FF6B35/FFFFFF?text=番茄牛腩',
-    tags: ['温热', '维C丰富', '高蛋白'],
-    calories: 220,
-    protein: 25,
-    matchScore: 92
-  },
-  {
-    id: 3,
-    name: '清蒸鲈鱼',
-    image: 'https://via.placeholder.com/200x150/2196F3/FFFFFF?text=清蒸鲈鱼',
-    tags: ['低脂', '高蛋白', '富含维D'],
-    calories: 150,
-    protein: 30,
-    matchScore: 90
-  }
-])
+// 推荐菜品（仅由接口填充）
+const recommendDishes = ref([])
 
-// 营养搭配
-const mealCombos = ref([
-  {
-    type: '午餐推荐',
-    totalCalories: 650,
-    dishes: ['西兰花炒虾仁（180kcal）', '糙米饭（200kcal）', '紫菜蛋花汤（50kcal）', '清炒时蔬（80kcal）', '水果拼盘（140kcal）']
-  },
-  {
-    type: '晚餐推荐',
-    totalCalories: 450,
-    dishes: ['清蒸鲈鱼（150kcal）', '杂粮粥（150kcal）', '凉拌蔬菜（80kcal）', '酸奶（70kcal）']
-  }
-])
+// 营养搭配（仅由接口填充）
+const mealCombos = ref([])
 
-// 健康评分
-const healthScore = ref(85)
+// 健康评分（仅由接口填充）
+const healthScore = ref(0)
 const scoreDetails = ref({
-  balance: 88,
-  calories: 90,
-  regularity: 78
+  balance: 0,
+  calories: 0,
+  regularity: 0
 })
 
-// 饮食习惯
+// 饮食习惯（仅由接口填充）
 const habits = ref({
-  avgCalories: 1850,
-  proteinRatio: 18,
-  veggieFreq: 5,
-  diningOut: 35
+  avgCalories: 0,
+  proteinRatio: 0,
+  veggieFreq: 0,
+  diningOut: 0
 })
 
-// 改进建议
-const improvements = ref([
-  {
-    priority: 'high',
-    priorityText: '高优先级',
-    title: '增加维生素C摄入',
-    desc: '每日维生素C摄入量为78mg，低于推荐值100mg，建议增加新鲜蔬果摄入'
-  },
-  {
-    priority: 'medium',
-    priorityText: '中优先级',
-    title: '优化晚餐时间',
-    desc: '检测到您晚餐时间较晚（平均21:30），建议提前到19:00-20:00'
-  },
-  {
-    priority: 'low',
-    priorityText: '低优先级',
-    title: '增加全谷物摄入',
-    desc: '建议将部分精制米面替换为全谷物，提高膳食纤维摄入'
-  }
-])
+// 近7天饮食趋势（仅由接口填充；为空时不画曲线）
+const trendData = ref({
+  labels: [],
+  values: []
+})
+
+// 改进建议（仅由接口填充）
+const improvements = ref([])
 
 // 切换选项卡
 const switchTab = (tab) => {
@@ -535,13 +496,20 @@ const drawTrendChart = () => {
   const height = 200
   const padding = 40
 
-  // 模拟数据
-  const data = [1800, 1950, 1750, 2000, 1850, 1900, 1856]
-  const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '今天']
+  // 趋势点位来自服务端；无数据时不画任何曲线
+  const data = trendData.value.values
+
+  if (data.length < 2) {
+    ctx.setFillStyle('#999999')
+    ctx.setFontSize(14)
+    ctx.fillText('暂无趋势数据', width / 2 - 50, height / 2)
+    ctx.draw()
+    return
+  }
 
   const maxValue = Math.max(...data)
   const minValue = Math.min(...data)
-  const range = maxValue - minValue
+  const range = maxValue - minValue || 1
 
   // 绘制网格线
   ctx.setStrokeStyle('#E0E0E0')
@@ -654,8 +622,10 @@ const loadNutritionData = async () => {
     return
   }
 
+  loading.value = true
+  loadError.value = ''
+
   try {
-    loading.value = true
     const userId = userStore.userInfo?.userId || userStore.userInfo?.id
 
     // 调用营养分析API
@@ -664,36 +634,86 @@ const loadNutritionData = async () => {
       date: new Date().toISOString().split('T')[0] // 今日日期
     })
 
-    if (res.data) {
-      // 更新今日热量
-      todayCalories.value = res.data.calories || todayCalories.value
+    if (!res || !res.data) {
+      throw new Error('未获取到营养分析数据')
+    }
 
-      // 更新营养素数据
-      if (res.data.nutrition) {
-        nutrition.value = {
-          ...nutrition.value,
-          ...res.data.nutrition
-        }
-      }
+    // 更新今日热量
+    todayCalories.value = res.data.calories || '0'
 
-      // 更新微量元素
-      if (res.data.micronutrients) {
-        micronutrients.value = res.data.micronutrients
-      }
-
-      // 更新AI建议
-      if (res.data.suggestions) {
-        suggestions.value = res.data.suggestions
-      }
-
-      // 更新推荐菜品
-      if (res.data.recommendDishes) {
-        recommendDishes.value = res.data.recommendDishes
+    // 更新营养素数据
+    if (res.data.nutrition) {
+      nutrition.value = {
+        ...nutrition.value,
+        ...res.data.nutrition
       }
     }
+
+    // 更新微量元素
+    if (res.data.micronutrients) {
+      micronutrients.value = res.data.micronutrients
+    }
+
+    // 更新AI建议
+    if (res.data.suggestions) {
+      suggestions.value = res.data.suggestions
+    }
+
+    // 更新推荐菜品
+    if (res.data.recommendDishes) {
+      recommendDishes.value = res.data.recommendDishes
+    }
+
+    // 更新健康评分 / 饮食习惯 / 改进建议 / 趋势
+    if (res.data.healthScore != null) {
+      healthScore.value = res.data.healthScore
+    }
+    if (res.data.scoreDetails) {
+      scoreDetails.value = { ...scoreDetails.value, ...res.data.scoreDetails }
+    }
+    if (res.data.habits) {
+      habits.value = { ...habits.value, ...res.data.habits }
+    }
+    if (res.data.improvements) {
+      improvements.value = res.data.improvements
+    }
+    if (res.data.mealCombos) {
+      mealCombos.value = res.data.mealCombos
+    }
+    if (res.data.trend) {
+      trendData.value = {
+        labels: (res.data.trend.labels || []).map(String),
+        values: (res.data.trend.values || []).map(v => Number(v) || 0)
+      }
+    }
+
+    // 数据到位后重绘图表
+    nextTick(() => {
+      drawNutritionChart()
+      if (activeTab.value === 'report') {
+        drawTrendChart()
+      }
+    })
   } catch (error) {
     console.error('加载营养分析数据失败:', error)
-    // 使用默认数据，不影响用户体验
+    // 失败时不保留任何写死数值，清空并置错误态
+    loadError.value = error?.message || '营养分析数据加载失败'
+    todayCalories.value = '0'
+    nutrition.value = {
+      protein: 0, proteinTarget: 100, proteinPercent: 0,
+      carbs: 0, carbsTarget: 280, carbsPercent: 0,
+      fat: 0, fatTarget: 70, fatPercent: 0,
+      fiber: 0, fiberTarget: 25, fiberPercent: 0
+    }
+    micronutrients.value = []
+    suggestions.value = []
+    recommendDishes.value = []
+    mealCombos.value = []
+    improvements.value = []
+    healthScore.value = 0
+    scoreDetails.value = { balance: 0, calories: 0, regularity: 0 }
+    habits.value = { avgCalories: 0, proteinRatio: 0, veggieFreq: 0, diningOut: 0 }
+    trendData.value = { labels: [], values: [] }
   } finally {
     loading.value = false
   }
@@ -722,6 +742,38 @@ onMounted(() => {
   min-height: 100vh;
   background: #f5f5f5;
   padding-bottom: 140rpx;
+}
+
+/* 加载 / 错误 / 空态 */
+.ai-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+  padding: 160rpx 60rpx;
+}
+
+.ai-state-text {
+  font-size: 30rpx;
+  color: #999;
+}
+
+.ai-state-desc {
+  font-size: 26rpx;
+  color: #bbb;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.ai-state-btn {
+  min-width: 240rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  color: #fff;
+  font-size: 28rpx;
+  border-radius: 36rpx;
+  border: none;
 }
 
 .header {
