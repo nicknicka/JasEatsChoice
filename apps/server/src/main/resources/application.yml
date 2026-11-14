@@ -105,7 +105,14 @@ spring.flyway:
   enabled: true
   locations: classpath:db/migration
   baseline-on-migrate: true
-  baseline-version: 0
+  # 非空库但无 flyway_schema_history：基线到最新版本 24，视为「相较 Flyway 一次
+  # 迁移的既有库」——空库不触发 baseline，仍从 V1 全量执行（make reset-db 走这条）。
+  # 旧版 baseline-version: 0 会让这类库先执行 V1 的 CREATE TABLE 而 table already exists。
+  # 新增迁移后须同步上调此值；若遗留库其实停在更早版本，用
+  # flyway baseline -baselineVersion=<实际版本> 显式定基线，不要依赖本默认值。
+  # 注意：24 是「表结构已等于 V24」的断言，Flyway 不核对；停在 V1 态（t_ 前缀未改名）
+  # 的库会被跳过 V3 改名而在启动时报 Table 'xxx.sys_system_config' doesn't exist（见 ADR-0017）。
+  baseline-version: 24
   encoding: UTF-8
   # 开发环境关闭校验（允许不一致的本地修改），生产建议开启
   validate-on-migrate: true

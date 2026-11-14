@@ -1,7 +1,13 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { getMerchant, getDish, getUserId } = require('../utils/real-data')
 const { TEST_API_BASE } = require('../utils/api')
+const { userToken, authedFetch } = require('../utils/auth-token')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
+
+// 默认拒绝后，商家/评价/收藏等接口需带登录态（见 docs/technical/public-routes.md）
+async function authHeaders() {
+  return { Authorization: `Bearer ${await userToken()}` }
+}
 
 test.describe('模块三：商家浏览与详情', () => {
 
@@ -78,10 +84,12 @@ test.describe('模块三：商家浏览与详情', () => {
     const merchantId = '7638432224340229'
     const title = `E2E 公告 ${Date.now()}`
     let createdId
+    const headers = await authHeaders()
     try {
       // seed 公告的 end_time 已过期，会被 AnnouncementScheduler 自动下线，不能作为稳定前置数据。
       // 这里自建一条 end_time 在未来的临时公告，验证后再清理。
       const createResp = await request.post(`${TEST_API_BASE}/v1/merchant/${merchantId}/announcements`, {
+        headers,
         data: {
           title,
           content: `${title} 的内容`,
@@ -100,7 +108,7 @@ test.describe('模块三：商家浏览与详情', () => {
       createdId = createBody.data.id
       expect(createdId).toBeTruthy()
 
-      const listResp = await request.get(`${TEST_API_BASE}/v1/merchant/${merchantId}/announcements`)
+      const listResp = await request.get(`${TEST_API_BASE}/v1/merchant/${merchantId}/announcements`, { headers })
       const listBody = await listResp.json()
       expect(listBody.success).toBe(true)
       const mine = (listBody.data || []).find((item) => String(item.id) === String(createdId))
@@ -115,7 +123,7 @@ test.describe('模块三：商家浏览与详情', () => {
       await expect(card.locator('.announcement-content')).toHaveText(`${title} 的内容`)
       markPassed('3.4', `商家公告展示与接口一致（临时公告 ${createdId}）`)
 
-      const emptyResp = await request.get(`${TEST_API_BASE}/v1/merchant/9999999999999/announcements`)
+      const emptyResp = await request.get(`${TEST_API_BASE}/v1/merchant/9999999999999/announcements`, { headers })
       const emptyBody = await emptyResp.json()
       expect(emptyBody.success).toBe(true)
       expect(emptyBody.data).toEqual([])
@@ -126,7 +134,7 @@ test.describe('模块三：商家浏览与详情', () => {
       throw e
     } finally {
       if (createdId) {
-        await request.delete(`${TEST_API_BASE}/v1/merchant/${merchantId}/announcements/${createdId}`).catch(() => null)
+        await request.delete(`${TEST_API_BASE}/v1/merchant/${merchantId}/announcements/${createdId}`, { headers }).catch(() => null)
       }
     }
   })
@@ -136,7 +144,7 @@ test.describe('模块三：商家浏览与详情', () => {
     try {
       const merchant = await getMerchant()
       const merchantId = merchant.merchantId || merchant.id
-      const response = await fetch(`${TEST_API_BASE}/v1/reviews/merchant/${encodeURIComponent(merchantId)}`)
+      const response = await authedFetch(`/v1/reviews/merchant/${encodeURIComponent(merchantId)}`)
       const payload = await response.json()
 
       expect(response.ok).toBeTruthy()
@@ -234,7 +242,7 @@ test.describe('模块三：商家浏览与详情', () => {
       await expect(page.locator('.el-message--success')).toHaveText(/收藏成功/, { timeout: 10000 })
 
       const userId = await getUserId()
-      const queryResponse = await fetch(`${TEST_API_BASE}/v1/collections?userId=${encodeURIComponent(userId)}`)
+      const queryResponse = await authedFetch(`/v1/collections?userId=${encodeURIComponent(userId)}`)
       const payload = await queryResponse.json()
       expect(queryResponse.ok).toBeTruthy()
       expect(payload.success).toBe(true)
@@ -243,11 +251,10 @@ test.describe('模块三：商家浏览与详情', () => {
         && String(item.collectableId) === String(collectionPayload.collectableId)
       )).toBeTruthy()
 
-      const cleanupUrl = new URL(`${TEST_API_BASE}/v1/collections`)
-      cleanupUrl.searchParams.set('userId', userId)
-      cleanupUrl.searchParams.set('type', collectionPayload.collectableType)
-      cleanupUrl.searchParams.set('id', String(collectionPayload.collectableId))
-      await fetch(cleanupUrl, { method: 'DELETE' })
+      await authedFetch(
+        `/v1/collections?userId=${encodeURIComponent(userId)}&type=${encodeURIComponent(collectionPayload.collectableType)}&id=${encodeURIComponent(String(collectionPayload.collectableId))}`,
+        { method: 'DELETE' }
+      )
 
       await page.route('**/v1/collections', route => {
         if (route.request().method() === 'POST') {
@@ -267,7 +274,7 @@ test.describe('模块三：商家浏览与详情', () => {
       await expect(page.locator('.el-message--error')).toHaveText(/收藏失败/, { timeout: 10000 })
       await expect(favoriteButton).toHaveText(/☆ 收藏/)
 
-      const failedQueryResponse = await fetch(`${TEST_API_BASE}/v1/collections?userId=${encodeURIComponent(userId)}`)
+      const failedQueryResponse = await authedFetch(`/v1/collections?userId=${encodeURIComponent(userId)}`)
       const failedPayload = await failedQueryResponse.json()
       expect((failedPayload.data || []).some((item) =>
         item.collectableType === collectionPayload.collectableType

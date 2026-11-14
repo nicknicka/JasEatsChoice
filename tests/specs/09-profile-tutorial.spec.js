@@ -1,6 +1,7 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { getUser, getUserId } = require('../utils/real-data')
 const { TEST_API_BASE } = require('../utils/api')
+const { authedFetch } = require('../utils/auth-token')
 const {
   markRunning,
   markPassed,
@@ -19,7 +20,7 @@ test.describe('模块九：个人中心与教程', () => {
       const user = await getUser()
       const userId = await getUserId()
       const statsBody = await (
-        await fetch(`${TEST_API_BASE}/v1/orders/user/${encodeURIComponent(userId)}/statistics`)
+        await authedFetch(`/v1/orders/user/${encodeURIComponent(userId)}/statistics`)
       ).json()
       expect(statsBody.success).toBe(true)
       await page.goto('/user/home/profile')
@@ -112,8 +113,8 @@ test.describe('模块九：个人中心与教程', () => {
     try {
       const userId = await getUserId()
       const user = await getUser({ userId })
-      const records = await (await fetch(
-        `${TEST_API_BASE}/v1/consume-history?userId=${encodeURIComponent(userId)}&type=all&page=1&pageSize=10`
+      const records = await (await authedFetch(
+        `/v1/consume-history?userId=${encodeURIComponent(userId)}&type=all&page=1&pageSize=10`
       )).json()
       expect(records.success).toBe(true)
       await page.goto('/user/home/consume-history')
@@ -137,7 +138,7 @@ test.describe('模块九：个人中心与教程', () => {
   test('9.6 教程列表', async ({ page }) => {
     markRunning('9.6')
     try {
-      const response = await fetch(`${TEST_API_BASE}/v1/tutorial/list`)
+      const response = await authedFetch('/v1/tutorial/list')
       const tutorials = await response.json()
       expect(Array.isArray(tutorials)).toBe(true)
       expect(tutorials.length).toBeGreaterThan(0)
@@ -157,7 +158,7 @@ test.describe('模块九：个人中心与教程', () => {
   test('9.7 教程详情', async ({ page }) => {
     markRunning('9.7')
     try {
-      const tutorials = await (await fetch(`${TEST_API_BASE}/v1/tutorial/list`)).json()
+      const tutorials = await (await authedFetch('/v1/tutorial/list')).json()
       const tutorial = tutorials[0]
       await page.goto(`/user/home/tutorials/${tutorial.id}`)
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
@@ -193,8 +194,8 @@ test.describe('模块九：个人中心与教程', () => {
     markRunning('9.9')
     try {
       const userId = await getUserId()
-      const response = await fetch(
-        `${TEST_API_BASE}/v1/tutorial/user/my?userId=${encodeURIComponent(userId)}`
+      const response = await authedFetch(
+        `/v1/tutorial/user/my?userId=${encodeURIComponent(userId)}`
       )
       const body = await response.json()
       const tutorials = Array.isArray(body) ? body : body.data || []

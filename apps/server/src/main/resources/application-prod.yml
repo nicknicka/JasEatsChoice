@@ -18,3 +18,13 @@ file:
   upload:
     path: ${FILE_UPLOAD_PATH:/data/uploads/}
     server-url: ${FILE_SERVER_URL}
+
+# 生产必须真实发送短信：mock-mode 关闭，否则验证码只打到容器日志。
+# 三个 ALIYUN_SMS_* 缺失或为空时，AliyunSMSConfiguration 在启动阶段即抛错（fail fast），
+# 不会静默降级成 System.out。
+aliyun:
+  sms:
+    mock-mode: false
+    endpoint: ${ALIYUN_SMS_ENDPOINT:}
+    sign-name: ${ALIYUN_SMS_SIGN_NAME:}
+    template-code: ${ALIYUN_SMS_TEMPLATE_CODE:}

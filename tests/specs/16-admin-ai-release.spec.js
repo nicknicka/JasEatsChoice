@@ -99,6 +99,11 @@ test.describe('AI 热加载发布验收', () => {
 
     await page.route('**/api/admin/settings/config/group/*', route =>
       route.fulfill({ json: { success: true, data: {} } }))
+    // 本用例刻意用假令牌 + 全量 stub 跑，不真实登录。SecurityConfig 默认拒绝后
+    // /admin/current 会返回 401，触发全局拦截器清管理员态并跳登录页（#576）。
+    // 布局挂载即调它，必须一并 stub，否则页面渲染后被弹走。
+    await page.route('**/api/admin/current', route =>
+      route.fulfill({ json: { success: true, admin: { adminId: 1, username: 'admin', realName: '管理员', roleCode: 'SUPER_ADMIN', roleName: '超级管理员' } } }))
     await page.route('**/api/admin/settings/ai/current', route => {
       // #188 /current 需按调用次序返回不同快照：首屏 READY，刷新状态时返回 UNAVAILABLE
       const payload = currentCallCount === 0 ? activeSnapshot : unavailableSnapshot

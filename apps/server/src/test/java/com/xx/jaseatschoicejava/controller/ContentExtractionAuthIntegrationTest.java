@@ -248,6 +248,8 @@ class ContentExtractionAuthIntegrationTest {
         String recipeId = objectMapper.readTree(body).path("data").asText();
         createdRecipeIds.add(recipeId);
 
+        // 无 Authorization：食谱详情是公开只读（小程序「食谱」tabBar 页未登录可达），
+        // 但仍必须能读到刚发布的这条，语义是「内容本身可读」而非「带身份才可读」。
         mockMvc.perform(get("/v1/recipe/" + recipeId))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))

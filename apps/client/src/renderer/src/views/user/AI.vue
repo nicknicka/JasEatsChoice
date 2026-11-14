@@ -73,6 +73,7 @@ import AppPageHeader from '../../components/common/AppPageHeader.vue'
 import AppEmptyState from '../../components/common/AppEmptyState.vue'
 import AiChatFull from './AI/components/AIChatFull.vue'
 import { API_CONFIG } from '../../config'
+import { useAuthStore } from '../../store/authStore'
 
 const DishRecognition = defineAsyncComponent(() =>
   import('./AI/components/DishRecognition.vue')
@@ -208,7 +209,15 @@ const switchTab = (name) => {
 
 const loadCapabilities = async () => {
   try {
-    const response = await fetch(API_CONFIG.baseURL + API_CONFIG.ai.capabilities)
+    // SecurityConfig 默认拒绝后 /v1/ai/capabilities 要求登录态（见 docs/technical/public-routes.md）。
+    // 这里是裸 fetch，不走 axios/全局 fetch 拦截器，必须自己带令牌；
+    // 否则 401 会被全局拦截器判定为「用户态失效」而清登录态跳登录页。
+    const authStore = useAuthStore()
+    const token = authStore.token || localStorage.getItem('auth_token')
+    const headers = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    const response = await fetch(API_CONFIG.baseURL + API_CONFIG.ai.capabilities, { headers })
     const result = await response.json()
     if (!response.ok || !result?.success || !result.data) {
       throw new Error(result?.message || '能力状态读取失败')
