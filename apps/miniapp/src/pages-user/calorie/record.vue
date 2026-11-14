@@ -75,7 +75,12 @@
           </view>
         </view>
 
-        <view class="empty-state" v-if="records.length === 0">
+        <view class="error-state" v-if="loadError">
+          <text class="error-text">{{ loadError }}</text>
+          <button class="error-btn" @tap="loadRecords">重试</button>
+        </view>
+
+        <view class="empty-state" v-else-if="records.length === 0">
           <empty />
         </view>
       </scroll-view>
@@ -135,6 +140,7 @@ const summary = ref({
 
 const targetCalories = ref(2000)
 const records = ref([])
+const loadError = ref('')
 
 const addPopup = ref(null)
 const mealTypes = ['早餐', '午餐', '晚餐', '加餐']
@@ -181,6 +187,7 @@ const showDatePicker = () => {
 }
 
 const loadRecords = async () => {
+  loadError.value = ''
   try {
     if (!userStore.isLogin) {
       uni.showToast({
@@ -249,24 +256,15 @@ const loadRecords = async () => {
     }
   } catch (error) {
     console.error('加载营养记录失败:', error)
-    // 使用默认数据
-    summary.value = {
-      breakfast: 450,
-      lunch: 780,
-      dinner: 0,
-      snack: 120
-    }
-    records.value = [
-      { id: 1, time: '08:30', name: '牛奶燕麦粥', calories: 280, tags: ['早餐', '健康'] },
-      { id: 2, time: '08:30', name: '水煮蛋', calories: 70, tags: ['早餐'] },
-      { id: 3, time: '08:30', name: '全麦面包', calories: 100, tags: ['早餐'] },
-      { id: 4, time: '12:15', name: '宫保鸡丁', calories: 380, tags: ['午餐'] },
-      { id: 5, time: '12:15', name: '米饭', calories: 200, tags: ['午餐'] },
-      { id: 6, time: '12:15', name: '青菜', calories: 50, tags: ['午餐'] },
-      { id: 7, time: '12:15', name: '西红柿蛋汤', calories: 150, tags: ['午餐'] },
-      { id: 8, time: '15:30', name: '苹果', calories: 60, tags: ['加餐', '水果'] },
-      { id: 9, time: '15:30', name: '酸奶', calories: 60, tags: ['加餐', '健康'] }
-    ]
+    // 加载失败时清空数据并归零统计，绝不回填任何假记录/假热量
+    // 热量摄入是健康管理场景的核心数字，展示编造的数据会直接误导饮食决策
+    loadError.value = error?.message || '营养记录加载失败，请重试'
+    summary.value = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 }
+    records.value = []
+    uni.showToast({
+      title: loadError.value,
+      icon: 'none'
+    })
   }
 }
 
@@ -574,6 +572,31 @@ const saveRecord = async () => {
   color: #666;
   font-size: 22rpx;
   border-radius: 4rpx;
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+  padding: 80rpx 40rpx;
+}
+
+.error-text {
+  font-size: 28rpx;
+  color: #999;
+  text-align: center;
+}
+
+.error-btn {
+  min-width: 240rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  color: #fff;
+  font-size: 28rpx;
+  border-radius: 36rpx;
+  border: none;
 }
 
 .empty-state {
