@@ -1,7 +1,7 @@
 <template>
   <view class="comment-center-container">
-    <!-- 评分概览 -->
-    <view class="rating-overview">
+    <!-- 评分概览：统计未成功加载时不展示数字，避免被误读为真实经营数据 -->
+    <view class="rating-overview" v-if="statsLoaded">
       <view class="rating-main">
         <text class="rating-score">{{ ratingStats.avgRating }}</text>
         <uni-rate :value="ratingStats.avgRating" size="18" readonly></uni-rate>
@@ -26,7 +26,7 @@
     </view>
 
     <!-- 统计数据 -->
-    <view class="stats-grid">
+    <view class="stats-grid" v-if="statsLoaded">
       <view class="stat-card">
         <text class="stat-value">{{ ratingStats.totalReviews }}</text>
         <text class="stat-label">总评价数</text>
@@ -43,6 +43,11 @@
         <text class="stat-value warning">{{ ratingStats.pendingReply }}</text>
         <text class="stat-label">待回复</text>
       </view>
+    </view>
+
+    <!-- 统计未加载出来：只提示，不显示任何数字 -->
+    <view class="stats-error" v-else-if="!loading">
+      <text class="stats-error-text">评价统计加载失败，下拉可重试</text>
     </view>
 
     <!-- 筛选Tab -->
@@ -175,28 +180,30 @@ import { formatRelativeTime } from '@/utils/helper'
 const merchantId = ref('')
 
 // 评分统计
-const ratingStats = ref({
-  avgRating: 4.8,
-  totalReviews: 156,
-  positiveRate: 96,
-  replyCount: 142,
-  pendingReply: 14,
+// 初值一律归零：接口失败时不得展示任何与真实商家无关的数字（否则商家会误判经营状况）
+const EMPTY_RATING_STATS = () => ({
+  avgRating: 0,
+  totalReviews: 0,
+  positiveRate: 0,
+  replyCount: 0,
+  pendingReply: 0,
   distribution: [
-    { star: 5, count: 120, percent: 77 },
-    { star: 4, count: 25, percent: 16 },
-    { star: 3, count: 8, percent: 5 },
-    { star: 2, count: 2, percent: 1 },
-    { star: 1, count: 1, percent: 1 }
+    { star: 5, count: 0, percent: 0 },
+    { star: 4, count: 0, percent: 0 },
+    { star: 3, count: 0, percent: 0 },
+    { star: 2, count: 0, percent: 0 },
+    { star: 1, count: 0, percent: 0 }
   ]
 })
+const ratingStats = ref(EMPTY_RATING_STATS())
 
-// 筛选Tab
+// 筛选Tab（count 由接口统计回填，初值 0）
 const filterTabs = ref([
-  { label: '全部', value: 'all', count: 156 },
-  { label: '待回复', value: 'pending', count: 14 },
-  { label: '已回复', value: 'replied', count: 142 },
-  { label: '有图', value: 'hasImage', count: 89 },
-  { label: '差评', value: 'bad', count: 3 }
+  { label: '全部', value: 'all', count: 0 },
+  { label: '待回复', value: 'pending', count: 0 },
+  { label: '已回复', value: 'replied', count: 0 },
+  { label: '有图', value: 'hasImage', count: 0 },
+  { label: '差评', value: 'bad', count: 0 }
 ])
 
 const activeFilter = ref('all')
@@ -217,6 +224,8 @@ const commentList = ref([])
 const loading = ref(false)
 const refreshing = ref(false)
 const noMore = ref(false)
+// 统计是否已从接口成功取到：未取到时不渲染「0 分/0 条」这类易被误读为真实经营数据的数字
+const statsLoaded = ref(false)
 const page = ref(1)
 const pageSize = 20
 
@@ -313,20 +322,36 @@ const loadComments = async (isRefresh = false) => {
         commentList.value = [...commentList.value, ...formattedReviews]
       }
 
-      // 更新统计
+      // 更新统计（同时回填筛选 Tab 的计数）
       if (res.data.statistics && isRefresh) {
+        const st = res.data.statistics
+        const total = st.totalCount || 0
+        const replied = st.replyCount || 0
         ratingStats.value = {
-          avgRating: res.data.statistics.averageRating || 0,
-          totalReviews: res.data.statistics.totalCount || 0,
-          positiveRate: Math.round((res.data.statistics.positiveCount || 0) / (res.data.statistics.totalCount || 1) * 100),
-          replyCount: res.data.statistics.replyCount || 0,
-          pendingReply: (res.data.statistics.totalCount || 0) - (res.data.statistics.replyCount || 0),
-          distribution: (res.data.statistics.ratingDistribution || []).map(item => ({
+          avgRating: st.averageRating || 0,
+          totalReviews: total,
+          positiveRate: total > 0 ? Math.round((st.positiveCount || 0) / total * 100) : 0,
+          replyCount: replied,
+          pendingReply: total - replied,
+          distribution: (st.ratingDistribution || []).map(item => ({
             star: item.star,
             count: item.count,
-            percent: Math.round(item.count / (res.data.statistics.totalCount || 1) * 100)
+            percent: total > 0 ? Math.round(item.count / total * 100) : 0
           }))
         }
+        // filterTabs 的计数只能来自接口，缺失时保持 0，不用写死值兜底
+        const countMap = {
+          all: total,
+          pending: total - replied,
+          replied,
+          hasImage: st.hasImageCount || 0,
+          bad: st.badCount || 0
+        }
+        filterTabs.value = filterTabs.value.map(t => ({
+          ...t,
+          count: countMap[t.value] != null ? countMap[t.value] : 0
+        }))
+        statsLoaded.value = true
       }
 
       if (reviews.length < pageSize) {
@@ -339,9 +364,12 @@ const loadComments = async (isRefresh = false) => {
   } catch (error) {
     console.error('加载评价失败:', error)
 
-    // 接口失败不回填任何假评价：清空列表并提示，交由空态与重试入口兜底
+    // 接口失败不回填任何假评价：清空列表 + 统计归零，交由空态与重试入口兜底
     if (isRefresh) {
       commentList.value = []
+      ratingStats.value = EMPTY_RATING_STATS()
+      filterTabs.value = filterTabs.value.map(t => ({ ...t, count: 0 }))
+      statsLoaded.value = false
     }
     uni.showToast({
       title: error.message || '评价列表加载失败',
@@ -476,6 +504,17 @@ const replyComment = (comment) => {
   grid-template-columns: repeat(4, 1fr);
   gap: 20rpx;
   padding: 20rpx;
+}
+
+/* 统计未取到时的占位提示：不显示任何数字 */
+.stats-error {
+  padding: 30rpx 20rpx;
+  text-align: center;
+}
+
+.stats-error-text {
+  font-size: 26rpx;
+  color: #999;
 }
 
 .stat-card {

@@ -1,0 +1,191 @@
+[
+  {
+    "page": "pages-merchant/home/statistics.vue",
+    "desc": "营业统计（原整页写死→接真接口）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "加载失败": true,
+      "暂无": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-merchant/profile/finance.vue",
+    "desc": "账户流水（写死余额+随机流水）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "加载失败": true,
+      "暂无": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-merchant/comment/index.vue",
+    "desc": "评价管理（随机生成）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "加载失败": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-merchant/wishlist/index.vue",
+    "desc": "需求池（随机 3-7 条）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "加载失败": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-merchant/chat/index.vue",
+    "desc": "消息列表（随机会话）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "加载失败": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-merchant/dish/index.vue",
+    "desc": "菜品列表（generateMockDishes 死代码）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": null,
+    "state_branch_ok": null,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-merchant/order/today.vue",
+    "desc": "今日订单（generateMockOrders 死代码）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": null,
+    "state_branch_ok": null,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-user/ai/content-extract.vue",
+    "desc": "内容提取【高风险】",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "重新提取": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-user/review/submit/index.vue",
+    "desc": "提交评价【高风险·原会评错对象】",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "评价对象加载失败": true,
+      "重试": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-user/ai/advanced.vue",
+    "desc": "AI 智能分析（整页写死）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "加载失败": true,
+      "暂无": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-user/help/index.vue",
+    "desc": "帮助中心（固定 FAQ）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "加载失败": true,
+      "重试": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-user/order/confirm/index.vue",
+    "desc": "订单确认（假购物车）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "返回选购": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-user/group-order/create.vue",
+    "desc": "创建群订单（假商家）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": null,
+    "state_branch_ok": null,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-user/home/merchant-list.vue",
+    "desc": "商家列表（generateMockData 死代码）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": null,
+    "state_branch_ok": null,
+    "verdict": "PASS"
+  },
+  {
+    "page": "pages-common/chat/conversation-list.vue",
+    "desc": "会话列表（随机会话）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": {
+      "加载失败": true
+    },
+    "state_branch_ok": true,
+    "verdict": "PASS"
+  },
+  {
+    "page": "components/common/WeatherLocation.vue",
+    "desc": "天气组件（写死 26°C）",
+    "src_fake_total": 0,
+    "dist_fake_total": 0,
+    "state_branch": null,
+    "state_branch_ok": null,
+    "verdict": "PASS"
+  },
+  {
+    "page": "composables/chat/useChatRoom.js",
+    "desc": "聊天室 composable（假消息）",
+    "src_fake_total": 0,
+    "dist_fake_total": null,
+    "state_branch": null,
+    "state_branch_ok": null,
+    "verdict": "PASS"
+  },
+  {
+    "page": "composables/ai/useChatStreaming.js",
+    "desc": "AI 流式 composable（假响应）",
+    "src_fake_total": 0,
+    "dist_fake_total": null,
+    "state_branch": null,
+    "state_branch_ok": null,
+    "verdict": "PASS"
+  }
+]

@@ -10,8 +10,8 @@
       />
     </view>
 
-    <!-- 系统通知入口 -->
-    <view class="system-notifications" @tap="openSystemNotifications">
+    <!-- 系统通知入口：无真实通知数据时整块不渲染，不用假通知占位 -->
+    <view class="system-notifications" v-if="latestSystemNotification" @tap="openSystemNotifications">
       <view class="notification-icon">
         <uni-icons type="notification" size="24" color="#FF6B35"></uni-icons>
       </view>
@@ -125,20 +125,22 @@ import { formatRelativeTime } from '@/utils/helper'
 // 商家ID
 const merchantId = ref('')
 
-// 筛选标签
+// 筛选标签（未读数由接口回填，初值 0）
 const filterTabs = ref([
   { label: '全部', value: 'all', unread: 0 },
-  { label: '用户', value: 'user', unread: 5 },
+  { label: '用户', value: 'user', unread: 0 },
   { label: '商家', value: 'merchant', unread: 0 },
-  { label: '群组', value: 'group', unread: 2 }
+  { label: '群组', value: 'group', unread: 0 }
 ])
 
 const activeTab = ref('all')
 
 // 系统通知
-const latestSystemNotification = ref('您有新的订单待处理')
-const systemNotificationTime = ref('5分钟前')
-const unreadSystemCount = ref(3)
+// 这里没有独立的通知接口，一律留空：绝不展示「您有新的订单待处理」这类凭空捏造的通知，
+// 否则商家会据此误判有待处理订单。模板按 hasSystemNotification 决定整块是否渲染。
+const latestSystemNotification = ref('')
+const systemNotificationTime = ref('')
+const unreadSystemCount = ref(0)
 
 // 会话列表
 const conversationList = ref([])
@@ -242,9 +244,10 @@ const loadConversations = async (isRefresh = false) => {
   } catch (error) {
     console.error('加载会话失败:', error)
 
-    // 接口失败不回填任何假会话：清空列表并提示，交由空态与重试入口兜底
+    // 接口失败不回填任何假会话：清空列表 + 未读数归零，交由空态与重试入口兜底
     if (isRefresh) {
       conversationList.value = []
+      filterTabs.value = filterTabs.value.map(t => ({ ...t, unread: 0 }))
     }
     uni.showToast({
       title: error.message || '会话列表加载失败',
