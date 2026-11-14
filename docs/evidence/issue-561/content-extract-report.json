@@ -1,0 +1,16 @@
+{
+  "page": "content-extract",
+  "url": "http://127.0.0.1:8931/#/pages-user/ai/content-extract",
+  "apiCallsBlocked": [
+    "POST https://api.example.com/api/api/ai/extract"
+  ],
+  "errorBlockVisible": true,
+  "errorBlockText": "网络连接失败重新提取",
+  "fakeDataFound": [],
+  "bodyText": "内容提取AI内容提取从图片、视频中提取菜品信息图片识别从菜品图片中提取信息视频提取从美食视频中提取步骤文章解析从文章中提取食谱信息https://example.com/recipe/gongbao-jiding输入文章链接开始提取网络连接失败重新提取首页食谱AI消息我的 网络连接失败",
+  "consoleErrors": [
+    "TypeError: Cannot assign to read only property '_' of object '#<Object>'\n    at assign (<anonymous>)\n    at http://127.0.0.1:8931/assets/index-DyfzS_UY.js:21:23",
+    "TypeError: Cannot assign to read only property '_' of object '#<Object>'\n    at assign (<anonymous>)\n    at http://127.0.0.1:8931/assets/index-DyfzS_UY.js:21:23",
+    "TypeError: Cannot assign to read only property '_' of object '#<Object>'\n    at assign (<anonymous>)\n    at http://127.0.0.1:8931/assets/index-DyfzS_UY.js:21:23"
+  ]
+}
