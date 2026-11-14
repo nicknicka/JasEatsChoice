@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
 import jakarta.annotation.Resource;
 
@@ -25,11 +26,13 @@ public class AliyunSMSConfiguration {
     @Bean
     @ConditionalOnMissingBean // 防止重复注入
     public Client aliyunSmsClient() throws Exception {
-        // 1. 校验必填参数（避免空指针）
-        if (smsProperties.getEndpoint() == null
-                || smsProperties.getSignName() == null
-                || smsProperties.getTemplateCode() == null) {
-            throw new IllegalArgumentException("阿里云短信认证：endpoint、signName、templateCode不能为空！");
+        // 1. 校验必填参数（避免空指针；空串同样视为缺失，生产 fail fast）
+        if (!StringUtils.hasText(smsProperties.getEndpoint())
+                || !StringUtils.hasText(smsProperties.getSignName())
+                || !StringUtils.hasText(smsProperties.getTemplateCode())) {
+            throw new IllegalArgumentException(
+                    "阿里云短信认证：ALIYUN_SMS_ENDPOINT / ALIYUN_SMS_SIGN_NAME / "
+                            + "ALIYUN_SMS_TEMPLATE_CODE 不能为空（mock-mode=false 时必须提供真实值）");
         }
 
         // 2. 初始化配置（自动读取阿里云AK/SK等认证信息）

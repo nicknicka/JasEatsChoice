@@ -35,6 +35,12 @@ x-app-env: &app-env
   - TENCENT_MAP_KEY=${TENCENT_MAP_KEY:-}
   - MAIL_USERNAME=${MAIL_USERNAME:-}
   - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+  # 生产必填（application-prod.yml 关闭 mock 后缺项会启动失败）
+  - ALIYUN_SMS_ENDPOINT=${ALIYUN_SMS_ENDPOINT:-}
+  - ALIYUN_SMS_SIGN_NAME=${ALIYUN_SMS_SIGN_NAME:-}
+  - ALIYUN_SMS_TEMPLATE_CODE=${ALIYUN_SMS_TEMPLATE_CODE:-}
+  - ALIBABA_CLOUD_ACCESS_KEY_ID=${ALIBABA_CLOUD_ACCESS_KEY_ID:-}
+  - ALIBABA_CLOUD_ACCESS_KEY_SECRET=${ALIBABA_CLOUD_ACCESS_KEY_SECRET:-}
   - CONTENT_EXTRACTION_USER_AGENT=${CONTENT_EXTRACTION_USER_AGENT:-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36}
   - CONTENT_EXTRACTION_CONNECT_TIMEOUT=${CONTENT_EXTRACTION_CONNECT_TIMEOUT:-30000}
   - CONTENT_EXTRACTION_READ_TIMEOUT=${CONTENT_EXTRACTION_READ_TIMEOUT:-60000}
@@ -98,13 +104,17 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-}", "--appendonly", "yes"]
+    # 密码经容器环境交给 sh 展开（$$ 让 Compose 不在宿主侧展开），
+    # 避免明文写进 Config.Cmd；与 mysql healthcheck 的做法一致。
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes"]
     volumes:
       - redis-data:/data
     networks:
       - jaseats-net
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep -q PONG"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 6
