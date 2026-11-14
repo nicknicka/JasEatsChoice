@@ -1748,9 +1748,14 @@ export function replyFeedback(feedbackId, content, visibility = 'USER') {
 /**
  * 分诊：needs_info / accepted / rejected；接受时可标记平台系统问题
  */
-export function triageFeedback(feedbackId, status, platformSystem = false, extra = {}) {
+export function triageFeedback(feedbackId, status, platformSystem, extra = {}) {
   // extra 承接分诊决策字段：priority 与 assigneeId（#546）
-  return api.post(feedbackUrl(API_CONFIG.adminFeedback.triage, feedbackId), { status, platformSystem, ...extra })
+  const payload = { status, ...extra }
+  // #548：只有显式提交 platformSystem 才发送；accepted 自流转改属性时不得把已有判定误清成 false
+  if (platformSystem !== undefined && platformSystem !== null) {
+    payload.platformSystem = platformSystem
+  }
+  return api.post(feedbackUrl(API_CONFIG.adminFeedback.triage, feedbackId), payload)
 }
 
 /**
