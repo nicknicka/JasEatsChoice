@@ -98,3 +98,9 @@ jobs:
 
       - name: Build WeChat mini program
         run: make build-miniapp
+
+      # H5 产物完整性门禁（#583）：dev:h5/build:h5 曾因缺平台依赖声明而静默失效
+      # ——构建退出码 0、无警告，产物却只有 12KB 空壳。这条门禁校验产物本身，
+      # 让「构建成功但其实什么都没编译」当场失败，而不是等到用 H5 验证页面时才踩坑。
+      - name: Build H5 and check artifact
+        run: make build-h5
