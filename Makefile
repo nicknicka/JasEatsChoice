@@ -121,7 +121,7 @@ lint:
 
 # 静态防线：不起容器、不打桩，一分钟内把机械性问题挡在跑 5 分钟端到端之前。
 # CI 与本地共用这三个目标，命令不在两处各自演化。
-check: check-unit check-routes check-miniapp-api check-route-auth check-lint check-privacy
+check: check-unit check-routes check-miniapp-api check-route-auth check-public-routes check-lint check-privacy
 
 check-unit:
 	python3 -m unittest discover -s scripts -p 'test_*.py'
@@ -134,6 +134,12 @@ check-routes:
 # 防止有人改了放行清单却忘了同步文档（或反过来手改文档）。
 check-route-auth:
 	python3 scripts/gen_route_auth_matrix.py --check
+
+# 公开清单一致性（#576）：桌面端 PUBLIC_API_PATHS 与小程序 AUTH_WHITELIST 的每条
+# 都必须能被后端 permitAll 覆盖。漂移的失败形态是「打开页面被弹回登录」
+# （前端不带令牌 → 401 → 全局拦截器清登录态），很难反查到白名单里的拼写错误。
+check-public-routes:
+	python3 scripts/check_public_route_consistency.py
 
 # 小程序：页面调用的 xxxApi.method 是否真的存在于对应 api 模块里。
 # 这类缺陷不会被编译或路由检查发现——调用瞬间抛 TypeError，若被 try/catch

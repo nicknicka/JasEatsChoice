@@ -61,6 +61,41 @@
   应用启动输出 `Successfully baselined schema with version: 24`，6 项集成测试全绿。
 - `deploy/.env.example` 新增「Aliyun SMS（生产必填）」块，附获取方式说明。
 - 新增单测 `AliyunSMSConfigurationTest`：缺任一必填项（含空串）抛异常、四项齐全时成功创建 client。
+
+## 回归：`compose` 注入空串 × 校验无视 `mockMode`，把 local/E2E 一起拖垮
+
+上 E2E 时 spring-boot 容器直接起不来（`dependency failed to start: container is unhealthy`）：
+
+```
+阿里云短信认证：ALIYUN_SMS_ENDPOINT / ALIYUN_SMS_SIGN_NAME / ALIYUN_SMS_TEMPLATE_CODE
+不能为空（mock-mode=false 时必须提供真实值）
+  at AliyunSMSConfiguration.aliyunSmsClient(AliyunSMSConfiguration.java:33)
+```
+
+**两个改动各自都对，叠在一起才出问题**：
+
+1. `compose.yml` 新增 `ALIYUN_SMS_ENDPOINT=${ALIYUN_SMS_ENDPOINT:-}` 等五行。`:-}` 兜底
+   空串——开发/local 的 `.env` 没有这三项，于是容器里被注入**空串**。Spring relaxed binding
+   下「环境变量存在（哪怕是空串）」会**覆盖** `application.yml` 的 `endpoint: dypnsapi.aliyuncs.com`，
+   默认值就此失效。
+2. `AliyunSMSConfiguration` 把判空从 `== null` 换成 `StringUtils.hasText`（空串也算缺失），
+   方向正确；但**没有判断 `mockMode`**，于是 mock 模式的 local/E2E 也被要求必须有真值。
+
+旧代码在 local 下之所以没炸，是因为空串能通过 `== null` 判断而 client 构造对空 endpoint 宽容。
+
+**修法**：校验只在 `mock-mode=false` 时生效。mock 模式（开发 / local / 集成测试）验证码只打
+日志、根本不调用 client，空值不该阻塞启动。生产 `application-prod.yml` 的
+`mock-mode: false` 未被改动，验收标准 1 的 fail-fast 语义不变。单测补两条反向用例：
+「mock 模式容忍空值」「mockMode 未显式设置时默认为 mock」。
+
+**教训**：fail-fast 的判据是「**这个值真的会被用到吗**」，不是「这个值是否为空」。
+把校验挂在错误的层（配置装配）而非使用点（真实发送分支），会把「开发环境没配密钥」
+误判成「生产级致命错误」。**改配置注入与改校验判据是两条独立的失败面，必须一起回归**——
+本次正是靠跑 E2E 才暴露，纯后端单测全部通过。
+
+**遗留待办**：`compose.yml` 仍注入空串（只是现在被 mock 分支兜住）。更干净的做法是
+`.env` 不缺项时不注入（`ALIYUN_SMS_ENDPOINT` 与 `${ALIYUN_SMS_ENDPOINT:-}` 的语义差异），
+但这会牵动整个 `x-app-env` 的表达方式，记入后续 issue，不在本次一并改。
 - **更正 issue 原文的一处判断**：`01_schema.sql` 的乱码注释是**可无损还原**的（UTF-8 字节被
   cp1252 误读，用完整 cp1252 反向表逐段解码即可）。已还原 `01_schema.sql` 506 行、`V1` 451 行乱码，
   还原后 `grep -c "è\|æ\|ç"` 为 0。此项不是「重新生成注释」，而是**还原既有字节**。

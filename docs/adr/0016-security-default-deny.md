@@ -91,5 +91,17 @@
   是 `permitAll`（返回 404 被吞）蒙混；默认拒绝后该请求 401 会把页面弹走，补 stub `**/api/admin/current`。
 - 文档：新增 `docs/technical/public-routes.md`，写明清单、生成方式（`check_routes.py --source static`
   的 480 条路由）、与前端两处白名单的对齐关系。
+- **验收第 6 条（两端白名单一致）实测抓到一处漂移**：小程序 `AUTH_WHITELIST` 写的是
+  `/v1/admin/login`，而后端真实路径是 `/admin/login`（`AdminController` 的 `@RequestMapping("/admin")`），
+  多了一层 `v1`。小程序没有任何 admin 页面或 api 模块，这条既是**拼错**也是**死条目**。
+  它长期无人发现，是因为漂移的失败形态很隐蔽：小程序端登录管理员时会**不带令牌**发出请求 →
+  401 → 全局拦截器判「登录态失效」→ 清 localStorage 跳登录页，现象是「打开页面被弹回登录」，
+  很难反查到白名单里的一条拼写错误。已改为 `/admin/login`。
+- **新增 `scripts/check_public_route_consistency.py`**（接入 `make check` 的 `check-public-routes`、
+  含 8 项单测）：把桌面端 `PUBLIC_API_PATHS` 与小程序 `AUTH_WHITELIST` 的**每条**路径拿去与
+  `SecurityConfig` 的 `permitAll` 比对，凡「前端声明公开但后端不放行」即报错。
+  只做单向约束——反向（后端放行但某端不涉及，如小程序不渲染 `/uploads/**`）属正常职责差异，
+  硬报会产生高频误报而被忽略。路径解析**复用** `gen_route_auth_matrix.public_patterns`，
+  避免两处各写一套、其中一处修了 bug 另一处没修而校验静默失效。
 - 未纳入本次：`db/init/01_schema.sql` 与 `Flyway V1` 结构不等价（见 `#566` 的 `baseline-version` 讨论），
   属独立历史遗留问题。
