@@ -9,6 +9,8 @@
 #   make test        跑全部 144 条 Playwright 用例
 #   make test-smoke  只跑 01/04/10 三条冒烟
 #   make check       静态防线：单测 + 路由漂移 + 小程序 API 调用 + lint 门禁（不起容器）
+#   make build-miniapp  构建微信小程序产物（mp-weixin）
+#   make build-h5       构建 H5 产物并校验完整性（#583）
 #   make desktop     Electron 打包回归（build:mac）
 #   make screenshots 全量网页截图 + 索引页（产出在 output/，不入库）
 #   make logs        跟随后端日志
@@ -22,7 +24,7 @@ NPM := npm --no-audit --no-fund
 CHECK_SOURCE ?= auto
 
 .PHONY: doctor env deps up down ps logs reset-db web desktop screenshots test test-smoke lint \
-	check check-unit check-routes check-miniapp-api check-lint check-privacy build-miniapp nginx-test config-prod agent-check
+	check check-unit check-routes check-miniapp-api check-lint check-privacy build-miniapp build-h5 check-h5 nginx-test config-prod agent-check
 
 doctor:
 	@echo "== Docker =="
@@ -98,6 +100,18 @@ desktop:
 # 小程序构建门禁：不依赖容器与密钥，CI 与本地跑同一条命令
 build-miniapp:
 	cd apps/miniapp && $(NPM) run build:mp-weixin
+
+# H5 构建（#583）：先出产物，再校验它不是 12KB 空壳。
+# 这两步必须连着跑——「构建退出码 0 但产物只有 pinia」正是当初静默失效的形态，
+# 单看命令成功没有意义，得看产物里到底有没有应用入口。
+build-h5:
+	cd apps/miniapp && $(NPM) run build:h5
+	python3 scripts/check_h5_build.py
+
+# H5 产物完整性门禁（#583）：只校验既有产物，不重新构建。
+# 单独拆出来是为了让已构建过的环境（或只想复验门禁本身）不必再花一次构建时间。
+check-h5:
+	python3 scripts/check_h5_build.py
 
 # 全量网页截图：按需拉起前端 dev server → 逐页截图 → 重建 index.html/README.md。
 # 需要后端栈已 make up；截图与索引都落在 output/web-screenshots（.gitignore，不入库）。
