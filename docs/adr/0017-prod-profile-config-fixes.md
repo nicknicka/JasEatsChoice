@@ -56,10 +56,55 @@
 - 生产启动时若缺 `ALIYUN_SMS_ENDPOINT/SIGN_NAME/TEMPLATE_CODE` 或 `ALIBABA_CLOUD_ACCESS_KEY_*`，
   直接抛异常退出，而不是带着打日志的假短信在线上跑。
 - 空库路径（`make reset-db`）验证通过：`V1..V24` 全量迁移成功；
-  遗留库（表齐全、无 `flyway_schema_history`）验证通过：输出
-  `Successfully baselined schema with version: 24` 且应用启动成功。
+  遗留库（表齐全、无 `flyway_schema_history`）验证通过：把已跑完全量迁移的库
+  `mysqldump --no-data` 出来、剥掉 `flyway_schema_history` 段后灌入新库（84 表 / 无 history），
+  应用启动输出 `Successfully baselined schema with version: 24`，6 项集成测试全绿。
 - `deploy/.env.example` 新增「Aliyun SMS（生产必填）」块，附获取方式说明。
 - 新增单测 `AliyunSMSConfigurationTest`：缺任一必填项（含空串）抛异常、四项齐全时成功创建 client。
 - **更正 issue 原文的一处判断**：`01_schema.sql` 的乱码注释是**可无损还原**的（UTF-8 字节被
-  cp1252 误读，用完整 cp1252 反向表逐段解码即可）。已还原 `01_schema.sql` 491 行、`V1` 436 行乱码，
+  cp1252 误读，用完整 cp1252 反向表逐段解码即可）。已还原 `01_schema.sql` 506 行、`V1` 451 行乱码，
   还原后 `grep -c "è\|æ\|ç"` 为 0。此项不是「重新生成注释」，而是**还原既有字节**。
+
+## 副作用：修改已应用的 V1 会改变 Flyway checksum（部署时必读）
+
+还原乱码同时改了 `V1__init_schema.sql` 的字节，因此 **checksum 变了**。Flyway 默认
+`validate-on-migrate: true`，对**已经应用过 V1 的既有库**会直接失败：
+
+```
+Validate failed: Migrations have failed validation
+Migration checksum mismatch for migration version 1
+-> Applied to database : 1571144652
+-> Resolved locally    : 901602595
+Either revert the changes to the migration, or run repair to update the schema history.
+```
+
+**这不是本次引入的缺陷，而是「修改已应用迁移」的固有代价**——`V1` 是历史文件，任何编辑都会如此。
+本仓已有环境对应的处置（按库的性质二选一）：
+
+| 库的性质 | 现象 | 处置 |
+|---|---|---|
+| 空库 / `make reset-db` 重建 | 无 `flyway_schema_history`，不触发 baseline，从 V1 全量执行 | 无需处理，本次已验证 `V1..V24` 全量迁移通过 |
+| 遗留库（表齐全、无 `flyway_schema_history`） | 走到 `baseline-version: 24` | 无需处理，本次已验证输出 `Successfully baselined schema with version: 24` |
+| **既有库（已跑过旧 V1，有 history）** | 启动即校验失败（如上） | 执行一次 `flyway repair` 把记录里的 checksum 更新为新值，或直接重建开发库 |
+
+### 边界：`baseline-version: 24` 只对「已到 24 态」的遗留库安全
+
+`baseline-version` 是**断言**「这个库的表结构已经等于第 N 版」，Flyway 不会去核对，
+只会写入一条 `24` 的基线记录并**跳过 V1..V24 全部迁移**。因此：
+
+| 遗留库的真实态 | 后果 |
+|---|---|
+| 表结构 == V24 态（本次构造的 `legacy_probe`） | 正确。跳过全部迁移，应用直接可用 |
+| 表结构停在更早版本（例如 V1 旧命名态：`system_config` / `t_user`） | **静默错**。跳过 V3 的 74 张表重命名，应用启动即 `Table 'xxx.sys_system_config' doesn't exist` |
+
+第二行是本仓最容易踩的坑：`db/init/01_schema.sql` 就是 V1 旧命名态（`t_` 前缀、`system_config`
+未改名），拿它当「遗留库」来构造会得到上表的失败态——我第一轮验证正是这样失败的。
+所以**遗留库上生产前必须先确认它停在哪个版本**：若早于 24，用
+`flyway baseline -baselineVersion=<实际版本>`（或补齐 `V(n+1)..V24` 的迁移）显式处理，
+不能依赖 `application.yml` 里的默认值。默认值只覆盖「已是最新」这一种遗留库。
+
+本地隔离栈（`codex576-*`）就属第三类——它跑过旧 `V1`，集成分支合并后首次启动即报上述错。
+用 `DROP DATABASE ... CREATE DATABASE ...` 重建后，`V1..V24` 全量迁移通过、586 项测试全绿。
+生产库若已应用旧 `V1`，**发布前必须先 `flyway repair`**，否则应用起不来（失败形态是启动失败，
+不是静默错数据，属可接受的 fail fast，但需写进发布步骤）。
+
