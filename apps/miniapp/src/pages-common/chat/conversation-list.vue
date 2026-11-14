@@ -244,56 +244,17 @@ const loadConversations = async (isRefresh = false) => {
   } catch (error) {
     console.error('加载会话失败:', error)
 
-    // 开发阶段：使用模拟数据
-    const mockData = generateMockConversations()
+    // 接口失败不回填任何假会话：清空列表并提示，交由空态与重试入口兜底
     if (isRefresh) {
-      conversationList.value = mockData
-    } else {
-      conversationList.value = [...conversationList.value, ...mockData]
+      conversationList.value = []
     }
-
-    if (mockData.length < pageSize) {
-      hasMore.value = false
-    }
+    uni.showToast({
+      title: error.message || '会话列表加载失败',
+      icon: 'none'
+    })
   } finally {
     loading.value = false
   }
-}
-
-/**
- * 生成模拟会话数据
- */
-const generateMockConversations = () => {
-  const conversations = []
-  const count = Math.floor(Math.random() * 5) + 5
-
-  const names = ['张三', '李四', '老王家常菜', '王五', '美食群', '同学聚会群']
-  const messages = [
-    '你好，在吗？',
-    '订单已发货',
-    '今天的菜品很不错',
-    '[图片]',
-    '[菜品卡片]',
-    '好的，我知道了'
-  ]
-
-  for (let i = 0; i < count; i++) {
-    const isGroup = Math.random() > 0.7
-    conversations.push({
-      id: page.value * 20 + i,
-      name: names[i % names.length],
-      avatar: `https://via.placeholder.com/80/FF6B35/FFFFFF?text=${names[i % names.length][0]}`,
-      isGroup,
-      isOnline: Math.random() > 0.5,
-      isPinned: Math.random() > 0.8,
-      unread: Math.floor(Math.random() * 5),
-      lastMessage: messages[Math.floor(Math.random() * messages.length)],
-      lastMessageType: Math.random() > 0.8 ? 'image' : 'text',
-      lastTime: new Date(Date.now() - Math.random() * 3600000)
-    })
-  }
-
-  return conversations
 }
 
 /**

@@ -246,36 +246,6 @@ const generateDishTags = (dish) => {
 }
 
 /**
- * 生成模拟菜品数据
- */
-const generateMockDishes = () => {
-  const dishes = []
-  const count = Math.floor(Math.random() * 5) + 5
-
-  const dishNames = [
-    '宫保鸡丁', '鱼香肉丝', '回锅肉', '麻婆豆腐',
-    '水煮鱼', '糖醋排骨', '青椒肉丝', '红烧肉'
-  ]
-
-  for (let i = 0; i < count; i++) {
-    dishes.push({
-      id: page.value * 10 + i,
-      name: dishNames[i % dishNames.length],
-      description: '经典川菜，麻辣鲜香',
-      image: `https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=${i}`,
-      price: Math.floor(Math.random() * 50) + 20,
-      isActive: Math.random() > 0.2,
-      tags: i % 3 === 0 ? ['招牌', '辣'] : ['推荐'],
-      sales: Math.floor(Math.random() * 500) + 50,
-      rating: (Math.random() * 1 + 4).toFixed(1),
-      category: activeCategory.value === 'all' ? 'hot' : activeCategory.value
-    })
-  }
-
-  return dishes
-}
-
-/**
  * 加载更多
  */
 const loadMore = () => {

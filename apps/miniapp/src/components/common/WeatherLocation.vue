@@ -52,30 +52,29 @@ const getLocationAndWeather = async () => {
 
     // 如果有位置信息，获取天气
     if (locationStore.currentLocation) {
-      // U-033: 调用天气API（暂时使用模拟数据）
+      // U-033: 调用天气接口；失败时展示未知态，不写死任何温度
       try {
-        // TODO: 集成真实天气API（如和风天气、高德天气等）
-        // const { weatherApi } = await import('@/api')
-        // const { latitude, longitude } = locationStore.currentLocation
-        // const res = await weatherApi.getByLocation({ latitude, longitude })
+        const { weatherApi } = await import('@/api')
+        const city = locationStore.currentLocation.city ||
+          locationStore.currentLocation.address ||
+          ''
+        const res = await weatherApi.getWeatherInfo({ city })
 
-        // 暂时使用模拟数据
-        const mockWeatherData = {
-          temperature: 26,
-          condition: '晴',
-          icon: '☀️',
-          humidity: 65,
-          windSpeed: 3
+        if (res && res.code === 200 && res.data) {
+          locationStore.setWeather({
+            temperature: res.data.temperature ?? res.data.temp ?? '--',
+            condition: res.data.condition || res.data.weather || '未知',
+            icon: res.data.icon || '❓',
+            humidity: res.data.humidity ?? 0,
+            windSpeed: res.data.windSpeed ?? 0
+          })
+        } else {
+          throw new Error(res?.message || '未获取到天气信息')
         }
-
-        // 更新天气信息到store
-        locationStore.setWeather(mockWeatherData)
-
-        console.log('天气信息已更新:', mockWeatherData)
       } catch (error) {
-        console.error('获取天气信息失败，使用默认值:', error)
+        console.error('获取天气信息失败:', error)
 
-        // 如果API调用失败，使用默认天气信息
+        // 失败展示未知态，不返回任何伪造数值
         locationStore.setWeather({
           temperature: '--',
           condition: '未知',

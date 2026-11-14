@@ -10,6 +10,15 @@
         </view>
       </view>
 
+      <!-- 目标信息加载失败：不显示任何替身对象，避免评错对象 -->
+      <view class="target-info card target-error" v-else-if="targetLoadError">
+        <view class="target-detail">
+          <view class="target-name">评价对象加载失败</view>
+          <view class="target-meta">{{ targetLoadError }}</view>
+        </view>
+        <button class="target-retry-btn" @tap="loadTargetInfo">重试</button>
+      </view>
+
       <!-- 星级评分 -->
       <view class="rating-section card">
         <view class="section-title">总体评分</view>
@@ -152,6 +161,8 @@ const canSubmit = computed(() => {
 
 // 评价目标信息
 const targetInfo = ref(null)
+// 目标信息加载失败原因（非空即错误态，禁止用假对象顶替）
+const targetLoadError = ref('')
 
 // 评价标签
 const reviewTags = ref([
@@ -363,81 +374,61 @@ onMounted(async () => {
 
 /**
  * REVIEW-003: 加载评价目标信息
+ * 失败时保持 targetInfo 为空并置错误态，绝不用假对象顶替（否则会评错对象）
  */
 const loadTargetInfo = async () => {
+  targetLoadError.value = ''
   try {
     // U-031: 根据targetId加载信息
     if (targetType.value === 'dish') {
       // 调用菜品详情API获取菜品信息
-      try {
-        const { dishApi } = await import('@/api')
-        const res = await dishApi.getDetail(targetId.value)
+      const { dishApi } = await import('@/api')
+      const res = await dishApi.getDetail(targetId.value)
 
-        if (res && res.data) {
-          targetInfo.value = {
-            name: res.data.dishName || res.data.name,
-            image: res.data.image || res.data.coverImage,
-            meta: `${res.data.merchantName || '商家'} - ¥${res.data.price}`
-          }
-        }
-      } catch (error) {
-        console.error('加载菜品信息失败，使用模拟数据:', error)
-        // 使用模拟数据作为降级处理
+      if (res && res.data) {
         targetInfo.value = {
-          name: '宫保鸡丁',
-          image: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=宫保鸡丁',
-          meta: '老王家常菜 - ¥28'
+          name: res.data.dishName || res.data.name,
+          image: res.data.image || res.data.coverImage,
+          meta: `${res.data.merchantName || '商家'} - ¥${res.data.price}`
         }
+      } else {
+        throw new Error('未获取到菜品信息')
       }
     } else if (targetType.value === 'merchant') {
       // 调用商家详情API获取商家信息
-      try {
-        const { merchantApi } = await import('@/api')
-        const res = await merchantApi.getDetail(targetId.value)
+      const { merchantApi } = await import('@/api')
+      const res = await merchantApi.getDetail(targetId.value)
 
-        if (res && res.data) {
-          targetInfo.value = {
-            name: res.data.merchantName || res.data.name,
-            image: res.data.logo || res.data.avatar || res.data.coverImage,
-            meta: `${res.data.category || '餐饮'} - ${res.data.rating || 4.5}分`
-          }
-        }
-      } catch (error) {
-        console.error('加载商家信息失败，使用模拟数据:', error)
-        // 使用模拟数据作为降级处理
+      if (res && res.data) {
         targetInfo.value = {
-          name: '老王家常菜',
-          image: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=老王',
-          meta: '川菜 - 4.7分'
+          name: res.data.merchantName || res.data.name,
+          image: res.data.logo || res.data.avatar || res.data.coverImage,
+          meta: `${res.data.category || '餐饮'} - ${res.data.rating || 4.5}分`
         }
+      } else {
+        throw new Error('未获取到商家信息')
       }
     } else if (targetType.value === 'order') {
       // 调用订单详情API获取订单信息
-      try {
-        const { orderApi } = await import('@/api')
-        const res = await orderApi.getDetail(orderId.value)
+      const { orderApi } = await import('@/api')
+      const res = await orderApi.getDetail(orderId.value)
 
-        if (res && res.data) {
-          targetInfo.value = {
-            name: res.data.merchantName || res.data.merchant?.name,
-            image: res.data.merchantImage || res.data.merchant?.logo || res.data.merchant?.avatar,
-            meta: `${res.data.createdAt} 订单`
-          }
-        }
-      } catch (error) {
-        console.error('加载订单信息失败，使用模拟数据:', error)
-        // 使用模拟数据作为降级处理
+      if (res && res.data) {
         targetInfo.value = {
-          name: '老王家常菜',
-          image: 'https://via.placeholder.com/200x200/FF6B35/FFFFFF?text=老王',
-          meta: '2026-03-17 订单'
+          name: res.data.merchantName || res.data.merchant?.name,
+          image: res.data.merchantImage || res.data.merchant?.logo || res.data.merchant?.avatar,
+          meta: `${res.data.createdAt} 订单`
         }
+      } else {
+        throw new Error('未获取到订单信息')
       }
     }
   } catch (error) {
     console.error('加载目标信息失败:', error)
+    targetInfo.value = null
+    targetLoadError.value = error?.message || '评价对象加载失败'
     uni.showToast({
-      title: '加载失败',
+      title: targetLoadError.value,
       icon: 'none'
     })
   }
@@ -482,6 +473,23 @@ const loadTargetInfo = async () => {
 .target-info {
   @include flex-center;
   gap: $spacing-md;
+}
+
+/* 目标信息失败态 */
+.target-error {
+  justify-content: space-between;
+}
+
+.target-retry-btn {
+  min-width: 140rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  background: linear-gradient(135deg, $primary-color, #FF8F61);
+  color: #fff;
+  font-size: $font-size-sm;
+  border-radius: $border-radius-round;
+  border: none;
+  padding: 0 $spacing-md;
 }
 
 .target-image {

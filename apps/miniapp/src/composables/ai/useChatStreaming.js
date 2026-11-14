@@ -285,31 +285,6 @@ export function useChatStreaming() {
 	}
 
 	/**
-	 * 生成模拟AI回复（降级方案）
-	 * @param {string} text - 用户消息
-	 * @returns {string} AI回复
-	 */
-	const generateMockResponse = (text) => {
-		const responses = {
-			推荐健康食谱:
-				'根据您的需求，我为您推荐以下健康食谱：\n\n早餐：燕麦牛奶粥配鸡蛋（约420卡）\n午餐：清蒸鲈鱼配时蔬（约580卡）\n晚餐：鸡胸肉蔬菜沙拉（约380卡）\n\n这些食谱营养均衡，适合日常食用。',
-			分析营养成分:
-				'请告诉我您想分析哪种食物的营养成分？我可以为您提供详细的分析报告。',
-			制定饮食计划:
-				'为了制定个性化的饮食计划，我需要了解以下信息：\n\n1. 您的身高体重\n2. 运动习惯\n3. 饮食偏好\n4. 健康目标\n\n请提供这些信息，我会为您制定专属计划。',
-			default: `收到您的问题："${text}"\n\n我正在为您分析，稍后会给出专业建议。\n\n您可以问我关于：\n• 营养成分分析\n• 食谱推荐\n• 饮食计划\n• 健康建议`
-		}
-
-		for (const [key, value] of Object.entries(responses)) {
-			if (text.includes(key)) {
-				return value
-			}
-		}
-
-		return responses['default']
-	}
-
-	/**
 	 * 重置所有状态
 	 */
 	const reset = () => {
@@ -335,7 +310,6 @@ export function useChatStreaming() {
 		startStreaming,
 		stopStreaming,
 		parseCardData,
-		generateMockResponse,
 		reset
 	}
 }

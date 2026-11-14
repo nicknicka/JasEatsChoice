@@ -196,41 +196,13 @@ export function useChatRoom() {
       console.error('加载聊天消息失败:', error)
       uni.hideLoading()
 
-      // 如果API调用失败，使用模拟数据
-      messageList.value = generateMockMessages()
-      nextTick(() => {
-        scrollToBottom()
+      // 接口失败不回填任何假消息：清空列表并提示，页面空态与重试入口兜底
+      messageList.value = []
+      uni.showToast({
+        title: error.message || '聊天记录加载失败',
+        icon: 'none'
       })
     }
-  }
-
-  /**
-   * 生成模拟消息
-   */
-  const generateMockMessages = () => {
-    const messages = []
-    const otherAvatar = 'https://via.placeholder.com/80/FF6B35/FFFFFF?text=店'
-    const myAvatar = 'https://via.placeholder.com/80/FAAD14/FFFFFF?text=我'
-
-    for (let i = 0; i < 10; i++) {
-      const isSelf = i % 3 === 0
-
-      messages.push({
-        id: Date.now() + i,
-        isSelf,
-        userId: isSelf ? 0 : 1,
-        nickname: isSelf ? '我' : '商家',
-        avatar: isSelf ? myAvatar : otherAvatar,
-        isGroup: false,
-        type: 'text',
-        content: `这是第${i + 1}条消息`,
-        time: new Date(Date.now() - (10 - i) * 60000),
-        showTime: i === 0 || i % 5 === 0,
-        status: 'success'
-      })
-    }
-
-    return messages
   }
 
   /**

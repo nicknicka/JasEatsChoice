@@ -211,62 +211,18 @@ const loadWishlist = async (isRefresh = false) => {
   } catch (error) {
     console.error('加载心愿单失败:', error)
 
-    // API失败时使用模拟数据
-    // TODO: 生产环境应移除此模拟数据逻辑
-    const mockData = generateMockWishlist()
+    // 接口失败不回填任何假需求：清空列表并提示，交由空态与重试入口兜底
     if (isRefresh) {
-      wishlist.value = mockData
-    } else {
-      wishlist.value = [...wishlist.value, ...mockData]
+      wishlist.value = []
     }
-    if (mockData.length < pageSize) {
-      noMore.value = true
-    }
+    uni.showToast({
+      title: error.message || '需求列表加载失败',
+      icon: 'none'
+    })
 
     loading.value = false
     refreshing.value = false
   }
-}
-
-/**
- * 生成模拟数据
- */
-const generateMockWishlist = () => {
-  const wishes = []
-  const count = Math.floor(Math.random() * 5) + 3
-
-  const users = [
-    { name: '张同学', avatar: 'https://via.placeholder.com/60/FF6B35/FFFFFF?text=张' },
-    { name: '李同学', avatar: 'https://via.placeholder.com/60/FF6B35/FFFFFF?text=李' },
-    { name: '王同学', avatar: 'https://via.placeholder.com/60/FF6B35/FFFFFF?text=王' }
-  ]
-
-  const contents = [
-    '想吃家乡的味道，有没有正宗的川菜推荐？最好是那种麻辣鲜香的。',
-    '希望能有低脂低卡的菜品，正在减肥中，但想吃点好吃的。',
-    '想吃点开胃的菜品，最近没什么食欲，需要酸辣口味的刺激一下。',
-    '有没有适合聚餐的菜品？需要分量大一点，价格实惠的。',
-    '想吃点养生的汤品，最好是清热降火的。'
-  ]
-
-  for (let i = 0; i < count; i++) {
-    const user = users[Math.floor(Math.random() * users.length)]
-    wishes.push({
-      id: page.value * 20 + i,
-      user: user,
-      content: contents[Math.floor(Math.random() * contents.length)],
-      dishes: i % 2 === 0 ? ['宫保鸡丁', '水煮鱼'] : [],
-      budget: i % 3 === 0 ? '50-80' : '',
-      expectTime: i % 2 === 0 ? '本周五午餐' : '',
-      submitTime: '2小时前',
-      status: activeStatus.value,
-      statusText: getStatusText(activeStatus.value),
-      replyCount: Math.floor(Math.random() * 5),
-      likeCount: Math.floor(Math.random() * 20)
-    })
-  }
-
-  return wishes
 }
 
 /**

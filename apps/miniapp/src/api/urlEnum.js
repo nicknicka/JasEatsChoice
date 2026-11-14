@@ -76,7 +76,10 @@ export const MERCHANT_API = {
   GET_MERCHANT_REVIEWS: '/v1/merchants/:merchantId/reviews',  // GET - 获取商家评价列表
 
   // 商家统计
-  GET_MERCHANT_STATISTICS: '/v1/merchants/:merchantId/statistics',  // GET - 获取商家统计数据
+  // 注意：后端路由在 MerchantController（@RequestMapping("/v1/merchant")，单数），
+  // 而 MerchantsController（复数）只有列表/详情/附近三个 GET，没有 statistics。
+  // 早期这里写成复数会直接 404。
+  GET_MERCHANT_STATISTICS: '/v1/merchant/:merchantId/statistics',  // GET - 获取商家统计数据
   GET_MERCHANT_FINANCE: '/v1/merchants/:merchantId/finance',  // GET - 获取商家财务数据
   MERCHANT_WITHDRAW: '/v1/merchants/:merchantId/withdraw',  // POST - 商家提现申请
 

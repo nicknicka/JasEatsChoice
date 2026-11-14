@@ -242,96 +242,18 @@ const loadConversations = async (isRefresh = false) => {
   } catch (error) {
     console.error('加载会话失败:', error)
 
-    // 开发阶段：使用模拟数据
-    const mockData = generateMockConversations()
-
-    // 根据activeTab筛选
-    let filteredData = mockData
-    if (activeTab.value !== 'all') {
-      filteredData = mockData.filter(conv => conv.type === activeTab.value)
-    }
-
+    // 接口失败不回填任何假会话：清空列表并提示，交由空态与重试入口兜底
     if (isRefresh) {
-      conversationList.value = filteredData
-    } else {
-      conversationList.value = [...conversationList.value, ...filteredData]
+      conversationList.value = []
     }
-
-    updateUnreadCounts()
-
-    if (filteredData.length < pageSize) {
-      noMore.value = true
-    }
+    uni.showToast({
+      title: error.message || '会话列表加载失败',
+      icon: 'none'
+    })
   } finally {
     loading.value = false
     refreshing.value = false
   }
-}
-
-/**
- * 生成模拟会话数据
- */
-const generateMockConversations = () => {
-  const conversations = []
-
-  // 用户会话
-  const users = [
-    {
-      id: 1,
-      type: 'user',
-      name: '张同学',
-      avatar: 'https://via.placeholder.com/80/FF6B35/FFFFFF?text=张',
-      online: true,
-      pinned: true,
-      lastMessage: '好的，我马上就过去取餐',
-      lastMessageType: 'text',
-      time: '刚刚',
-      unread: 2
-    },
-    {
-      id: 2,
-      type: 'user',
-      name: '李同学',
-      avatar: 'https://via.placeholder.com/80/52C41A/FFFFFF?text=李',
-      online: false,
-      pinned: false,
-      lastMessage: '请问宫保鸡丁还有吗？',
-      lastMessageType: 'text',
-      time: '10分钟前',
-      unread: 1
-    },
-    {
-      id: 3,
-      type: 'user',
-      name: '王同学',
-      avatar: 'https://via.placeholder.com/80/1890FF/FFFFFF?text=王',
-      online: true,
-      pinned: false,
-      lastMessage: '[订单卡片] 订单号：OD202603180003',
-      lastMessageType: 'orderCard',
-      time: '30分钟前',
-      unread: 0
-    }
-  ]
-
-  // 群组会话
-  const groups = [
-    {
-      id: 4,
-      type: 'group',
-      name: '商家交流群',
-      avatar: 'https://via.placeholder.com/80/722ED1/FFFFFF?text=群',
-      online: false,
-      pinned: false,
-      lastMessage: '王商家: 大家今天的生意怎么样？',
-      lastMessageType: 'text',
-      time: '1小时前',
-      unread: 5
-    }
-  ]
-
-  conversations.push(...users, ...groups)
-  return conversations
 }
 
 /**

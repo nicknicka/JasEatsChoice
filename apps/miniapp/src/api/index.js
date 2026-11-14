@@ -26,6 +26,7 @@ export { cartApi } from './modules/cart'
 export { bannerApi } from './modules/banner'
 export { recommendationApi } from './modules/recommendation'
 export { categoryApi } from './modules/category'
+export { weatherApi } from './modules/weather'
 
 // 默认导出所有API的集合（向后兼容）
 import { userApi } from './modules/user'
@@ -50,6 +51,7 @@ import { cartApi } from './modules/cart'
 import { bannerApi } from './modules/banner'
 import { recommendationApi } from './modules/recommendation'
 import { categoryApi } from './modules/category'
+import { weatherApi } from './modules/weather'
 
 export default {
   user: userApi,
@@ -73,5 +75,6 @@ export default {
   cart: cartApi,
   banner: bannerApi,
   recommendation: recommendationApi,
-  category: categoryApi
+  category: categoryApi,
+  weather: weatherApi
 }
