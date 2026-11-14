@@ -1,18 +1,13 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
-const { TEST_API_BASE } = require('../utils/api')
+const { authedJson, authedFetch } = require('../utils/auth-token')
 const { getUserId } = require('../utils/real-data')
 
-const API_BASE = TEST_API_BASE.replace(/\/$/, '')
 let testUserId
 
+// 默认拒绝后，收藏/推荐等数据接口需带登录态（见 docs/technical/public-routes.md）
 async function getJson(path) {
-  const response = await fetch(`${API_BASE}${path}`)
-  const body = await response.json()
-  if (!response.ok || body.success !== true) {
-    throw new Error(`GET ${path} 失败：${body.message || response.statusText}`)
-  }
-  return body.data
+  return authedJson(path)
 }
 
 async function getCollections() {
@@ -20,8 +15,8 @@ async function getCollections() {
 }
 
 async function removeCollection(dishId) {
-  const response = await fetch(
-    `${API_BASE}/v1/collections?userId=${encodeURIComponent(testUserId)}&type=dish&id=${encodeURIComponent(dishId)}`,
+  const response = await authedFetch(
+    `/v1/collections?userId=${encodeURIComponent(testUserId)}&type=dish&id=${encodeURIComponent(dishId)}`,
     { method: 'DELETE' }
   )
   const body = await response.json()

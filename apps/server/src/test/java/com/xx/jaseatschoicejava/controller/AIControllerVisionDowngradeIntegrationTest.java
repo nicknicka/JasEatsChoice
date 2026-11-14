@@ -92,7 +92,8 @@ class AIControllerVisionDowngradeIntegrationTest {
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.code").value("500"));
 
-        mockMvc.perform(get("/v1/ai/capabilities"))
+        mockMvc.perform(get("/v1/ai/capabilities")
+                .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.vision").value(true));
     }
@@ -114,7 +115,8 @@ class AIControllerVisionDowngradeIntegrationTest {
             .andExpect(jsonPath("$.code").value("AI_VISION_UNSUPPORTED"))
             .andExpect(jsonPath("$.message").value("当前视觉模型不支持图片输入，菜品识别暂不可用"));
 
-        mockMvc.perform(get("/v1/ai/capabilities"))
+        mockMvc.perform(get("/v1/ai/capabilities")
+                .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.vision").value(false));
 

@@ -1,6 +1,7 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { getAddress } = require('../utils/real-data')
 const { TEST_API_BASE } = require('../utils/api')
+const { authedFetch } = require('../utils/auth-token')
 const { markRunning, markPassed, markFailed, markSkippedEnv, updateSummary } = require('../utils/progress')
 
 const USER_ID = '3384650106421960'
@@ -16,8 +17,9 @@ const SHANGHAI_CASCADER_DATA = [{
   }]
 }]
 
+// 默认拒绝后，地址/AI 等接口需带登录态（见 docs/technical/public-routes.md）
 async function getAddressList() {
-  const response = await fetch(`${TEST_API_BASE}/v1/addresses/user?userId=${USER_ID}`)
+  const response = await authedFetch(`/v1/addresses/user?userId=${USER_ID}`)
   const result = await response.json()
   if (!response.ok || !result?.success) throw new Error('读取地址列表失败')
   return result.data || []
@@ -30,7 +32,7 @@ async function findAddressByName(name) {
 async function deleteAddressesByName(name) {
   const addresses = await getAddressList().catch(() => [])
   for (const address of addresses.filter((item) => item.receiverName === name)) {
-    await fetch(`${TEST_API_BASE}/v1/users/${USER_ID}/addresses/${address.id}`, { method: 'DELETE' })
+    await authedFetch(`/v1/users/${USER_ID}/addresses/${address.id}`, { method: 'DELETE' })
   }
 }
 
@@ -53,7 +55,7 @@ async function selectShanghaiDistrict(page, dialog, district) {
 }
 
 async function getAiCapabilities() {
-  const response = await fetch(`${TEST_API_BASE}/v1/ai/capabilities`)
+  const response = await authedFetch('/v1/ai/capabilities')
   const result = await response.json()
   if (!response.ok || !result?.success || !result.data) {
     throw new Error('读取 AI 能力清单失败')
@@ -665,6 +667,7 @@ test.describe('模块八：AI助手与地址管理', () => {
       markPassed('8.8', `默认地址从 ${originalDefault.id} 切换为 ${target.id}`)
     } finally {
       const response = await page.request.put(`/api/v1/users/3384650106421960/addresses/${originalDefault.id}`, {
+        headers: await authHeaders(page),
         data: {
           receiverName: originalDefault.receiverName,
           receiverPhone: originalDefault.receiverPhone,

@@ -94,8 +94,10 @@ const fetchStats = async () => {
 const fetchRecentTutorials = async () => {
   loading.value = true
   try {
-    // utils/api.js 拦截器已返回 response.data，本接口返回的是裸数组（issue 452）
-    const response = await api.get(API_CONFIG.tutorial.list)
+    // SecurityConfig 默认拒绝后，/v1/tutorial/list 是**用户端**接口：只有 auth_token
+    // 能过鉴权。管理端会话只持有 admin_token，该路径会被判为 user scope 取到空令牌，
+    // 401 触发全局拦截器清管理员态并回跳登录页。管理端改用管理员接口。
+    const response = await api.get(API_CONFIG.tutorial.adminList)
     const list = Array.isArray(response) ? response : response?.data || []
     recentTutorials.value = list.slice(0, 5)
   } catch (error) {

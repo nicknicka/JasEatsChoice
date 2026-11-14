@@ -1,6 +1,7 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 const { TEST_API_BASE } = require('../utils/api')
+const { adminToken } = require('../utils/auth-token')
 const { createEphemeralTask, deleteEphemeralTask } = require('../utils/real-data')
 
 test.describe('模块十五：实时推荐推送', () => {
@@ -55,7 +56,10 @@ test.describe('模块十五：实时推荐推送', () => {
       registered = true
 
       // 触发真实链路：后端反射调用定时推荐方法 → 生成推荐 → 推给在线连接
-      const executed = await request.post(`${TEST_API_BASE}/v1/scheduled-tasks/${taskId}/execute`)
+      // 定时任务属运维接口，SecurityConfig 默认拒绝后需带管理员令牌。
+      const executed = await request.post(`${TEST_API_BASE}/v1/scheduled-tasks/${taskId}/execute`, {
+        headers: { Authorization: `Bearer ${await adminToken()}` }
+      })
       expect(executed.ok(), '执行临时任务接口应返回成功').toBeTruthy()
 
       const notice = page.locator('.el-notification')

@@ -109,17 +109,43 @@ public class SecurityConfig {
             // 导致响应已提交却抛 AccessDenied，chunked 响应收不到终止块。
             .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests
-            .requestMatchers("/v1/content-extraction/**").authenticated() // 内容提取一律要求登录
-            .requestMatchers("/v1/feedback/**").authenticated() // 用户反馈一律要求登录（归属取自可信 JWT）
+            // 公开接口：登录 / 注册 / 验证码。清单与前端 PUBLIC_API_PATHS、
+            // 小程序 AUTH_WHITELIST 对齐（见 docs/technical/public-routes.md）。
             .requestMatchers(
-                "/v1/ai/dish-recognize",
-                "/v1/ai/dish-recognize-url",
-                "/v1/ai/recipe",
-                "/v1/ai/recipe/stream",
-                "/v1/ai/recipe-upload"
-            ).authenticated() // AI 饮食助手禁止匿名消耗模型额度
-            .requestMatchers("/**").permitAll()
-            .anyRequest().permitAll();
+                "/v1/users/login",
+                "/v1/users/register",
+                "/v1/users/send-sms-code",
+                "/v1/users/send-email-code",
+                "/v1/users/wechat-login",
+                "/v1/users/reset-password",
+                "/v1/merchant/login",
+                "/v1/merchant/register",
+                "/admin/login",
+                "/v1/captcha/**"
+            ).permitAll()
+            // 运维与联调：compose 健康检查、wait-healthy.sh、check_routes.py 依赖。
+            .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+            .requestMatchers(
+                "/v3/api-docs/**",
+                "/swagger-ui/**",
+                "/swagger-ui.html",
+                "/doc.html",
+                "/webjars/**"
+            ).permitAll()
+            .requestMatchers("/error").permitAll()
+            // 图片直出：<img> 标签无法携带 Authorization，头像/菜品/聊天图片只能匿名读取。
+            //   1. /uploads/**、/files/**  运行时上传目录（WebConfig 资源映射 + FileController/FileAccessController 读取）
+            //   2. /synthetic-assets/**   入库的合成素材（V15 把演示账号头像迁到此处）
+            // 只放这两类「按目录读」的路径；根级 /*.png 兼容入口（FileAccessController
+            // 的 /{filename:.+}）不放行——它等价于按文件名匿名遍历上传目录，
+            // 超出最小公开集，需要时再单独登记。
+            .requestMatchers("/uploads/**", "/files/**", "/synthetic-assets/**").permitAll()
+            // 食谱只读：小程序「食谱」是 tabBar 页（pages/recipe/index），未登录可达，
+            // 进页即拉今日推荐；点击「一键订餐」时才在小程序侧要求登录。
+            // 只放行读（GET），写入 /v1/recipe（POST 新建）仍要求登录。
+            .requestMatchers(HttpMethod.GET, "/v1/recipe/**").permitAll()
+            // 其余一律要求登录：新增接口忘记加注解时返回 401，而不是匿名可调。
+            .anyRequest().authenticated();
 
         return http.build();
     }

@@ -19,6 +19,9 @@ import static org.hamcrest.Matchers.*;
  *
  * 测试SupervisorAgent的HTTP接口
  *
+ * #576 起 SecurityConfig 默认拒绝：/agent/supervisor/** 需要登录，
+ * 因此本地无 AI_API_KEY 时仍可验证「匿名 401 / 带令牌放行」这条契约。
+ *
 
  * @since 2026-03-25
  */
@@ -32,6 +35,28 @@ public class SupervisorAgentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private com.xx.jaseatschoicejava.util.JwtUtil jwtUtil;
+
+    /** 默认拒绝后所有 Supervisor 端点都要带令牌。 */
+    private String bearer() {
+        return "Bearer " + jwtUtil.generateToken("it-supervisor-user", "13000000000");
+    }
+
+    /**
+     * 匿名访问被默认拒绝拦下（#576）。
+     */
+    @Test
+    public void anonymousChatIsRejectedByDefaultDeny() throws Exception {
+        mockMvc.perform(post("/agent/supervisor/chat")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\":\"你好\",\"userId\":\"user123\"}"))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/agent/supervisor/chat").param("message", "你好"))
+            .andExpect(status().isUnauthorized());
+    }
 
     /**
      * 测试基本聊天接口（POST）
@@ -47,6 +72,7 @@ public class SupervisorAgentControllerTest {
             """;
 
         mockMvc.perform(post("/agent/supervisor/chat")
+                .header("Authorization", bearer())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
@@ -70,6 +96,7 @@ public class SupervisorAgentControllerTest {
             """;
 
         mockMvc.perform(post("/agent/supervisor/chatWithContext")
+                .header("Authorization", bearer())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
@@ -84,6 +111,7 @@ public class SupervisorAgentControllerTest {
     @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testQuickChatEndpoint() throws Exception {
         mockMvc.perform(get("/agent/supervisor/chat")
+                .header("Authorization", bearer())
                 .param("message", "宫保鸡丁有多少卡路里？")
                 .param("userId", "user123"))
                 .andExpect(status().isOk())
@@ -98,6 +126,7 @@ public class SupervisorAgentControllerTest {
     @EnabledIfEnvironmentVariable(named = "AI_API_KEY", matches = ".+")
     public void testQuickChatWithoutUserId() throws Exception {
         mockMvc.perform(get("/agent/supervisor/chat")
+                .header("Authorization", bearer())
                 .param("message", "你好"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
@@ -117,6 +146,7 @@ public class SupervisorAgentControllerTest {
             """;
 
         mockMvc.perform(post("/agent/supervisor/chat")
+                .header("Authorization", bearer())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk());
@@ -153,6 +183,7 @@ public class SupervisorAgentControllerTest {
             """, message);
 
         mockMvc.perform(post("/agent/supervisor/chat")
+                .header("Authorization", bearer())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())
@@ -180,6 +211,7 @@ public class SupervisorAgentControllerTest {
             """, longMessage.toString());
 
         mockMvc.perform(post("/agent/supervisor/chat")
+                .header("Authorization", bearer())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody))
                 .andExpect(status().isOk())

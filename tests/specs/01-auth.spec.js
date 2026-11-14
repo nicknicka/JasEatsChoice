@@ -11,6 +11,14 @@ async function api(path, options = {}) {
   return { response, result }
 }
 
+// SecurityConfig 默认拒绝后，/v1/users/{id}、/v1/merchant/{id} 这类回查需要登录态。
+// 用例里页面通常已登录，直接从 localStorage 取令牌。
+async function pageAuthHeaders(page) {
+  const token = await page.evaluate(() => localStorage.getItem('auth_token') || '')
+  if (!token) throw new Error('页面未登录，取不到 auth_token')
+  return { Authorization: `Bearer ${token}` }
+}
+
 async function fetchCaptcha() {
   const { response, result } = await api('/v1/captcha/checkCode')
   expect(response.ok, '验证码接口应返回成功').toBeTruthy()
@@ -231,12 +239,13 @@ test.describe('模块一：认证模块', () => {
       const merchantId = registerPayload.data?.merchantId
       expect(merchantId).toBeTruthy()
 
-      const userInfo = await api(`/v1/users/${encodeURIComponent(tempUserId)}`)
+      const authHeaders = await pageAuthHeaders(page)
+      const userInfo = await api(`/v1/users/${encodeURIComponent(tempUserId)}`, { headers: authHeaders })
       expect(userInfo.response.ok, '用户回查接口应返回成功').toBeTruthy()
       expect(userInfo.result?.success, `用户回查失败：${userInfo.result?.message || ''}`).toBe(true)
       expect(userInfo.result.data?.merchantId).toBe(merchantId)
 
-      const merchantInfo = await api(`/v1/merchant/${encodeURIComponent(merchantId)}`)
+      const merchantInfo = await api(`/v1/merchant/${encodeURIComponent(merchantId)}`, { headers: authHeaders })
       expect(merchantInfo.response.ok, '商家回查接口应返回成功').toBeTruthy()
       expect(merchantInfo.result?.success, `商家回查失败：${merchantInfo.result?.message || ''}`).toBe(true)
       expect(merchantInfo.result.data?.name).toBe(merchantName)

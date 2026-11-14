@@ -2,6 +2,7 @@
 const { execFileSync } = require('child_process')
 const path = require('path')
 const { TEST_API_BASE } = require('./api')
+const { userToken } = require('./auth-token')
 
 const DEFAULT_USER_PHONE = process.env.TEST_USER_PHONE || process.env.TEST_USER || '17322222222'
 
@@ -10,12 +11,15 @@ function buildUrl(path) {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`
 }
 
+// SecurityConfig 默认拒绝后，这些用户/商家/订单数据接口都需要登录态。
 async function request(path, options = {}) {
+  const token = await userToken()
   const response = await fetch(buildUrl(path), {
     ...options,
     headers: {
       Accept: 'application/json',
-      ...(options.headers || {})
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`
     }
   })
 

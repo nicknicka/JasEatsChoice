@@ -33,5 +33,6 @@ jobs:
           restore-keys: eslint-${{ runner.os }}-
 
       - name: Static checks
-        # 三件事：静态检查脚本自身的单测、前后端路由漂移、lint error 数的冻结基线
+        # 四件事：静态检查脚本自身的单测、前后端路由漂移、鉴权档位清单（#576）、
+        # lint error 数的冻结基线
         run: make check CHECK_SOURCE=static

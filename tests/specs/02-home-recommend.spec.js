@@ -1,8 +1,7 @@
 const { test, expect } = require('../fixtures/test-base')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
-const { TEST_API_BASE } = require('../utils/api')
+const { authedJson, authedFetch } = require('../utils/auth-token')
 
-const API_BASE = TEST_API_BASE.replace(/\/$/, '')
 const RECOMMEND_USER = {
   phone: process.env.TEST_RECOMMEND_USER_PHONE || '13800138000',
   password: process.env.TEST_RECOMMEND_USER_PWD || 'asdasd'
@@ -12,12 +11,9 @@ const FEEDBACK_USER = {
   password: process.env.TEST_FEEDBACK_USER_PWD || 'asdasd'
 }
 
+// 默认拒绝后，首页/推荐等数据接口需带登录态（见 docs/technical/public-routes.md）
 async function getJson(path) {
-  const response = await fetch(`${API_BASE}${path}`)
-  const result = await response.json().catch(() => null)
-  expect(response.ok, `${path} 应返回 HTTP 成功`).toBeTruthy()
-  expect(result?.success, `${path} 应返回 success=true`).toBe(true)
-  return result.data
+  return authedJson(path)
 }
 
 async function getRecommendations(user) {
@@ -47,8 +43,8 @@ async function loginUser(page, credentials) {
 }
 
 async function clearRejectRecord(userId, dishId) {
-  const response = await fetch(
-    `${API_BASE}/v1/recommendations/rejects?userId=${encodeURIComponent(userId)}&dishId=${encodeURIComponent(dishId)}`,
+  const response = await authedFetch(
+    `/v1/recommendations/rejects?userId=${encodeURIComponent(userId)}&dishId=${encodeURIComponent(dishId)}`,
     { method: 'DELETE' }
   )
   const payload = await response.json().catch(() => null)

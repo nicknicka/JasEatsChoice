@@ -100,9 +100,21 @@ class AIControllerAuthAndCapabilitiesIntegrationTest {
             .andExpect(jsonPath("$.message").value(containsString("不支持的优化目标")));
     }
 
+    /**
+     * capabilities 是 AI 页的能力探测，只在登录后的 /user/home/ai 调用（桌面端路由守卫
+     * 对 /user/** 强制登录），因此 #576 起与其余 /v1/ai/** 一样要求登录。
+     * 这里固定「带令牌读到真实能力字段」这条契约。
+     */
     @Test
-    void capabilitiesAreAnonymousAndExposeRecipeStreamTimeout() throws Exception {
+    void capabilitiesRequireAuthenticationAndExposeRecipeStreamTimeout() throws Exception {
+        // 匿名 -> 401（默认拒绝覆盖）
         mockMvc.perform(get("/v1/ai/capabilities"))
+            .andExpect(status().isUnauthorized());
+
+        // 带令牌 -> 200 + 能力字段
+        String token = jwtUtil.generateToken("it216-user", "13000000000");
+        mockMvc.perform(get("/v1/ai/capabilities")
+                .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.dishRecognitionTimeoutMs", greaterThan(0)))
