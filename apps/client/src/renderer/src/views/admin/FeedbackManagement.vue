@@ -32,6 +32,17 @@
             <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
+        <!-- 优先级是分诊排序的主信号（§4.10 决策 4A），单独成列且收窄宽度，保证筛选区仍是一行 -->
+        <el-form-item label="优先级">
+          <el-select
+            v-model="filters.priority"
+            placeholder="全部"
+            clearable
+            class="filter-control filter-control--priority"
+          >
+            <el-option v-for="item in priorityOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="用户ID">
           <el-input v-model="filters.userId" placeholder="精确匹配" clearable class="filter-control" />
         </el-form-item>
@@ -267,15 +278,24 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="triageVisible" title="分诊" width="480px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="triageVisible"
+      :title="triageIsUpdate ? '更新分诊' : '分诊'"
+      width="480px"
+      :close-on-click-modal="false"
+    >
       <el-form label-position="top">
-        <el-form-item label="分诊结果">
+        <!-- 已接受的反馈只能改派 / 调优先级，不再提供状态切换，避免 accepted -> needs_info 这类非法流转 -->
+        <el-form-item v-if="!triageIsUpdate" label="分诊结果">
           <el-radio-group v-model="triageForm.status">
             <el-radio-button value="needs_info">待补充信息</el-radio-button>
             <el-radio-button value="accepted">接受</el-radio-button>
             <el-radio-button value="rejected">拒绝</el-radio-button>
           </el-radio-group>
         </el-form-item>
+        <p v-else class="form-hint form-hint--lead">
+          该反馈已是「已接受」，这里只调整负责人与优先级，状态保持不变。
+        </p>
         <el-form-item label="优先级">
           <el-radio-group v-model="triageForm.priority">
             <el-radio-button v-for="item in priorityOptions" :key="item.value" :value="item.value">
@@ -301,7 +321,9 @@
       </el-form>
       <template #footer>
         <el-button @click="triageVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitTriage">提交</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitTriage">
+          {{ triageIsUpdate ? '保存调整' : '提交' }}
+        </el-button>
       </template>
     </el-dialog>
 
@@ -456,7 +478,7 @@ const issueVisible = ref(false)
 const stats = ref({})
 
 // 默认落在待分诊：客服打开这页要看到的是待办队列，不是全量归档
-const filters = reactive({ status: 'pending', type: '', userId: '', merchantId: '', orderId: '' })
+const filters = reactive({ status: 'pending', type: '', priority: '', userId: '', merchantId: '', orderId: '' })
 const pagination = reactive({ page: 1, size: 10, total: 0 })
 
 // 负责人下拉：来自 /admin/list（IPage 原始结构，取 records）
@@ -477,6 +499,9 @@ const loadAdmins = async () => {
 
 const replyForm = reactive({ visibility: 'USER', content: '' })
 const triageForm = reactive({ status: 'accepted', platformSystem: false, priority: 'normal', assigneeId: null })
+// 已接受的反馈走「更新分诊」：只改属性不改状态；只提交真正变了的字段，
+// 既避免误清 platformSystem，也让 TRIAGE 审计只记录本次变更。
+const triageOriginal = reactive({ platformSystem: false, priority: 'normal', assigneeId: null })
 const resolveForm = reactive({ resolutionCode: 'fixed' })
 const associationForm = reactive({ orderId: '', merchantId: '' })
 const issueForm = reactive({
@@ -546,6 +571,7 @@ const activeFilterText = computed(() => {
   const labels = []
   if (filters.status) labels.push(`状态：${statusOptions.find((i) => i.value === filters.status)?.label || filters.status}`)
   if (filters.type) labels.push(`类型：${typeOptions.find((i) => i.value === filters.type)?.label || filters.type}`)
+  if (filters.priority) labels.push(`优先级：${priorityOptions.find((i) => i.value === filters.priority)?.label || filters.priority}`)
   if (filters.userId) labels.push(`用户：${filters.userId}`)
   if (filters.merchantId) labels.push(`商家：${filters.merchantId}`)
   if (filters.orderId) labels.push(`订单：${filters.orderId}`)
@@ -565,12 +591,13 @@ const SECONDARY_BY_STATUS = {
 const footerActions = computed(() => {
   const status = detail.value?.status
   const items = [{ key: 'reply', label: status === 'needs_info' ? '回复用户' : '回复 / 备注' }]
-  if (!['rejected', 'resolved'].includes(status)) {
-    items.push({ key: 'triage', label: '分诊' })
-  }
   if (status === 'accepted') {
+    // #548：已接受只能改派 / 调优先级，入口语义与首次分诊区分开，避免用户走到必然 409 的路径
+    items.push({ key: 'triage', label: '转派 / 调整' })
     items.push({ key: 'resolve', label: '解决' })
     items.push({ key: 'issue', label: '建 GitHub Issue' })
+  } else if (!['rejected', 'resolved'].includes(status)) {
+    items.push({ key: 'triage', label: '分诊' })
   }
   items.push({ key: 'association', label: '修正关联' })
 
@@ -587,26 +614,49 @@ const auditLabel = (action) => auditLabels[action] || action
 const resolutionLabel = (code) =>
   code ? (resolutionOptions.find((item) => item.value === code)?.label || code) : '—'
 
-// 审计详情由后端按 status=…/visibility=… 原始串落库，展示层转成中文，不改存储格式
+// 审计详情由后端按 status=…/visibility=… 原始串落库，展示层转成中文，不改存储格式。
+// #548 起 TRIAGE 可能带多段（status; priority; assigneeId; platformSystem），按 ; 拆开逐段翻译。
 const auditDetailLabel = (audit) => {
   const raw = audit?.detail || ''
-  const sep = raw.indexOf('=')
-  if (sep < 0) return raw
-  const key = raw.slice(0, sep)
-  const value = raw.slice(sep + 1)
   const statusText = (code) => statusOptions.find((item) => item.value === code)?.label || code
-  if (key === 'status') {
-    const [from, to] = value.split('->')
-    return `状态：${statusText(from)} → ${statusText(to)}`
+  const priorityText = (code) =>
+    code === 'none' ? '未设置' : (priorityOptions.find((item) => item.value === code)?.label || code)
+  const labelSegment = (segment) => {
+    const sep = segment.indexOf('=')
+    if (sep < 0) return segment
+    const key = segment.slice(0, sep).trim()
+    const value = segment.slice(sep + 1).trim()
+    if (key === 'status') {
+      const [from, to] = value.split('->')
+      return `状态：${statusText(from)} → ${statusText(to)}`
+    }
+    if (key === 'visibility') return value === 'INTERNAL' ? '范围：内部备注' : '范围：用户可见'
+    if (key === 'resolution') return `结果：${resolutionOptions.find((item) => item.value === value)?.label || value}`
+    if (key === 'orderId') {
+      const [from, to] = value.split('->')
+      return `订单归属：${from || '未关联'} → ${to || '未关联'}`
+    }
+    if (key === 'priority') {
+      const [from, to] = value.split('->')
+      return `优先级：${priorityText(from)} → ${priorityText(to)}`
+    }
+    if (key === 'assigneeId') {
+      const [from, to] = value.split('->')
+      const assigneeText = (v) => (!v || v === 'none' ? '未认领' : `#${v}`)
+      return `负责人：${assigneeText(from)} → ${assigneeText(to)}`
+    }
+    if (key === 'platformSystem') {
+      const [from, to] = value.split('->')
+      const boolText = (v) => (v === 'true' ? '是' : '否')
+      return `平台系统问题：${boolText(from)} → ${boolText(to)}`
+    }
+    if (key === 'issue') return `研发单：${value}`
+    return segment
   }
-  if (key === 'visibility') return value === 'INTERNAL' ? '范围：内部备注' : '范围：用户可见'
-  if (key === 'resolution') return `结果：${resolutionOptions.find((item) => item.value === value)?.label || value}`
-  if (key === 'orderId') {
-    const [from, to] = value.split('->')
-    return `订单归属：${from || '未关联'} → ${to || '未关联'}`
+  if (!raw.includes(';')) {
+    return labelSegment(raw)
   }
-  if (key === 'issue') return `研发单：${value}`
-  return raw
+  return raw.split(';').map((part) => labelSegment(part.trim())).join(' · ')
 }
 
 // 19 位反馈 ID 在列表里读不出信息，只留尾部便于人工比对，全量在悬浮里
@@ -629,6 +679,7 @@ const loadList = async () => {
       size: pagination.size,
       status: filters.status || undefined,
       type: filters.type || undefined,
+      priority: filters.priority || undefined,
       userId: filters.userId || undefined,
       merchantId: filters.merchantId || undefined,
       orderId: filters.orderId || undefined
@@ -652,6 +703,7 @@ const handleSearch = () => {
 const handleReset = () => {
   filters.status = ''
   filters.type = ''
+  filters.priority = ''
   filters.userId = ''
   filters.merchantId = ''
   filters.orderId = ''
@@ -683,11 +735,17 @@ const runAction = (key) => {
 }
 
 const openReply = () => { replyForm.visibility = 'USER'; replyForm.content = ''; replyVisible.value = true }
+// accepted 状态下的按钮语义是「转派 / 调整」，对话框只允许改属性
+const triageIsUpdate = computed(() => detail.value?.status === 'accepted')
 const openTriage = () => {
+  const current = detail.value || {}
   triageForm.status = 'accepted'
-  triageForm.platformSystem = false
-  triageForm.priority = detail.value?.priority || 'normal'
-  triageForm.assigneeId = detail.value?.assigneeId ?? null
+  triageForm.platformSystem = Boolean(current.platformSystem)
+  triageOriginal.platformSystem = Boolean(current.platformSystem)
+  triageForm.priority = current.priority || 'normal'
+  triageOriginal.priority = triageForm.priority
+  triageForm.assigneeId = current.assigneeId ?? null
+  triageOriginal.assigneeId = triageForm.assigneeId
   triageVisible.value = true
 }
 const openResolve = () => { resolveForm.resolutionCode = 'fixed'; resolveVisible.value = true }
@@ -728,11 +786,29 @@ const submitReply = () => withSubmit(
   '已提交', () => { replyVisible.value = false }
 )
 
-const submitTriage = () => withSubmit(
-  () => triageFeedback(currentId.value, triageForm.status, triageForm.platformSystem,
-    { priority: triageForm.priority, assigneeId: triageForm.assigneeId }),
-  '分诊完成', () => { triageVisible.value = false }
-)
+const submitTriage = () => {
+  const isAccepted = triageForm.status === 'accepted'
+  const updateMode = triageIsUpdate.value
+  // accepted 自流转：只提交真正变了的字段。未改动就不发送，避免后端误清 platformSystem、
+  // 或往 TRIAGE 审计里写一条 X->X 的假变更（#548）。
+  const changed = (next, original) => (next !== original ? next : undefined)
+  const platformSystem = !isAccepted
+    ? undefined
+    : updateMode
+      ? changed(Boolean(triageForm.platformSystem), triageOriginal.platformSystem)
+      : triageForm.platformSystem
+  const priority = updateMode ? changed(triageForm.priority, triageOriginal.priority) : triageForm.priority
+  const assigneeId = updateMode ? changed(triageForm.assigneeId, triageOriginal.assigneeId) : triageForm.assigneeId
+  if (updateMode && platformSystem === undefined && priority === undefined && assigneeId === undefined) {
+    ElMessage.info('没有需要保存的改动')
+    return undefined
+  }
+  return withSubmit(
+    () => triageFeedback(currentId.value, triageForm.status, platformSystem, { priority, assigneeId }),
+    updateMode ? '分诊已更新' : '分诊完成',
+    () => { triageVisible.value = false }
+  )
+}
 
 const submitResolve = () => withSubmit(
   () => resolveFeedback(currentId.value, resolveForm.resolutionCode),
@@ -797,6 +873,11 @@ onMounted(() => {
 
   .filter-control {
     width: 160px;
+  }
+
+  /* 优先级取值只有三个，收窄到 120px，把新增控件的横向预算压到最小（§4.10 顶部 ≤330px） */
+  .filter-control--priority {
+    width: 120px;
   }
 
   .filter-actions {
@@ -1165,6 +1246,14 @@ onMounted(() => {
   margin: var(--space-1) 0 0;
   color: var(--ink-500);
   font-size: var(--text-caption);
+}
+
+/* 「更新分诊」用一句说明替代状态选择器，避免用户误以为能改回 needs_info（#548） */
+.form-hint--lead {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-700);
+  font-size: var(--text-body-sm);
+  line-height: 20px;
 }
 
 .issue-alert {

@@ -420,21 +420,51 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
                 throw new BusinessException("400", "优先级只支持 normal / important / urgent");
             }
         }
-        boolean accepted = FeedbackStatus.ACCEPTED.getCode().equals(target);
-        var update = lambdaUpdate()
-                .eq(Feedback::getFeedbackId, feedbackId)
-                .set(Feedback::getStatus, target)
-                .set(accepted, Feedback::getPlatformSystem,
-                        accepted && Boolean.TRUE.equals(dto.getPlatformSystem()));
+        boolean selfTransition = FeedbackStatus.ACCEPTED.getCode().equals(current)
+                && FeedbackStatus.ACCEPTED.getCode().equals(target);
+        if (selfTransition && priority == null && dto.getAssigneeId() == null
+                && dto.getPlatformSystem() == null) {
+            // 只重复提交 status=accepted 而没有任何属性变更：幂等空操作，不写第二次接受痕迹。
+            return feedback;
+        }
+
+        var update = lambdaUpdate().eq(Feedback::getFeedbackId, feedbackId);
+        if (!selfTransition) {
+            // accepted -> accepted 只更新分诊属性，状态原样保持，不产生第二次「接受」。
+            update.set(Feedback::getStatus, target);
+        }
+        // 只有显式提交 platformSystem 才改写；null 表示「不改动」，避免把已有判定清成 false。
+        boolean platformSystemSubmitted = FeedbackStatus.ACCEPTED.getCode().equals(target)
+                && dto.getPlatformSystem() != null;
+        if (platformSystemSubmitted) {
+            update.set(Feedback::getPlatformSystem, Boolean.TRUE.equals(dto.getPlatformSystem()));
+        }
         if (priority != null) {
             update.set(Feedback::getPriority, priority.getCode());
         }
+        Long nextAssignee = null;
         if (dto.getAssigneeId() != null) {
             // 0 表示取消认领；其余按 sys_admin.admin_id 落库
-            update.set(Feedback::getAssigneeId, dto.getAssigneeId() == 0L ? null : dto.getAssigneeId());
+            nextAssignee = dto.getAssigneeId() == 0L ? null : dto.getAssigneeId();
+            update.set(Feedback::getAssigneeId, nextAssignee);
         }
         update.update();
-        writeAudit(feedbackId, "TRIAGE", adminId, "status=" + current + "->" + target);
+
+        // 审计要能看出本次改了哪些字段与新旧值；未提交的字段不入审计（#548）。
+        StringBuilder detail = new StringBuilder("status=").append(current).append("->").append(target);
+        if (priority != null) {
+            detail.append("; priority=").append(valueOrNone(feedback.getPriority()))
+                    .append("->").append(priority.getCode());
+        }
+        if (dto.getAssigneeId() != null) {
+            detail.append("; assigneeId=").append(valueOrNone(feedback.getAssigneeId()))
+                    .append("->").append(valueOrNone(nextAssignee));
+        }
+        if (platformSystemSubmitted) {
+            detail.append("; platformSystem=").append(valueOrNone(feedback.getPlatformSystem()))
+                    .append("->").append(Boolean.TRUE.equals(dto.getPlatformSystem()));
+        }
+        writeAudit(feedbackId, "TRIAGE", adminId, detail.toString());
         return getById(feedbackId);
     }
 
@@ -514,8 +544,15 @@ public class FeedbackServiceImpl extends ServiceImpl<FeedbackMapper, Feedback> i
                     || FeedbackStatus.REJECTED.getCode().equals(target);
             case NEEDS_INFO -> FeedbackStatus.ACCEPTED.getCode().equals(target)
                     || FeedbackStatus.REJECTED.getCode().equals(target);
+            // accepted -> accepted 只用于改派负责人 / 调整优先级 / 同步平台判定；
+            // 状态语义不变，也不构成第二次「接受」（#548）。
+            case ACCEPTED -> FeedbackStatus.ACCEPTED.getCode().equals(target);
             default -> false;
         };
+    }
+
+    private static String valueOrNone(Object value) {
+        return value == null ? "none" : String.valueOf(value);
     }
 
     private void writeAudit(String feedbackId, String action, Long adminId, String detail) {

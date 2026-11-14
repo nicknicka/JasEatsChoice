@@ -5,6 +5,7 @@ import com.xx.jaseatschoicejava.entity.Feedback;
 import com.xx.jaseatschoicejava.entity.FeedbackAttachment;
 import com.xx.jaseatschoicejava.entity.FeedbackAudit;
 import com.xx.jaseatschoicejava.entity.FeedbackMessage;
+import com.xx.jaseatschoicejava.enums.FeedbackPriority;
 import com.xx.jaseatschoicejava.enums.FeedbackResolutionCode;
 import com.xx.jaseatschoicejava.enums.FeedbackStatus;
 import com.xx.jaseatschoicejava.enums.FeedbackType;
@@ -33,6 +34,13 @@ public class AdminFeedbackDetailVO {
     private String contact;
     private Map<String, Object> deviceInfo;
     private String environment;
+    /** 分诊优先级：normal / important / urgent；管理端「更新分诊」需要回填当前值。 */
+    private String priority;
+    private String priorityLabel;
+    /** 当前负责人 sys_admin.admin_id；未认领为空。 */
+    private Long assigneeId;
+    /** 是否判定为平台系统问题：决定能否创建 GitHub Issue，也是自流转可同步的字段。 */
+    private Boolean platformSystem;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<FeedbackMessageVO> messages;
@@ -79,6 +87,10 @@ public class AdminFeedbackDetailVO {
         vo.contact = feedback.getContact();
         vo.deviceInfo = parse(feedback.getDeviceInfo());
         vo.environment = feedback.getEnvironment();
+        vo.priority = feedback.getPriority();
+        vo.priorityLabel = FeedbackPriority.labelOf(feedback.getPriority());
+        vo.assigneeId = feedback.getAssigneeId();
+        vo.platformSystem = feedback.getPlatformSystem();
         vo.createdAt = feedback.getCreatedAt();
         vo.updatedAt = feedback.getUpdatedAt();
         vo.messages = messages == null ? List.of() : messages.stream().map(FeedbackMessageVO::from).toList();

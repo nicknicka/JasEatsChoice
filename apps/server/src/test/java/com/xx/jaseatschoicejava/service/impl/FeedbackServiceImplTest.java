@@ -34,10 +34,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -322,6 +324,131 @@ class FeedbackServiceImplTest {
         ArgumentCaptor<FeedbackAudit> captor = ArgumentCaptor.forClass(FeedbackAudit.class);
         verify(feedbackAuditMapper).insert(captor.capture());
         assertEquals("TRIAGE", captor.getValue().getAction());
+    }
+
+    @Test
+    void triage_whenAcceptedSelfTransition_shouldKeepStatusAndUpdateAssignee() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("accepted");
+        fb.setPriority("normal");
+        fb.setAssigneeId(3L);
+        fb.setPlatformSystem(true);
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+        when(feedbackAuditMapper.insert(any(FeedbackAudit.class))).thenReturn(1);
+
+        FeedbackTriageDTO dto = triageDto("accepted");
+        dto.setAssigneeId(8L);
+        feedbackService.triage(1L, "fb-1", dto);
+
+        // 状态保持 accepted，且只通过 update 语句改属性，不出现 accepted -> needs_info 之类。
+        ArgumentCaptor<FeedbackAudit> captor = ArgumentCaptor.forClass(FeedbackAudit.class);
+        verify(feedbackAuditMapper).insert(captor.capture());
+        assertEquals("TRIAGE", captor.getValue().getAction());
+        String detail = captor.getValue().getDetail();
+        assertTrue(detail.startsWith("status=accepted->accepted"), detail);
+        assertTrue(detail.contains("assigneeId=3->8"), detail);
+    }
+
+    @Test
+    void triage_whenAcceptedSelfTransition_shouldUpdatePriorityOnly() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("accepted");
+        fb.setPriority("normal");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+        when(feedbackAuditMapper.insert(any(FeedbackAudit.class))).thenReturn(1);
+
+        FeedbackTriageDTO dto = triageDto("accepted");
+        dto.setPriority("urgent");
+        feedbackService.triage(1L, "fb-1", dto);
+
+        ArgumentCaptor<FeedbackAudit> captor = ArgumentCaptor.forClass(FeedbackAudit.class);
+        verify(feedbackAuditMapper).insert(captor.capture());
+        String detail = captor.getValue().getDetail();
+        assertTrue(detail.contains("priority=normal->urgent"), detail);
+        // 未提交 assigneeId，就不该出现在审计里（未改字段不得被意外清空或记录）。
+        assertFalse(detail.contains("assigneeId"), detail);
+    }
+
+    @Test
+    void triage_whenAcceptedSelfTransitionWithoutChanges_shouldBeIdempotent() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("accepted");
+        fb.setPriority("normal");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+
+        // 只重复提交 status=accepted 而无任何属性变更：幂等空操作，不写审计、不产生第二次接受。
+        Feedback result = feedbackService.triage(1L, "fb-1", triageDto("accepted"));
+
+        assertEquals("accepted", result.getStatus());
+        verify(feedbackAuditMapper, never()).insert(any(FeedbackAudit.class));
+    }
+
+    @Test
+    void triage_whenAcceptedSelfTransition_shouldNotClearPlatformSystem() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("accepted");
+        fb.setPlatformSystem(true);
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+        when(feedbackAuditMapper.insert(any(FeedbackAudit.class))).thenReturn(1);
+
+        // 只改优先级、不提交 platformSystem：判定必须保留，不能被 null 落成 false（#548 回归）。
+        FeedbackTriageDTO dto = triageDto("accepted");
+        dto.setPriority("important");
+        feedbackService.triage(1L, "fb-1", dto);
+
+        ArgumentCaptor<FeedbackAudit> captor = ArgumentCaptor.forClass(FeedbackAudit.class);
+        verify(feedbackAuditMapper).insert(captor.capture());
+        assertFalse(captor.getValue().getDetail().contains("platformSystem"),
+                captor.getValue().getDetail());
+    }
+
+    @Test
+    void triage_whenAcceptedSelfTransition_shouldAuditPlatformSystemChange() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("accepted");
+        fb.setPlatformSystem(false);
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+        when(feedbackAuditMapper.insert(any(FeedbackAudit.class))).thenReturn(1);
+
+        FeedbackTriageDTO dto = triageDto("accepted");
+        dto.setPlatformSystem(true);
+        feedbackService.triage(1L, "fb-1", dto);
+
+        ArgumentCaptor<FeedbackAudit> captor = ArgumentCaptor.forClass(FeedbackAudit.class);
+        verify(feedbackAuditMapper).insert(captor.capture());
+        assertTrue(captor.getValue().getDetail().contains("platformSystem=false->true"),
+                captor.getValue().getDetail());
+    }
+
+    @Test
+    void triage_whenRejectedSelfTransition_shouldStillReject() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("rejected");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+
+        FeedbackTriageDTO dto = triageDto("rejected");
+        dto.setPriority("urgent");
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.triage(1L, "fb-1", dto));
+        assertEquals("409", ex.getCode());
+    }
+
+    @Test
+    void triage_whenResolvedToAccepted_shouldStillReject() {
+        Feedback fb = new Feedback();
+        fb.setFeedbackId("fb-1");
+        fb.setStatus("resolved");
+        when(feedbackMapper.selectById("fb-1")).thenReturn(fb);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> feedbackService.triage(1L, "fb-1", triageDto("accepted")));
+        assertEquals("409", ex.getCode());
     }
 
     @Test
