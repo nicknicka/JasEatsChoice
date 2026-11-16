@@ -1,13 +1,24 @@
 <template>
   <view class="menu-manage-container">
+    <!-- 商家身份缺失：不用假 id 继续请求，直接显示错误态（#593） -->
+    <view class="error-state" v-if="identityError">
+      <empty
+        text="未获取到商家信息"
+        description="请重新登录后再进入菜单管理"
+        icon="⚠️"
+        buttonText="重新加载"
+        @button-click="initMerchant"
+      />
+    </view>
+
     <!-- 顶部提示 -->
-    <view class="tips-card">
+    <view class="tips-card" v-if="!identityError">
       <uni-icons type="info" size="18" color="#FF6B35"></uni-icons>
       <text class="tips-text">拖动菜品可调整排序，点击开关可控制上架状态</text>
     </view>
 
     <!-- 分类菜单 -->
-    <view class="category-menu">
+    <view class="category-menu" v-if="!identityError">
       <scroll-view scroll-x class="category-scroll">
         <view
           class="category-item"
@@ -25,6 +36,7 @@
     <!-- 菜品列表 -->
     <scroll-view
       class="dish-list"
+      v-if="!identityError"
       scroll-y
       :refresher-enabled="true"
       :refresher-triggered="refreshing"
@@ -102,7 +114,7 @@
     </scroll-view>
 
     <!-- 批量操作栏 -->
-    <view class="batch-actions" v-if="batchMode">
+    <view class="batch-actions" v-if="batchMode && !identityError">
       <text class="selected-count">已选 {{ selectedDishes.length }} 项</text>
       <view class="action-buttons">
         <button class="action-btn" @tap="batchOffShelf">批量下架</button>
@@ -111,7 +123,7 @@
     </view>
 
     <!-- 底部操作按钮 -->
-    <view class="bottom-actions" v-if="!batchMode">
+    <view class="bottom-actions" v-if="!batchMode && !identityError">
       <button class="action-btn" @tap="toggleBatchMode">批量管理</button>
       <button class="action-btn primary" @tap="showMenuActions">菜单管理</button>
     </view>
@@ -122,9 +134,13 @@
 import { ref, onMounted } from 'vue'
 import { showConfirm } from '@/utils/helper'
 import { menuApi } from '@/api/modules/menu.js'
+import { useMerchantStore } from '@/store/modules/merchant'
 
 // 商家ID
 const merchantId = ref('')
+
+// 商家身份缺失标记：取不到身份时只显示错误态，不做任何请求
+const identityError = ref(false)
 
 // 分类列表
 const categories = ref([
@@ -151,17 +167,33 @@ const batchMode = ref(false)
 const selectedDishes = ref([])
 
 onMounted(() => {
-  // 获取商家ID
-  merchantId.value = uni.getStorageSync('merchantId') || ''
+  initMerchant()
+})
+
+/**
+ * 获取商家身份并加载菜单
+ * 身份统一走 merchant store（#593）：取不到就显示错误态，不再用假 id 发请求
+ */
+const initMerchant = async () => {
+  const merchantStore = useMerchantStore()
+  merchantId.value = merchantStore.resolveMerchantId()
+
   if (!merchantId.value) {
-    uni.showToast({
-      title: '未登录或商家信息缺失',
-      icon: 'none'
-    })
+    identityError.value = true
     return
   }
+
+  identityError.value = false
+
+  try {
+    // 首次进入时补拉商家详情；详情失败不影响菜单管理，只要 merchantId 可用就继续
+    await merchantStore.ensureMerchant()
+  } catch (error) {
+    console.error('加载商家信息失败:', error)
+  }
+
   loadMenuList()
-})
+}
 
 /**
  * 切换分类
@@ -183,7 +215,8 @@ const loadMenuList = async () => {
     // MENU-001: 调用API获取菜单列表
     const res = await menuApi.getList(merchantId.value)
 
-    if (res.code === 200 && res.data) {
+    // 后端的 code 是字符串 "200"，只能按 success 判断（request.js 已拒绝 success=false）
+    if (res.success === true && res.data) {
       // 保存菜单列表
       menuList.value = res.data
 
@@ -333,7 +366,8 @@ const onDragEnd = async (dish, dishes) => {
     // MENU-002: 调用API更新菜品排序
     const apiRes = await menuApi.updateDishSort(currentMenuId, dish.id, newIndex)
 
-    if (apiRes.code === 200) {
+    // code 是字符串 "200"，按 success 判断
+    if (apiRes.success === true) {
       // 更新本地数据
       dish._originalIndex = newIndex
 
@@ -410,7 +444,8 @@ const toggleDishStatus = async (dish, e) => {
           const status = isActive ? 1 : 0
           const apiRes = await menuApi.updateDishStatus(currentMenuId, dish.id, status)
 
-          if (apiRes.code === 200) {
+          // code 是字符串 "200"，按 success 判断
+          if (apiRes.success === true) {
             // 更新本地数据
             dish.isActive = isActive
             dish._originalStatus = isActive ? 'online' : 'offline'
@@ -473,26 +508,72 @@ const editDish = (dish) => {
 }
 
 /**
- * 删除菜品
+ * 从菜单中移除菜品
+ *
+ * 本页是菜单管理：菜品数据来自 menuApi.getList 里每个菜单自带的 dishes，
+ * 所以「删除菜品」的语义是把该菜品从当前菜单里去掉，不删除菜品实体。
+ * 后端更新菜单是覆盖式写入（先清空该菜单的菜单-菜品关联，再按 dishes 重建），
+ * 因此必须提交「去掉目标项之后」的完整菜品列表。
  */
 const deleteDish = async (dish) => {
-  const confirmed = await showConfirm(`确认删除菜品"${dish.name}"吗？`)
+  const confirmed = await showConfirm(`确认从菜单中移除菜品"${dish.name}"吗？菜品本身不会被删除。`)
 
-  if (confirmed) {
-    // TODO: 调用API删除菜品
+  if (!confirmed) return
+
+  // 定位目标菜品所在的菜单分组（每个 section 对应一个菜单）
+  const section = dishSections.value.find(item => item.dishes.some(d => d.id === dish.id))
+  if (!section) {
+    uni.showToast({ title: '未找到该菜品所属的菜单', icon: 'none' })
+    return
+  }
+
+  // 菜单的名称/分类/状态取接口原始数据：更新接口不传 status 会把菜单置为下线
+  const rawMenu = menuList.value.find(menu => menu.id === section.id)
+  if (!rawMenu) {
+    uni.showToast({ title: '未找到菜单信息', icon: 'none' })
+    return
+  }
+
+  const remainDishes = section.dishes
+    .filter(item => item.id !== dish.id)
+    .map(item => ({ id: item.id, status: item.isActive ? 1 : 0 }))
+
+  try {
+    uni.showLoading({ title: '移除中...', mask: true })
+
+    const res = await menuApi.update(merchantId.value, section.id, {
+      name: rawMenu.menuName || rawMenu.name || section.name,
+      category: rawMenu.category,
+      description: rawMenu.description,
+      status: rawMenu.status,
+      dishes: remainDishes
+    })
+
+    if (res.success !== true) {
+      throw new Error(res.message || '移除失败')
+    }
+
+    // 先请求后改本地状态：请求失败时列表保持原样，不需要回滚
+    const index = section.dishes.findIndex(d => d.id === dish.id)
+    if (index > -1) {
+      section.dishes.splice(index, 1)
+    }
+
+    uni.hideLoading()
     uni.showToast({
-      title: '删除成功',
+      title: '已从菜单移除',
       icon: 'success'
     })
 
-    // 从列表中移除
-    for (const section of dishSections.value) {
-      const index = section.dishes.findIndex(d => d.id === dish.id)
-      if (index > -1) {
-        section.dishes.splice(index, 1)
-        break
-      }
-    }
+    // 重新拉取菜单，确认服务端结果并同步分类计数
+    loadMenuList()
+  } catch (error) {
+    console.error('从菜单移除菜品失败:', error)
+    uni.hideLoading()
+    uni.showToast({
+      title: error.message || '移除失败',
+      icon: 'none'
+    })
   }
 }
 
@@ -627,7 +708,8 @@ const batchOperateMenus = async (action) => {
 
     uni.hideLoading()
 
-    if (res.code === 200) {
+    // code 是字符串 "200"，按 success 判断
+    if (res.success === true) {
       uni.showToast({
         title: '操作成功',
         icon: 'success'
@@ -658,6 +740,11 @@ const batchOperateMenus = async (action) => {
   background: #F5F5F5;
   display: flex;
   flex-direction: column;
+}
+
+/* 商家身份缺失错误态 */
+.error-state {
+  padding: 120rpx 30rpx;
 }
 
 /* 顶部提示 */

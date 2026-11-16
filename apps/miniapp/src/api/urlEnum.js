@@ -260,12 +260,18 @@ export const HISTORY_API = {
   CLEAR_HISTORY: '/v1/history/clear'                     // DELETE - 清空历史记录
 }
 
-// ==================== 愿望清单相关 ====================
-export const WISHLIST_API = {
-  GET_WISHLIST: '/v1/wishlist',                          // GET - 获取愿望清单
-  ADD_WISH: '/v1/wishlist',                              // POST - 添加愿望
-  DELETE_WISH: '/v1/wishlist/:wishId',                  // DELETE - 删除愿望
-  COMPLETE_WISH: '/v1/wishlist/:wishId/complete'        // PUT - 完成愿望
+// ==================== 想吃列表相关 ====================
+// 后端路由在 WishListController（@RequestMapping("/v1/wish-list")，是**连字符**）。
+// 这里以前写成 wishlist、modules/wish.js 里写成 wishes，两条后端都不存在，
+// 调用只会 404（#593）。商家端的待审核列表没有查询参数，商家身份由后端从请求身份取。
+export const WISH_LIST_API = {
+  GET_USER_ITEMS: '/v1/wish-list/items',                 // GET - 当前用户的想吃列表
+  GET_DETAIL: '/v1/wish-list/item/:itemId',              // GET - 想吃列表项详情
+  GET_MERCHANT_PENDING: '/v1/wish-list/merchant/pending', // GET - 商家待审核列表（无参数）
+  AUDIT: '/v1/wish-list/audit',                          // POST - 审核（approved: true 受理 / false 拒绝）
+  CREATE: '/v1/wish-list/item',                          // POST - 创建想吃列表项
+  APPEAL: '/v1/wish-list/appeal',                        // POST - 用户申诉
+  WITHDRAW: '/v1/wish-list/item/:itemId'                 // DELETE - 用户撤回
 }
 
 // ==================== 拼单相关 ====================
@@ -383,7 +389,7 @@ export default {
   CHAT_API,
   NOTIFICATION_API,
   HISTORY_API,
-  WISHLIST_API,
+  WISH_LIST_API,
   GROUP_ORDER_API,
   FEEDBACK_API,
   CAPTCHA_API,

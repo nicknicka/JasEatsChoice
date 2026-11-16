@@ -6,6 +6,27 @@
 import { get, post, del } from '@/utils/request'
 import { REVIEW_API, buildUrl } from '../urlEnum'
 
+/**
+ * 解析评价图片。
+ * 后端 t_review.images 存的是 JSON 字符串（ReviewController 用 objectMapper 写入，
+ * 无图时是 "[]"，历史数据可能是 NULL），不是数组；直接当数组遍历会逐个字符渲染。
+ * 商家评价列表页与评价详情页共用这一处口径。
+ * @param {string|Array} images - 接口返回的 images 字段
+ * @returns {Array<string>} 图片地址数组
+ */
+export const parseReviewImages = (images) => {
+  if (Array.isArray(images)) return images
+  if (typeof images !== 'string' || !images.trim()) return []
+
+  try {
+    const parsed = JSON.parse(images)
+    return Array.isArray(parsed) ? parsed : []
+  } catch (error) {
+    console.error('解析评价图片失败:', images, error)
+    return []
+  }
+}
+
 export const reviewApi = {
   /**
    * 发表评价
@@ -69,6 +90,16 @@ export const reviewApi = {
    * @returns {Promise} 返回评价列表
    */
   getUserReviews: (userId, params) => get(buildUrl(REVIEW_API.GET_USER_REVIEWS, { userId }), params),
+
+  /**
+   * 获取单条评价详情
+   * GET /v1/reviews/{reviewId}
+   * 路径写成字面量：urlEnum.js 里没有对应常量，且该文件本次不允许改动。
+   * 返回字段与商家评价列表里的单个条目一致（userName/orderNo/dishes/replies 等）。
+   * @param {string} reviewId - 评价ID
+   * @returns {Promise} 返回评价详情；评价不存在时后端返回 code 404
+   */
+  getDetail: (reviewId) => get(buildUrl('/v1/reviews/:reviewId', { reviewId })),
 
   /**
    * 获取订单评价

@@ -1,7 +1,18 @@
 <template>
   <view class="menu-edit-container">
+    <!-- 商家身份缺失：不用假 id 继续请求，直接显示错误态（#593） -->
+    <view class="error-state" v-if="identityError">
+      <empty
+        text="未获取到商家信息"
+        description="请重新登录后再进入菜单编辑"
+        icon="⚠️"
+        buttonText="重新加载"
+        @button-click="initMerchant"
+      />
+    </view>
+
     <!-- 菜单信息 -->
-    <view class="menu-info-section">
+    <view class="menu-info-section" v-if="!identityError">
       <view class="section-title">菜单信息</view>
 
       <view class="form-item">
@@ -26,7 +37,7 @@
     </view>
 
     <!-- 分类管理 -->
-    <view class="category-section">
+    <view class="category-section" v-if="!identityError">
       <view class="section-header">
         <text class="section-title">菜品分类</text>
         <view class="add-btn" @tap="addCategory">
@@ -87,11 +98,14 @@
       </view>
     </view>
 
-    <!-- 菜单预览 -->
-    <view class="preview-section">
+    <!-- 菜单预览（只读）：点「预览效果」时同一份内容以弹层展示，后端没有预览接口 -->
+    <view class="preview-section" :class="{ 'preview-overlay': previewVisible }" v-if="!identityError">
       <view class="section-header">
         <text class="section-title">菜单预览</text>
-        <text class="preview-mode">{{ menuInfo.name || '未命名菜单' }}</text>
+        <view class="preview-header-right">
+          <text class="preview-mode">{{ menuInfo.name || '未命名菜单' }}</text>
+          <text class="preview-close" v-if="previewVisible" @tap="closePreview">关闭</text>
+        </view>
       </view>
 
       <view class="preview-list">
@@ -118,7 +132,7 @@
     </view>
 
     <!-- 菜单设置 -->
-    <view class="settings-section">
+    <view class="settings-section" v-if="!identityError">
       <view class="section-title">菜单设置</view>
 
       <view class="setting-item switch-item">
@@ -192,9 +206,44 @@
     </view>
 
     <!-- 操作按钮 -->
-    <view class="action-buttons">
+    <view class="action-buttons" v-if="!identityError">
       <button class="action-btn" @tap="previewMenu">预览效果</button>
       <button class="action-btn primary" @tap="saveMenu">保存菜单</button>
+    </view>
+
+    <!-- 菜品选择弹层：菜品池来自 GET /v1/dishes，支持多选 -->
+    <view class="picker-mask" v-if="dishPickerVisible" @tap="closeDishPicker">
+      <view class="dish-picker" @tap.stop>
+        <view class="dish-picker-header">
+          <text class="dish-picker-title">选择菜品</text>
+          <text class="dish-picker-subtitle">{{ pickerCategory ? pickerCategory.name : '' }}</text>
+        </view>
+
+        <scroll-view class="dish-picker-body" scroll-y>
+          <view class="dish-picker-loading" v-if="loadingDishes">
+            <uni-load-more status="loading" />
+          </view>
+          <view class="dish-picker-empty" v-else-if="dishPool.length === 0">
+            暂无可添加的菜品
+          </view>
+          <view
+            class="dish-picker-item"
+            v-for="dish in dishPool"
+            :key="dish.id"
+            :class="{ selected: selectedDishIds.includes(dish.id), disabled: dish.added }"
+            @tap="toggleDishSelect(dish)"
+          >
+            <text class="dish-picker-name">{{ dish.name }}</text>
+            <text class="dish-picker-price">¥{{ dish.price }}</text>
+            <text class="dish-picker-flag" v-if="dish.added">已在菜单中</text>
+          </view>
+        </scroll-view>
+
+        <view class="dish-picker-actions">
+          <button class="picker-btn" @tap="closeDishPicker">取消</button>
+          <button class="picker-btn primary" @tap="confirmAddDishes">确定</button>
+        </view>
+      </view>
     </view>
   </view>
 </template>
@@ -203,9 +252,24 @@
 import { ref, onMounted } from 'vue'
 import { showConfirm } from '@/utils/helper'
 import { menuApi } from '@/api/modules/menu.js'
+import { dishApi } from '@/api/modules/dish.js'
+import { useMerchantStore } from '@/store/modules/merchant'
 
 // 商家ID
 const merchantId = ref('')
+
+// 商家身份缺失标记：取不到身份时只显示错误态，不做任何请求
+const identityError = ref(false)
+
+// 预览弹层开关（只读预览，后端没有预览接口）
+const previewVisible = ref(false)
+
+// 菜品选择弹层
+const dishPickerVisible = ref(false)
+const pickerCategory = ref(null)
+const dishPool = ref([])
+const selectedDishIds = ref([])
+const loadingDishes = ref(false)
 
 // 菜单ID（编辑模式）
 const menuId = ref('')
@@ -239,14 +303,29 @@ const sortOptions = ref([
 const sortIndex = ref(0)
 
 onMounted(() => {
-  // 获取商家ID
-  merchantId.value = uni.getStorageSync('merchantId') || ''
+  initMerchant()
+})
+
+/**
+ * 获取商家身份后初始化页面
+ * 身份统一走 merchant store（#593）：取不到就显示错误态，不再用假 id 发请求
+ */
+const initMerchant = async () => {
+  const merchantStore = useMerchantStore()
+  merchantId.value = merchantStore.resolveMerchantId()
+
   if (!merchantId.value) {
-    uni.showToast({
-      title: '未登录或商家信息缺失',
-      icon: 'none'
-    })
+    identityError.value = true
     return
+  }
+
+  identityError.value = false
+
+  try {
+    // 首次进入时补拉商家详情；详情失败不影响菜单编辑
+    await merchantStore.ensureMerchant()
+  } catch (error) {
+    console.error('加载商家信息失败:', error)
   }
 
   // 获取页面参数
@@ -262,7 +341,7 @@ onMounted(() => {
     // 新建模式
     initNewMenu()
   }
-})
+}
 
 /**
  * 初始化新菜单
@@ -293,7 +372,8 @@ const loadMenuDetail = async () => {
     // MENU-002: 调用API获取菜单详情
     const res = await menuApi.getDetail(menuId.value)
 
-    if (res.code === 200 && res.data) {
+    // 后端的 code 是字符串 "200"，只能按 success 判断（request.js 已拒绝 success=false）
+    if (res.success === true && res.data) {
       const data = res.data
 
       // 更新菜单基本信息
@@ -319,7 +399,7 @@ const loadMenuDetail = async () => {
       // MENU-003: 调用API获取菜单下的菜品列表
       const dishesRes = await menuApi.getMenuDishes(merchantId.value, menuId.value)
 
-      if (dishesRes.code === 200 && dishesRes.data) {
+      if (dishesRes.success === true && dishesRes.data) {
         // 将菜品按分类分组
         const dishMap = new Map()
         dishesRes.data.forEach(dish => {
@@ -411,14 +491,101 @@ const deleteCategory = async (index) => {
 }
 
 /**
- * 添加菜品到分类
+ * 判断菜品是否已经在当前菜单里
  */
-const addDish = (category) => {
-  // TODO: 跳转到菜品选择页面
+const isDishInMenu = (dishId) => {
+  return categories.value.some(category => category.dishes.some(dish => dish.id === dishId))
+}
+
+/**
+ * 添加菜品到分类：拉菜品池 + 弹出多选
+ * 菜品池来自 GET /v1/dishes?merchantId=xxx，选中的菜品并入该分类，随「保存菜单」一起提交
+ */
+const addDish = async (category) => {
+  pickerCategory.value = category
+  selectedDishIds.value = []
+  dishPool.value = []
+  dishPickerVisible.value = true
+  loadingDishes.value = true
+
+  try {
+    const res = await dishApi.getList({ merchantId: merchantId.value })
+
+    if (res.success !== true) {
+      throw new Error(res.message || '获取菜品列表失败')
+    }
+
+    dishPool.value = (res.data || []).map(dish => ({
+      id: dish.id,
+      name: dish.name,
+      price: dish.price,
+      // 整个菜单里已有的菜品不允许再选，避免同一菜品被关联两次
+      added: isDishInMenu(dish.id)
+    }))
+  } catch (error) {
+    console.error('获取菜品列表失败:', error)
+    closeDishPicker()
+    uni.showToast({
+      title: error.message || '获取菜品列表失败',
+      icon: 'none'
+    })
+  } finally {
+    loadingDishes.value = false
+  }
+}
+
+/**
+ * 切换菜品选中状态
+ */
+const toggleDishSelect = (dish) => {
+  if (dish.added) return
+
+  const index = selectedDishIds.value.indexOf(dish.id)
+  if (index > -1) {
+    selectedDishIds.value.splice(index, 1)
+  } else {
+    selectedDishIds.value.push(dish.id)
+  }
+}
+
+/**
+ * 关闭菜品选择弹层
+ */
+const closeDishPicker = () => {
+  dishPickerVisible.value = false
+  pickerCategory.value = null
+  selectedDishIds.value = []
+}
+
+/**
+ * 确认添加：把选中的菜品并入当前分类
+ */
+const confirmAddDishes = () => {
+  if (selectedDishIds.value.length === 0) {
+    uni.showToast({
+      title: '请先选择菜品',
+      icon: 'none'
+    })
+    return
+  }
+
+  const category = pickerCategory.value
+  let addedCount = 0
+
+  selectedDishIds.value.forEach(id => {
+    const dish = dishPool.value.find(item => item.id === id)
+    if (dish && !category.dishes.some(item => item.id === id)) {
+      category.dishes.push({ id: dish.id, name: dish.name })
+      addedCount++
+    }
+  })
+
   uni.showToast({
-    title: '菜品选择功能开发中',
+    title: `已添加 ${addedCount} 个菜品`,
     icon: 'none'
   })
+
+  closeDishPicker()
 }
 
 /**
@@ -469,13 +636,33 @@ const onAutoOfflineChange = (e) => {
 
 /**
  * 预览菜单
+ * 后端没有菜单预览接口，这里用页面内的只读预览区块（同一份 categories 数据）弹层展示
  */
 const previewMenu = () => {
-  // TODO: 跳转到预览页面
-  uni.showToast({
-    title: '预览功能开发中',
-    icon: 'none'
-  })
+  if (!menuInfo.value.name) {
+    uni.showToast({
+      title: '请先填写菜单名称',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (categories.value.every(category => category.dishes.length === 0)) {
+    uni.showToast({
+      title: '菜单里还没有菜品，无法预览',
+      icon: 'none'
+    })
+    return
+  }
+
+  previewVisible.value = true
+}
+
+/**
+ * 关闭预览弹层
+ */
+const closePreview = () => {
+  previewVisible.value = false
 }
 
 /**
@@ -542,7 +729,7 @@ const saveMenu = async () => {
       res = await menuApi.create(merchantId.value, menuData)
     }
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.hideLoading()
       uni.showToast({
         title: '保存成功',
@@ -787,6 +974,150 @@ const saveMenu = async () => {
   font-size: 24rpx;
   color: #999;
   padding: 6rpx 16rpx;
+}
+
+/* 预览弹层：复用同一份只读预览内容，后端没有预览接口 */
+.preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99;
+  margin-bottom: 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.preview-header-right {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.preview-close {
+  font-size: 26rpx;
+  color: #1890FF;
+}
+
+/* 商家身份缺失错误态 */
+.error-state {
+  padding: 120rpx 30rpx;
+}
+
+/* 菜品选择弹层 */
+.picker-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+}
+
+.dish-picker {
+  width: 100%;
+  max-height: 70vh;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dish-picker-header {
+  padding: 30rpx;
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.dish-picker-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.dish-picker-subtitle {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.dish-picker-body {
+  max-height: 50vh;
+}
+
+.dish-picker-loading,
+.dish-picker-empty {
+  padding: 60rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: #999;
+}
+
+.dish-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 24rpx 30rpx;
+  border-bottom: 1rpx solid #F5F5F5;
+
+  &.selected {
+    background: rgba(255, 107, 53, 0.08);
+
+    .dish-picker-name {
+      color: #FF6B35;
+      font-weight: bold;
+    }
+  }
+
+  &.disabled {
+    opacity: 0.5;
+  }
+}
+
+.dish-picker-name {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+  @include text-ellipsis;
+}
+
+.dish-picker-price {
+  font-size: 26rpx;
+  color: #FF6B35;
+}
+
+.dish-picker-flag {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.dish-picker-actions {
+  padding: 20rpx 30rpx 40rpx;
+  display: flex;
+  gap: 20rpx;
+  border-top: 1rpx solid #eee;
+}
+
+.picker-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  background: #F5F5F5;
+  color: #666;
+  border: none;
+
+  &.primary {
+    background: #FF6B35;
+    color: #fff;
+  }
 }
 
 /* 菜单设置 */

@@ -10,6 +10,33 @@ const getCurrentUserId = () => {
   return userInfo.userId || userInfo.id || uni.getStorageSync('userId') || ''
 }
 
+/**
+ * 解析会话操作要用的 userId。
+ *
+ * 后端三个写操作都按 (userId, sessionId) 定位 chat_session 记录，所以这里必须和使用
+ * getList(userId) 拉列表时传的身份一致。商家端列表传的是商家 ID（#593），若这里继续
+ * 用 getCurrentUserId() 取登录用户 ID，两个口径不一致，后端查不到会话直接 404。
+ *
+ * 页面显式传入的 ID 优先；旧调用点 pages-common/chat/conversation-list.vue 的第二参数
+ * 是布尔（setPin(id, true/false)），不是 userId，一律忽略并回退到登录用户身份。
+ */
+const resolveUserId = (userId) => {
+  if (typeof userId === 'string' && userId) return userId
+  if (typeof userId === 'number' && Number.isFinite(userId)) return String(userId)
+  return getCurrentUserId()
+}
+
+/**
+ * 缺少身份时直接失败，不让请求带着空 userId 打过去（后端只会回 404，看不出真实原因）
+ */
+const withUserId = (userId, send) => {
+  const id = resolveUserId(userId)
+  if (!id) {
+    return Promise.reject(new Error('未获取到用户身份，无法同步会话状态'))
+  }
+  return send(id)
+}
+
 const buildQueryUrl = (url, params = {}) => {
   const query = Object.entries(params)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')
@@ -95,37 +122,40 @@ export const conversationApi = {
   },
 
   /**
-   * 保存置顶状态
+   * 切换置顶状态
    * POST /v1/chat/sessions/{conversationId}/toggle-pin
    * @param {string} conversationId - 会话ID
-   * @returns {Promise} 返回更新结果
+   * @param {string} [userId] - 会话所属身份；商家端必须传商家ID（与拉列表的口径一致）
+   * @returns {Promise} data 为切换后的置顶状态布尔值
    */
-  setPin: (conversationId) => post(
+  setPin: (conversationId, userId) => withUserId(userId, id => post(
     buildUrl('/v1/chat/sessions/:conversationId/toggle-pin', { conversationId }),
-    { userId: getCurrentUserId() }
-  ),
+    { userId: id }
+  )),
 
   /**
    * 标记已读
    * POST /v1/chat/sessions/{conversationId}/unread-clear
    * @param {string} conversationId - 会话ID
+   * @param {string} [userId] - 会话所属身份；商家端必须传商家ID（与拉列表的口径一致）
    * @returns {Promise} 返回标记结果
    */
-  markRead: (conversationId) => post(
+  markRead: (conversationId, userId) => withUserId(userId, id => post(
     buildUrl('/v1/chat/sessions/:conversationId/unread-clear', { conversationId }),
-    { userId: getCurrentUserId() }
-  ),
+    { userId: id }
+  )),
 
   /**
    * 删除会话
    * DELETE /v1/chat/sessions/{conversationId}?userId=xxx
    * @param {string} conversationId - 会话ID
+   * @param {string} [userId] - 会话所属身份；商家端必须传商家ID（与拉列表的口径一致）
    * @returns {Promise} 返回删除结果
    */
-  delete: (conversationId) => del(buildQueryUrl(
+  delete: (conversationId, userId) => withUserId(userId, id => del(buildQueryUrl(
     buildUrl(CHAT_API.DELETE_CONVERSATION, { conversationId }),
-    { userId: getCurrentUserId() }
-  ))
+    { userId: id }
+  )))
 }
 
 export default conversationApi

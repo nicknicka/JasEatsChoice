@@ -1,7 +1,7 @@
 <template>
   <view class="merchant-profile-container">
     <!-- 商家信息卡片 -->
-    <view class="profile-header">
+    <view class="profile-header" v-if="merchantInfo">
       <image class="shop-logo" :src="merchantInfo.logo" mode="aspectFill"></image>
       <view class="shop-details">
         <text class="shop-name">{{ merchantInfo.name }}</text>
@@ -10,23 +10,29 @@
           <text class="rating-text">{{ merchantInfo.rating }}</text>
           <text class="rating-count">({{ merchantInfo.reviewCount }}条评价)</text>
         </view>
-        <text class="shop-desc">{{ merchantInfo.description }}</text>
+        <text class="shop-desc">{{ merchantInfo.address }}</text>
       </view>
       <view class="edit-btn" @tap="toEditShop">
         <uni-icons type="compose" size="20" color="#FF6B35"></uni-icons>
       </view>
     </view>
 
+    <!-- 未获取到商家身份 / 接口失败：只影响头部与统计，菜单仍可用 -->
+    <view class="state-block" v-else>
+      <text class="state-text">{{ loading ? '加载中...' : (loadError || '未获取到商家信息') }}</text>
+      <button class="state-btn" v-if="loadError" @tap="loadPage">重试</button>
+    </view>
+
     <!-- 数据统计 -->
-    <view class="stats-section">
+    <view class="stats-section" v-if="merchantInfo">
       <view class="stats-grid">
         <view class="stat-item" @tap="toFinance">
-          <text class="stat-value">¥{{ statistics.balance }}</text>
-          <text class="stat-label">账户余额</text>
-        </view>
-        <view class="stat-item" @tap="toFinance">
           <text class="stat-value">¥{{ statistics.todayRevenue }}</text>
-          <text class="stat-label">今日收入</text>
+          <text class="stat-label">今日营业额</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-value">{{ statistics.todayOrders }}</text>
+          <text class="stat-label">今日订单</text>
         </view>
         <view class="stat-item" @tap="toComment">
           <text class="stat-value">{{ statistics.pendingReviews }}</text>
@@ -127,68 +133,70 @@
 import { ref, onMounted } from 'vue'
 import { showConfirm } from '@/utils/helper'
 import { merchantApi } from '@/api'
+import { reviewApi } from '@/api/modules/review.js'
+import { useMerchantStore } from '@/store/modules/merchant'
 
-// 商家信息
-const merchantInfo = ref({
-  id: 1,
-  name: '老王家常菜',
-  logo: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=店',
-  rating: 4.8,
-  reviewCount: 156,
-  description: '主营川菜，口味正宗，分量足'
-})
+const merchantStore = useMerchantStore()
 
-// 统计数据
+// 商家信息（来自服务端；拿不到身份时不回填任何假数据）
+const merchantInfo = ref(null)
+
+// 统计数据（来自服务端）
 const statistics = ref({
-  balance: '5,280.00',
-  todayRevenue: '1,680',
-  pendingReviews: 5
+  todayRevenue: '0.00',
+  todayOrders: 0,
+  pendingReviews: 0
 })
 
-onMounted(async () => {
-  await loadMerchantInfo()
-  await loadStatistics()
-})
+// 加载与错误状态
+const loading = ref(false)
+const loadError = ref('')
+
+onMounted(loadPage)
 
 /**
- * M-020: 加载商家信息
+ * 加载商家信息与统计数据
  */
-const loadMerchantInfo = async () => {
-  try {
-    const res = await merchantApi.getInfo()
-    if (res.code === 200 && res.data) {
-      merchantInfo.value = {
-        id: res.data.id,
-        name: res.data.name,
-        logo: res.data.logo || res.data.avatar,
-        rating: res.data.rating || 4.8,
-        reviewCount: res.data.reviewCount || 0,
-        description: res.data.description || ''
-      }
-    }
-  } catch (error) {
-    console.error('加载商家信息失败:', error)
-    // 保持默认数据
-  }
-}
+const loadPage = async () => {
+  if (loading.value) return
 
-/**
- * M-021: 加载统计数据
- */
-const loadStatistics = async () => {
+  loading.value = true
+  loadError.value = ''
+
   try {
-    const merchantId = uni.getStorageSync('merchantId') || merchantInfo.value.id
-    const res = await merchantApi.getStatistics(merchantId, { timeRange: 'today' })
-    if (res.code === 200 && res.data) {
-      statistics.value = {
-        balance: formatMoney(res.data.balance || 0),
-        todayRevenue: formatMoney(res.data.todayRevenue || 0),
-        pendingReviews: res.data.pendingReviews || 0
-      }
+    // 身份统一由 store 解析；拿不到返回 null，不再回退到写死的商家 id
+    const info = await merchantStore.ensureMerchant()
+    if (!info) {
+      loadError.value = '未获取到商家信息，请重新登录'
+      return
+    }
+    const merchantId = merchantStore.merchantId
+
+    // 今日经营数据 + 评价数据
+    const [statsRes, reviewRes] = await Promise.all([
+      merchantApi.getStatistics(merchantId, { timeRange: 'today' }),
+      reviewApi.getStatistics(merchantId)
+    ])
+
+    const basicStats = statsRes.data.basicStats || {}
+    statistics.value = {
+      todayRevenue: formatMoney(basicStats.totalAmount),
+      todayOrders: Number(basicStats.orders) || 0,
+      pendingReviews: Number(reviewRes.data.unrepliedCount) || 0
+    }
+
+    merchantInfo.value = {
+      name: info.name || info.merchantName || '',
+      logo: info.logo || info.avatar || '',
+      rating: reviewRes.data.avgRating != null ? reviewRes.data.avgRating : Number(info.rating) || 0,
+      reviewCount: Number(reviewRes.data.total) || 0,
+      address: info.address || ''
     }
   } catch (error) {
-    console.error('加载统计数据失败:', error)
-    // 保持默认数据
+    console.error('商家资料加载失败:', error)
+    loadError.value = error?.message || '加载失败，请稍后重试'
+  } finally {
+    loading.value = false
   }
 }
 
@@ -196,10 +204,8 @@ const loadStatistics = async () => {
  * 格式化金额
  */
 const formatMoney = (amount) => {
-  if (typeof amount === 'number') {
-    return amount.toFixed(2)
-  }
-  return amount
+  const num = Number(amount)
+  return Number.isFinite(num) ? num.toFixed(2) : '0.00'
 }
 
 /**
@@ -505,5 +511,32 @@ const handleLogout = async () => {
   @include flex-center;
   font-size: 28rpx;
   color: #F5222D;
+}
+
+/* 加载 / 错误态 */
+.state-block {
+  @include flex-center;
+  flex-direction: column;
+  gap: 20rpx;
+  padding: 60rpx 40rpx;
+  margin: 20rpx;
+  background: #fff;
+  border-radius: 16rpx;
+}
+
+.state-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.state-btn {
+  min-width: 200rpx;
+  height: 72rpx;
+  @include flex-center;
+  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  color: #fff;
+  font-size: 28rpx;
+  border-radius: 36rpx;
+  border: none;
 }
 </style>
