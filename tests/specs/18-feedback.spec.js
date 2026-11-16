@@ -322,7 +322,9 @@ test.describe('模块十八：反馈闭环', () => {
       page.on('request', (req) => {
         if (req.url().includes('/admin/feedbacks?')) resetRequests.push(req.url())
       })
-      await page.getByRole('button', { name: '重置' }).click()
+      // 限定在筛选栏的按钮组内：结果为空时表格区还会渲染空态的「重置筛选」，
+      // 裸 getByRole('button', { name: '重置' }) 会同时命中两个按钮而触发 strict mode 失败（CI 复现）。
+      await page.locator('.filter-actions').getByRole('button', { name: '重置', exact: true }).click()
       await expect.poll(() => resetRequests.length > 0, { timeout: 8000 }).toBe(true)
       const lastReset = resetRequests[resetRequests.length - 1]
       expect(lastReset).not.toContain('priority=')
