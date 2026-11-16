@@ -597,7 +597,8 @@ const deleteDish = async () => {
       // 调用API删除菜品
       const res = await dishApi.delete(dishId.value)
 
-      if (res.code === 200) {
+      // 后端 ResponseResult.code 是字符串 "200"，与数字比较恒为假：删成功也会提示失败
+      if (res.success === true) {
         uni.showToast({
           title: '删除成功',
           icon: 'success'
