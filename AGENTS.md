@@ -24,7 +24,7 @@
 | `db/migrations` | 历史脚本，仅作追溯，不参与启动 |
 | `tests` | Playwright 用例与台账，独立 `package.json` |
 | `scripts` | `gen-env.sh`、`wait-healthy.sh`、`ci-e2e.sh` |
-| `docs` | 当前有效的产品/架构/测试文档，`archive/` 存历史总结 |
+| `docs` | 当前有效的产品/架构/测试文档（历史归档已按 ADR 0003 删除） |
 
 技术栈：后端 SpringBoot + MyBatis-Plus + MySQL + Redis + Netty；桌面/前端 Electron + Vue 3 + Element Plus；小程序 UniApp。
 
@@ -78,7 +78,7 @@ bash scripts/ci-e2e.sh [spec ...]   # 一条命令从空仓到跑完用例
 - **agent 收尾必须销毁自己的验证栈**：`docker compose ... down -v`；隔离栈统一用 `--project-name codex<issue>`，别用 `jaseats-`、`jaseats-codex-60-` 这类乱名，否则无法批量清理。
 - **`deploy/.env` 是 gitignore 的，worktree 里不存在。** 需要栈时用临时 env，或接受无 key 的降级验证。
 - **`tests/progress.txt` 是运行产物**，提交前 `git checkout -- tests/progress.txt`，任何 PR 都不该含它的 diff。
-- **PR 的 smoke 只跑 `01/04/10` 三个 spec**；改动涉及 03/05/06/07/08/09/11~14 时，必须本地跑对应 spec，不能只看 PR 绿就合并。
+- **PR 的 smoke 跑 `01/04/08/10/16` 五个 spec（59 条）**；改动涉及 03/05/06/07/09/11~14/17/18 时，必须本地跑对应 spec，不能只看 PR 绿就合并。
 - **判断"某分支自己改了什么"** 用 `git diff $(git merge-base origin/main <branch>)..<branch>`，或用三点 `git diff origin/main...<branch>`；直接 `git diff origin/main..<branch>` 会把主干新增显示成该分支的删除，容易误判。
 - **测试数据别依赖会随时间失效的 seed。** 例如公告有 `start_time`/`end_time`，`AnnouncementScheduler` 会把过期公告置为 `inactive`；用例应自建临时数据并在 `finally` 清理。
 - **关闭 issue 前搜一遍指向它的 `test.fixme`**，避免留下永远解不开的孤儿 fixme。
@@ -96,7 +96,7 @@ Issue 与 spec 都放 GitHub Issues（私有仓 nicknicka/JasEatsChoice），一
 
 ### Domain docs
 
-single-context：词表在根目录 `GLOSSARY.md`，架构决策在 `docs/adr/`（当前 6 篇 ADR）。见 `docs/agents/domain.md`。
+single-context：词表在根目录 `GLOSSARY.md`，架构决策在 `docs/adr/`（当前 17 篇 ADR）。见 `docs/agents/domain.md`。
 
 ## 代码规范
 

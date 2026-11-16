@@ -81,7 +81,6 @@
 | 菜品管理 | `merchant/DishManagement.vue` | 100% | ✅ |
 | 今日订单 | `merchant/TodayOrders.vue` | 100% | ✅ |
 | 商家中心 | `merchant/Home.vue` | 100% | ✅ |
-| 我的店铺 | `merchant/MyShop.vue` | 100% | ✅ |
 | 营业统计 | `merchant/Statistics.vue` | 100% | ✅ |
 | 评价中心 | `merchant/Comments.vue` | 100% | ✅ |
 
