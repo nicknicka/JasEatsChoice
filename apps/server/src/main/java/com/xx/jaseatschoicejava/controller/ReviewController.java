@@ -381,157 +381,8 @@ public class ReviewController {
 
             List<Review> reviews = reviewService.list(queryWrapper);
 
-            // 查询回复信息
-            List<String> reviewIds = reviews.stream()
-                    .map(Review::getId)
-                    .collect(Collectors.toList());
-
-            Map<String, List<ReviewReply>> replyMap = new HashMap<>();
-            if (!reviewIds.isEmpty()) {
-                LambdaQueryWrapper<ReviewReply> replyWrapper = new LambdaQueryWrapper<>();
-                replyWrapper.in(ReviewReply::getReviewId, reviewIds)
-                           .orderByDesc(ReviewReply::getCreatedAt); // 改为倒序，最新的在前
-                List<ReviewReply> replies = reviewReplyService.list(replyWrapper);
-
-                replyMap = replies.stream()
-                        .collect(Collectors.groupingBy(ReviewReply::getReviewId));
-            }
-
-            // 查询用户信息
-            List<String> userIds = reviews.stream()
-                    .map(Review::getUserId)
-                    .distinct()
-                    .collect(Collectors.toList());
-
-            Map<String, User> userMap = new HashMap<>();
-            if (!userIds.isEmpty()) {
-                List<User> users = userService.listByIds(userIds);
-                userMap = users.stream()
-                        .collect(Collectors.toMap(User::getUserId, u -> u));
-            }
-
-            // 查询订单信息
-            List<String> orderIds = reviews.stream()
-                    .map(Review::getOrderId)
-                    .distinct()
-                    .collect(Collectors.toList());
-
-            Map<String, Order> orderMap = new HashMap<>();
-            Map<String, List<String>> orderDishesMap = new HashMap<>();
-            if (!orderIds.isEmpty()) {
-                List<Order> orders = orderService.listByIds(orderIds);
-                orderMap = orders.stream()
-                        .collect(Collectors.toMap(Order::getId, o -> o));
-
-                // 查询订单菜品
-                LambdaQueryWrapper<OrderDish> dishWrapper = new LambdaQueryWrapper<>();
-                dishWrapper.in(OrderDish::getOrderId, orderIds);
-                List<OrderDish> orderDishes = orderDishService.list(dishWrapper);
-
-                // 查询菜品信息以获取菜品名称
-                List<String> dishIds = orderDishes.stream()
-                        .map(OrderDish::getDishId)
-                        .distinct()
-                        .collect(Collectors.toList());
-
-                Map<String, String> dishNameMap = new HashMap<>();
-                if (!dishIds.isEmpty()) {
-                    List<Dish> dishes = dishService.listByIds(dishIds);
-                    dishNameMap = dishes.stream()
-                            .collect(Collectors.toMap(Dish::getId, Dish::getName));
-                }
-
-                // 按订单ID分组，将菜品名称收集
-                final Map<String, String> finalDishNameMap = dishNameMap;
-                orderDishesMap = orderDishes.stream()
-                        .collect(Collectors.groupingBy(
-                                OrderDish::getOrderId,
-                                Collectors.mapping(
-                                        od -> finalDishNameMap.getOrDefault(od.getDishId(), "未知菜品"),
-                                        Collectors.toList()
-                                )
-                        ));
-            }
-
-            // 组装返回数据
-            List<Map<String, Object>> resultList = new ArrayList<>();
-            for (Review review : reviews) {
-                Map<String, Object> item = new HashMap<>();
-                item.put("id", review.getId());
-                item.put("orderId", review.getOrderId());
-                item.put("userId", review.getUserId());
-                item.put("rating", review.getRating());
-                item.put("content", review.getContent());
-                item.put("images", review.getImages());
-                item.put("createdAt", review.getCreatedAt());
-
-                // 用户信息
-                User user = userMap.get(review.getUserId());
-                if (user != null) {
-                    item.put("userName", user.getNickname() != null ? user.getNickname() : "用户" + user.getUserId());
-                } else {
-                    item.put("userName", "未知用户");
-                }
-
-                // 订单信息
-                Order order = orderMap.get(review.getOrderId());
-                if (order != null) {
-                    item.put("orderNo", order.getId()); // 使用订单ID作为订单号
-                }
-
-                // 菜品信息
-                List<String> dishNames = orderDishesMap.get(review.getOrderId());
-                if (dishNames != null) {
-                    item.put("dishes", dishNames);
-                } else {
-                    item.put("dishes", new ArrayList<>());
-                }
-
-                // 回复信息 - 统一返回所有回复（商家+用户），按时间倒序
-                List<ReviewReply> replies = replyMap.get(review.getId());
-                List<Map<String, Object>> allReplies = new ArrayList<>();
-                boolean hasMerchantReply = false; // 是否有商家回复
-
-                if (replies != null && !replies.isEmpty()) {
-                    for (ReviewReply reply : replies) {
-                        Map<String, Object> replyItem = new HashMap<>();
-                        Integer isAdditional = reply.getIsAdditional();
-
-                        replyItem.put("id", reply.getId());
-                        replyItem.put("content", reply.getContent());
-                        replyItem.put("time", reply.getCreatedAt().toString().replace("T", " ").substring(0, 16));
-                        replyItem.put("createdAt", reply.getCreatedAt()); // 添加原始时间用于排序
-                        // isAdditional: 0/null=商家回复, 1=用户追评
-                        replyItem.put("isAdditional", isAdditional == null ? 0 : isAdditional);
-                        replyItem.put("isMerchant", isAdditional == null || isAdditional == 0);
-
-                        // 检查是否有商家回复
-                        if (isAdditional == null || isAdditional == 0) {
-                            hasMerchantReply = true;
-                        }
-
-                        allReplies.add(replyItem);
-                    }
-
-                    // 确保按时间倒序排序（最新的在前）
-                    allReplies.sort((a, b) -> {
-                        LocalDateTime timeA = (LocalDateTime) a.get("createdAt");
-                        LocalDateTime timeB = (LocalDateTime) b.get("createdAt");
-                        return timeB.compareTo(timeA); // 降序：最新的在前
-                    });
-                }
-
-                // 设置回复状态：只有商家回复才算"已回复"
-                item.put("status", hasMerchantReply ? "replied" : "unreplied");
-
-                // 设置所有回复列表（已按时间倒序）
-                item.put("replies", allReplies);
-
-                // 格式化时间
-                item.put("time", review.getCreatedAt().toString().replace("T", " ").substring(0, 16));
-
-                resultList.add(item);
-            }
+            // 组装返回数据（与评价详情共用同一套口径）
+            List<Map<String, Object>> resultList = buildReviewItems(reviews);
 
             // 关键词搜索
             if (keyword != null && !keyword.trim().isEmpty()) {
@@ -569,6 +420,189 @@ public class ReviewController {
             log.error("获取商家评价列表失败", e);
             return ResponseResult.fail("500", "获取评价列表失败：" + e.getMessage());
         }
+    }
+
+    /**
+     * 获取单条评价详情（商家端评价详情页使用，字段口径与商家评价列表一致）
+     */
+    @ApiOperation("获取评价详情")
+    @GetMapping("/{reviewId}")
+    public ResponseResult<?> getReviewDetail(@PathVariable String reviewId) {
+        try {
+            log.info("获取评价详情，reviewId={}", reviewId);
+
+            Review review = reviewService.getById(reviewId);
+
+            // 与商家评价列表口径一致：只返回正常状态（0）的评价
+            if (review == null || !Integer.valueOf(0).equals(review.getStatus())) {
+                return ResponseResult.fail("404", "评价不存在");
+            }
+
+            return ResponseResult.success(buildReviewItems(List.of(review)).get(0));
+
+        } catch (Exception e) {
+            log.error("获取评价详情失败，reviewId={}", reviewId, e);
+            return ResponseResult.fail("500", "获取评价详情失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 组装评价条目（商家评价列表与评价详情共用，保证字段口径一致）
+     */
+    private List<Map<String, Object>> buildReviewItems(List<Review> reviews) {
+        // 查询回复信息
+        List<String> reviewIds = reviews.stream()
+                .map(Review::getId)
+                .collect(Collectors.toList());
+
+        Map<String, List<ReviewReply>> replyMap = new HashMap<>();
+        if (!reviewIds.isEmpty()) {
+            LambdaQueryWrapper<ReviewReply> replyWrapper = new LambdaQueryWrapper<>();
+            replyWrapper.in(ReviewReply::getReviewId, reviewIds)
+                       .orderByDesc(ReviewReply::getCreatedAt); // 改为倒序，最新的在前
+            List<ReviewReply> replies = reviewReplyService.list(replyWrapper);
+
+            replyMap = replies.stream()
+                    .collect(Collectors.groupingBy(ReviewReply::getReviewId));
+        }
+
+        // 查询用户信息
+        List<String> userIds = reviews.stream()
+                .map(Review::getUserId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<String, User> userMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<User> users = userService.listByIds(userIds);
+            userMap = users.stream()
+                    .collect(Collectors.toMap(User::getUserId, u -> u));
+        }
+
+        // 查询订单信息
+        List<String> orderIds = reviews.stream()
+                .map(Review::getOrderId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<String, Order> orderMap = new HashMap<>();
+        Map<String, List<String>> orderDishesMap = new HashMap<>();
+        if (!orderIds.isEmpty()) {
+            List<Order> orders = orderService.listByIds(orderIds);
+            orderMap = orders.stream()
+                    .collect(Collectors.toMap(Order::getId, o -> o));
+
+            // 查询订单菜品
+            LambdaQueryWrapper<OrderDish> dishWrapper = new LambdaQueryWrapper<>();
+            dishWrapper.in(OrderDish::getOrderId, orderIds);
+            List<OrderDish> orderDishes = orderDishService.list(dishWrapper);
+
+            // 查询菜品信息以获取菜品名称
+            List<String> dishIds = orderDishes.stream()
+                    .map(OrderDish::getDishId)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            Map<String, String> dishNameMap = new HashMap<>();
+            if (!dishIds.isEmpty()) {
+                List<Dish> dishes = dishService.listByIds(dishIds);
+                dishNameMap = dishes.stream()
+                        .collect(Collectors.toMap(Dish::getId, Dish::getName));
+            }
+
+            // 按订单ID分组，将菜品名称收集
+            final Map<String, String> finalDishNameMap = dishNameMap;
+            orderDishesMap = orderDishes.stream()
+                    .collect(Collectors.groupingBy(
+                            OrderDish::getOrderId,
+                            Collectors.mapping(
+                                    od -> finalDishNameMap.getOrDefault(od.getDishId(), "未知菜品"),
+                                    Collectors.toList()
+                            )
+                    ));
+        }
+
+        // 组装返回数据
+        List<Map<String, Object>> resultList = new ArrayList<>();
+        for (Review review : reviews) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", review.getId());
+            item.put("orderId", review.getOrderId());
+            item.put("userId", review.getUserId());
+            item.put("rating", review.getRating());
+            item.put("content", review.getContent());
+            item.put("images", review.getImages());
+            item.put("createdAt", review.getCreatedAt());
+
+            // 用户信息
+            User user = userMap.get(review.getUserId());
+            if (user != null) {
+                item.put("userName", user.getNickname() != null ? user.getNickname() : "用户" + user.getUserId());
+            } else {
+                item.put("userName", "未知用户");
+            }
+
+            // 订单信息
+            Order order = orderMap.get(review.getOrderId());
+            if (order != null) {
+                item.put("orderNo", order.getId()); // 使用订单ID作为订单号
+            }
+
+            // 菜品信息
+            List<String> dishNames = orderDishesMap.get(review.getOrderId());
+            if (dishNames != null) {
+                item.put("dishes", dishNames);
+            } else {
+                item.put("dishes", new ArrayList<>());
+            }
+
+            // 回复信息 - 统一返回所有回复（商家+用户），按时间倒序
+            List<ReviewReply> replies = replyMap.get(review.getId());
+            List<Map<String, Object>> allReplies = new ArrayList<>();
+            boolean hasMerchantReply = false; // 是否有商家回复
+
+            if (replies != null && !replies.isEmpty()) {
+                for (ReviewReply reply : replies) {
+                    Map<String, Object> replyItem = new HashMap<>();
+                    Integer isAdditional = reply.getIsAdditional();
+
+                    replyItem.put("id", reply.getId());
+                    replyItem.put("content", reply.getContent());
+                    replyItem.put("time", reply.getCreatedAt().toString().replace("T", " ").substring(0, 16));
+                    replyItem.put("createdAt", reply.getCreatedAt()); // 添加原始时间用于排序
+                    // isAdditional: 0/null=商家回复, 1=用户追评
+                    replyItem.put("isAdditional", isAdditional == null ? 0 : isAdditional);
+                    replyItem.put("isMerchant", isAdditional == null || isAdditional == 0);
+
+                    // 检查是否有商家回复
+                    if (isAdditional == null || isAdditional == 0) {
+                        hasMerchantReply = true;
+                    }
+
+                    allReplies.add(replyItem);
+                }
+
+                // 确保按时间倒序排序（最新的在前）
+                allReplies.sort((a, b) -> {
+                    LocalDateTime timeA = (LocalDateTime) a.get("createdAt");
+                    LocalDateTime timeB = (LocalDateTime) b.get("createdAt");
+                    return timeB.compareTo(timeA); // 降序：最新的在前
+                });
+            }
+
+            // 设置回复状态：只有商家回复才算"已回复"
+            item.put("status", hasMerchantReply ? "replied" : "unreplied");
+
+            // 设置所有回复列表（已按时间倒序）
+            item.put("replies", allReplies);
+
+            // 格式化时间
+            item.put("time", review.getCreatedAt().toString().replace("T", " ").substring(0, 16));
+
+            resultList.add(item);
+        }
+
+        return resultList;
     }
 
     /**
