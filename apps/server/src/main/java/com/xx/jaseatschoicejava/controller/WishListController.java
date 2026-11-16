@@ -4,7 +4,10 @@ import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.WishListAppealDTO;
 import com.xx.jaseatschoicejava.dto.WishListAuditDTO;
 import com.xx.jaseatschoicejava.dto.WishListItemCreateDTO;
+import com.xx.jaseatschoicejava.entity.User;
+import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.service.WishListService;
+import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 import com.xx.jaseatschoicejava.vo.WishListItemDetailVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +32,27 @@ public class WishListController {
     @Autowired
     private WishListService wishListService;
 
+    @Autowired
+    private UserService userService;
+
+    /**
+     * 取当前登录用户。
+     * <p>
+     * 身份只认 JwtAuthenticationFilter 验签后写入的可信用户ID；此前这里读的
+     * {@code request.getAttribute("userId")} 从来没有写入点，取不到就回落成写死的
+     * {@code test_user}，等于任何登录用户都能以同一个测试身份读写想吃列表（#593）。
+     *
+     * @param request HTTP请求
+     * @return 用户实体；未登录或用户不存在时返回 null
+     */
+    private User resolveCurrentUser(HttpServletRequest request) {
+        String userId = UserIdentityUtil.extractVerifiedUserId(request);
+        if (userId == null) {
+            return null;
+        }
+        return userService.getById(userId);
+    }
+
     /**
      * 创建想吃列表项
      *
@@ -40,12 +64,12 @@ public class WishListController {
     public ResponseResult<String> createWishListItem(
             @RequestBody WishListItemCreateDTO dto,
             HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        if (userId == null) {
-            userId = "test_user";
+        User currentUser = resolveCurrentUser(request);
+        if (currentUser == null) {
+            return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
 
-        String itemId = wishListService.createWishListItem(dto, userId);
+        String itemId = wishListService.createWishListItem(dto, currentUser.getUserId());
         return ResponseResult.success(itemId);
     }
 
@@ -57,12 +81,12 @@ public class WishListController {
      */
     @GetMapping("/items")
     public ResponseResult<List<WishListItemDetailVO>> getUserWishList(HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        if (userId == null) {
-            userId = "test_user";
+        User currentUser = resolveCurrentUser(request);
+        if (currentUser == null) {
+            return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
 
-        List<WishListItemDetailVO> list = wishListService.getUserWishList(userId);
+        List<WishListItemDetailVO> list = wishListService.getUserWishList(currentUser.getUserId());
         return ResponseResult.success(list);
     }
 
@@ -74,9 +98,15 @@ public class WishListController {
      */
     @GetMapping("/merchant/pending")
     public ResponseResult<List<WishListItemDetailVO>> getMerchantPendingList(HttpServletRequest request) {
-        String merchantId = (String) request.getAttribute("merchantId");
-        if (merchantId == null) {
-            merchantId = "test_merchant";
+        User currentUser = resolveCurrentUser(request);
+        if (currentUser == null) {
+            return ResponseResult.fail("401", "未登录或登录状态已失效");
+        }
+
+        // 商家归属取自用户表的 merchant_id；未注册为商家的账号不能看待审核列表
+        String merchantId = currentUser.getMerchantId();
+        if (merchantId == null || merchantId.isBlank()) {
+            return ResponseResult.fail("403", "当前账号未注册为商家");
         }
 
         List<WishListItemDetailVO> list = wishListService.getMerchantPendingList(merchantId);
@@ -94,14 +124,15 @@ public class WishListController {
     public ResponseResult<Boolean> auditWishListItem(
             @RequestBody WishListAuditDTO dto,
             HttpServletRequest request) {
-        String auditorId = (String) request.getAttribute("userId");
-        String auditorName = (String) request.getAttribute("username");
-
-        if (auditorId == null) {
-            auditorId = "test_user";
+        User currentUser = resolveCurrentUser(request);
+        if (currentUser == null) {
+            return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
-        if (auditorName == null) {
-            auditorName = "测试用户";
+
+        String auditorId = currentUser.getUserId();
+        String auditorName = currentUser.getNickname();
+        if (auditorName == null || auditorName.isBlank()) {
+            auditorName = "用户" + auditorId;
         }
 
         boolean success = wishListService.auditWishListItem(dto, auditorId, auditorName);
@@ -119,12 +150,12 @@ public class WishListController {
     public ResponseResult<Boolean> appealWishListItem(
             @RequestBody WishListAppealDTO dto,
             HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        if (userId == null) {
-            userId = "test_user";
+        User currentUser = resolveCurrentUser(request);
+        if (currentUser == null) {
+            return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
 
-        boolean success = wishListService.appealWishListItem(dto, userId);
+        boolean success = wishListService.appealWishListItem(dto, currentUser.getUserId());
         return ResponseResult.success(success);
     }
 
@@ -139,12 +170,12 @@ public class WishListController {
     public ResponseResult<Boolean> withdrawWishListItem(
             @PathVariable String itemId,
             HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        if (userId == null) {
-            userId = "test_user";
+        User currentUser = resolveCurrentUser(request);
+        if (currentUser == null) {
+            return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
 
-        boolean success = wishListService.withdrawWishListItem(itemId, userId);
+        boolean success = wishListService.withdrawWishListItem(itemId, currentUser.getUserId());
         return ResponseResult.success(success);
     }
 

@@ -1,209 +1,293 @@
 <template>
   <view class="merchant-home-container">
-    <!-- 商家头部信息 -->
-    <view class="merchant-header">
-      <view class="shop-info">
-        <image class="shop-logo" :src="merchantInfo.logo" mode="aspectFill"></image>
-        <view class="shop-details">
-          <text class="shop-name">{{ merchantInfo.name }}</text>
-          <text class="shop-status" :class="{ active: merchantInfo.isOpen }">
-            {{ merchantInfo.isOpen ? '营业中' : '已打烊' }}
-          </text>
-        </view>
-      </view>
-      <view class="status-switch" @tap="toggleBusinessStatus">
-        <text class="switch-text">{{ merchantInfo.isOpen ? '打烊' : '开市' }}</text>
-      </view>
+    <!-- 加载中 -->
+    <view class="state-block" v-if="loading && !merchantInfo">
+      <text class="state-text">加载中...</text>
     </view>
 
-    <!-- 今日数据概览 -->
-    <view class="today-stats">
-      <view class="section-title">今日数据</view>
-      <view class="stats-grid">
-        <view class="stat-item">
-          <text class="stat-value">{{ todayStats.orders }}</text>
-          <text class="stat-label">订单数</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-value">¥{{ todayStats.revenue }}</text>
-          <text class="stat-label">营业额</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-value">{{ todayStats.customers }}</text>
-          <text class="stat-label">顾客数</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-value">{{ todayStats.avgPrice }}</text>
-          <text class="stat-label">客单价</text>
-        </view>
-      </view>
+    <!-- 错误态：拿不到商家身份或接口失败，不回填任何假数据 -->
+    <view class="state-block" v-else-if="loadError">
+      <text class="state-text">{{ loadError }}</text>
+      <button class="state-btn" @tap="loadPage">重试</button>
     </view>
 
-    <!-- 快捷操作 -->
-    <view class="quick-actions">
-      <view class="action-item" @tap="toOrderList">
-        <view class="action-icon">📋</view>
-        <text class="action-name">订单管理</text>
-        <view class="action-badge" v-if="pendingOrders > 0">{{ pendingOrders }}</view>
-      </view>
-      <view class="action-item" @tap="toDishManage">
-        <view class="action-icon">🍜</view>
-        <text class="action-name">菜品管理</text>
-      </view>
-      <view class="action-item" @tap="toStatistics">
-        <view class="action-icon">📊</view>
-        <text class="action-name">数据统计</text>
-      </view>
-      <view class="action-item" @tap="toComment">
-        <view class="action-icon">⭐</view>
-        <text class="action-name">评价中心</text>
-        <view class="action-badge" v-if="pendingComments > 0">{{ pendingComments }}</view>
-      </view>
-    </view>
-
-    <!-- 待处理订单 -->
-    <view class="pending-orders" v-if="pendingOrderList.length > 0">
-      <view class="section-header">
-        <text class="section-title">待处理订单 ({{ pendingOrderList.length }})</text>
-        <text class="more" @tap="toOrderList">查看全部 ›</text>
-      </view>
-      <view class="order-list">
-        <view
-          class="order-item"
-          v-for="order in pendingOrderList"
-          :key="order.id"
-          @tap="toOrderDetail(order.id)"
-        >
-          <view class="order-header">
-            <text class="order-no">订单号：{{ order.orderNo }}</text>
-            <text class="order-time">{{ order.time }}</text>
+    <template v-else>
+      <!-- 商家头部信息 -->
+      <view class="merchant-header">
+        <view class="shop-info">
+          <image class="shop-logo" :src="merchantInfo.logo" mode="aspectFill"></image>
+          <view class="shop-details">
+            <text class="shop-name">{{ merchantInfo.name }}</text>
+            <text class="shop-status" :class="{ active: isOpen }">
+              {{ isOpen ? '营业中' : '已打烊' }}
+            </text>
           </view>
-          <view class="order-content">
-            <text class="order-dishes">{{ order.dishes }}</text>
+        </view>
+        <view class="status-switch" @tap="toggleBusinessStatus">
+          <text class="switch-text">{{ isOpen ? '打烊' : '开市' }}</text>
+        </view>
+      </view>
+
+      <!-- 今日数据概览 -->
+      <view class="today-stats">
+        <view class="section-title">今日数据</view>
+        <view class="stats-grid">
+          <view class="stat-item">
+            <text class="stat-value">{{ todayStats.orders }}</text>
+            <text class="stat-label">订单数</text>
           </view>
-          <view class="order-footer">
-            <text class="order-amount">¥{{ order.amount }}</text>
-            <view class="order-status" :class="'status-' + order.status">
-              {{ order.statusText }}
+          <view class="stat-item">
+            <text class="stat-value">¥{{ todayStats.revenue }}</text>
+            <text class="stat-label">营业额</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-value">{{ todayStats.customers }}</text>
+            <text class="stat-label">顾客数</text>
+          </view>
+          <view class="stat-item">
+            <text class="stat-value">¥{{ todayStats.avgPrice }}</text>
+            <text class="stat-label">客单价</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 快捷操作 -->
+      <view class="quick-actions">
+        <view class="action-item" @tap="toOrderList">
+          <view class="action-icon">📋</view>
+          <text class="action-name">订单管理</text>
+          <view class="action-badge" v-if="pendingOrders > 0">{{ pendingOrders }}</view>
+        </view>
+        <view class="action-item" @tap="toDishManage">
+          <view class="action-icon">🍜</view>
+          <text class="action-name">菜品管理</text>
+        </view>
+        <view class="action-item" @tap="toStatistics">
+          <view class="action-icon">📊</view>
+          <text class="action-name">数据统计</text>
+        </view>
+        <view class="action-item" @tap="toComment">
+          <view class="action-icon">⭐</view>
+          <text class="action-name">评价中心</text>
+          <view class="action-badge" v-if="pendingComments > 0">{{ pendingComments }}</view>
+        </view>
+      </view>
+
+      <!-- 待处理订单 -->
+      <view class="pending-orders" v-if="pendingOrderList.length > 0">
+        <view class="section-header">
+          <text class="section-title">待处理订单 ({{ pendingOrderList.length }})</text>
+          <text class="more" @tap="toOrderList">查看全部 ›</text>
+        </view>
+        <view class="order-list">
+          <view
+            class="order-item"
+            v-for="order in pendingOrderList"
+            :key="order.id"
+            @tap="toOrderDetail(order.id)"
+          >
+            <view class="order-header">
+              <text class="order-no">订单号：{{ order.id }}</text>
+              <text class="order-time">{{ order.time }}</text>
+            </view>
+            <view class="order-footer">
+              <text class="order-amount">¥{{ order.amount }}</text>
+              <view class="order-status" :class="'status-' + order.status">
+                {{ order.statusText }}
+              </view>
             </view>
           </view>
         </view>
       </view>
-    </view>
+      <view class="pending-orders" v-else>
+        <view class="section-header">
+          <text class="section-title">待处理订单</text>
+        </view>
+        <text class="empty-text">今天没有待处理的订单</text>
+      </view>
 
-    <!-- 营业状态提示 -->
-    <view class="business-tips" v-if="!merchantInfo.isOpen">
-      <view class="tips-icon">💡</view>
-      <text class="tips-text">店铺已打烊，开始营业后可接收新订单</text>
-    </view>
+      <!-- 营业状态提示 -->
+      <view class="business-tips" v-if="!isOpen">
+        <view class="tips-icon">💡</view>
+        <text class="tips-text">店铺已打烊，开始营业后可接收新订单</text>
+      </view>
+    </template>
   </view>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { toOrderDetail } from '@/utils/router'
+import { merchantApi } from '@/api/modules/merchant.js'
+import { reviewApi } from '@/api/modules/review.js'
+import { useMerchantStore } from '@/store/modules/merchant'
 
-// 商家信息
-const merchantInfo = ref({
-  id: 1,
-  name: '老王家常菜',
-  logo: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=店',
-  isOpen: true
-})
+const merchantStore = useMerchantStore()
 
-// 今日统计数据
+// 商家信息（全部来自服务端；拿不到身份时不回填任何假数据）
+const merchantInfo = ref(null)
+const merchantId = ref('')
+// 营业状态：Merchant.status，true=营业 / false=休息
+const isOpen = ref(false)
+
+// 今日统计数据（后端 data.basicStats）
 const todayStats = ref({
-  orders: 28,
-  revenue: '1,680',
-  customers: 32,
-  avgPrice: '52.5'
+  orders: 0,
+  revenue: '0.00',
+  customers: 0,
+  avgPrice: '0.00'
 })
 
-// 待处理订单数
-const pendingOrders = ref(3)
-const pendingComments = ref(5)
-
-// 待处理订单列表
+// 待处理订单
+const pendingOrders = ref(0)
 const pendingOrderList = ref([])
+// 待回复评价数
+const pendingComments = ref(0)
 
-onMounted(() => {
-  loadMerchantInfo()
-  loadTodayStats()
-  loadPendingOrders()
-})
+// 加载与错误状态
+const loading = ref(false)
+const loadError = ref('')
+
+// 商家后台只有「待接单 / 制作中」需要商家处理，与桌面端 HomeContent.vue 的 PENDING_STATUS_CODES 口径一致
+const PENDING_STATUS_CODES = [1, 2]
+const PENDING_STATUS_TEXT = { 1: '待接单', 2: '制作中' }
+
+onMounted(loadPage)
 
 /**
- * 加载商家信息
+ * 加载整页数据：解析商家身份 → 商家信息 → 今日统计 / 今日订单 / 营业状态
  */
-const loadMerchantInfo = () => {
-  // TODO: 调用API获取商家信息
-  // const res = await merchantApi.getInfo()
-  // merchantInfo.value = res.data
+const loadPage = async () => {
+  if (loading.value) return
+
+  loading.value = true
+  loadError.value = ''
+
+  try {
+    // 身份统一由 store 解析；拿不到返回 null，不再回退到写死的商家 id
+    const info = await merchantStore.ensureMerchant()
+    if (!info) {
+      loadError.value = '未获取到商家信息，请重新登录'
+      return
+    }
+
+    merchantId.value = merchantStore.merchantId
+    merchantInfo.value = {
+      name: info.name || info.merchantName || '',
+      logo: info.logo || info.avatar || ''
+    }
+
+    await Promise.all([
+      loadBusinessStatus(),
+      loadTodayStats(),
+      loadTodayOrders(),
+      loadPendingComments()
+    ])
+  } catch (error) {
+    console.error('商家首页加载失败:', error)
+    loadError.value = error?.message || '加载失败，请稍后重试'
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * 加载营业状态
+ * 单数 /v1/merchant/{merchantId} 才返回 Merchant.status，复数的 getDetail 响应里没有该字段
+ */
+const loadBusinessStatus = async () => {
+  const res = await merchantApi.getShopDetail(merchantId.value)
+  isOpen.value = res.data.status === true
 }
 
 /**
  * 加载今日统计
+ * GET /v1/merchant/{merchantId}/statistics?timeRange=today（timeRange 为必填参数）
  */
-const loadTodayStats = () => {
-  // TODO: 调用API获取今日统计
-  // const res = await merchantApi.getTodayStats()
-  // todayStats.value = res.data
+const loadTodayStats = async () => {
+  const res = await merchantApi.getStatistics(merchantId.value, { timeRange: 'today' })
+  const basicStats = res.data.basicStats || {}
+
+  todayStats.value = {
+    orders: Number(basicStats.orders) || 0,
+    revenue: formatAmount(basicStats.totalAmount),
+    customers: Number(basicStats.newCustomers) || 0,
+    avgPrice: formatAmount(basicStats.avgAmount)
+  }
 }
 
 /**
- * 加载待处理订单
+ * 加载今日待处理订单
  */
-const loadPendingOrders = () => {
-  // TODO: 调用API获取待处理订单
-  pendingOrderList.value = [
-    {
-      id: 1,
-      orderNo: 'OD202603180001',
-      time: '12:30',
-      dishes: '宫保鸡丁 x1, 鱼香肉丝 x1',
-      amount: '54.00',
-      status: 'pending',
-      statusText: '待接单'
-    },
-    {
-      id: 2,
-      orderNo: 'OD202603180002',
-      time: '12:25',
-      dishes: '回锅肉 x1, 青菜 x2',
-      amount: '48.00',
-      status: 'cooking',
-      statusText: '制作中'
-    },
-    {
-      id: 3,
-      orderNo: 'OD202603180003',
-      time: '12:15',
-      dishes: '麻婆豆腐 x1',
-      amount: '18.00',
-      status: 'ready',
-      statusText: '待配送'
-    }
-  ]
+const loadTodayOrders = async () => {
+  const res = await merchantApi.getTodayOrders(merchantId.value)
+  const orders = Array.isArray(res.data) ? res.data : []
+  const pending = orders.filter(order => PENDING_STATUS_CODES.includes(Number(order.status)))
+
+  pendingOrders.value = pending.length
+  pendingOrderList.value = pending.map(order => ({
+    id: order.id,
+    time: formatTime(order.createdAt),
+    amount: formatAmount(order.totalAmount),
+    status: Number(order.status),
+    statusText: PENDING_STATUS_TEXT[Number(order.status)]
+  }))
+}
+
+/**
+ * 加载待回复评价数
+ * GET /v1/reviews/merchant/{merchantId}/statistics，取 data.unrepliedCount
+ */
+const loadPendingComments = async () => {
+  const res = await reviewApi.getStatistics(merchantId.value)
+  pendingComments.value = Number(res.data.unrepliedCount) || 0
 }
 
 /**
  * 切换营业状态
+ * 服务端对 status 取反且不回传新状态，所以切换后必须重新回读真实状态
  */
-const toggleBusinessStatus = () => {
-  uni.showModal({
-    title: '提示',
-    content: merchantInfo.value.isOpen ? '确认打烊吗？' : '确认开市吗？',
-    success: (res) => {
-      if (res.confirm) {
-        merchantInfo.value.isOpen = !merchantInfo.value.isOpen
-        // TODO: 调用API更新营业状态
-        uni.showToast({
-          title: merchantInfo.value.isOpen ? '已开市' : '已打烊',
-          icon: 'success'
-        })
-      }
-    }
+const toggleBusinessStatus = async () => {
+  const confirmed = await new Promise(resolve => {
+    uni.showModal({
+      title: '提示',
+      content: isOpen.value ? '确认打烊吗？' : '确认开市吗？',
+      success: res => resolve(res.confirm === true),
+      fail: () => resolve(false)
+    })
   })
+  if (!confirmed) return
+
+  try {
+    await merchantApi.updateStatus(merchantId.value)
+    await loadBusinessStatus()
+    uni.showToast({
+      title: isOpen.value ? '已开市' : '已打烊',
+      icon: 'success'
+    })
+  } catch (error) {
+    console.error('切换营业状态失败:', error)
+    uni.showToast({
+      title: '切换失败，请稍后重试',
+      icon: 'none'
+    })
+  }
+}
+
+/**
+ * 金额格式化：保留两位小数
+ */
+const formatAmount = (amount) => {
+  const num = Number(amount)
+  return Number.isFinite(num) ? num.toFixed(2) : '0.00'
+}
+
+/**
+ * 时间格式化：后端 createdAt 为 LocalDateTime，取其中的时:分
+ */
+const formatTime = (time) => {
+  const matched = String(time || '').match(/(\d{2}):(\d{2})/)
+  return matched ? `${matched[1]}:${matched[2]}` : ''
 }
 
 /**
@@ -448,16 +532,6 @@ const toComment = () => {
   color: #999;
 }
 
-.order-content {
-  margin-bottom: 15rpx;
-}
-
-.order-dishes {
-  font-size: 26rpx;
-  color: #666;
-  line-height: 1.5;
-}
-
 .order-footer {
   display: flex;
   justify-content: space-between;
@@ -476,19 +550,15 @@ const toComment = () => {
   font-size: 24rpx;
   font-weight: bold;
 
-  &.status-pending {
+  /* 状态数值口径：1-待接单、2-制作中（后端 Order.status） */
+  &.status-1 {
     background: #FFF7E6;
     color: #FAAD14;
   }
 
-  &.status-cooking {
+  &.status-2 {
     background: #E6F7FF;
     color: #1890FF;
-  }
-
-  &.status-ready {
-    background: #F6FFED;
-    color: #52C41A;
   }
 }
 
@@ -512,5 +582,38 @@ const toComment = () => {
   flex: 1;
   font-size: 26rpx;
   color: #FF6B35;
+}
+
+/* 加载 / 错误态 */
+.state-block {
+  @include flex-center;
+  flex-direction: column;
+  gap: 20rpx;
+  padding: 120rpx 40rpx;
+  margin: 20rpx;
+  background: #fff;
+  border-radius: 16rpx;
+}
+
+.state-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.state-btn {
+  min-width: 200rpx;
+  height: 72rpx;
+  @include flex-center;
+  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  color: #fff;
+  font-size: 28rpx;
+  border-radius: 36rpx;
+  border: none;
+}
+
+/* 空态 */
+.empty-text {
+  font-size: 26rpx;
+  color: #999;
 }
 </style>

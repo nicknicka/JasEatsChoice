@@ -120,9 +120,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { conversationApi } from '@/api/modules/conversation.js'
-import { formatRelativeTime } from '@/utils/helper'
+import { useMerchantStore } from '@/store'
+import { formatTime } from '@/utils/helper'
 
-// 商家ID
+const merchantStore = useMerchantStore()
+
+// 商家ID：拉列表和三个会话写操作都用这个身份（后端按 (userId, sessionId) 定位会话），
+// 由 store 统一解析，取不到时不再回退到写死的商家 id（#593）
 const merchantId = ref('')
 
 // 筛选标签（未读数由接口回填，初值 0）
@@ -153,8 +157,16 @@ const pageSize = 20
 let pollingTimer = null
 
 onMounted(() => {
-  // 获取商家ID
-  merchantId.value = uni.getStorageSync('merchantId') || ''
+  // 统一从 store 解析商家身份；拿不到就不发请求，也不启动轮询（否则每 30 秒空拉一次）
+  merchantId.value = merchantStore.resolveMerchantId()
+
+  if (!merchantId.value) {
+    uni.showToast({
+      title: '未获取到商家身份，请重新登录',
+      icon: 'none'
+    })
+    return
+  }
 
   loadConversations()
   startPolling()
@@ -181,6 +193,15 @@ const stopPolling = () => {
 }
 
 /**
+ * 会话排序：置顶的在前（与后端列表的排序口径一致）
+ */
+const compareConversations = (a, b) => {
+  if (a.pinned && !b.pinned) return -1
+  if (!a.pinned && b.pinned) return 1
+  return new Date(b.time) - new Date(a.time)
+}
+
+/**
  * 加载会话列表 - IM-032: 调用API获取会话列表
  */
 const loadConversations = async (isRefresh = false) => {
@@ -196,9 +217,13 @@ const loadConversations = async (isRefresh = false) => {
     // IM-032: 调用API获取会话列表（商家端）
     const res = await conversationApi.getList(merchantId.value)
 
-    if (res.code === 200 && res.data) {
+    // 后端 code 是字符串 "200"，不能按数字比较；请求层已拦截 success=false，
+    // 这里只确认拿到的是列表数据
+    const conversations = Array.isArray(res?.data) ? res.data : null
+
+    if (conversations) {
       // 转换会话数据格式
-      const formattedConversations = res.data.map(conv => ({
+      const formattedConversations = conversations.map(conv => ({
         id: conv.id,
         type: conv.type || 'user', // user, merchant, group
         name: conv.name || conv.displayName || '未命名',
@@ -207,7 +232,8 @@ const loadConversations = async (isRefresh = false) => {
         pinned: conv.isPinned || false,
         lastMessage: conv.lastMessage?.content || '',
         lastMessageType: conv.lastMessage?.type || 'text',
-        time: formatTime(conv.lastMessageTime || conv.updatedAt || new Date()),
+        // 后端列表直接给格式化好的 time（HH:mm）；取不到就留空，不用当前时间冒充
+        time: conv.time || formatTime(conv.lastMessageTime || conv.updatedAt),
         unread: conv.unreadCount || 0
       }))
 
@@ -218,11 +244,7 @@ const loadConversations = async (isRefresh = false) => {
       }
 
       // 排序：置顶的在前，然后按时间排序
-      filteredConversations.sort((a, b) => {
-        if (a.pinned && !b.pinned) return -1
-        if (!a.pinned && b.pinned) return 1
-        return new Date(b.time) - new Date(a.time)
-      })
+      filteredConversations.sort(compareConversations)
 
       if (isRefresh) {
         conversationList.value = filteredConversations
@@ -305,9 +327,12 @@ const onSearch = async (e) => {
     // IM-033: 调用API搜索会话
     const res = await conversationApi.search(merchantId.value, keyword)
 
-    if (res.code === 200 && res.data) {
+    // 同上：后端 code 是字符串 "200"，不按数字比较
+    const results = Array.isArray(res?.data) ? res.data : null
+
+    if (results) {
       // 转换搜索结果
-      const searchResults = res.data.map(conv => ({
+      const searchResults = results.map(conv => ({
         id: conv.id,
         type: conv.type || 'user',
         name: conv.name || conv.displayName || '未命名',
@@ -316,7 +341,7 @@ const onSearch = async (e) => {
         pinned: conv.isPinned || false,
         lastMessage: conv.lastMessage?.content || '',
         lastMessageType: conv.lastMessage?.type || 'text',
-        time: formatTime(conv.lastMessageTime || conv.updatedAt || new Date()),
+        time: conv.time || formatTime(conv.lastMessageTime || conv.updatedAt),
         unread: conv.unreadCount || 0
       }))
 
@@ -348,12 +373,38 @@ const openSystemNotifications = () => {
 }
 
 /**
+ * 清除未读：先乐观清零，后端失败则回滚并提示（不静默成功）
+ * @returns {Promise<boolean>} 是否真的清成功
+ */
+const clearUnreadOnServer = async (conversation) => {
+  const previousUnread = conversation.unread
+  conversation.unread = 0
+  updateUnreadCounts()
+
+  try {
+    await conversationApi.markRead(conversation.id, merchantId.value)
+    return true
+  } catch (error) {
+    // 回滚本地未读：否则 30 秒轮询把服务端未读拉回来时，界面会突然跳数
+    conversation.unread = previousUnread
+    updateUnreadCounts()
+    uni.showToast({
+      title: error.message || '标记已读失败',
+      icon: 'none'
+    })
+    return false
+  }
+}
+
+/**
  * 打开会话
  */
 const openConversation = (conversation) => {
-  // 清除未读
-  conversation.unread = 0
-  updateUnreadCounts()
+  // 未读要同步到后端，否则下一次轮询会把本地清掉的未读又拉回来。
+  // 不阻塞跳转：失败时 clearUnreadOnServer 内部回滚未读并提示
+  if (conversation.unread > 0) {
+    clearUnreadOnServer(conversation)
+  }
 
   uni.navigateTo({
     url: `/pages-merchant/chat/detail?id=${conversation.id}&type=${conversation.type}&name=${conversation.name}`
@@ -395,27 +446,44 @@ const showConversationMenu = (conversation) => {
 
 /**
  * 置顶/取消置顶
+ * 后端返回切换后的新状态，以返回值回写本地（与桌面端 useConversations 的范式一致）
  */
-const togglePinned = (conversation) => {
-  conversation.pinned = !conversation.pinned
-  uni.showToast({
-    title: conversation.pinned ? '已置顶' : '已取消置顶',
-    icon: 'success'
-  })
-  // TODO: 调用API保存置顶状态
+const togglePinned = async (conversation) => {
+  try {
+    const res = await conversationApi.setPin(conversation.id, merchantId.value)
+
+    if (typeof res?.data !== 'boolean') {
+      throw new Error('置顶状态更新失败')
+    }
+
+    conversation.pinned = res.data
+    conversationList.value.sort(compareConversations)
+
+    uni.showToast({
+      title: conversation.pinned ? '已置顶' : '已取消置顶',
+      icon: 'success'
+    })
+  } catch (error) {
+    // 失败不做本地翻转：保持与服务端一致，避免商家看到假的置顶状态
+    uni.showToast({
+      title: error.message || '置顶状态更新失败',
+      icon: 'none'
+    })
+  }
 }
 
 /**
  * 标记已读
  */
-const markAsRead = (conversation) => {
-  conversation.unread = 0
-  updateUnreadCounts()
-  uni.showToast({
-    title: '已标记为已读',
-    icon: 'success'
-  })
-  // TODO: 调用API标记已读
+const markAsRead = async (conversation) => {
+  const cleared = await clearUnreadOnServer(conversation)
+
+  if (cleared) {
+    uni.showToast({
+      title: '已标记为已读',
+      icon: 'success'
+    })
+  }
 }
 
 /**
@@ -426,18 +494,28 @@ const deleteConversation = (conversation) => {
     title: '删除聊天',
     content: '确定删除该聊天吗？删除后将无法恢复。',
     confirmColor: '#F5222D',
-    success: (res) => {
-      if (res.confirm) {
+    success: async (res) => {
+      if (!res.confirm) return
+
+      try {
+        await conversationApi.delete(conversation.id, merchantId.value)
+
         const index = conversationList.value.findIndex(c => c.id === conversation.id)
         if (index !== -1) {
           conversationList.value.splice(index, 1)
           updateUnreadCounts()
-          uni.showToast({
-            title: '已删除',
-            icon: 'success'
-          })
         }
-        // TODO: 调用API删除会话
+
+        uni.showToast({
+          title: '已删除',
+          icon: 'success'
+        })
+      } catch (error) {
+        // 删除失败不抹掉本地会话：否则商家以为删掉了，刷新又出现
+        uni.showToast({
+          title: error.message || '删除会话失败',
+          icon: 'none'
+        })
       }
     }
   })

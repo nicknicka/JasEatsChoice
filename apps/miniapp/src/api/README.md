@@ -223,7 +223,7 @@ request.js 自动清除 token 并跳转登录页。
 - `modules/notification.js` - 通知
 - `modules/history.js` - 历史
 - `modules/feedback.js` - 反馈
-- `modules/wishlist.js` - 愿望清单
+- `modules/wish.js` - 想吃列表（路径 `/v1/wish-list/*`）
 - `modules/groupOrder.js` - 拼单
 - `modules/recipe.js` - 食谱
 

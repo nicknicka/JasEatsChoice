@@ -15,6 +15,9 @@ export const useUserStore = defineStore('user', {
     // 用户ID
     userId: '',
 
+    // 商家ID：该账号已注册为商家时非空（后端 UserDTO.merchantId）
+    merchantId: '',
+
     // 用户角色：user | merchant | admin（延迟初始化）
     role: 'user',
 
@@ -74,6 +77,12 @@ export const useUserStore = defineStore('user', {
           this.role = savedRole
         }
 
+        // 从本地存储恢复商家ID（登录时由 setUserInfo 落盘）
+        const savedMerchantId = uni.getStorageSync('merchantId')
+        if (savedMerchantId) {
+          this.merchantId = savedMerchantId
+        }
+
         this._initialized = true
         console.log('✅ User store 初始化成功')
       } catch (error) {
@@ -111,6 +120,18 @@ export const useUserStore = defineStore('user', {
         this.role = userInfo.role
         uni.setStorageSync('role', userInfo.role)
       }
+
+      // 商家身份：登录响应的 UserDTO.merchantId 非空即表示该账号已注册为商家。
+      // 这里必须落盘：pages-merchant 下十几处读取的都是 storage 的 merchantId，
+      // 以前没有任何写入点，页面只能靠写死的商家 id 兜底（见 #593）。
+      if (userInfo.merchantId) {
+        this.merchantId = userInfo.merchantId
+        uni.setStorageSync('merchantId', userInfo.merchantId)
+        // splash 按 role 决定进用户端还是商家端，商家账号没有别的入口
+        this.role = 'merchant'
+        uni.setStorageSync('role', 'merchant')
+      }
+
       uni.setStorageSync('userInfo', userInfo)
     },
 
@@ -320,6 +341,7 @@ export const useUserStore = defineStore('user', {
       this.token = ''
       this.userInfo = null
       this.userId = ''
+      this.merchantId = ''
       this.role = 'user'
       this.isLogin = false
 
@@ -327,6 +349,8 @@ export const useUserStore = defineStore('user', {
       uni.removeStorageSync('token')
       uni.removeStorageSync('userInfo')
       uni.removeStorageSync('role')
+      uni.removeStorageSync('merchantId')
+      uni.removeStorageSync('merchantInfo')
 
       // 跳转到登录页（注意：路径要与 pages.json 中配置的一致）
       uni.reLaunch({

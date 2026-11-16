@@ -7,12 +7,12 @@
 **按「方法 + 路径」归档**：`GET /v1/recipe/**` 放行只覆盖读，
 `POST /v1/recipe`、`PUT /v1/recipe/toggle-favorite/{id}` 等写接口仍要求登录。
 
-本轮共 **546** 条：
+本轮共 **547** 条：
 
 | 档位 | 条数 | 含义 |
 |---|---:|---|
 | 公开 | 18 | 匿名可调（显式登记在 `SecurityConfig`） |
-| 登录 | 405 | 默认拒绝覆盖，匿名返回 401 |
+| 登录 | 406 | 默认拒绝覆盖，匿名返回 401 |
 | 管理员 | 123 | 需 `ROLE_ADMIN` 或 `admin:*` 权限 |
 
 改路由或改 `SecurityConfig` 后重跑本脚本即可，勿手改下表。
@@ -168,7 +168,7 @@
 | `PUT` | `/v1/admin/hot-topic/update/{id}` |
 | `PUT` | `/v1/tutorial/admin/{id}/featured` |
 
-## 登录（405 条）
+## 登录（406 条）
 
 | 方法 | 路径 |
 |---|---|
@@ -358,6 +358,7 @@
 | `GET` | `/v1/reviews/merchant/{merchantId}` |
 | `GET` | `/v1/reviews/merchant/{merchantId}/statistics` |
 | `GET` | `/v1/reviews/order/{orderId}` |
+| `GET` | `/v1/reviews/{reviewId}` |
 | `GET` | `/v1/scheduled-tasks` |
 | `GET` | `/v1/scheduled-tasks/running` |
 | `GET` | `/v1/scheduled-tasks/{taskId}` |

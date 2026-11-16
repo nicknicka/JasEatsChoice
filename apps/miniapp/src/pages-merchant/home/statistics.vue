@@ -136,6 +136,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { merchantApi } from '@/api/modules/merchant.js'
 import { reviewApi } from '@/api/modules/review.js'
+import { useMerchantStore } from '@/store/modules/merchant'
+
+const merchantStore = useMerchantStore()
 
 const timeType = ref('today')
 
@@ -205,7 +208,6 @@ const isEmpty = computed(() => {
 })
 
 onMounted(() => {
-  merchantId.value = uni.getStorageSync('merchantId') || ''
   loadStatistics()
 })
 
@@ -252,27 +254,43 @@ const buildTimeDistribution = (orderTrend, range) => {
 }
 
 /**
+ * 清空统计数据（身份缺失或加载失败时不保留上一次的数字）
+ */
+const resetStatistics = () => {
+  chartData.value = {}
+  hotDishes.value = []
+  timeDistribution.value = []
+  statistics.value = {
+    revenue: '0',
+    orders: 0,
+    customers: 0,
+    avgPrice: '0',
+    rating: '-',
+    reviews: 0
+  }
+}
+
+/**
  * 加载统计数据（数据全部来自服务端；失败展示错误态 + 重试）
  */
 const loadStatistics = async () => {
   if (loading.value) return
 
-  if (!merchantId.value) {
-    loadError.value = '未获取到商家信息，请重新登录'
-    return
-  }
-
   loading.value = true
   loadError.value = ''
 
   try {
+    // 商家身份统一由 store 解析，拿不到就走错误态，不回退到写死的商家 id
+    const merchant = await merchantStore.ensureMerchant()
+    if (!merchant) {
+      loadError.value = '未获取到商家信息，请重新登录'
+      resetStatistics()
+      return
+    }
+    merchantId.value = merchantStore.merchantId
+
     // 经营数据：/v1/merchant/{merchantId}/statistics?timeRange=today|week|month
     const res = await merchantApi.getStatistics(merchantId.value, { timeRange: timeType.value })
-
-    if (!res || res.code !== 200 || !res.data) {
-      throw new Error(res?.message || '获取统计数据失败')
-    }
-
     const { basicStats = {}, orderTrend = [], dishSalesRank = [] } = res.data
 
     statistics.value = {
@@ -307,17 +325,7 @@ const loadStatistics = async () => {
   } catch (error) {
     console.error('加载统计数据失败:', error)
     loadError.value = error?.message || '统计数据加载失败'
-    chartData.value = {}
-    hotDishes.value = []
-    timeDistribution.value = []
-    statistics.value = {
-      revenue: '0',
-      orders: 0,
-      customers: 0,
-      avgPrice: '0',
-      rating: '-',
-      reviews: 0
-    }
+    resetStatistics()
   } finally {
     loading.value = false
   }
@@ -329,12 +337,10 @@ const loadStatistics = async () => {
 const loadReviewStats = async () => {
   try {
     const res = await reviewApi.getStatistics(merchantId.value)
-    if (res && res.code === 200 && res.data) {
-      statistics.value = {
-        ...statistics.value,
-        rating: res.data.avgRating != null ? res.data.avgRating : '-',
-        reviews: Number(res.data.total) || 0
-      }
+    statistics.value = {
+      ...statistics.value,
+      rating: res.data.avgRating != null ? res.data.avgRating : '-',
+      reviews: Number(res.data.total) || 0
     }
   } catch (error) {
     console.error('加载评价统计失败:', error)

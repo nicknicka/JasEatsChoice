@@ -1,106 +1,98 @@
 <template>
   <view class="wishlist-container">
-    <!-- 筛选Tab -->
-    <view class="filter-tabs">
-      <view
-        class="tab-item"
-        :class="{ active: activeStatus === item.value }"
-        v-for="item in statusTabs"
-        :key="item.value"
-        @tap="changeStatus(item.value)"
-      >
-        {{ item.label }}
-        <view class="tab-count" v-if="item.count > 0">{{ item.count }}</view>
-      </view>
+    <!-- 后端只提供待审核列表（GET /v1/wish-list/merchant/pending），
+         没有按审核状态筛选、也没有分页，所以这里不再有状态 Tab 和上拉加载 -->
+    <view class="list-header">
+      <text class="list-title">待审核需求</text>
+      <text class="list-count" v-if="!loading && !errorMessage">共 {{ wishlist.length }} 条</text>
     </view>
 
-    <!-- 列表 -->
+    <!-- 身份缺失 / 接口失败：提示 + 重试，不回填任何假数据 -->
+    <view class="error-state" v-if="errorMessage && !loading">
+      <text class="error-text">{{ errorMessage }}</text>
+      <button class="retry-btn" @tap="loadWishlist">重新加载</button>
+    </view>
+
     <scroll-view
+      v-else
       class="wishlist-scroll"
       scroll-y
-      @scrolltolower="loadMore"
       :refresher-enabled="true"
       :refresher-triggered="refreshing"
       @refresherrefresh="onRefresh"
     >
       <view
         class="wish-card"
-        v-for="wish in wishlist"
-        :key="wish.id"
-        @tap="toDetail(wish)"
+        v-for="item in wishlist"
+        :key="item.id"
+        @tap="toDetail(item)"
       >
-        <!-- 用户信息 -->
+        <!-- 用户信息：userNickname / userAvatar 后端 VO 声明了但 service 未赋值，
+             取不到就不渲染头像，昵称缺失时退回展示真实的用户 ID -->
         <view class="user-header">
-          <image class="user-avatar" :src="wish.user.avatar" mode="aspectFill"></image>
+          <image
+            v-if="item.userAvatar"
+            class="user-avatar"
+            :src="item.userAvatar"
+            mode="aspectFill"
+          ></image>
           <view class="user-info">
-            <text class="user-name">{{ wish.user.name }}</text>
-            <text class="submit-time">{{ wish.submitTime }}</text>
+            <text class="user-name">{{ displayUserName(item) }}</text>
+            <text class="submit-time">{{ formatRelativeTime(item.createdAt) }}</text>
           </view>
-          <view class="wish-status" :class="'status-' + wish.status">
-            {{ wish.statusText }}
-          </view>
+          <view class="wish-status">{{ item.auditStatusName }}</view>
         </view>
 
-        <!-- 需求内容 -->
+        <!-- 需求内容（全部取自后端 WishListItemDetailVO 的真实字段） -->
         <view class="wish-content">
-          <text class="wish-text">{{ wish.content }}</text>
-
-          <!-- 期望菜品 -->
-          <view class="expected-dishes" v-if="wish.dishes.length > 0">
-            <text class="dish-label">期望菜品：</text>
-            <view class="dish-tags">
-              <text class="dish-tag" v-for="dish in wish.dishes" :key="dish">
-                {{ dish }}
-              </text>
+          <view class="dish-row">
+            <image
+              v-if="item.dishImage"
+              class="dish-image"
+              :src="item.dishImage"
+              mode="aspectFill"
+            ></image>
+            <view class="dish-main">
+              <text class="dish-name">{{ item.dishName }}</text>
+              <text class="wish-text" v-if="item.description">{{ item.description }}</text>
             </view>
           </view>
 
-          <!-- 预算范围 -->
-          <view class="budget-info" v-if="wish.budget">
-            <uni-icons type="wallet" size="16" color="#52C41A"></uni-icons>
-            <text class="budget-text">预算：¥{{ wish.budget }}</text>
+          <view class="detail-line" v-if="item.tasteRequirement">
+            <text class="line-label">口味要求</text>
+            <text class="line-value">{{ item.tasteRequirement }}</text>
           </view>
 
-          <!-- 期望时间 -->
-          <view class="time-info" v-if="wish.expectTime">
-            <uni-icons type="calendar" size="16" color="#1890FF"></uni-icons>
-            <text class="time-text">期望时间：{{ wish.expectTime }}</text>
+          <view class="detail-line" v-if="item.expectedAvailableTime">
+            <text class="line-label">期望上架</text>
+            <text class="line-value">{{ formatDateTime(item.expectedAvailableTime) }}</text>
+          </view>
+
+          <view class="detail-line" v-if="hasRemainingHours(item)">
+            <text class="line-label">剩余审核</text>
+            <text class="line-value">{{ item.remainingHours }} 小时</text>
           </view>
         </view>
 
-        <!-- 互动信息 -->
-        <view class="interaction-info" v-if="wish.status !== 'pending'">
-          <view class="info-item" v-if="wish.replyCount > 0">
-            <text class="info-label">回复数</text>
-            <text class="info-value">{{ wish.replyCount }}</text>
-          </view>
-          <view class="info-item" v-if="wish.likeCount > 0">
-            <text class="info-label">点赞数</text>
-            <text class="info-value">{{ wish.likeCount }}</text>
-          </view>
-        </view>
-
-        <!-- 快捷操作 -->
-        <view class="quick-actions" v-if="wish.status === 'pending'" @tap.stop>
-          <button class="action-btn reject" @tap="rejectWish(wish)">
+        <!-- 快捷审核：受理 / 拒绝都打 POST /v1/wish-list/audit -->
+        <view class="quick-actions" v-if="item.auditStatus === 0" @tap.stop="stopPropagation">
+          <button class="action-btn reject" :disabled="submitting" @tap="rejectWish(item)">
             暂无法满足
           </button>
-          <button class="action-btn accept" @tap="acceptWish(wish)">
-            接受需求
+          <button class="action-btn accept" :disabled="submitting" @tap="acceptWish(item)">
+            受理需求
           </button>
         </view>
       </view>
 
       <!-- 加载状态 -->
-      <view class="load-status" v-if="wishlist.length > 0">
-        <text v-if="loading">加载中...</text>
-        <text v-else-if="noMore">没有更多了</text>
-        <text v-else @tap="loadMore">上拉加载更多</text>
+      <view class="load-status" v-if="loading">
+        <text>加载中...</text>
       </view>
 
       <!-- 空状态 -->
       <view class="empty-state" v-if="wishlist.length === 0 && !loading">
-        <empty text="暂无需求" icon="💭" buttonText="刷新列表" @button-click="onRefresh" />
+        <empty text="暂无待审核需求" icon="💭" buttonText="刷新列表" @button-click="onRefresh" />
       </view>
     </scroll-view>
   </view>
@@ -108,143 +100,63 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { wishApi } from '@/api/modules/wish.js'
-import { formatRelativeTime } from '@/utils/helper'
+import { wishApi, WISH_REJECTION_REASONS, OTHER_REJECTION_CODE } from '@/api/modules/wish.js'
+import { useMerchantStore } from '@/store/modules/merchant'
+import { formatRelativeTime, formatDateTime, showConfirm } from '@/utils/helper'
 
-const merchantId = ref('')
+const merchantStore = useMerchantStore()
 
-// 状态Tab
-const statusTabs = ref([
-  { label: '待审核', value: 'pending', count: 0 },
-  { label: '已接受', value: 'accepted', count: 0 },
-  { label: '已拒绝', value: 'rejected', count: 0 },
-  { label: '已完成', value: 'completed', count: 0 }
-])
-
-const activeStatus = ref('pending')
 const wishlist = ref([])
 const loading = ref(false)
 const refreshing = ref(false)
-const noMore = ref(false)
-const page = ref(1)
-const pageSize = 20
+const submitting = ref(false)
+const errorMessage = ref('')
 
 onMounted(() => {
-  merchantId.value = uni.getStorageSync('merchantId') || ''
-  // WISH-005: 加载商家心愿单列表
   loadWishlist()
 })
 
 /**
- * 切换状态
+ * 后端取不到昵称时用真实的用户 ID 兜底，不编造姓名
  */
-const changeStatus = (status) => {
-  activeStatus.value = status
-  page.value = 1
-  noMore.value = false
-  loadWishlist()
-}
+const displayUserName = (item) => item.userNickname || item.userId || ''
 
 /**
- * WISH-005: 加载心愿单列表
+ * remainingHours 只在待审核且后端算得出来时才有值
  */
-const loadWishlist = async (isRefresh = false) => {
+const hasRemainingHours = (item) =>
+  item.remainingHours !== null && item.remainingHours !== undefined
+
+const stopPropagation = () => {}
+
+/**
+ * 加载商家待审核列表
+ * 后端 merchantId 从请求身份取，所以这里只校验本地有没有商家身份，不往接口传参
+ */
+const loadWishlist = async () => {
   if (loading.value) return
 
-  loading.value = true
-  if (isRefresh) {
-    page.value = 1
-    noMore.value = false
+  const merchantId = merchantStore.resolveMerchantId()
+  if (!merchantId) {
+    wishlist.value = []
+    errorMessage.value = '未获取到商家身份，请重新登录商家账号后再试'
+    refreshing.value = false
+    return
   }
+
+  loading.value = true
+  errorMessage.value = ''
 
   try {
-    // WISH-005: 调用API获取商家心愿单列表
-    const res = await wishApi.getMerchantList({
-      merchantId: merchantId.value,
-      status: activeStatus.value,
-      page: page.value,
-      size: pageSize
-    })
-
-    if (res.code === 200 && res.data) {
-      const wishes = res.data.list || res.data || []
-
-      // 转换数据格式
-      const formattedWishes = wishes.map(wish => ({
-        id: wish.id,
-        user: {
-          id: wish.userId,
-          name: wish.userName || '匿名用户',
-          avatar: wish.userAvatar || 'https://via.placeholder.com/100'
-        },
-        content: wish.content,
-        dishes: wish.dishes || [],
-        budget: wish.budget || '',
-        expectTime: wish.expectedTime || '',
-        submitTime: formatRelativeTime(wish.createdAt),
-        status: wish.status || 'pending',
-        statusText: getStatusText(wish.status || 'pending'),
-        replyCount: wish.replyCount || 0,
-        likeCount: wish.likeCount || 0
-      }))
-
-      if (isRefresh) {
-        wishlist.value = formattedWishes
-      } else {
-        wishlist.value = [...wishlist.value, ...formattedWishes]
-      }
-
-      // 更新Tab计数
-      if (res.data.counts) {
-        statusTabs.value.forEach(tab => {
-          tab.count = res.data.counts[tab.value] || 0
-        })
-      }
-
-      if (wishes.length < pageSize) {
-        noMore.value = true
-      }
-    }
-
-    loading.value = false
-    refreshing.value = false
+    const res = await wishApi.getMerchantPending()
+    wishlist.value = Array.isArray(res.data) ? res.data : []
   } catch (error) {
-    console.error('加载心愿单失败:', error)
-
-    // 接口失败不回填任何假需求：清空列表并提示，交由空态与重试入口兜底
-    if (isRefresh) {
-      wishlist.value = []
-    }
-    uni.showToast({
-      title: error.message || '需求列表加载失败',
-      icon: 'none'
-    })
-
+    console.error('加载待审核需求失败:', error)
+    wishlist.value = []
+    errorMessage.value = error.message || '待审核需求加载失败，请稍后重试'
+  } finally {
     loading.value = false
     refreshing.value = false
-  }
-}
-
-/**
- * 获取状态文本
- */
-const getStatusText = (status) => {
-  const statusMap = {
-    pending: '待审核',
-    accepted: '已接受',
-    rejected: '已拒绝',
-    completed: '已完成'
-  }
-  return statusMap[status] || status
-}
-
-/**
- * 加载更多
- */
-const loadMore = () => {
-  if (!loading.value && !noMore.value) {
-    page.value++
-    loadWishlist()
   }
 }
 
@@ -253,112 +165,114 @@ const loadMore = () => {
  */
 const onRefresh = () => {
   refreshing.value = true
-  loadWishlist(true)
+  loadWishlist()
 }
 
 /**
  * 跳转到详情
  */
-const toDetail = (wish) => {
+const toDetail = (item) => {
   uni.navigateTo({
-    url: `/pages-merchant/wishlist/audit?id=${wish.id}`
+    url: `/pages-merchant/wishlist/audit?id=${item.id}`
   })
 }
 
 /**
- * WISH-006: 商家接受需求
+ * 让商家选一个拒绝原因
+ * 后端 approved=false 时 rejectionReasonCode 必填，所以必须选一个 code；
+ * 选「其他原因」时再补一句说明写进 auditRemark
+ * @returns {Promise<{code:number,title:string,remark:string}|null>} 取消返回 null
  */
-const acceptWish = (wish) => {
-  uni.showModal({
-    title: '接受需求',
-    content: '接受后将通知用户，并可以添加菜品。确认接受吗？',
-    success: async (res) => {
-      if (res.confirm) {
-        try {
-          uni.showLoading({ title: '处理中...' })
-
-          // WISH-006: 调用API接受需求
-          const apiRes = await wishApi.accept(wish.id, {
-            merchantId: merchantId.value,
-            quote: '', // 可选：报价
-            estimatedTime: '', // 可选：预计时间
-            remark: '商家已接受您的需求'
-          })
-
-          uni.hideLoading()
-
-          if (apiRes.code === 200) {
-            uni.showToast({
-              title: '已接受',
-              icon: 'success'
-            })
-
-            // 刷新列表
-            setTimeout(() => {
-              loadWishlist(true)
-            }, 1500)
-          } else {
-            throw new Error(apiRes.message || '接受失败')
-          }
-        } catch (error) {
-          console.error('接受需求失败:', error)
-          uni.hideLoading()
-          uni.showToast({
-            title: error.message || '接受失败',
-            icon: 'none'
-          })
+const pickRejectionReason = () =>
+  new Promise((resolve) => {
+    uni.showActionSheet({
+      itemList: WISH_REJECTION_REASONS.map((reason) => reason.title),
+      success: (res) => {
+        const reason = WISH_REJECTION_REASONS[res.tapIndex]
+        if (!reason) {
+          resolve(null)
+          return
         }
-      }
-    }
+        if (reason.code !== OTHER_REJECTION_CODE) {
+          resolve({ code: reason.code, title: reason.title, remark: '' })
+          return
+        }
+        uni.showModal({
+          title: '其他原因',
+          editable: true,
+          placeholderText: '请说明具体原因',
+          success: (modalRes) => {
+            const remark = (modalRes.content || '').trim()
+            if (!modalRes.confirm) {
+              resolve(null)
+              return
+            }
+            if (!remark) {
+              uni.showToast({ title: '请填写具体原因', icon: 'none' })
+              resolve(null)
+              return
+            }
+            resolve({ code: reason.code, title: reason.title, remark })
+          },
+          fail: () => resolve(null)
+        })
+      },
+      fail: () => resolve(null)
+    })
   })
+
+/**
+ * 受理需求：POST /v1/wish-list/audit { approved: true }
+ */
+const acceptWish = async (item) => {
+  const confirmed = await showConfirm('受理后该需求状态变为已通过，确认受理吗？', '受理需求')
+  if (!confirmed) return
+
+  submitting.value = true
+  uni.showLoading({ title: '处理中...' })
+  try {
+    const res = await wishApi.approve(item.id)
+    if (res.data !== true) {
+      throw new Error('受理失败')
+    }
+    uni.showToast({ title: '已受理', icon: 'success' })
+    await loadWishlist()
+  } catch (error) {
+    console.error('受理需求失败:', error)
+    uni.showToast({ title: error.message || '受理失败', icon: 'none' })
+  } finally {
+    uni.hideLoading()
+    submitting.value = false
+  }
 }
 
 /**
- * WISH-007: 商家拒绝需求
+ * 拒绝需求：POST /v1/wish-list/audit { approved: false, rejectionReasonCode, ... }
  */
-const rejectWish = (wish) => {
-  uni.showModal({
-    title: '无法满足',
-    content: '请输入拒绝原因（可选）',
-    editable: true,
-    placeholderText: '如：暂时缺少食材',
-    success: async (res) => {
-      if (res.confirm) {
-        try {
-          uni.showLoading({ title: '处理中...' })
+const rejectWish = async (item) => {
+  const reason = await pickRejectionReason()
+  if (!reason) return
 
-          // WISH-007: 调用API拒绝需求
-          const apiRes = await wishApi.reject(wish.id, {
-            merchantId: merchantId.value,
-            reason: res.content || '商家暂时无法满足此需求'
-          })
-
-          uni.hideLoading()
-
-          if (apiRes.code === 200) {
-            uni.showToast({
-              title: '已拒绝',
-              icon: 'success'
-            })
-
-            // 刷新列表
-            setTimeout(() => {
-              loadWishlist(true)
-            }, 1500)
-          } else {
-            throw new Error(apiRes.message || '拒绝失败')
-          }
-        } catch (error) {
-          console.error('拒绝需求失败:', error)
-          uni.hideLoading()
-          uni.showToast({
-            title: error.message || '拒绝失败',
-            icon: 'none'
-          })
-        }
-      }
+  submitting.value = true
+  uni.showLoading({ title: '处理中...' })
+  try {
+    const res = await wishApi.reject(item.id, {
+      rejectionReasonCode: reason.code,
+      rejectionReason: reason.remark || reason.title,
+      auditRemark: reason.remark || ''
+    })
+    if (res.data !== true) {
+      throw new Error('拒绝失败')
     }
-  })
+    uni.showToast({ title: '已拒绝', icon: 'success' })
+    await loadWishlist()
+  } catch (error) {
+    console.error('拒绝需求失败:', error)
+    uni.showToast({ title: error.message || '拒绝失败', icon: 'none' })
+  } finally {
+    uni.hideLoading()
+    submitting.value = false
+  }
 }
 </script>
 
@@ -373,44 +287,59 @@ const rejectWish = (wish) => {
   flex-direction: column;
 }
 
-/* 筛选Tab */
-.filter-tabs {
+/* 列表头 */
+.list-header {
   background: #fff;
-  padding: 20rpx;
+  padding: 24rpx 30rpx;
   display: flex;
-  gap: 15rpx;
+  align-items: center;
+  justify-content: space-between;
   border-bottom: 1rpx solid #eee;
 }
 
-.tab-item {
-  flex: 1;
-  height: 70rpx;
-  border-radius: 35rpx;
-  background: #F5F5F5;
-  @include flex-center;
-  font-size: 28rpx;
-  color: #666;
-  position: relative;
-
-  &.active {
-    background: #FF6B35;
-    color: #fff;
-    font-weight: bold;
-  }
+.list-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
 }
 
-.tab-count {
-  position: absolute;
-  top: -5rpx;
-  right: -5rpx;
-  min-width: 32rpx;
-  height: 32rpx;
-  padding: 0 8rpx;
-  background: #F5222D;
-  color: #fff;
-  font-size: 20rpx;
+.list-count {
+  font-size: 26rpx;
+  color: #999;
+}
+
+/* 错误态 */
+.error-state {
+  margin: 100rpx 40rpx 0;
+  padding: 60rpx 30rpx;
+  background: #fff;
   border-radius: 16rpx;
-  @include flex-center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30rpx;
+}
+
+.error-text {
+  font-size: 28rpx;
+  color: #666;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.retry-btn {
+  min-width: 240rpx;
+  height: 70rpx;
+  line-height: 70rpx;
+  border-radius: 35rpx;
+  background: #FF6B35;
+  color: #fff;
+  font-size: 28rpx;
+  border: none;
+
+  &::after {
+    border: none;
+  }
 }
 
 /* 列表 */
@@ -466,26 +395,8 @@ const rejectWish = (wish) => {
   border-radius: 20rpx;
   font-size: 24rpx;
   font-weight: bold;
-
-  &.status-pending {
-    background: #FFF7E6;
-    color: #FAAD14;
-  }
-
-  &.status-accepted {
-    background: #E6F7FF;
-    color: #1890FF;
-  }
-
-  &.status-rejected {
-    background: #FFF1F0;
-    color: #F5222D;
-  }
-
-  &.status-completed {
-    background: #F6FFED;
-    color: #52C41A;
-  }
+  background: #FFF7E6;
+  color: #FAAD14;
 }
 
 /* 需求内容 */
@@ -493,92 +404,76 @@ const rejectWish = (wish) => {
   margin-bottom: 15rpx;
 }
 
-.wish-text {
-  font-size: 28rpx;
-  color: #333;
-  line-height: 1.6;
+.dish-row {
+  display: flex;
+  gap: 15rpx;
   margin-bottom: 15rpx;
 }
 
-.expected-dishes {
+.dish-image {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 12rpx;
+  flex-shrink: 0;
+}
+
+.dish-main {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.dish-name {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.wish-text {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.6;
+}
+
+.detail-line {
+  display: flex;
+  gap: 12rpx;
   margin-bottom: 10rpx;
 }
 
-.dish-label {
+.line-label {
+  width: 130rpx;
   font-size: 26rpx;
   color: #999;
   flex-shrink: 0;
 }
 
-.dish-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10rpx;
+.line-value {
   flex: 1;
-}
-
-.dish-tag {
-  padding: 6rpx 16rpx;
-  background: rgba(255, 107, 53, 0.1);
-  color: #FF6B35;
-  font-size: 24rpx;
-  border-radius: 20rpx;
-}
-
-.budget-info,
-.time-info {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  margin-bottom: 10rpx;
-}
-
-.budget-text,
-.time-text {
-  font-size: 26rpx;
-  color: #666;
-}
-
-/* 互动信息 */
-.interaction-info {
-  display: flex;
-  gap: 30rpx;
-  padding: 15rpx 0;
-  border-top: 1rpx solid #eee;
-  margin-bottom: 15rpx;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-}
-
-.info-label {
-  font-size: 24rpx;
-  color: #999;
-}
-
-.info-value {
   font-size: 26rpx;
   color: #333;
-  font-weight: bold;
 }
 
 /* 快捷操作 */
 .quick-actions {
   display: flex;
   gap: 15rpx;
+  margin-top: 20rpx;
 }
 
 .action-btn {
   flex: 1;
   height: 70rpx;
+  line-height: 70rpx;
   border-radius: 35rpx;
   font-size: 28rpx;
   border: none;
+
+  &::after {
+    border: none;
+  }
 
   &.accept {
     background: #FF6B35;

@@ -1,145 +1,102 @@
 /**
- * 心愿单管理 API
- * 对接后端 WishController
- * 基础路径: /v1/wishes
+ * 想吃列表 API（用户 + 商家）
+ * 对接后端 WishListController，基础路径 /v1/wish-list（连字符）
+ * 桌面端同源参照实现：apps/client/src/renderer/src/api/wishList.js
  */
-import { get, post, put, del } from '@/utils/request'
+import { get, post, del } from '@/utils/request'
+import { WISH_LIST_API, buildUrl } from '../urlEnum'
+
+/**
+ * 拒绝原因枚举
+ *
+ * 逐项对齐后端 RejectionReason 枚举
+ * （apps/server/src/main/java/com/xx/jaseatschoicejava/enums/RejectionReason.java）。
+ * 后端 auditWishListItem 在 approved=false 时校验 rejectionReasonCode 必填，
+ * 缺失会抛「拒绝时必须选择拒绝原因」，所以拒绝必须从这份列表里带一个 code 过去。
+ * 后端新增/调整枚举项时这里要同步。
+ */
+export const WISH_REJECTION_REASONS = [
+  { code: 1, title: '食材季节性短缺' },
+  { code: 2, title: '食材供应链问题' },
+  { code: 3, title: '制作工艺过于复杂' },
+  { code: 4, title: '成本过高' },
+  { code: 5, title: '与餐厅定位不符' },
+  { code: 6, title: '食品安全考虑' },
+  { code: 7, title: '原料品质不稳定' },
+  { code: 8, title: '制作时间过长' },
+  { code: 9, title: '特殊设备限制' },
+  { code: 99, title: '其他原因' }
+]
+
+/** 「其他原因」的 code，选中它时页面会额外让商家填说明 */
+export const OTHER_REJECTION_CODE = 99
 
 export const wishApi = {
   /**
-   * WISH-001: 获取用户心愿列表
-   * GET /v1/wishes
-   * @param {Object} params - 查询参数
-   * @param {string} params.userId - 用户ID
-   * @param {string} params.status - 状态（pending/accepted/rejected/completed）
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
+   * 获取当前用户的想吃列表
+   * GET /v1/wish-list/items
    */
-  getUserList: (params) => get('/v1/wishes', params),
+  getUserItems: () => get(WISH_LIST_API.GET_USER_ITEMS),
 
   /**
-   * WISH-002: 获取心愿详情
-   * GET /v1/wishes/{wishId}
-   * @param {string} wishId - 心愿ID
+   * 获取想吃列表项详情
+   * GET /v1/wish-list/item/{itemId}
+   * @param {string} itemId - 列表项ID
    */
-  getDetail: (wishId) => get(`/v1/wishes/${wishId}`),
+  getDetail: (itemId) => get(buildUrl(WISH_LIST_API.GET_DETAIL, { itemId })),
 
   /**
-   * WISH-003: 点赞心愿
-   * POST /v1/wishes/{wishId}/like
-   * @param {string} wishId - 心愿ID
-   * @param {Object} data - 数据
-   * @param {string} data.userId - 用户ID
+   * 获取商家待审核列表
+   * GET /v1/wish-list/merchant/pending
+   * 无查询参数：商家身份由后端从请求身份（token）取
    */
-  like: (wishId, data) => post(`/v1/wishes/${wishId}/like`, data),
+  getMerchantPending: () => get(WISH_LIST_API.GET_MERCHANT_PENDING),
 
   /**
-   * 取消点赞
-   * POST /v1/wishes/{wishId}/unlike
-   * @param {string} wishId - 心愿ID
-   * @param {Object} data - 数据
-   * @param {string} data.userId - 用户ID
+   * 审核想吃列表项（受理/拒绝同一个端点）
+   * POST /v1/wish-list/audit
+   * @param {string} itemId - 列表项ID
+   * @param {Object} data - { approved, rejectionReasonCode, rejectionReason, auditRemark, actualAvailableTime }
    */
-  unlike: (wishId, data) => post(`/v1/wishes/${wishId}/unlike`, data),
+  audit: (itemId, data) => post(WISH_LIST_API.AUDIT, { wishListItemId: itemId, ...data }),
 
   /**
-   * WISH-004: 发布心愿
-   * POST /v1/wishes
-   * @param {Object} data - 心愿数据
-   * @param {string} data.userId - 用户ID
-   * @param {string} data.content - 心愿内容
-   * @param {string} data.category - 分类
-   * @param {Array} data.dishes - 期望菜品列表
-   * @param {Array} data.images - 图片列表
-   * @param {number} data.budget - 预算
-   * @param {string} data.expectedTime - 期望时间
+   * 受理想吃列表项（approved: true）
+   * @param {string} itemId - 列表项ID
+   * @param {Object} data - 可选 { actualAvailableTime }
    */
-  create: (data) => post('/v1/wishes', data),
+  approve: (itemId, data = {}) =>
+    post(WISH_LIST_API.AUDIT, { wishListItemId: itemId, approved: true, ...data }),
 
   /**
-   * 更新心愿
-   * PUT /v1/wishes/{wishId}
-   * @param {string} wishId - 心愿ID
-   * @param {Object} data - 心愿数据
+   * 拒绝想吃列表项（approved: false，rejectionReasonCode 必填）
+   * @param {string} itemId - 列表项ID
+   * @param {Object} data - { rejectionReasonCode, rejectionReason, auditRemark }
    */
-  update: (wishId, data) => put(`/v1/wishes/${wishId}`, data),
+  reject: (itemId, data = {}) =>
+    post(WISH_LIST_API.AUDIT, { wishListItemId: itemId, approved: false, ...data }),
 
   /**
-   * 删除心愿
-   * DELETE /v1/wishes/{wishId}
-   * @param {string} wishId - 心愿ID
-   * @param {Object} params - 参数
-   * @param {string} params.userId - 用户ID
+   * 创建想吃列表项
+   * POST /v1/wish-list/item
    */
-  delete: (wishId, params) => del(`/v1/wishes/${wishId}`, params),
+  create: (data) => post(WISH_LIST_API.CREATE, data),
 
   /**
-   * WISH-005: 获取商家心愿单列表
-   * GET /v1/wishes/merchant
-   * @param {Object} params - 查询参数
-   * @param {string} params.merchantId - 商家ID
-   * @param {string} params.status - 状态筛选
-   * @param {number} params.page - 页码
-   * @param {number} params.size - 每页数量
+   * 用户申诉被拒绝的想吃列表项
+   * POST /v1/wish-list/appeal
+   * @param {string} itemId - 列表项ID
+   * @param {Object} data - { appealContent }
    */
-  getMerchantList: (params) => get('/v1/wishes/merchant', params),
+  appeal: (itemId, data = {}) =>
+    post(WISH_LIST_API.APPEAL, { wishListItemId: itemId, ...data }),
 
   /**
-   * WISH-006: 商家接受心愿
-   * POST /v1/wishes/{wishId}/accept
-   * @param {string} wishId - 心愿ID
-   * @param {Object} data - 数据
-   * @param {string} data.merchantId - 商家ID
-   * @param {string} data.quote - 报价
-   * @param {string} data.estimatedTime - 预计时间
-   * @param {string} data.remark - 备注
+   * 用户撤回想吃列表项
+   * DELETE /v1/wish-list/item/{itemId}
+   * @param {string} itemId - 列表项ID
    */
-  accept: (wishId, data) => post(`/v1/wishes/${wishId}/accept`, data),
-
-  /**
-   * WISH-007: 商家拒绝心愿
-   * POST /v1/wishes/{wishId}/reject
-   * @param {string} wishId - 心愿ID
-   * @param {Object} data - 数据
-   * @param {string} data.merchantId - 商家ID
-   * @param {string} data.reason - 拒绝原因
-   */
-  reject: (wishId, data) => post(`/v1/wishes/${wishId}/reject`, data),
-
-  /**
-   * WISH-008: 获取商家端心愿详情（审核）
-   * GET /v1/wishes/{wishId}/audit
-   * @param {string} wishId - 心愿ID
-   * @param {Object} params - 参数
-   * @param {string} params.merchantId - 商家ID
-   */
-  getAuditDetail: (wishId, params) => get(`/v1/wishes/${wishId}/audit`, params),
-
-  /**
-   * 用户选择商家
-   * POST /v1/wishes/{wishId}/select-merchant
-   * @param {string} wishId - 心愿ID
-   * @param {Object} data - 数据
-   * @param {string} data.userId - 用户ID
-   * @param {string} data.merchantId - 商家ID
-   */
-  selectMerchant: (wishId, data) => post(`/v1/wishes/${wishId}/select-merchant`, data),
-
-  /**
-   * 获取心愿分类
-   * GET /v1/wishes/categories
-   */
-  getCategories: () => get('/v1/wishes/categories'),
-
-  /**
-   * 搜索心愿
-   * GET /v1/wishes/search
-   * @param {Object} params - 查询参数
-   * @param {string} params.keyword - 关键词
-   * @param {string} params.category - 分类
-   * @param {number} params.page - 页码
-   */
-  search: (params) => get('/v1/wishes/search', params)
+  withdraw: (itemId) => del(buildUrl(WISH_LIST_API.WITHDRAW, { itemId }))
 }
 
 export default wishApi

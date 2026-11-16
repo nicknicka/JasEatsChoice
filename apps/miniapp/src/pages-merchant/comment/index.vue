@@ -97,7 +97,7 @@
       >
         <!-- 用户信息 -->
         <view class="user-header">
-          <image class="user-avatar" :src="comment.user.avatar" mode="aspectFill"></image>
+          <image v-if="comment.user.avatar" class="user-avatar" :src="comment.user.avatar" mode="aspectFill"></image>
           <view class="user-info">
             <text class="user-name">{{ comment.user.name }}</text>
             <view class="comment-rating">
@@ -174,7 +174,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { reviewApi } from '@/api/modules/review.js'
+import { reviewApi, parseReviewImages } from '@/api/modules/review.js'
 import { formatRelativeTime } from '@/utils/helper'
 
 const merchantId = ref('')
@@ -290,7 +290,7 @@ const loadComments = async (isRefresh = false) => {
 
     const res = await reviewApi.getMerchantReviews(merchantId.value, params)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const reviews = res.data.list || res.data || []
 
       // 转换数据格式
@@ -298,12 +298,13 @@ const loadComments = async (isRefresh = false) => {
         id: review.id,
         user: {
           name: review.isAnonymous ? '匿名用户' : (review.userName || '用户***'),
-          avatar: review.userAvatar || 'https://via.placeholder.com/60'
+          avatar: review.userAvatar || ''
         },
-        rating: review.rating || 5,
-        time: formatTime(review.createdAt),
+        rating: review.rating ?? 0,
+        time: formatRelativeTime(review.createdAt),
         content: review.content || '',
-        images: review.images || [],
+        // images 是未解析的 JSON 字符串，直接当数组用会逐字符渲染
+        images: parseReviewImages(review.images),
         dish: review.dish ? {
           id: review.dish.id,
           name: review.dish.name,
@@ -312,7 +313,7 @@ const loadComments = async (isRefresh = false) => {
         tags: review.tags || [],
         reply: review.reply ? {
           content: review.reply.content,
-          time: formatTime(review.reply.createdAt)
+          time: formatRelativeTime(review.reply.createdAt)
         } : null
       }))
 

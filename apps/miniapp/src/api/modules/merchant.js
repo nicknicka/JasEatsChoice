@@ -97,6 +97,26 @@ export const merchantApi = {
   getInfo: () => get(MERCHANT_API.GET_MERCHANT_INFO),
 
   /**
+   * 获取商家详情（商家端单数路由）
+   * GET /v1/merchant/{merchantId}
+   * 注意与 getDetail 的区别：getDetail 走复数 /v1/merchants/{merchantId}，
+   * 后端返回的白名单里没有 status；本接口返回完整 Merchant 实体，含 status（true=营业 / false=休息）。
+   * 路径字面量写在本模块内：urlEnum.js 由其他 writer 独占（#593）。
+   * @param {string} merchantId - 商家ID
+   * @returns {Promise} 返回商家实体
+   */
+  getShopDetail: (merchantId) => get(buildUrl('/v1/merchant/:merchantId', { merchantId })),
+
+  /**
+   * 切换商家营业状态
+   * PUT /v1/merchant/{merchantId}/status
+   * 无请求体，服务端对 status 取反，响应不返回新状态，调用后需重新 getShopDetail 回读。
+   * @param {string} merchantId - 商家ID
+   * @returns {Promise} 返回切换结果
+   */
+  updateStatus: (merchantId) => put(buildUrl('/v1/merchant/:merchantId/status', { merchantId })),
+
+  /**
    * M-001: 获取商家资料
    * GET /v1/merchant/profile
    * @returns {Promise} 返回商家资料
