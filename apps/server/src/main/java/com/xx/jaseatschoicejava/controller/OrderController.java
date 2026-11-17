@@ -43,6 +43,7 @@ public class OrderController {
     private final PaymentService paymentService;
     private final WalletService walletService;
     private final OrderDishService orderDishService;
+    private final com.xx.jaseatschoicejava.security.CurrentIdentityResolver identityResolver;
     private final PaymentPasswordService paymentPasswordService;
 
     /**
@@ -155,7 +156,16 @@ public class OrderController {
     @GetMapping("/merchant/{merchantId}")
     public ResponseResult<?> getOrdersByMerchantId(
             @PathVariable String merchantId,
-            @RequestParam(defaultValue = "true") boolean today) {
+            @RequestParam(defaultValue = "true") boolean today,
+            HttpServletRequest request) {
+        // 归属校验（#597）：商家订单只给商家本人（或管理员），此前任何登录用户都能读任意商家订单
+        if (identityResolver.userIdOrNull(request) == null) {
+            return ResponseResult.fail("401", "请先登录");
+        }
+        if (!identityResolver.canManageMerchant(request, merchantId)) {
+            return ResponseResult.fail("403", "无权查看该商家订单");
+        }
+
         LambdaQueryWrapper<Order> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Order::getMerchantId, merchantId);
 

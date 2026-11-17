@@ -70,6 +70,9 @@ public class MerchantController {
     private UserService userService;
 
     @Autowired
+    private com.xx.jaseatschoicejava.security.CurrentIdentityResolver identityResolver;
+
+    @Autowired
     private OrderService orderService;
 
     @Autowired
@@ -445,10 +448,19 @@ public class MerchantController {
      * 更新商家状态
      */
     @PutMapping("/{merchantId}/status")
-    public ResponseResult<?> updateMerchantStatus(@PathVariable String merchantId) {
+    public ResponseResult<?> updateMerchantStatus(@PathVariable String merchantId,
+                                                  jakarta.servlet.http.HttpServletRequest request) {
         // 参数验证
         if (merchantId == null) {
             return ResponseResult.fail("400", "参数错误");
+        }
+
+        // 归属校验（#597）：营业状态属于商家自有数据，此前任何登录用户都能开关任意商家
+        if (identityResolver.userIdOrNull(request) == null) {
+            return ResponseResult.fail("401", "请先登录");
+        }
+        if (!identityResolver.canManageMerchant(request, merchantId)) {
+            return ResponseResult.fail("403", "无权操作该商家");
         }
 
         // 切换商家状态
@@ -636,23 +648,8 @@ public class MerchantController {
      * 判断当前登录者能否管理该商家的相册：管理员，或用户档案绑定的 merchantId 与路径一致。
      */
     private boolean canManageMerchant(String currentUserId, String merchantId) {
-        if (currentUserId == null || currentUserId.isBlank() || merchantId == null) {
-            return false;
-        }
-
-        org.springframework.security.core.Authentication authentication =
-            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null
-                && authentication.isAuthenticated()
-                && !(authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)
-                && authentication.getAuthorities().stream()
-                    .anyMatch(authority -> authority.getAuthority() != null
-                        && authority.getAuthority().startsWith("admin:"))) {
-            return true;
-        }
-
-        User currentUser = userService.getById(currentUserId);
-        return currentUser != null && merchantId.equals(currentUser.getMerchantId());
+        // 判据统一收敛到 CurrentIdentityResolver（#597），此处只保留原方法名供既有调用点使用
+        return identityResolver.canManageMerchant(currentUserId, merchantId);
     }
 
     /**
@@ -775,7 +772,15 @@ public class MerchantController {
      * 获取今日营业概览
      */
     @GetMapping("/{merchantId}/business-overview")
-    public ResponseResult<?> getBusinessOverview(@PathVariable String merchantId) {
+    public ResponseResult<?> getBusinessOverview(@PathVariable String merchantId,
+                                                 jakarta.servlet.http.HttpServletRequest request) {
+        // 归属校验（#597）：经营概览只给商家本人（或管理员）
+        if (identityResolver.userIdOrNull(request) == null) {
+            return ResponseResult.fail("401", "请先登录");
+        }
+        if (!identityResolver.canManageMerchant(request, merchantId)) {
+            return ResponseResult.fail("403", "无权查看该商家经营数据");
+        }
         try {
             // 从数据库获取真实数据
             Map<String, Object> overview = new HashMap<>();
@@ -923,7 +928,15 @@ public class MerchantController {
      * 获取经营统计数据
      */
     @GetMapping("/{merchantId}/statistics")
-    public ResponseResult<?> getStatistics(@PathVariable String merchantId, @RequestParam String timeRange) {
+    public ResponseResult<?> getStatistics(@PathVariable String merchantId, @RequestParam String timeRange,
+                                           jakarta.servlet.http.HttpServletRequest request) {
+        // 归属校验（#597）：经营统计只给商家本人（或管理员）
+        if (identityResolver.userIdOrNull(request) == null) {
+            return ResponseResult.fail("401", "请先登录");
+        }
+        if (!identityResolver.canManageMerchant(request, merchantId)) {
+            return ResponseResult.fail("403", "无权查看该商家经营数据");
+        }
         try {
             LocalDate today = LocalDate.now();
             LocalDateTime startTime = null;

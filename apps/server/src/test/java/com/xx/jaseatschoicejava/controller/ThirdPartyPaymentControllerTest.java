@@ -73,7 +73,9 @@ public class ThirdPartyPaymentControllerTest {
         OrderDishService orderDishService = mock(OrderDishService.class);
         PaymentPasswordService paymentPasswordService = mock(PaymentPasswordService.class);
         OrderController controller = new OrderController(
-                orderService, paymentService, walletService, orderDishService, paymentPasswordService);
+                orderService, paymentService, walletService, orderDishService,
+                mock(com.xx.jaseatschoicejava.security.CurrentIdentityResolver.class),
+                paymentPasswordService);
 
         Order order = new Order();
         order.setId("order-1");

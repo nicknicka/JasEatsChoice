@@ -32,13 +32,16 @@ public class ReviewControllerTest {
         UserService userService = mock(UserService.class);
         DishService dishService = mock(DishService.class);
 
+        com.xx.jaseatschoicejava.security.CurrentIdentityResolver identityResolver =
+                mock(com.xx.jaseatschoicejava.security.CurrentIdentityResolver.class);
         ReviewController controller = new ReviewController(
                 reviewService,
                 reviewReplyService,
                 orderService,
                 orderDishService,
                 userService,
-                dishService
+                dishService,
+                identityResolver
         );
 
         Review review = new Review();
@@ -64,13 +67,16 @@ public class ReviewControllerTest {
         UserService userService = mock(UserService.class);
         DishService dishService = mock(DishService.class);
 
+        com.xx.jaseatschoicejava.security.CurrentIdentityResolver identityResolver =
+                mock(com.xx.jaseatschoicejava.security.CurrentIdentityResolver.class);
         ReviewController controller = new ReviewController(
                 reviewService,
                 reviewReplyService,
                 orderService,
                 orderDishService,
                 userService,
-                dishService
+                dishService,
+                identityResolver
         );
 
         Review review1 = new Review();
@@ -96,7 +102,13 @@ public class ReviewControllerTest {
         when(reviewReplyService.list(org.mockito.ArgumentMatchers.<Wrapper<ReviewReply>>any()))
                 .thenReturn(List.of(merchantReply, additionalReply));
 
-        ResponseResult<?> response = controller.getReviewStatistics("m1");
+        // 归属校验（#597）：统计接口需要商家本人身份，这里以"属于该商家"放行
+        when(identityResolver.canManageMerchant(
+                org.mockito.ArgumentMatchers.any(jakarta.servlet.http.HttpServletRequest.class),
+                org.mockito.ArgumentMatchers.any())).thenReturn(true);
+
+        ResponseResult<?> response = controller.getReviewStatistics(
+                "m1", new org.springframework.mock.web.MockHttpServletRequest());
 
         assertTrue(response.getSuccess());
         assertNotNull(response.getData());

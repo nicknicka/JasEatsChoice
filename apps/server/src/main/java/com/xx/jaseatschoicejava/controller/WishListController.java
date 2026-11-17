@@ -5,9 +5,8 @@ import com.xx.jaseatschoicejava.dto.WishListAppealDTO;
 import com.xx.jaseatschoicejava.dto.WishListAuditDTO;
 import com.xx.jaseatschoicejava.dto.WishListItemCreateDTO;
 import com.xx.jaseatschoicejava.entity.User;
-import com.xx.jaseatschoicejava.service.UserService;
+import com.xx.jaseatschoicejava.security.CurrentIdentityResolver;
 import com.xx.jaseatschoicejava.service.WishListService;
-import com.xx.jaseatschoicejava.util.UserIdentityUtil;
 import com.xx.jaseatschoicejava.vo.WishListItemDetailVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,26 +31,15 @@ public class WishListController {
     @Autowired
     private WishListService wishListService;
 
-    @Autowired
-    private UserService userService;
-
     /**
-     * 取当前登录用户。
+     * 身份与归属判据统一取自共享组件（#597），本控制器不再自留一份实现。
      * <p>
-     * 身份只认 JwtAuthenticationFilter 验签后写入的可信用户ID；此前这里读的
-     * {@code request.getAttribute("userId")} 从来没有写入点，取不到就回落成写死的
-     * {@code test_user}，等于任何登录用户都能以同一个测试身份读写想吃列表（#593）。
-     *
-     * @param request HTTP请求
-     * @return 用户实体；未登录或用户不存在时返回 null
+     * 此前这里有个私有 {@code resolveCurrentUser}，重复了组件里
+     * {@link CurrentIdentityResolver#currentUserOrNull} 的逻辑（#593 期间临时加的）；
+     * 判据分散在控制器里必然再次漂移，故收敛掉。
      */
-    private User resolveCurrentUser(HttpServletRequest request) {
-        String userId = UserIdentityUtil.extractVerifiedUserId(request);
-        if (userId == null) {
-            return null;
-        }
-        return userService.getById(userId);
-    }
+    @Autowired
+    private CurrentIdentityResolver identityResolver;
 
     /**
      * 创建想吃列表项
@@ -64,7 +52,7 @@ public class WishListController {
     public ResponseResult<String> createWishListItem(
             @RequestBody WishListItemCreateDTO dto,
             HttpServletRequest request) {
-        User currentUser = resolveCurrentUser(request);
+        User currentUser = identityResolver.currentUserOrNull(request);
         if (currentUser == null) {
             return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
@@ -81,7 +69,7 @@ public class WishListController {
      */
     @GetMapping("/items")
     public ResponseResult<List<WishListItemDetailVO>> getUserWishList(HttpServletRequest request) {
-        User currentUser = resolveCurrentUser(request);
+        User currentUser = identityResolver.currentUserOrNull(request);
         if (currentUser == null) {
             return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
@@ -98,7 +86,7 @@ public class WishListController {
      */
     @GetMapping("/merchant/pending")
     public ResponseResult<List<WishListItemDetailVO>> getMerchantPendingList(HttpServletRequest request) {
-        User currentUser = resolveCurrentUser(request);
+        User currentUser = identityResolver.currentUserOrNull(request);
         if (currentUser == null) {
             return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
@@ -124,7 +112,7 @@ public class WishListController {
     public ResponseResult<Boolean> auditWishListItem(
             @RequestBody WishListAuditDTO dto,
             HttpServletRequest request) {
-        User currentUser = resolveCurrentUser(request);
+        User currentUser = identityResolver.currentUserOrNull(request);
         if (currentUser == null) {
             return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
@@ -133,6 +121,27 @@ public class WishListController {
         String auditorName = currentUser.getNickname();
         if (auditorName == null || auditorName.isBlank()) {
             auditorName = "用户" + auditorId;
+        }
+
+        // 归属校验（#597）：审核的是"挂在某个商家名下"的想吃需求。
+        // 此前只按 wishListItemId 定位，service 也不比对 merchant_id，
+        // 因此任何登录用户都能受理/拒绝任意商家的需求。
+        String wishListItemId = dto.getWishListItemId();
+        if (wishListItemId == null || wishListItemId.isBlank()) {
+            return ResponseResult.fail("400", "wishListItemId 不能为空");
+        }
+        WishListItemDetailVO target;
+        try {
+            target = wishListService.getWishListItemDetail(wishListItemId);
+        } catch (RuntimeException e) {
+            log.warn("审核时取想吃列表项失败：wishListItemId={}, reason={}", wishListItemId, e.getMessage());
+            return ResponseResult.fail("404", "想吃列表项不存在");
+        }
+        if (target == null) {
+            return ResponseResult.fail("404", "想吃列表项不存在");
+        }
+        if (!identityResolver.canManageMerchant(request, target.getMerchantId())) {
+            return ResponseResult.fail("403", "无权审核该想吃需求");
         }
 
         boolean success = wishListService.auditWishListItem(dto, auditorId, auditorName);
@@ -150,7 +159,7 @@ public class WishListController {
     public ResponseResult<Boolean> appealWishListItem(
             @RequestBody WishListAppealDTO dto,
             HttpServletRequest request) {
-        User currentUser = resolveCurrentUser(request);
+        User currentUser = identityResolver.currentUserOrNull(request);
         if (currentUser == null) {
             return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
@@ -170,7 +179,7 @@ public class WishListController {
     public ResponseResult<Boolean> withdrawWishListItem(
             @PathVariable String itemId,
             HttpServletRequest request) {
-        User currentUser = resolveCurrentUser(request);
+        User currentUser = identityResolver.currentUserOrNull(request);
         if (currentUser == null) {
             return ResponseResult.fail("401", "未登录或登录状态已失效");
         }
@@ -190,7 +199,27 @@ public class WishListController {
     public ResponseResult<WishListItemDetailVO> getWishListItemDetail(
             @PathVariable String itemId,
             HttpServletRequest request) {
-        WishListItemDetailVO detail = wishListService.getWishListItemDetail(itemId);
+        WishListItemDetailVO detail;
+        try {
+            detail = wishListService.getWishListItemDetail(itemId);
+        } catch (RuntimeException e) {
+            // service 查不到时抛 RuntimeException("想吃列表项不存在")，此前会冒泡成 500；
+            // 这里按"不存在"处理。其余异常也一并记日志，避免把真实故障静默吞成 404。
+            log.warn("查询想吃列表项详情失败：itemId={}", itemId, e);
+            return ResponseResult.fail("404", "想吃列表项不存在");
+        }
+
+        if (detail == null) {
+            return ResponseResult.fail("404", "想吃列表项不存在");
+        }
+
+        // #597：归属判据用 canAccessOwnedResource——列表项的归属方可能是用户ID，
+        // 也可能是商家ID（商家端代客记录），两者任一匹配即可查看。
+        // 不属于调用方时统一返回 404，不用 403，避免用主键探测他人列表项是否存在。
+        if (!identityResolver.canAccessOwnedResource(request, detail.getUserId(), detail.getMerchantId())) {
+            return ResponseResult.fail("404", "想吃列表项不存在");
+        }
+
         return ResponseResult.success(detail);
     }
 
@@ -200,7 +229,12 @@ public class WishListController {
      * @return 处理数量
      */
     @PostMapping("/auto-audit-timeout")
-    public ResponseResult<Integer> autoAuditTimeoutItems() {
+    public ResponseResult<Integer> autoAuditTimeoutItems(HttpServletRequest request) {
+        // #597：这是批处理触发器，定时任务直接调用 service，不经过本端点；
+        // 对外只允许管理员手动触发，避免任何登录用户随意跑批量审核。
+        if (!identityResolver.isAdmin()) {
+            return ResponseResult.fail("403", "仅管理员可触发超时审核");
+        }
         int count = wishListService.autoAuditTimeoutItems();
         return ResponseResult.success(count);
     }

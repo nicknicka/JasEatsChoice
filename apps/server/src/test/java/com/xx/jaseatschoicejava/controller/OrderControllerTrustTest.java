@@ -48,6 +48,7 @@ class OrderControllerTrustTest {
                 paymentService,
                 walletService,
                 mock(OrderDishService.class),
+                mock(com.xx.jaseatschoicejava.security.CurrentIdentityResolver.class),
                 mock(PaymentPasswordService.class)
         );
     }
