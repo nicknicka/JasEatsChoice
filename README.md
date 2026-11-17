@@ -13,7 +13,7 @@
 | `deploy` | Compose 基础文件 + dev/prod overlay、nginx 配置、环境变量模板 |
 | `db/init` | Flyway 建表与种子迁移的来源；后端从 classpath 下的 `db/migration` 自动执行，运行时不挂载到容器 |
 | `db/migrations` | 历史迁移脚本归档，仅作追溯，不参与启动 |
-| `tests` | 18 个 spec / 148 条 Playwright 用例与进度台账 |
+| `tests` | 19 个 spec / 160 条 Playwright 用例与进度台账 |
 | `scripts` | 生成环境变量、等待健康、CI 入口、种子校验等脚本 |
 | `docs` | 当前有效的产品、接口、技术、测试、交付文档（`docs/archive/` 已按 ADR 0003 删除） |
 
@@ -43,7 +43,7 @@ make up          # 起 MySQL + Redis + Spring Boot + nginx，并等待全部 hea
 
 ```bash
 make test-smoke   # 只跑 01/04/10 三条冒烟
-make test         # 全部 148 条
+make test         # 全部 160 条
 ```
 
 用例打的是 Web 版渲染进程（`PLAYWRIGHT_BASE_URL`，默认 `http://localhost:5173`），
@@ -103,7 +103,7 @@ npm run build:mp-weixin    # 产物 dist/build/mp-weixin，用微信开发者工
 ## CI
 
 - `.github/workflows/smoke.yml`：PR 与主干推送跑 5 个 spec（01/04/08/10/16）、共 59 条冒烟。
-- `.github/workflows/regression.yml`：每晚定时 + 手动触发跑全量 148 条，上传 HTML 报告。
+- `.github/workflows/regression.yml`：每晚定时 + 手动触发跑全量 160 条，上传 HTML 报告。
 
 ## 历史仓库
 

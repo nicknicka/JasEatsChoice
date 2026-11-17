@@ -1,6 +1,7 @@
 const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 const { TEST_API_BASE } = require('../utils/api')
+const { adminToken } = require('../utils/auth-token')
 
 test.describe('模块七：聊天与消息', () => {
 
@@ -15,6 +16,25 @@ async function apiRequest(page, request, path, options = {}) {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {})
+    }
+  })
+  const responseBody = await response.json().catch(() => null)
+  if (!response.ok() || !responseBody?.success) {
+    throw new Error(`请求 ${path} 失败（${response.status()}）：${responseBody?.message || '无响应'}`)
+  }
+  return responseBody.data
+}
+
+// 越权读被 #597 拦掉后，核对"别人会话里有没有这条消息"必须用本来就有权限的身份。
+// 管理员令牌在 CurrentIdentityResolver.isCallerIdentity 判据下放行（isAdmin() 分支），
+// 因此用它读 GET /v1/chat/users/{userId}/chat-sessions 与 /v1/chat/{sessionId}/messages。
+// 注意：不能用发送者令牌直读收件人会话，那正是本次收紧要拦的行为。
+async function adminApiRequest(request, path) {
+  const token = await adminToken()
+  const response = await request.fetch(`${TEST_API_BASE.replace(/\/$/, '')}${path}`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`
     }
   })
   const responseBody = await response.json().catch(() => null)
@@ -199,13 +219,14 @@ async function getConversation(page, request, userId, sessionId) {
       await expect(dialog).toBeHidden()
       await expect(toolbar).toBeHidden()
 
-      // 收件人侧核对：每个收件人的会话里都能看到同一条消息
+      // 收件人侧核对：每个收件人的会话里都能看到同一条消息。
+      // 用管理员令牌读（发送者对收件人会话没有读权限），仍直接读后端数据，核对的是服务端真实落库结果。
       for (const recipientId of recipients) {
-        const sessions = await apiRequest(page, request, `/v1/chat/users/${encodeURIComponent(recipientId)}/chat-sessions`)
+        const sessions = await adminApiRequest(request, `/v1/chat/users/${encodeURIComponent(recipientId)}/chat-sessions`)
         const session = sessions.find((item) => item.targetId === senderId && item.lastMessage === content)
         expect(session, `收件人 ${recipientId} 应出现与发送者的会话`).toBeTruthy()
 
-        const history = await apiRequest(page, request, `/v1/chat/${encodeURIComponent(session.id)}/messages?size=50`)
+        const history = await adminApiRequest(request, `/v1/chat/${encodeURIComponent(session.id)}/messages?size=50`)
         const received = (history.records || []).filter((msg) => msg.content === content)
         expect(received.length, `收件人 ${recipientId} 的会话应包含刚群发的消息`).toBeGreaterThanOrEqual(1)
       }
