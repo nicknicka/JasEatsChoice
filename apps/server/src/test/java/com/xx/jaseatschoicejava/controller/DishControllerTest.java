@@ -28,6 +28,12 @@ class DishControllerTest {
         DishController controller = new DishController();
         ReflectionTestUtils.setField(controller, "dishService", dishService);
         ReflectionTestUtils.setField(controller, "menuService", mock(MenuService.class));
+        // 归属校验（#597）：单测里以"该菜品属于调用方"放行
+        com.xx.jaseatschoicejava.security.CurrentIdentityResolver identityResolver =
+                mock(com.xx.jaseatschoicejava.security.CurrentIdentityResolver.class);
+        when(identityResolver.canManageMerchant(
+                any(jakarta.servlet.http.HttpServletRequest.class), any())).thenReturn(true);
+        ReflectionTestUtils.setField(controller, "identityResolver", identityResolver);
 
         Dish dish = new Dish();
         dish.setId("dish-1");
@@ -38,7 +44,8 @@ class DishControllerTest {
         when(dishService.getById("dish-1")).thenReturn(dish, persistedDish);
         when(dishService.updateById(any(Dish.class))).thenReturn(true);
 
-        ResponseResult<?> response = controller.updateDishStatus("dish-1", Map.of("status", false));
+        ResponseResult<?> response = controller.updateDishStatus("dish-1", Map.of("status", false),
+                new org.springframework.mock.web.MockHttpServletRequest());
 
         assertTrue(response.getSuccess());
         ArgumentCaptor<Dish> captor = ArgumentCaptor.forClass(Dish.class);
@@ -53,13 +60,20 @@ class DishControllerTest {
         DishController controller = new DishController();
         ReflectionTestUtils.setField(controller, "dishService", dishService);
         ReflectionTestUtils.setField(controller, "menuService", mock(MenuService.class));
+        // 归属校验（#597）：单测里以"该菜品属于调用方"放行
+        com.xx.jaseatschoicejava.security.CurrentIdentityResolver identityResolver =
+                mock(com.xx.jaseatschoicejava.security.CurrentIdentityResolver.class);
+        when(identityResolver.canManageMerchant(
+                any(jakarta.servlet.http.HttpServletRequest.class), any())).thenReturn(true);
+        ReflectionTestUtils.setField(controller, "identityResolver", identityResolver);
 
         Dish dish = new Dish();
         dish.setId("dish-1");
         when(dishService.getById("dish-1")).thenReturn(dish);
         when(dishService.updateById(any(Dish.class))).thenReturn(false);
 
-        ResponseResult<?> response = controller.updateDishStatus("dish-1", Map.of("status", false));
+        ResponseResult<?> response = controller.updateDishStatus("dish-1", Map.of("status", false),
+                new org.springframework.mock.web.MockHttpServletRequest());
 
         assertFalse(response.getSuccess());
         assertEquals("500", response.getCode());
@@ -71,6 +85,12 @@ class DishControllerTest {
         DishController controller = new DishController();
         ReflectionTestUtils.setField(controller, "dishService", dishService);
         ReflectionTestUtils.setField(controller, "menuService", mock(MenuService.class));
+        // 归属校验（#597）：单测里以"该菜品属于调用方"放行
+        com.xx.jaseatschoicejava.security.CurrentIdentityResolver identityResolver =
+                mock(com.xx.jaseatschoicejava.security.CurrentIdentityResolver.class);
+        when(identityResolver.canManageMerchant(
+                any(jakarta.servlet.http.HttpServletRequest.class), any())).thenReturn(true);
+        ReflectionTestUtils.setField(controller, "identityResolver", identityResolver);
 
         Dish dish = new Dish();
         dish.setId("dish-1");
@@ -78,7 +98,8 @@ class DishControllerTest {
         when(dishService.getById("dish-1")).thenReturn(dish);
         when(dishService.updateById(any(Dish.class))).thenReturn(true);
 
-        ResponseResult<?> response = controller.updateDishStatus("dish-1", Map.of("status", false));
+        ResponseResult<?> response = controller.updateDishStatus("dish-1", Map.of("status", false),
+                new org.springframework.mock.web.MockHttpServletRequest());
 
         assertFalse(response.getSuccess());
         assertEquals("500", response.getCode());
@@ -90,7 +111,8 @@ class DishControllerTest {
         DishController controller = new DishController();
         ReflectionTestUtils.setField(controller, "dishService", dishService);
 
-        ResponseResult<?> response = controller.updateDishStatus("dish-1", Map.of());
+        ResponseResult<?> response = controller.updateDishStatus("dish-1", Map.of(),
+                new org.springframework.mock.web.MockHttpServletRequest());
 
         assertFalse(response.getSuccess());
         assertEquals("400", response.getCode());

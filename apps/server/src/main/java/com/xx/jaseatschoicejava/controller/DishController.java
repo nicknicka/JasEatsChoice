@@ -7,6 +7,7 @@ import com.xx.jaseatschoicejava.common.ResponseResult;
 import com.xx.jaseatschoicejava.dto.MenuWithDishStatusDTO;
 import com.xx.jaseatschoicejava.entity.Dish;
 import com.xx.jaseatschoicejava.exception.BusinessException;
+import com.xx.jaseatschoicejava.security.CurrentIdentityResolver;
 import com.xx.jaseatschoicejava.service.DishService;
 import com.xx.jaseatschoicejava.service.MenuService;
 import com.xx.jaseatschoicejava.service.UserBehaviorService;
@@ -38,6 +39,9 @@ public class DishController {
 
     @Autowired
     private UserBehaviorService userBehaviorService;
+
+    @Autowired
+    private CurrentIdentityResolver identityResolver;
 
     /**
      * 获取菜品列表
@@ -304,7 +308,19 @@ public class DishController {
      * 创建菜品
      */
     @PostMapping
-    public ResponseResult<?> createDish(@RequestBody Dish dish) {
+    public ResponseResult<?> createDish(@RequestBody Dish dish, HttpServletRequest request) {
+        // #597 归属校验：请求体里的 merchantId 不可信，非管理员只能挂到调用方自己绑定的商家
+        if (!identityResolver.isAdmin()) {
+            String ownedMerchantId = identityResolver.merchantIdOrNull(request);
+            String bodyMerchantId = dish.getMerchantId();
+            if (ownedMerchantId == null
+                    || (bodyMerchantId != null && !bodyMerchantId.isBlank()
+                        && !ownedMerchantId.equals(bodyMerchantId))) {
+                return ResponseResult.fail("403", "无权为该商家创建菜品");
+            }
+            // 请求体没带 merchantId 时用它填充，带了且与自己一致时保持等价
+            dish.setMerchantId(ownedMerchantId);
+        }
         // 设置默认值
         if (dish.getStatus() == null) {
             dish.setStatus(true); // 默认上架
@@ -320,8 +336,19 @@ public class DishController {
      * 更新菜品
      */
     @PutMapping("/{dishId}")
-    public ResponseResult<?> updateDish(@PathVariable String dishId, @RequestBody Dish dish) {
+    public ResponseResult<?> updateDish(@PathVariable String dishId, @RequestBody Dish dish,
+                                       HttpServletRequest request) {
+        Dish existing = dishService.getById(dishId);
+        if (existing == null) {
+            return ResponseResult.fail("404", "菜品不存在");
+        }
+        // #597 归属校验：菜品的归属以库里的 merchant_id 为准
+        if (!identityResolver.canManageMerchant(request, existing.getMerchantId())) {
+            return ResponseResult.fail("403", "无权操作该菜品");
+        }
         dish.setId(dishId);
+        // #597 防改归属：丢弃请求体里的 merchantId，沿用库里的归属
+        dish.setMerchantId(existing.getMerchantId());
         boolean updated = dishService.updateById(dish);
         if (updated) {
             return ResponseResult.success(dishService.getById(dishId)); // 返回更新后的菜品数据
@@ -333,14 +360,20 @@ public class DishController {
      * 更新菜品状态（上架/下架）
      */
     @PutMapping("/{dishId}/status")
-    public ResponseResult<?> updateDishStatus(@PathVariable String dishId, @RequestBody java.util.Map<String, Object> request) {
-        Boolean status = (Boolean) request.get("status");
+    public ResponseResult<?> updateDishStatus(@PathVariable String dishId,
+                                             @RequestBody java.util.Map<String, Object> body,
+                                             HttpServletRequest request) {
+        Boolean status = (Boolean) body.get("status");
         if (status == null) {
             return ResponseResult.fail("400", "菜品状态不能为空");
         }
         Dish dish = dishService.getById(dishId);
         if (dish == null) {
             throw new BusinessException("404", "菜品不存在");
+        }
+        // #597 归属校验：只能上下架自己商家的菜品
+        if (!identityResolver.canManageMerchant(request, dish.getMerchantId())) {
+            return ResponseResult.fail("403", "无权操作该菜品");
         }
         Dish statusUpdate = new Dish();
         statusUpdate.setId(dishId);
@@ -373,14 +406,25 @@ public class DishController {
      * 批量删除菜品
      */
     @PutMapping("/batch")
-    public ResponseResult<?> batchDeleteDishes(@RequestBody java.util.Map<String, Object> request) {
-        List<Long> dishIds = (List<Long>) request.get("dishIds");
+    public ResponseResult<?> batchDeleteDishes(@RequestBody java.util.Map<String, Object> body,
+                                              HttpServletRequest request) {
+        // Dish.id 是字符串主键（种子里就有非数字 id），而请求体元素的类型取决于客户端
+        // 传字符串还是数字；原来强转 List<Long>，传字符串 id 会在 listByIds 时抛
+        // ClassCastException → 500，批量删除对任何真实菜品都不可用。
+        List<String> dishIds = toDishIdList(body.get("dishIds"));
 
-        if (dishIds == null || dishIds.isEmpty()) {
+        if (dishIds.isEmpty()) {
             return ResponseResult.fail("400", "请选择要删除的菜品");
         }
 
         log.info("批量删除菜品, dishIds: {}", dishIds);
+
+        // #597 归属校验：所选菜品必须全部存在且都属于调用方，任一不满足即整体拒绝，不做部分删除
+        List<Dish> existingDishes = dishService.listByIds(dishIds);
+        ResponseResult<?> ownershipFailure = checkBatchOwnership(dishIds, existingDishes, "无权删除所选菜品", request);
+        if (ownershipFailure != null) {
+            return ownershipFailure;
+        }
 
         // 批量删除菜品
         boolean deleted = dishService.removeByIds(dishIds);
@@ -395,15 +439,22 @@ public class DishController {
      * 批量更新菜品状态（上架/下架）
      */
     @PutMapping("/batch/status")
-    public ResponseResult<?> batchUpdateDishStatus(@RequestBody java.util.Map<String, Object> request) {
-        List<Long> dishIds = (List<Long>) request.get("dishIds");
-        Boolean status = (Boolean) request.get("status");
+    public ResponseResult<?> batchUpdateDishStatus(@RequestBody java.util.Map<String, Object> body,
+                                                  HttpServletRequest request) {
+        List<String> dishIds = toDishIdList(body.get("dishIds"));
+        Boolean status = (Boolean) body.get("status");
 
-        if (dishIds == null || dishIds.isEmpty()) {
+        if (dishIds.isEmpty()) {
             return ResponseResult.fail("400", "请选择要操作的菜品");
         }
 
         List<Dish> dishes = dishService.listByIds(dishIds);
+        // #597 归属校验：与批量删除同口径，全部存在且全部属于调用方才执行
+        ResponseResult<?> ownershipFailure = checkBatchOwnership(dishIds, dishes, "无权操作所选菜品", request);
+        if (ownershipFailure != null) {
+            return ownershipFailure;
+        }
+
         for (Dish dish : dishes) {
             dish.setStatus(status);
         }
@@ -413,6 +464,58 @@ public class DishController {
             return ResponseResult.success("批量更新菜品状态成功");
         }
         return ResponseResult.fail("500", "批量更新菜品状态失败");
+    }
+
+    /**
+     * #597 批量写操作的归属前置校验：所选菜品必须全部存在，且全部属于调用方（或调用方为管理员）。
+     *
+     * <p>任一不满足即整体拒绝，不做部分执行。
+     *
+     * @param dishIds          归一后的菜品ID（字符串）
+     * @param existingDishes   已按 dishIds 查出的菜品
+     * @param forbiddenMessage 归属不匹配时的失败文案
+     * @return 校验通过返回 null，否则返回应直接返回给调用方的失败响应
+     */
+    /**
+     * 把请求体里的 dishIds 统一收敛成字符串列表。
+     * <p>
+     * 元素类型随客户端而变（JSON 字符串 id → String，数字 id → Integer），硬转任意一种
+     * 具体类型都会在遍历时抛 ClassCastException，因此这里按 {@code String.valueOf} 归一。
+     *
+     * @param raw 请求体里的原始值
+     * @return 归一后的菜品 id 列表；raw 不是列表时返回空列表
+     */
+    private List<String> toDishIdList(Object raw) {
+        List<String> ids = new ArrayList<>();
+        if (raw instanceof List<?> list) {
+            for (Object item : list) {
+                if (item != null) {
+                    ids.add(String.valueOf(item));
+                }
+            }
+        }
+        return ids;
+    }
+
+    private ResponseResult<?> checkBatchOwnership(List<String> dishIds, List<Dish> existingDishes,
+                                                 String forbiddenMessage, HttpServletRequest request) {
+        Map<String, Dish> existingById = new HashMap<>();
+        for (Dish existing : existingDishes) {
+            existingById.put(String.valueOf(existing.getId()), existing);
+        }
+        // 先判全在：任何一个不存在都返回 404
+        for (String dishId : dishIds) {
+            if (!existingById.containsKey(dishId)) {
+                return ResponseResult.fail("404", "菜品不存在");
+            }
+        }
+        // 再判全属于自己：任何一个不属于调用方都整体返回 403
+        for (Dish existing : existingDishes) {
+            if (!identityResolver.canManageMerchant(request, existing.getMerchantId())) {
+                return ResponseResult.fail("403", forbiddenMessage);
+            }
+        }
+        return null;
     }
 
     /**

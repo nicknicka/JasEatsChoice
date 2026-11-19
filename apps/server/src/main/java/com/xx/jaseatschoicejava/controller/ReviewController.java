@@ -45,6 +45,7 @@ public class ReviewController {
     private final OrderDishService orderDishService;
     private final UserService userService;
     private final DishService dishService;
+    private final com.xx.jaseatschoicejava.security.CurrentIdentityResolver identityResolver;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ==================== 用户端API ====================
@@ -427,7 +428,8 @@ public class ReviewController {
      */
     @ApiOperation("获取评价详情")
     @GetMapping("/{reviewId}")
-    public ResponseResult<?> getReviewDetail(@PathVariable String reviewId) {
+    public ResponseResult<?> getReviewDetail(@PathVariable String reviewId,
+                                             jakarta.servlet.http.HttpServletRequest request) {
         try {
             log.info("获取评价详情，reviewId={}", reviewId);
 
@@ -435,6 +437,13 @@ public class ReviewController {
 
             // 与商家评价列表口径一致：只返回正常状态（0）的评价
             if (review == null || !Integer.valueOf(0).equals(review.getStatus())) {
+                return ResponseResult.fail("404", "评价不存在");
+            }
+
+            // 归属校验（#597）：只给评价作者本人或该商家（管理员放行）。
+            // 用户端 AI 卡片会用用户令牌读它，所以判据必须是"或"，不能用商家归属单判。
+            // 无权与不存在都回 404，避免用主键探测他人评价是否存在。
+            if (!identityResolver.canAccessOwnedResource(request, review.getUserId(), review.getMerchantId())) {
                 return ResponseResult.fail("404", "评价不存在");
             }
 
@@ -612,7 +621,8 @@ public class ReviewController {
     @PostMapping("/{reviewId}/reply")
     public ResponseResult<?> replyReview(
             @PathVariable String reviewId,
-            @RequestBody Map<String, String> request
+            @RequestBody Map<String, String> request,
+            jakarta.servlet.http.HttpServletRequest httpRequest
     ) {
         try {
             String content = request.get("content");
@@ -624,10 +634,20 @@ public class ReviewController {
 
             log.info("回复评价，reviewId={}, merchantId={}", reviewId, merchantId);
 
+            // 归属校验（#597）：merchantId 来自请求体，此前任何登录用户都能冒名回复他人评价
+            if (!identityResolver.canManageMerchant(httpRequest, merchantId)) {
+                return ResponseResult.fail("403", "无权以该商家身份回复评价");
+            }
+
             // 检查评价是否存在
             Review review = reviewService.getById(reviewId);
             if (review == null) {
                 return ResponseResult.fail("404", "评价不存在");
+            }
+
+            // 只能回复自家商家的评价
+            if (!merchantId.equals(review.getMerchantId())) {
+                return ResponseResult.fail("403", "无权回复该评价");
             }
 
             // 创建回复
@@ -667,7 +687,12 @@ public class ReviewController {
      */
     @ApiOperation("获取评价统计")
     @GetMapping("/merchant/{merchantId}/statistics")
-    public ResponseResult<?> getReviewStatistics(@PathVariable String merchantId) {
+    public ResponseResult<?> getReviewStatistics(@PathVariable String merchantId,
+                                                 jakarta.servlet.http.HttpServletRequest request) {
+        // 归属校验（#597）：评价统计属于商家经营数据
+        if (!identityResolver.canManageMerchant(request, merchantId)) {
+            return ResponseResult.fail("403", "无权查看该商家评价统计");
+        }
         try {
             log.info("获取评价统计，merchantId={}", merchantId);
 

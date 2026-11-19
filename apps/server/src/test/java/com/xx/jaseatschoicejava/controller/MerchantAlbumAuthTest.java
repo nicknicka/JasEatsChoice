@@ -41,6 +41,9 @@ class MerchantAlbumAuthTest {
         controller = new MerchantController();
         ReflectionTestUtils.setField(controller, "userService", userService);
         ReflectionTestUtils.setField(controller, "jdbcTemplate", jdbcTemplate);
+        // #597：归属判据收敛到 CurrentIdentityResolver，手工装配时需一并注入
+        ReflectionTestUtils.setField(controller, "identityResolver",
+                new com.xx.jaseatschoicejava.security.CurrentIdentityResolver(userService));
 
         SecurityContextHolder.clearContext();
     }

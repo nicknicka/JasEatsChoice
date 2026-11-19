@@ -56,6 +56,9 @@ class ReviewControllerDetailTest {
     @Mock
     private DishService dishService;
 
+    @Mock
+    private com.xx.jaseatschoicejava.security.CurrentIdentityResolver identityResolver;
+
     @InjectMocks
     private ReviewController controller;
 
@@ -104,7 +107,12 @@ class ReviewControllerDetailTest {
         when(orderDishService.list(ArgumentMatchers.<Wrapper<OrderDish>>any())).thenReturn(List.of(orderDish));
         when(dishService.listByIds(anyList())).thenReturn(List.of(dish));
 
-        ResponseResult<?> detailResponse = controller.getReviewDetail("r-1");
+        // 归属校验（#597）：详情页判据是"评价作者本人或该商家"，这里以作者身份放行
+        when(identityResolver.canAccessOwnedResource(
+                ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(true);
+
+        ResponseResult<?> detailResponse =
+                controller.getReviewDetail("r-1", new org.springframework.mock.web.MockHttpServletRequest());
 
         assertTrue(detailResponse.getSuccess());
         assertNotNull(detailResponse.getData());
@@ -142,7 +150,29 @@ class ReviewControllerDetailTest {
     void getReviewDetail_shouldReturn404WhenReviewMissing() {
         when(reviewService.getById("missing")).thenReturn(null);
 
-        ResponseResult<?> response = controller.getReviewDetail("missing");
+        ResponseResult<?> response =
+                controller.getReviewDetail("missing", new org.springframework.mock.web.MockHttpServletRequest());
+
+        assertFalse(response.getSuccess());
+        assertEquals("404", response.getCode());
+        assertEquals("评价不存在", response.getMessage());
+    }
+
+    @Test
+    void getReviewDetail_shouldReturn404WhenCallerIsNeitherAuthorNorMerchant() {
+        Review review = new Review();
+        review.setId("r-other");
+        review.setStatus(0);
+        review.setUserId("u-other");
+        review.setMerchantId("m-other");
+
+        when(reviewService.getById("r-other")).thenReturn(review);
+        // 既不是作者也不是该商家 → 与"不存在"同样回 404，避免探测主键
+        when(identityResolver.canAccessOwnedResource(
+                ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(false);
+
+        ResponseResult<?> response =
+                controller.getReviewDetail("r-other", new org.springframework.mock.web.MockHttpServletRequest());
 
         assertFalse(response.getSuccess());
         assertEquals("404", response.getCode());
@@ -157,7 +187,8 @@ class ReviewControllerDetailTest {
 
         when(reviewService.getById("r-deleted")).thenReturn(deleted);
 
-        ResponseResult<?> response = controller.getReviewDetail("r-deleted");
+        ResponseResult<?> response =
+                controller.getReviewDetail("r-deleted", new org.springframework.mock.web.MockHttpServletRequest());
 
         assertFalse(response.getSuccess());
         assertEquals("404", response.getCode());

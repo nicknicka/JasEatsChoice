@@ -8,7 +8,9 @@ import com.xx.jaseatschoicejava.service.UserService;
 import com.xx.jaseatschoicejava.util.CaptchaUtil;
 import com.xx.jaseatschoicejava.util.JwtUtil;
 import com.xx.jaseatschoicejava.util.UserIdentityUtil;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -43,6 +45,16 @@ class MerchantControllerTest {
 
     @InjectMocks
     private MerchantController controller;
+
+    /**
+     * #597：归属判据收敛到 CurrentIdentityResolver，@InjectMocks 不会自动注入它。
+     * 这里用真实实现包住本测试的 userService mock，判据与改造前的私有方法完全一致。
+     */
+    @BeforeEach
+    void injectIdentityResolver() {
+        ReflectionTestUtils.setField(controller, "identityResolver",
+                new com.xx.jaseatschoicejava.security.CurrentIdentityResolver(userService));
+    }
 
     @Test
     void register_withoutAuthorization_shouldFailWithoutWriting() {
