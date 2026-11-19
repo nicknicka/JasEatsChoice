@@ -134,8 +134,8 @@ lint:
 	cd apps/client && $(NPM) run lint
 
 # 静态防线：不起容器、不打桩，一分钟内把机械性问题挡在跑 5 分钟端到端之前。
-# CI 与本地共用这三个目标，命令不在两处各自演化。
-check: check-unit check-routes check-miniapp-api check-route-auth check-public-routes check-lint check-privacy
+# CI 与本地共用这些目标，命令不在两处各自演化。
+check: check-unit check-routes check-miniapp-api check-miniapp-code check-route-auth check-public-routes check-lint check-privacy
 
 check-unit:
 	python3 -m unittest discover -s scripts -p 'test_*.py'
@@ -160,6 +160,10 @@ check-public-routes:
 # 吞掉就只剩一行 console.error，能长期潜伏。
 check-miniapp-api:
 	python3 scripts/check_miniapp_api.py
+
+# 响应判据：后端 code 是字符串 "200"，`res.code === 200` 恒为假（#598）。
+check-miniapp-code:
+	python3 scripts/check_miniapp_code_checks.py
 
 # 隐私守卫（规格里的 privacy:check）：跟踪路径不得含 uploads/ 目录段，
 # 跟踪文本文件不得含高置信度私钥 / 云厂商 / 平台令牌。
