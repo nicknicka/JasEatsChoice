@@ -285,7 +285,7 @@ onMounted(async () => {
 const loadTutorials = async () => {
   try {
     const res = await merchantApi.getTutorials({})
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       if (res.data.quickStart) {
         quickStartTutorials.value = res.data.quickStart
       }
@@ -332,7 +332,7 @@ const changeCategory = async (category) => {
     const params = category === 'all' ? {} : { category }
     const res = await merchantApi.getTutorials(params)
 
-    if (res.code === 200 && res.data && res.data.features) {
+    if (res.success === true && res.data && res.data.features) {
       featureTutorials.value = res.data.features
     }
   } catch (error) {

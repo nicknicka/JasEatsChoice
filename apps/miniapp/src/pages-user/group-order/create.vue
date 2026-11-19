@@ -185,7 +185,7 @@ const loadMerchantInfo = async (merchantId) => {
   try {
     const res = await merchantApi.getDetail(merchantId)
 
-    if (res && res.code === 200 && res.data) {
+    if (res && res.success === true && res.data) {
       merchantInfo.value = {
         id: merchantId,
         name: res.data.merchantName || res.data.name || '',
@@ -291,7 +291,7 @@ const createGroupOrder = async () => {
       remark: formData.value.remark || ''
     })
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const orderId = res.data.id || res.data.orderId
       const orderCode = res.data.orderCode || ''
 

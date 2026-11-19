@@ -121,7 +121,7 @@ const loadOrderDetail = async () => {
   try {
     const res = await groupOrderApi.getDetail(orderId.value)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       orderInfo.value = {
         id: res.data.id,
         name: res.data.name,
@@ -151,7 +151,7 @@ const generateQRCode = async () => {
       width: 300
     })
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       // 如果返回的是base64图片数据
       if (typeof res.data === 'string' && res.data.startsWith('data:image')) {
         qrcodeUrl.value = res.data

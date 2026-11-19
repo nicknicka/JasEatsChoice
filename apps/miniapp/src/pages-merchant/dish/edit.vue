@@ -383,7 +383,7 @@ const loadDishDetail = async () => {
     // 调用API获取菜品详情
     const res = await dishApi.getDetail(dishId.value)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const data = res.data
 
       // 映射后端数据到前端表单
@@ -686,7 +686,7 @@ const submitDish = async () => {
     // 调用API更新菜品
     const res = await dishApi.update(dishId.value, submitData)
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.showToast({
         title: '保存成功',
         icon: 'success'

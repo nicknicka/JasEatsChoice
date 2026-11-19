@@ -171,7 +171,7 @@ export function useChatMessages() {
 			debug('后端响应', historyResponse, 'useChatMessages')
 
 			if (
-				historyResponse.code === 200 &&
+				historyResponse.success === true &&
 				historyResponse.data &&
 				historyResponse.data.length > 0
 			) {
@@ -258,7 +258,7 @@ export function useChatMessages() {
 
 			if (
 				response &&
-				(response.success === true || response.code === 200 || response.code === '200')
+				response.success === true
 			) {
 				debug(`${sender}消息保存成功`, {
 					code: response.code,
@@ -298,7 +298,7 @@ export function useChatMessages() {
 
 			const clearResponse = await aiApi.clearHistory(userId)
 
-			if (clearResponse.code === 200) {
+			if (clearResponse.success === true) {
 				info('后端清空成功', null, 'useChatMessages')
 
 				// 清空前端显示

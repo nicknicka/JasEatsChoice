@@ -231,7 +231,7 @@ const loadFinanceData = async () => {
   financeError.value = ''
   try {
     const res = await merchantApi.getFinanceData({ timeRange: 'month' })
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       financeData.value = {
         totalBalance: res.data.totalBalance || '0',
         availableBalance: res.data.availableBalance || '0',
@@ -287,7 +287,7 @@ const loadTransactions = async (isRefresh = false) => {
 
     const res = await merchantApi.getTransactions(params)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const transactions = res.data.list || []
 
       if (isRefresh) {
@@ -332,7 +332,7 @@ const onTrendDaysChange = async (e) => {
     const res = await merchantApi.getFinanceData({ timeRange })
 
     const trend = res?.data?.chartData
-    if (res?.code === 200 && trend) {
+    if (res.success === true && trend) {
       // 后端返回趋势点位时直接使用；结构未约定前保持空态，不臆造曲线
       chartData.value = {
         categories: (trend.categories || []).map(String),

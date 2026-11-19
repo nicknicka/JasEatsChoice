@@ -200,7 +200,7 @@ onMounted(async () => {
 const loadWithdrawData = async () => {
   try {
     const res = await merchantApi.getWithdrawData()
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       withdrawData.value = {
         availableBalance: res.data.availableBalance || '0',
         frozenBalance: res.data.frozenBalance || '0',
@@ -348,7 +348,7 @@ const submitWithdraw = async () => {
 
     uni.hideLoading()
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.showToast({
         title: '提现申请已提交',
         icon: 'success'

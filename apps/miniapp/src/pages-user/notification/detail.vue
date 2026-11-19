@@ -142,7 +142,7 @@ const loadNotificationDetail = async () => {
     // NOTIF-005: 调用API获取通知详情
     const res = await notificationApi.getDetail(notificationId.value)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const data = res.data
 
       // 解析额外信息
@@ -192,7 +192,7 @@ const markAsRead = async () => {
       userId: userId.value
     })
 
-    if (res.code === 200) {
+    if (res.success === true) {
       notificationDetail.value.readStatus = true
 
       // 更新列表页的未读数
@@ -222,7 +222,7 @@ const deleteNotification = () => {
 
           uni.hideLoading()
 
-          if (apiRes.code === 200) {
+          if (apiRes.success === true) {
             uni.showToast({
               title: '删除成功',
               icon: 'success'

@@ -204,7 +204,7 @@ const loadNotificationList = async (isRefresh = false) => {
     // NOTIF-001: 调用API获取通知列表
     const res = await notificationApi.getList(params)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const notifications = res.data.list || res.data || []
 
       // 转换数据格式，已读字段与后端 readStatus 对齐
@@ -319,7 +319,7 @@ const batchMarkRead = async () => {
 
     uni.hideLoading()
 
-    if (res.code === 200) {
+    if (res.success === true) {
       // 更新本地状态
       allNotifications.value.forEach(notif => {
         if (selectedIds.value.includes(notif.id)) {
@@ -371,7 +371,7 @@ const batchDelete = async () => {
 
           uni.hideLoading()
 
-          if (res.code === 200) {
+          if (res.success === true) {
             // 从列表中移除
             allNotifications.value = allNotifications.value.filter(
               n => !selectedIds.value.includes(n.id)
@@ -415,7 +415,7 @@ const markAllRead = async () => {
 
     uni.hideLoading()
 
-    if (res.code === 200) {
+    if (res.success === true) {
       // 更新本地状态
       allNotifications.value.forEach(notif => {
         notif.readStatus = true
@@ -462,7 +462,7 @@ const clearAll = async () => {
 
           uni.hideLoading()
 
-          if (apiRes.code === 200) {
+          if (apiRes.success === true) {
             notificationList.value = []
 
             uni.showToast({

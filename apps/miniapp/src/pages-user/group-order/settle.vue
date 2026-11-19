@@ -232,7 +232,7 @@ const loadData = async () => {
 const loadOrderDetail = async () => {
   const res = await groupOrderApi.getDetail(orderId.value)
 
-  if (res.code === 200 && res.data) {
+  if (res.success === true && res.data) {
     const data = res.data
     orderInfo.value = {
       orderCode: data.orderCode || '',
@@ -281,7 +281,7 @@ const loadOrderDetail = async () => {
 const loadSettlement = async () => {
   const res = await groupOrderApi.getSettlement(orderId.value)
 
-  if (res.code === 200 && res.data) {
+  if (res.success === true && res.data) {
     const data = res.data
     settlementInfo.value = {
       subtotal: parseFloat(data.subtotal || 0).toFixed(2),
@@ -304,7 +304,7 @@ const loadAvailableCoupons = async () => {
       orderAmount: amount
     })
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       availableCoupons.value = res.data || []
     }
   } catch (error) {
@@ -459,7 +459,7 @@ const processPayment = async () => {
       paymentPassword
     })
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       uni.hideLoading()
 
       await handleBalancePayment(res.data)

@@ -223,7 +223,7 @@ const chooseImage = async () => {
               },
               success: (uploadRes) => {
                 const data = JSON.parse(uploadRes.data)
-                if (data.code === 200 && data.data) {
+                if (data.success === true && data.data) {
                   resolve(data.data.fileUrl)
                 } else {
                   reject(new Error(data.message || '上传失败'))
@@ -326,7 +326,7 @@ const submitReview = async () => {
 
     uni.hideLoading()
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.showToast({
         title: '评价成功',
         icon: 'success'

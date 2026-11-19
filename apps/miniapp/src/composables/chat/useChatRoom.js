@@ -156,7 +156,7 @@ export function useChatRoom() {
 
       uni.hideLoading()
 
-      if (res.code === 200 && res.data) {
+      if (res.success === true && res.data) {
         const formattedMessages = res.data.map(msg => ({
           id: msg.id,
           isSelf: msg.senderId === currentUserId.value,
@@ -221,7 +221,7 @@ export function useChatRoom() {
         size: pageSize
       })
 
-      if (res.code === 200 && res.data) {
+      if (res.success === true && res.data) {
         if (res.data.length === 0) {
           hasMoreHistory.value = false
         } else {
@@ -307,7 +307,7 @@ export function useChatRoom() {
         quote: newMessage.quote
       })
 
-      if (res.code === 200) {
+      if (res.success === true) {
         newMessage.status = 'success'
 
         // 同时通过WebSocket发送
