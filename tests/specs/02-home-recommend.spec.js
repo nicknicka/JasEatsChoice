@@ -188,5 +188,38 @@ test.describe('模块二：用户首页与推荐', () => {
     }
   })
 
+  // #594：热点「查看详情」走 window.api.openExternal。桌面端曾经因为 preload 没暴露该方法
+  // 而静默失效，所以这里直接验证两端共用的 openExternal 契约：只放行 http(s) 并如实返回结果。
+  test('2.6 外链打开契约（openExternal 只放行 http(s)）', async ({ page }) => {
+    markRunning('2.6')
+    try {
+      await page.goto('/user/home')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+
+      const result = await page.evaluate(async () => {
+        const open = window.api?.openExternal
+        if (typeof open !== 'function') return { exposed: false }
+        return {
+          exposed: true,
+          https: await open('https://example.com/hot'),
+          javascript: await open('javascript:alert(1)'),
+          relative: await open('/user/home'),
+          empty: await open('')
+        }
+      })
+
+      expect(result.exposed, 'window.api.openExternal 必须由 webShim/preload 暴露').toBe(true)
+      expect(result.https, 'https 外链应被放行').toBe(true)
+      expect(result.javascript, 'javascript: 伪协议必须被拒绝').toBe(false)
+      expect(result.relative, '站内相对路径不应交给外部浏览器').toBe(false)
+      expect(result.empty, '空地址必须被拒绝').toBe(false)
+
+      markPassed('2.6', 'openExternal 放行 https、拒绝 javascript:/相对路径/空值')
+    } catch (e) {
+      markFailed('2.6', e.message.slice(0, 50))
+      throw e
+    }
+  })
+
   test.afterAll(() => { updateSummary() })
 })

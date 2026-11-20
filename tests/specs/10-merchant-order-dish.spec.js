@@ -400,6 +400,57 @@ test.describe('模块十：商家端-订单与菜品管理', () => {
     }
   })
 
+  test('10.16 批量下架菜单后落库且刷新不回滚', async ({ page }) => {
+    markRunning('10.16')
+    const merchantId = await getMerchantId()
+    const dishes = await apiRequest(page, `/v1/dishes?merchantId=${encodeURIComponent(merchantId)}`)
+    const dish = dishes?.[0]
+    expect(dish, '商家没有可用于创建临时菜单的菜品').toBeTruthy()
+    let menuId
+    let menuName
+    try {
+      const menu = await createTemporaryMenu(page, merchantId, dish.id)
+      menuId = menu.id
+      menuName = menu.name
+
+      // 先经 UI 批量上架，确认状态真的写进后端
+      await page.goto('/merchant/home/menu')
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      const row = page.locator('.menu-item', { hasText: menuName })
+      await expect(row).toBeVisible()
+      await row.locator('.el-checkbox').click()
+      await page.getByRole('button', { name: '批量上架' }).click()
+      await expect(page.locator('.el-message').filter({ hasText: '批量上架成功' })).toBeVisible()
+
+      const readStatus = async () => {
+        const menus = await apiRequest(page, `/v1/menus/merchants/${encodeURIComponent(merchantId)}/menu`)
+        return menus.find((item) => item.id === menuId)?.status
+      }
+      await expect.poll(readStatus).toBe('online')
+
+      // 再批量下架，刷新后仍应保持下架（曾经的假实现只改本地状态，刷新即回滚）
+      await row.locator('.el-checkbox').click()
+      await page.getByRole('button', { name: '批量下架' }).click()
+      await expect(page.locator('.el-message').filter({ hasText: '批量下架成功' })).toBeVisible()
+      await expect.poll(readStatus).toBe('offline')
+
+      await page.reload()
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null)
+      await expect(page.locator('.menu-item', { hasText: menuName }).getByText('下架中')).toBeVisible()
+      markPassed('10.16', `临时菜单 ${menuName} 批量上下架均已落库，刷新不回滚`)
+    } catch (e) {
+      markFailed('10.16', e.message.slice(0, 50))
+      throw e
+    } finally {
+      if (menuId) {
+        await apiRequest(page, '/v1/menus/menu/batch', {
+          method: 'POST',
+          body: JSON.stringify({ menuIds: [menuId], action: 'delete', merchantId })
+        }).catch(() => null)
+      }
+    }
+  })
+
   test('10.11 菜品上下架', async ({ page }) => {
     markRunning('10.11')
     const merchantId = await getMerchantId()

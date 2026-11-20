@@ -366,6 +366,21 @@ app.whenReady().then(() => {
     }
   })
 
+  // 交给系统浏览器打开外链；只放行 http(s)，避免把 file: 或 javascript: 交给 shell
+  ipcMain.handle('shell:openExternal', async (_, url) => {
+    try {
+      const parsed = new URL(String(url))
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return false
+      }
+      await shell.openExternal(parsed.toString())
+      return true
+    } catch (error) {
+      console.error('[Shell] 打开外链失败:', error?.message)
+      return false
+    }
+  })
+
   // === 小红书登录窗口 IPC 通道 ===
   ipcMain.handle('xhs:login', () => openXhsLoginWindow())
 

@@ -107,9 +107,18 @@
       }
     },
     // Electron 里 openExternal 由主进程 shell.openExternal 提供；浏览器只能开新标签
+    // 两端一致：只放行 http(s)，其它协议直接拒绝
     openExternal: function (url) {
-      if (url) window.open(String(url), '_blank', 'noopener')
-      return Promise.resolve(true)
+      try {
+        var parsed = new URL(String(url))
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          return Promise.resolve(false)
+        }
+        window.open(parsed.toString(), '_blank', 'noopener')
+        return Promise.resolve(true)
+      } catch (error) {
+        return Promise.resolve(false)
+      }
     },
     connectWebSocket: function (url) {
       if (

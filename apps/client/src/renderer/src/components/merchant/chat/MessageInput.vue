@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { ChatDotRound } from '@element-plus/icons-vue'
+import { ChatDotRound, Picture, Document } from '@element-plus/icons-vue'
 
 const props = defineProps({
   disabled: {
@@ -59,7 +59,6 @@ const inputRef = ref(null)
 const focus = () => {
   inputRef.value?.focus()
 }
-
 // 清空输入
 const clearInput = () => {
   messageContent.value = ''
@@ -83,6 +82,37 @@ defineExpose({
 
     <!-- 工具栏和输入框 -->
     <div class="input-container">
+      <!-- 附件入口：选完文件就交给父组件上传，真正的上传与发送在 Chat.vue 里 -->
+      <div class="attach-actions">
+        <el-upload
+          :auto-upload="false"
+          :show-file-list="false"
+          accept="image/*"
+          :disabled="disabled || sending"
+          :on-change="(file) => emit('upload-image', file.raw)"
+        >
+          <el-button
+            class="attach-btn"
+            :icon="Picture"
+            :disabled="disabled || sending"
+            aria-label="发送图片"
+          />
+        </el-upload>
+        <el-upload
+          :auto-upload="false"
+          :show-file-list="false"
+          :disabled="disabled || sending"
+          :on-change="(file) => emit('upload-file', file.raw)"
+        >
+          <el-button
+            class="attach-btn"
+            :icon="Document"
+            :disabled="disabled || sending"
+            aria-label="发送文件"
+          />
+        </el-upload>
+      </div>
+
       <el-input
         ref="inputRef"
         v-model="messageContent"
@@ -145,6 +175,28 @@ defineExpose({
     display: flex;
     gap: 12px;
     align-items: flex-end;
+
+    .attach-actions {
+      display: flex;
+      gap: 4px;
+      align-self: flex-end;
+      padding-bottom: 2px;
+
+      .attach-btn {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border-radius: @nordic-radius-md;
+        color: @merchant-text-sec;
+        border: 1px solid @merchant-border;
+        background: @merchant-surface;
+
+        &:hover:not(:disabled) {
+          color: var(--brand-500);
+          border-color: var(--brand-500);
+        }
+      }
+    }
 
     .message-textarea {
       flex: 1;

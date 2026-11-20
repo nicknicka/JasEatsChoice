@@ -75,6 +75,10 @@ const api = {
   // Image upload functionality
   uploadImage: (imageData) => {
     return ipcRenderer.invoke('user:uploadImage', imageData)
+  },
+  // 用系统浏览器打开外链；仅 http(s) 会被放行，与 webShim 的同名方法保持一致
+  openExternal: (url) => {
+    return ipcRenderer.invoke('shell:openExternal', url)
   }
 }
 

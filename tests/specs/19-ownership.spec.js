@@ -348,5 +348,50 @@ test.describe('模块十九：资源归属校验', () => {
     } catch (e) { markFailed('19.12', e.message.slice(0, 50)); throw e }
   })
 
+  // #594：桌面端批量上下架接入 POST /v1/menus/menu/batch 后，请求体里的 merchantId
+  // 是前端自己填的，必须由登录身份证明调用者能管理该商家，否则等于开了越权改菜单的口。
+  test('19.13 越权批量上下架他人菜单', async ({ request }) => {
+    markRunning('19.13')
+    try {
+      const menus = await ownerGet(request, `/v1/menus/merchants/${OWNER_MERCHANT_ID}/menu`)
+      const target = (menus || []).find(menu => menu.id)
+      expect(target, `种子商家 ${OWNER_MERCHANT_ID} 下应有菜单，否则无法验证越权`).toBeTruthy()
+
+      const before = String(target.status)
+      const attack = await apiJson(request, '/v1/menus/menu/batch', {
+        token: plainToken,
+        method: 'POST',
+        data: {
+          menuIds: [target.id],
+          action: before === 'online' ? 'deactivate' : 'activate',
+          merchantId: OWNER_MERCHANT_ID
+        }
+      })
+      expectFailure(attack, '/v1/menus/menu/batch', '403')
+
+      // 先查副作用：越权请求不该改动菜单状态。
+      const afterMenus = await ownerGet(request, `/v1/menus/merchants/${OWNER_MERCHANT_ID}/menu`)
+      const after = afterMenus.find(menu => menu.id === target.id)
+      expect(String(after?.status), `越权批量操作后菜单 ${target.id} 状态被改动：${before} -> ${after?.status}`)
+        .toBe(before)
+
+      // 正对照：拥有者用同一请求体必须被放行，证明 403 来自归属校验而不是参数写错。
+      const flipAction = before === 'online' ? 'deactivate' : 'activate'
+      const restoreAction = before === 'online' ? 'activate' : 'deactivate'
+      expectSuccess(await apiJson(request, '/v1/menus/menu/batch', {
+        token: ownerToken,
+        method: 'POST',
+        data: { menuIds: [target.id], action: flipAction, merchantId: OWNER_MERCHANT_ID }
+      }), '/v1/menus/menu/batch（拥有者正对照）')
+      expectSuccess(await apiJson(request, '/v1/menus/menu/batch', {
+        token: ownerToken,
+        method: 'POST',
+        data: { menuIds: [target.id], action: restoreAction, merchantId: OWNER_MERCHANT_ID }
+      }), '/v1/menus/menu/batch（还原原状态）')
+
+      markPassed('19.13', `菜单 ${target.id} 越权请求返回 code=403 且状态保持 ${before}`)
+    } catch (e) { markFailed('19.13', e.message.slice(0, 50)); throw e }
+  })
+
   test.afterAll(() => { updateSummary() })
 })
