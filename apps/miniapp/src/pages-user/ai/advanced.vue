@@ -589,26 +589,21 @@ const viewDetail = (item) => {
   })
 }
 
-// 导出报告
+// 导出报告：后端暂未提供导出接口，明确告知，不伪造"已生成"的成功提示
 const exportReport = (type) => {
-  uni.showLoading({ title: '生成中...' })
-  setTimeout(() => {
-    uni.hideLoading()
-    uni.showToast({
-      title: type === 'pdf' ? 'PDF已生成' : '图片已保存',
-      icon: 'success'
-    })
-  }, 2000)
+  uni.showModal({
+    title: '导出暂未开放',
+    content: `报告导出（${type === 'pdf' ? 'PDF' : '图片'}）功能暂未上线，请稍后再试。`,
+    showCancel: false
+  })
 }
 
-// 分享报告
+// 分享报告：后端暂未提供分享接口，明确告知，不伪造"已分享"的成功提示
 const shareReport = () => {
-  uni.showActionSheet({
-    itemList: ['分享到微信', '分享到朋友圈', '保存图片'],
-    success: (res) => {
-      const actions = ['已分享到微信', '已分享到朋友圈', '图片已保存']
-      uni.showToast({ title: actions[res.tapIndex], icon: 'success' })
-    }
+  uni.showModal({
+    title: '分享暂未开放',
+    content: '报告分享功能暂未上线，请稍后再试。',
+    showCancel: false
   })
 }
 

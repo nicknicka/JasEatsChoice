@@ -121,6 +121,17 @@ export const reviewApi = {
   reply: (reviewId, data) => post(buildUrl('/v1/reviews/:reviewId/reply', { reviewId }), data),
 
   /**
+   * 给已有评价追加评论（追评）
+   * POST /v1/reviews/{reviewId}/additional
+   * @param {string} reviewId - 评价ID
+   * @param {Object} data - 追评数据
+   * @param {string} data.content - 追评内容
+   * @param {string[]} data.images - 追评图片
+   * @returns {Promise} 返回追评结果
+   */
+  addComment: (reviewId, data) => post(buildUrl('/v1/reviews/:reviewId/additional', { reviewId }), data),
+
+  /**
    * 删除评价
    * DELETE /v1/reviews/{reviewId}
    * @param {string} reviewId - 评价ID

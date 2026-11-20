@@ -412,35 +412,37 @@ const submitComment = async () => {
     return
   }
 
+  if (!currentReview.value?.id) {
+    uni.showToast({
+      title: '未找到要评论的评价',
+      icon: 'none'
+    })
+    return
+  }
+
   try {
-    // TODO: 调用后端API
-    // await reviewApi.addComment(currentReview.value.id, {
-    //   content: commentText.value
-    // })
+    uni.showLoading({ title: '提交中...', mask: true })
 
-    // 模拟添加评论成功
-    if (!currentReview.value.comments) {
-      currentReview.value.comments = []
-    }
-
-    currentReview.value.comments.push({
-      id: Date.now(),
-      userName: '我',
+    // 追评走真实接口落库；失败时不得回填任何假数据
+    await reviewApi.addComment(currentReview.value.id, {
       content: commentText.value
     })
 
-    currentReview.value.commentCount = (currentReview.value.commentCount || 0) + 1
-
+    uni.hideLoading()
     uni.showToast({
       title: '评论成功',
       icon: 'success'
     })
 
     closeCommentInput()
+
+    // 重新拉取列表，让评论数与评论内容反映服务端真实状态
+    await loadReviews(true)
   } catch (error) {
+    uni.hideLoading()
     console.error('评论失败:', error)
     uni.showToast({
-      title: '评论失败',
+      title: error?.message || '评论失败，请稍后重试',
       icon: 'none'
     })
   }
