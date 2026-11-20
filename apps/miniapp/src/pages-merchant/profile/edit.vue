@@ -232,7 +232,7 @@ onMounted(async () => {
 const loadProfile = async () => {
   try {
     const res = await merchantApi.getProfile()
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       profile.value = {
         avatar: res.data.avatar || '',
         contactName: res.data.contactName || '',
@@ -479,7 +479,7 @@ const saveProfile = async () => {
 
     uni.hideLoading()
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.showToast({
         title: '提交成功',
         icon: 'success'

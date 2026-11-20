@@ -447,7 +447,7 @@ const loadWalletData = async () => {
   try {
     const userId = getCurrentUserId()
     const res = await walletApi.getInfo({ userId })
-    if (res.code === 200 || res.code === '200') {
+    if (res.success === true) {
       applyWalletAmount(res.data || res)
     }
   } catch (error) {
@@ -658,7 +658,7 @@ const confirmWithdraw = async () => {
 
     uni.hideLoading()
 
-    if (res.code === 200 || res.code === '200') {
+    if (res.success === true) {
       uni.showToast({
         title: '提现申请已提交',
         icon: 'success'

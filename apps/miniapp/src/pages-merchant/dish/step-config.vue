@@ -233,7 +233,7 @@ onMounted(async () => {
 const loadDishInfo = async () => {
   try {
     const res = await dishApi.getDetail(dishId.value)
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       dishInfo.value = {
         id: res.data.id,
         name: res.data.name,
@@ -276,7 +276,7 @@ const loadTemplates = async () => {
       merchantId: merchantId.value
     })
 
-    if (res.code === 200 && res.data && Array.isArray(res.data)) {
+    if (res.success === true && res.data && Array.isArray(res.data)) {
       templates.value = res.data.map(template => ({
         id: template.id,
         name: template.name,
@@ -326,7 +326,7 @@ const selectTemplate = async (template) => {
             // 如果模板没有步骤数据，从API获取模板详情
             const templateRes = await dishStepTemplateApi.getDetail(template.id)
 
-            if (templateRes.code === 200 && templateRes.data) {
+            if (templateRes.success === true && templateRes.data) {
               const templateData = templateRes.data
 
               steps.value = (templateData.steps || []).map(step => ({
@@ -470,7 +470,7 @@ const saveAsTemplate = () => {
           // 调用API保存模板
           const apiRes = await dishStepTemplateApi.create(templateData)
 
-          if (apiRes.code === 200) {
+          if (apiRes.success === true) {
             // 更新本地模板列表
             templates.value.push({
               id: apiRes.data.id || apiRes.data,
@@ -575,7 +575,7 @@ const submitSteps = async () => {
       cookingSteps: JSON.stringify(stepsData)
     })
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.hideLoading()
       uni.showToast({
         title: '步骤保存成功',

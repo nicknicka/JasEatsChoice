@@ -197,7 +197,7 @@ const loadOrderList = async (isRefresh = false) => {
     // GROUP-008: 调用API获取群订单列表
     const res = await groupOrderApi.getList(params)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const orders = res.data.list || res.data || []
 
       // 转换数据格式
@@ -299,7 +299,7 @@ const joinByCode = async () => {
 
     uni.hideLoading()
 
-    if (res.code === 200) {
+    if (res.success === true) {
       const groupOrderId = res.data?.groupOrderId || res.data?.orderId || ''
 
       // 清空输入
@@ -356,7 +356,7 @@ const cancelOrder = (order) => {
 
           uni.hideLoading()
 
-          if (apiRes.code === 200) {
+          if (apiRes.success === true) {
             uni.showToast({
               title: '取消成功',
               icon: 'success'

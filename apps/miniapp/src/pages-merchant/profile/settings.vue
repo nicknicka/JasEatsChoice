@@ -244,7 +244,7 @@ onMounted(async () => {
 const loadSettings = async () => {
   try {
     const res = await merchantApi.getSettings()
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       if (res.data.userInfo) {
         userInfo.value = {
           phone: res.data.userInfo.phone || '',

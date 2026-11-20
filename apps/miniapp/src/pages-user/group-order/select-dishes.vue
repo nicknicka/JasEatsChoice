@@ -223,7 +223,7 @@ onMounted(async () => {
 const loadOrderMeta = async () => {
   try {
     const res = await groupOrderApi.getDetail(orderId.value)
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       orderLocked.value = Boolean(res.data.locked)
       currentUserJoined.value = typeof res.data.currentUserJoined === 'boolean'
         ? res.data.currentUserJoined
@@ -270,7 +270,7 @@ const loadDishList = async (isRefresh = false) => {
     // GROUP-005: 调用API获取菜品列表
     const res = await groupOrderApi.getAvailableDishes(orderId.value, params)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const dishes = res.data.list || res.data || []
 
       if (isRefresh) {
@@ -302,7 +302,7 @@ const loadUserSelections = async () => {
   try {
     const res = await groupOrderApi.getUserSelections(orderId.value, userId.value)
 
-    if (res.code === 200 && res.data && Array.isArray(res.data)) {
+    if (res.success === true && res.data && Array.isArray(res.data)) {
       const selections = res.data
       selections.forEach(item => {
         selectedMap.value[item.dishId] = item.quantity
@@ -461,7 +461,7 @@ const submitSelections = async () => {
       dishes: selections
     })
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.hideLoading()
       uni.showToast({
         title: '保存成功',

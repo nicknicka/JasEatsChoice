@@ -128,7 +128,7 @@ export const aiApi = {
       console.log('📦 后端响应:', response)
 
       // SupervisorAgent返回标准ResponseResult格式: { success: true, code: "200", data: "内容" }
-      if (response && (response.success === true || response.code === 200 || response.code === "200")) {
+      if (response && response.success === true) {
         let message = response.data
 
         if (!message) {

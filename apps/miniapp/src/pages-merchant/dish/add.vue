@@ -471,7 +471,7 @@ const saveDraft = async () => {
     // 调用API创建菜品草稿
     const res = await dishApi.create(draftData)
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.showToast({
         title: '草稿保存成功',
         icon: 'success'
@@ -553,7 +553,7 @@ const submitDish = async () => {
     // 调用API创建菜品
     const res = await dishApi.create(publishData)
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.showToast({
         title: '发布成功',
         icon: 'success'

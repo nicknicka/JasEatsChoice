@@ -83,7 +83,9 @@ class RagKnowledgeServiceTest {
     void notStartedExpiredActiveAnnouncementsAreNotIndexedOrRebuilt() {
         Announcement notStarted = activePlatformAnnouncement();
         notStarted.setId("not-started");
-        notStarted.setStartTime(LocalDateTime.parse("2026-11-20T00:00:00"));
+        // 用动态的"未来"时间：isIndexable 拿真实 LocalDateTime.now() 与 startTime 比较，
+        // 写死日期会随时间推移变成过去，导致该用例失效（此前写死 2026-11-20，现已过期）。
+        notStarted.setStartTime(LocalDateTime.now().plusDays(1));
         notStarted.setEndTime(null);
         Announcement expired = activePlatformAnnouncement();
         expired.setId("expired");

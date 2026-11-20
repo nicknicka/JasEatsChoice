@@ -226,7 +226,7 @@ const loadOrderDetail = async () => {
 
     const res = await groupOrderApi.getDetail(orderId.value)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const data = res.data
       orderInfo.value = {
         id: data.id,
@@ -367,7 +367,7 @@ const confirmOrder = async () => {
     const res = await groupOrderApi.confirm(orderId.value, { userId: userId.value })
     uni.hideLoading()
 
-    if (res.code === 200) {
+    if (res.success === true) {
       await loadOrderDetail()
       uni.navigateTo({
         url: `/pages-user/group-order/settle?id=${orderId.value}`
@@ -442,7 +442,7 @@ const leaveOrder = () => {
         const result = await groupOrderApi.leave(orderId.value, { userId: userId.value })
         uni.hideLoading()
 
-        if (result.code === 200) {
+        if (result.success === true) {
           uni.showToast({
             title: '已退出拼单',
             icon: 'success'

@@ -195,7 +195,7 @@ const loadOrderDetail = async (orderId) => {
     // 调用后端API获取订单支付信息
     const res = await paymentApi.getOrderInfo(orderId)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const data = res.data
 
       // 格式化订单数据
@@ -242,7 +242,7 @@ const loadUserBalance = async () => {
 
     const res = await walletApi.getBalance(userId.value)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       userBalance.value = formatAmount(res.data.balance || 0)
     }
   } catch (error) {
@@ -276,7 +276,7 @@ const loadCoupons = async () => {
       orderAmount: orderAmount
     })
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       // 转换后端数据格式为前端所需格式
       availableCoupons.value = res.data.map(coupon => ({
         id: coupon.id,
@@ -419,7 +419,7 @@ const processPayment = async () => {
 
     const res = await paymentApi.createPayment(paymentData)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const { paymentNo, amount, status } = res.data
 
       console.log('支付订单创建成功:', { paymentNo, amount, status })
@@ -469,7 +469,7 @@ const walletPay = async (paymentNo) => {
       paymentPassword
     })
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       const { status, paymentNo: paidPaymentNo } = res.data
 
       if (status === 'success') {

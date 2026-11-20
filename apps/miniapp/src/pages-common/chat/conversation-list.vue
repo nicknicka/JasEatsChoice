@@ -202,7 +202,7 @@ const loadConversations = async (isRefresh = false) => {
     // IM-029: 调用API获取会话列表
     const res = await conversationApi.getList(currentUserId.value)
 
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       // 转换会话数据格式
       const formattedConversations = res.data.map(conv => ({
         id: conv.id,

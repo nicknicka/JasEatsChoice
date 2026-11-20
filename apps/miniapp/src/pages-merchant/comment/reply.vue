@@ -299,7 +299,7 @@ const saveReply = async () => {
 
     uni.hideLoading()
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.showToast({
         title: isEdit.value ? '修改成功' : '回复成功',
         icon: 'success'

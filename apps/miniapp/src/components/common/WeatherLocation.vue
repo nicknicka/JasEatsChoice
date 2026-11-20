@@ -60,7 +60,7 @@ const getLocationAndWeather = async () => {
           ''
         const res = await weatherApi.getWeatherInfo({ city })
 
-        if (res && res.code === 200 && res.data) {
+        if (res && res.success === true && res.data) {
           locationStore.setWeather({
             temperature: res.data.temperature ?? res.data.temp ?? '--',
             condition: res.data.condition || res.data.weather || '未知',

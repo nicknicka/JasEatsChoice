@@ -406,7 +406,7 @@ const contactMerchant = async () => {
       orderId: orderId.value
     })
 
-    if (res.code === 200 || res.conversationId) {
+    if (res.success === true || res.conversationId) {
       const conversationId = res.conversationId || res.data?.conversationId || res.id
       // 跳转到聊天页面
       uni.navigateTo({

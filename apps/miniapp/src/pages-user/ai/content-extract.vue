@@ -538,7 +538,7 @@ const saveAsRecipe = async () => {
 
           uni.hideLoading()
 
-          if (saveRes && (saveRes.code === 200 || saveRes.recipeId || saveRes.id)) {
+          if (saveRes && (saveRes.success === true || saveRes.recipeId || saveRes.id)) {
             const recipeId = saveRes.recipeId || saveRes.id || saveRes.data?.recipeId
 
             uni.showToast({

@@ -238,7 +238,7 @@ const addToCart = async () => {
       remark: remark.value
     })
 
-    if (res && (res.code === 200 || res.success || res.data)) {
+    if (res && (res.success === true || res.data)) {
       uni.showToast({
         title: '已加入购物车',
         icon: 'success'

@@ -205,7 +205,7 @@ onMounted(async () => {
 const loadShopInfo = async () => {
   try {
     const res = await merchantApi.getShopInfo()
-    if (res.code === 200 && res.data) {
+    if (res.success === true && res.data) {
       shopInfo.value = {
         avatar: res.data.avatar || '',
         name: res.data.name || '',
@@ -423,7 +423,7 @@ const saveSettings = async () => {
 
     uni.hideLoading()
 
-    if (res.code === 200) {
+    if (res.success === true) {
       uni.showToast({
         title: '保存成功',
         icon: 'success'

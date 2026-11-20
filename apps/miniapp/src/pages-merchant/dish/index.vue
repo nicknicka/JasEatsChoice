@@ -285,7 +285,7 @@ const toggleStatus = async (dish) => {
           // 注意：后端使用status字段，前端使用isActive
           const apiRes = await dishApi.setAvailability(dish.id, newStatus)
 
-          if (apiRes.code === 200) {
+          if (apiRes.success === true) {
             // 更新本地数据
             dish.isActive = newStatus
 
