@@ -1,5 +1,15 @@
 <template>
   <view class="order-process-container">
+    <!-- 加载 / 错误：失败时整页不进内容区，避免把示例订单当真实订单展示 -->
+    <view class="state-block" v-if="loading">
+      <text class="state-text">加载中...</text>
+    </view>
+    <view class="state-block" v-else-if="loadError">
+      <text class="state-text">{{ loadError }}</text>
+      <button class="state-btn" @tap="loadOrderProcess">重试</button>
+    </view>
+
+    <template v-else>
     <!-- 订单信息 -->
     <view class="order-card">
       <view class="card-header">
@@ -98,6 +108,7 @@
         联系顾客
       </button>
     </view>
+    </template>
   </view>
 </template>
 
@@ -109,17 +120,18 @@ import { normalizeOrderStatusCode } from '@/config/order-status'
 // 订单ID
 const orderId = ref('')
 
-// 订单信息
+// 订单信息：初始为空结构，真实数据一律来自接口，失败时不留任何示例订单
 const orderInfo = ref({
-  id: 1,
-  orderNo: 'OD202603180001',
-  status: 2,
-  statusText: '制作中',
-  dishes: [
-    { id: 1, name: '宫保鸡丁', quantity: 1 },
-    { id: 2, name: '鱼香肉丝', quantity: 2 }
-  ]
+  id: null,
+  orderNo: '',
+  status: 0,
+  statusText: '',
+  dishes: []
 })
+
+// 加载与错误状态：失败时清空订单并进入错误态
+const loading = ref(true)
+const loadError = ref('')
 
 // 制作步骤
 const processSteps = ref([
@@ -131,22 +143,11 @@ const processSteps = ref([
 ])
 
 const currentStep = ref(0)
-const expectTime = ref('13:00')
+const expectTime = ref('')
 const processRemark = ref('')
 
-// 进度历史
-const progressHistory = ref([
-  {
-    step: '开始制作',
-    time: '12:32',
-    remark: '已确认订单，开始准备食材'
-  },
-  {
-    step: '食材准备中',
-    time: '12:35',
-    remark: ''
-  }
-])
+// 进度历史：接口暂不提供分步打点，这里只保留空数组
+const progressHistory = ref([])
 
 onMounted(() => {
   // 从页面参数获取订单ID
@@ -157,45 +158,53 @@ onMounted(() => {
   if (options.id) {
     orderId.value = options.id
     loadOrderProcess()
+    return
   }
+  loading.value = false
+  loadError.value = '缺少订单号，无法加载订单'
 })
 
 /**
  * 加载订单进度
  */
 const loadOrderProcess = async () => {
+  loading.value = true
+  loadError.value = ''
+
   try {
     // 调用订单详情接口，detail 返回订单本体，dishes 返回订单菜品
     const res = await merchantApi.getOrderDetail(orderId.value)
-    const dishesRes = await merchantApi.getOrderDishes(orderId.value)
 
-    if (res && res.success && res.data) {
-      const data = res.data
-      const normalizedStatus = normalizeOrderStatusCode(data.status)
-      const dishes = dishesRes && dishesRes.success ? dishesRes.data || [] : []
-
-      // 更新订单信息
-      orderInfo.value = {
-        id: data.id,
-        orderNo: `OD${String(data.id).padStart(6, '0')}`,
-        status: normalizedStatus,
-        statusText: getStatusText(normalizedStatus),
-        dishes: dishes.map(dish => ({
-          id: dish.dishId || dish.id,
-          name: dish.dishName || dish.name,
-          quantity: dish.quantity || 1
-        }))
-      }
-
-      // 更新当前步骤
-      currentStep.value = mapStatusToStep(normalizedStatus)
+    if (!res || !res.success || !res.data) {
+      loadError.value = (res && res.message) || '订单不存在或已被删除'
+      return
     }
+
+    const dishesRes = await merchantApi.getOrderDishes(orderId.value)
+    const data = res.data
+    const normalizedStatus = normalizeOrderStatusCode(data.status)
+    const dishes = dishesRes && dishesRes.success ? dishesRes.data || [] : []
+
+    // 更新订单信息
+    orderInfo.value = {
+      id: data.id,
+      orderNo: `OD${String(data.id).padStart(6, '0')}`,
+      status: normalizedStatus,
+      statusText: getStatusText(normalizedStatus),
+      dishes: dishes.map(dish => ({
+        id: dish.dishId || dish.id,
+        name: dish.dishName || dish.name,
+        quantity: dish.quantity || 1
+      }))
+    }
+
+    // 更新当前步骤
+    currentStep.value = mapStatusToStep(normalizedStatus)
   } catch (error) {
     console.error('加载订单进度失败:', error)
-    uni.showToast({
-      title: '加载失败',
-      icon: 'none'
-    })
+    loadError.value = '加载订单失败，请稍后重试'
+  } finally {
+    loading.value = false
   }
 }
 
@@ -337,6 +346,33 @@ const getCurrentTime = () => {
   min-height: 100vh;
   background: #F5F5F5;
   padding-bottom: 40rpx;
+}
+
+/* 加载 / 错误态：与 statistics 页保持同一套写法 */
+.state-block {
+  @include flex-center;
+  flex-direction: column;
+  gap: 20rpx;
+  padding: 80rpx 40rpx;
+  margin: 20rpx;
+  background: #fff;
+  border-radius: 16rpx;
+}
+
+.state-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.state-btn {
+  min-width: 200rpx;
+  height: 72rpx;
+  @include flex-center;
+  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  color: #fff;
+  font-size: 28rpx;
+  border-radius: 36rpx;
+  border: none;
 }
 
 /* 订单卡片 */
