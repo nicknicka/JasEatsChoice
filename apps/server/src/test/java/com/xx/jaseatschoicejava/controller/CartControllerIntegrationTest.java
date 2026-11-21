@@ -294,6 +294,42 @@ class CartControllerIntegrationTest {
     }
 
     @Test
+    void deleteByDish_removesAllSpecsOfThatDish() throws Exception {
+        addItem(USER_A, dishA, "中辣", 1);
+        addItem(USER_A, dishA, "微辣", 1);
+        addItem(USER_A, dishB, "", 1);
+
+        MvcResult result = mockMvc.perform(delete("/v1/cart/items")
+                .param("merchantId", MERCHANT)
+                .param("dishId", dishA)
+                .header("Authorization", "Bearer " + token(USER_A)))
+            .andReturn();
+        assertTrue(json.readTree(result.getResponse().getContentAsString()).get("success").asBoolean());
+
+        // 该菜品的两个规格一起被删，另一个菜品不受影响
+        assertEquals(0L, cartItemService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CartItem>()
+            .eq(CartItem::getUserId, USER_A)
+            .eq(CartItem::getDishId, dishA)));
+        assertEquals(1L, cartItemService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CartItem>()
+            .eq(CartItem::getUserId, USER_A)
+            .eq(CartItem::getDishId, dishB)));
+    }
+
+    @Test
+    void deleteByDish_cannotTouchOtherUsersItems() throws Exception {
+        addItem(USER_A, dishA, "", 1);
+
+        mockMvc.perform(delete("/v1/cart/items")
+                .param("merchantId", MERCHANT)
+                .param("dishId", dishA)
+                .header("Authorization", "Bearer " + token(USER_B)))
+            .andReturn();
+
+        assertEquals(1L, cartItemService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CartItem>()
+            .eq(CartItem::getUserId, USER_A)));
+    }
+
+    @Test
     void anonymousRequestIsRejected() throws Exception {
         MvcResult result = mockMvc.perform(get("/v1/cart/" + USER_A)).andReturn();
         // 默认拒绝策略下未登录直接 401

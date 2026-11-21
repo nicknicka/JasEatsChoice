@@ -118,6 +118,23 @@ public class CartController {
     }
 
     /**
+     * 按商家 + 菜品删除：删掉该菜品在此商家下的全部规格。
+     *
+     * <p>单独给一个端点，而不是让调用方拼一个占位的 itemId。
+     */
+    @ApiOperation("按菜品移出购物车")
+    @DeleteMapping("/items")
+    public ResponseResult<?> deleteByDish(@RequestParam String merchantId,
+                                          @RequestParam String dishId,
+                                          HttpServletRequest request) {
+        String userId = identityResolver.requireUserId(request);
+        int removed = cartItemService.deleteByDish(userId, merchantId, dishId);
+        return removed > 0
+            ? ResponseResult.success("已从购物车移除")
+            : ResponseResult.fail("404", "购物车中没有该菜品");
+    }
+
+    /**
      * 删除购物车项。
      *
      * <p>不带 query 时按 itemId 删除；带 {@code merchantId + dishId} 时删除该菜品在此商家下的全部规格。

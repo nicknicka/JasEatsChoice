@@ -7,12 +7,12 @@
 **按「方法 + 路径」归档**：`GET /v1/recipe/**` 放行只覆盖读，
 `POST /v1/recipe`、`PUT /v1/recipe/toggle-favorite/{id}` 等写接口仍要求登录。
 
-本轮共 **555** 条：
+本轮共 **556** 条：
 
 | 档位 | 条数 | 含义 |
 |---|---:|---|
 | 公开 | 18 | 匿名可调（显式登记在 `SecurityConfig`） |
-| 登录 | 414 | 默认拒绝覆盖，匿名返回 401 |
+| 登录 | 415 | 默认拒绝覆盖，匿名返回 401 |
 | 管理员 | 123 | 需 `ROLE_ADMIN` 或 `admin:*` 权限 |
 
 改路由或改 `SecurityConfig` 后重跑本脚本即可，勿手改下表。
@@ -168,7 +168,7 @@
 | `PUT` | `/v1/admin/hot-topic/update/{id}` |
 | `PUT` | `/v1/tutorial/admin/{id}/featured` |
 
-## 登录（414 条）
+## 登录（415 条）
 
 | 方法 | 路径 |
 |---|---|
@@ -181,6 +181,7 @@
 | `DELETE` | `/v1/addresses/{userId}/addresses/{addressId}` |
 | `DELETE` | `/v1/ai/chat/clear` |
 | `DELETE` | `/v1/banners/{bannerId}` |
+| `DELETE` | `/v1/cart/items` |
 | `DELETE` | `/v1/cart/items/{itemId}` |
 | `DELETE` | `/v1/cart/{userId}/clear` |
 | `DELETE` | `/v1/chat/sessions/{sessionId}` |
