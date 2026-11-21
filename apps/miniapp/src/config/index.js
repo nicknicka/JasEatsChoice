@@ -99,7 +99,6 @@ export const API_CONFIG = {
     detail: '/v1/orders/', // 获取订单详情接口
     create: '/v1/orders', // 创建订单接口
     cancel: '/v1/orders/', // 取消订单接口 (需要拼接orderId)
-    confirm: '/v1/orders/', // 确认收货接口 (需要拼接orderId/confirm)
     pay: '/v1/orders/' // 支付接口 (需要拼接orderId/pay)
   },
 
