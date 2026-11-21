@@ -31,15 +31,21 @@
       </view>
     </view>
 
+    <!-- 加载 / 错误：失败时不渲染任何指标，避免旧数据伪装成当前数据 -->
+    <view class="state-block" v-if="loading">
+      <text class="state-text">加载中...</text>
+    </view>
+    <view class="state-block" v-else-if="loadError">
+      <text class="state-text">{{ loadError }}</text>
+      <button class="state-btn" @tap="loadAnalyticsData">重试</button>
+    </view>
+
+    <template v-else>
     <!-- 关键指标卡片 -->
     <view class="metrics-cards">
       <view class="metric-card" v-for="(metric, index) in keyMetrics" :key="index">
         <view class="metric-header">
           <text class="metric-title">{{ metric.title }}</text>
-          <view class="metric-trend" :class="{ up: metric.trend > 0, down: metric.trend < 0 }">
-            <text class="trend-icon">{{ metric.trend > 0 ? '↑' : '↓' }}</text>
-            <text class="trend-value">{{ Math.abs(metric.trend) }}%</text>
-          </view>
         </view>
         <view class="metric-value">
           <text class="value">{{ metric.value }}</text>
@@ -53,18 +59,7 @@
       <!-- 营业额趋势 -->
       <view class="chart-card">
         <view class="chart-header">
-          <text class="chart-title">营业额趋势</text>
-          <view class="chart-actions">
-            <view class="action-btn" @click="switchChartType('turnover')">
-              <text class="btn-text">日</text>
-            </view>
-            <view class="action-btn" @click="switchChartType('week')">
-              <text class="btn-text">周</text>
-            </view>
-            <view class="action-btn" @click="switchChartType('month')">
-              <text class="btn-text">月</text>
-            </view>
-          </view>
+          <text class="chart-title">订单趋势</text>
         </view>
         <view class="chart-container">
           <canvas class="turnover-chart" canvas-id="turnoverChart"></canvas>
@@ -97,10 +92,10 @@
         <view class="ranking-list">
           <view class="ranking-item" v-for="(item, index) in rankingList" :key="index">
             <view class="rank-number" :class="{ top3: index < 3 }">{{ index + 1 }}</view>
-            <image class="dish-image" :src="item.image" mode="aspectFill"></image>
+            <view class="dish-image dish-image-placeholder">{{ item.name.charAt(0) }}</view>
             <view class="dish-info">
               <text class="dish-name">{{ item.name }}</text>
-              <text class="dish-sales">{{ item.sales }}{{ rankingType === 'quantity' ? '份' : '元' }}</text>
+              <text class="dish-sales">{{ rankingType === 'quantity' ? `${item.sales}份` : `¥${item.amount}` }}</text>
             </view>
             <view class="dish-amount">
               <text class="amount-value">¥{{ item.amount }}</text>
@@ -109,43 +104,8 @@
         </view>
       </view>
 
-      <!-- 用户行为分析 -->
-      <view class="behavior-card">
-        <view class="behavior-header">
-          <text class="behavior-title">用户行为分析</text>
-        </view>
-        <view class="behavior-metrics">
-          <view class="behavior-item">
-            <view class="behavior-icon">🕐</view>
-            <view class="behavior-info">
-              <text class="behavior-label">下单高峰期</text>
-              <text class="behavior-value">{{ peakHour }}:00</text>
-            </view>
-          </view>
-          <view class="behavior-item">
-            <view class="behavior-icon">📍</view>
-            <view class="behavior-info">
-              <text class="behavior-label">主要配送区域</text>
-              <text class="behavior-value">{{ mainArea }}</text>
-            </view>
-          </view>
-          <view class="behavior-item">
-            <view class="behavior-icon">⭐</view>
-            <view class="behavior-info">
-              <text class="behavior-label">平均评分</text>
-              <text class="behavior-value">{{ avgRating }}分</text>
-            </view>
-          </view>
-          <view class="behavior-item">
-            <view class="behavior-icon">🔄</view>
-            <view class="behavior-info">
-              <text class="behavior-label">复购率</text>
-              <text class="behavior-value">{{ repurchaseRate }}%</text>
-            </view>
-          </view>
-        </view>
-      </view>
     </view>
+    </template>
 
     <!-- 日期选择器弹窗 -->
     <uni-popup ref="datePopup" type="bottom">
@@ -187,13 +147,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import uCharts from '@/utils/u-charts.js'
+import { merchantApi } from '@/api/modules/merchant.js'
+import { useMerchantStore } from '@/store/modules/merchant'
 
 // 日期选择器
 const datePopup = ref(null)
 const dateMode = ref('range')
-const datePickerValue = ref([2026, 3, 18])
+const datePickerValue = ref([new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()])
 const years = ref([])
 const months = ref([])
 const days = ref([])
@@ -201,36 +163,24 @@ const days = ref([])
 // 时间选择
 const currentTimeTab = ref(0)
 const timeTabs = ref(['今天', '昨天', '本周', '本月', '自定义'])
-const dateRange = ref('2026-03-18')
-
-// 图表类型
-const chartType = ref('turnover')
+const dateRange = ref('今天')
 
 // 排行类型
 const rankingType = ref('quantity')
 
-// 关键指标
-const keyMetrics = ref([
-  { title: '总营业额', value: '15,680', unit: '元', trend: 12.5 },
-  { title: '订单数', value: '328', unit: '单', trend: 8.3 },
-  { title: '客单价', value: '47.8', unit: '元', trend: -2.4 },
-  { title: '完成率', value: '96.5', unit: '%', trend: 5.2 }
-])
+// 加载与错误状态
+const loading = ref(false)
+const loadError = ref('')
+const merchantStore = useMerchantStore()
 
-// 销售排行
-const rankingList = ref([
-  { name: '招牌红烧肉', image: 'https://via.placeholder.com/100x100', sales: 156, amount: 4680 },
-  { name: '宫保鸡丁', image: 'https://via.placeholder.com/100x100', sales: 128, amount: 3840 },
-  { name: '鱼香肉丝', image: 'https://via.placeholder.com/100x100', sales: 112, amount: 3360 },
-  { name: '麻婆豆腐', image: 'https://via.placeholder.com/100x100', sales: 98, amount: 2940 },
-  { name: '糖醋排骨', image: 'https://via.placeholder.com/100x100', sales: 87, amount: 2610 }
-])
+// 关键指标：全部来自 /v1/merchant/{id}/statistics 的 basicStats
+const keyMetrics = ref([])
 
-// 用户行为数据
-const peakHour = ref(11)
-const mainArea = ref('天河区')
-const avgRating = ref(4.8)
-const repurchaseRate = ref(68)
+// 销售排行：来自同一个接口的 dishSalesRank
+const rankingList = ref([])
+
+// 趋势图与订单分布的数据源
+const orderTrend = ref([])
 
 // 初始化日期数据
 onMounted(() => {
@@ -243,8 +193,9 @@ onMounted(() => {
   months.value = Array.from({ length: 12 }, (_, i) => i + 1)
   days.value = Array.from({ length: daysInMonth }, (_, i) => i + 1)
 
-  // 初始化图表
+  // 初始化图表后拉取真实经营数据（图表数据随接口刷新）
   initCharts()
+  loadAnalyticsData()
 })
 
 onUnmounted(() => {
@@ -308,21 +259,76 @@ const onDateChange = (e) => {
 }
 
 // 加载分析数据
-const loadAnalyticsData = () => {
-  // 模拟加载数据
-  // 实际应该调用API获取数据
+// 时间标签 → 后端 timeRange 取值（与 MerchantController.getStatistics 的 switch 对齐）
+const TIME_RANGES = ['today', 'yesterday', 'week', 'month', 'all']
+
+const formatMoney = (value) => Number(value || 0).toFixed(2)
+
+/**
+ * 加载分析数据
+ * 只展示接口真实返回的内容；接口没有的数据（趋势百分比、高峰时段、区域、复购率）不编造。
+ */
+const loadAnalyticsData = async () => {
+  const merchantId = merchantStore.resolveMerchantId()
+  if (!merchantId) {
+    loadError.value = '未检测到商家信息，请重新登录'
+    keyMetrics.value = []
+    rankingList.value = []
+    orderTrend.value = []
+    return
+  }
+
+  loading.value = true
+  loadError.value = ''
+
+  try {
+    const res = await merchantApi.getStatistics(merchantId, {
+      timeRange: TIME_RANGES[currentTimeTab.value] || 'today'
+    })
+
+    if (!res || !res.success || !res.data) {
+      loadError.value = (res && res.message) || '加载经营数据失败'
+      keyMetrics.value = []
+      rankingList.value = []
+      orderTrend.value = []
+      return
+    }
+
+    const data = res.data
+    const basic = data.basicStats || {}
+
+    keyMetrics.value = [
+      { title: '总营业额', value: formatMoney(basic.totalAmount), unit: '元' },
+      { title: '订单数', value: String(basic.orders ?? 0), unit: '单' },
+      { title: '客单价', value: formatMoney(basic.avgAmount), unit: '元' },
+      { title: '下单人数', value: String(basic.newCustomers ?? 0), unit: '人' }
+    ]
+
+    rankingList.value = (data.dishSalesRank || []).map(item => ({
+      name: item.name,
+      sales: item.sales,
+      revenue: Number(item.revenue) || 0,
+      amount: formatMoney(item.revenue)
+    }))
+
+    orderTrend.value = data.orderTrend || []
+    updateCharts()
+  } catch (error) {
+    console.error('加载经营分析失败:', error)
+    loadError.value = '加载经营数据失败，请稍后重试'
+    keyMetrics.value = []
+    rankingList.value = []
+    orderTrend.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
-// 切换图表类型
-const switchChartType = (type) => {
-  chartType.value = type
-  updateCharts()
-}
-
-// 切换排行类型
+// 切换排行类型：按销量或按金额重新排序（数据都来自接口）
 const switchRankingType = (type) => {
   rankingType.value = type
-  // 重新排序
+  const sortKey = type === 'amount' ? 'revenue' : 'sales'
+  rankingList.value = [...rankingList.value].sort((a, b) => b[sortKey] - a[sortKey])
 }
 
 // 初始化图表
@@ -341,7 +347,7 @@ const updateCharts = () => {
   })
 }
 
-// 绘制营业额趋势图
+// 趋势图：接口只提供订单量趋势（orderTrend: [{time, orders}]），不画营业额曲线
 const drawTurnoverChart = () => {
   const ctx = uni.createCanvasContext('turnoverChart')
   const systemInfo = uni.getSystemInfoSync()
@@ -353,10 +359,10 @@ const drawTurnoverChart = () => {
     context: ctx,
     width: width,
     height: height,
-    categories: ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+    categories: orderTrend.value.map(item => item.time),
     series: [{
-      name: '营业额',
-      data: [1200, 1800, 2500, 3200, 2800, 3500, 4200, 3800],
+      name: '订单量',
+      data: orderTrend.value.map(item => Number(item.orders) || 0),
       color: '#ff6b6b',
       smooth: true
     }],
@@ -379,27 +385,24 @@ const drawTurnoverChart = () => {
   chart.init()
 }
 
-// 绘制订单分布图
+// 订单分布图：接口未提供状态分布，这里按当前时段订单总量呈现，不编造分段
 const drawOrderChart = () => {
   const ctx = uni.createCanvasContext('orderChart')
   const systemInfo = uni.getSystemInfoSync()
   const width = systemInfo.windowWidth - 64
   const height = 300
 
+  const totalOrders = orderTrend.value.reduce((sum, item) => sum + (Number(item.orders) || 0), 0)
+  const series = totalOrders > 0
+    ? [{ data: [{ name: '订单量', value: totalOrders, color: '#FF6B35' }] }]
+    : [{ data: [] }]
+
   const chart = new uCharts({
     type: 'pie',
     context: ctx,
     width: width,
     height: height,
-    series: [{
-      data: [
-        { name: '待付款', value: 12, color: '#faad14' },
-        { name: '待接单', value: 8, color: '#1677ff' },
-        { name: '制作中', value: 25, color: '#eb2f96' },
-        { name: '配送中', value: 18, color: '#52c41a' },
-        { name: '已完成', value: 37, color: '#13c2c2' }
-      ]
-    }],
+    series: series,
     legend: {
       position: 'bottom'
     }
@@ -409,27 +412,12 @@ const drawOrderChart = () => {
 }
 
 // 导出报表
+// 导出报表：后端暂无导出接口，如实告知未开放，不弹假的导出进度
 const exportReport = () => {
-  uni.showActionSheet({
-    itemList: ['导出Excel', '导出PDF', '发送到邮箱'],
-    success: (res) => {
-      if (res.tapIndex === 0) {
-        uni.showToast({
-          title: '正在导出Excel...',
-          icon: 'loading'
-        })
-      } else if (res.tapIndex === 1) {
-        uni.showToast({
-          title: '正在导出PDF...',
-          icon: 'loading'
-        })
-      } else if (res.tapIndex === 2) {
-        uni.showToast({
-          title: '正在发送到邮箱...',
-          icon: 'loading'
-        })
-      }
-    }
+  uni.showModal({
+    title: '暂未开放',
+    content: '报表导出功能尚未开放，当前可在本页查看实时经营数据。',
+    showCancel: false
   })
 }
 
@@ -440,11 +428,40 @@ const goBack = () => {
 </script>
 
 <style lang="scss" scoped>
+@import '@/styles/mixins.scss';
+
 .analytics-page {
   min-height: 100vh;
   background: #f5f5f5;
   padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 加载 / 错误态：与 statistics 页保持同一套写法 */
+.state-block {
+  @include flex-center;
+  flex-direction: column;
+  gap: 20rpx;
+  padding: 80rpx 40rpx;
+  margin: 20rpx;
+  background: #fff;
+  border-radius: 16rpx;
+}
+
+.state-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.state-btn {
+  min-width: 200rpx;
+  height: 72rpx;
+  @include flex-center;
+  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  color: #fff;
+  font-size: 28rpx;
+  border-radius: 36rpx;
+  border: none;
 }
 
 .nav-bar {
@@ -723,6 +740,13 @@ const goBack = () => {
         width: 80rpx;
         height: 80rpx;
         border-radius: 8rpx;
+      }
+
+      .dish-image-placeholder {
+        @include flex-center;
+        background: #fff3ec;
+        color: #FF6B35;
+        font-size: 32rpx;
       }
 
       .dish-info {

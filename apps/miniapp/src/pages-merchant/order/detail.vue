@@ -1,5 +1,15 @@
 <template>
   <view class="order-detail-container">
+    <!-- 加载 / 错误：失败时整页不进内容区，避免把示例订单当真实订单展示 -->
+    <view class="state-block" v-if="loading">
+      <text class="state-text">加载中...</text>
+    </view>
+    <view class="state-block" v-else-if="loadError">
+      <text class="state-text">{{ loadError }}</text>
+      <button class="state-btn" @tap="loadOrderDetail">重试</button>
+    </view>
+
+    <template v-else>
     <!-- 订单状态卡片 -->
     <view class="status-card" :class="'status-' + orderInfo.status">
       <view class="status-icon">
@@ -167,61 +177,46 @@
         拒单
       </button>
     </view>
+    </template>
   </view>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { merchantApi } from '@/api'
-import { useMerchantStore } from '@/store/modules/merchant'
 import { normalizeOrderStatusCode } from '@/config/order-status'
-
-const merchantStore = useMerchantStore()
 
 // 订单ID
 const orderId = ref('')
 
-// 订单信息
+// 订单信息：初始为空结构，真实数据一律来自接口，失败时不留任何示例订单
 const orderInfo = ref({
-  id: 1,
-  orderNo: 'OD202603180001',
-  status: 2,
-  statusText: '制作中',
-  dishes: [
-    {
-      id: 1,
-      name: '宫保鸡丁',
-      spec: '中辣',
-      price: 28,
-      quantity: 1,
-      image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=1'
-    },
-    {
-      id: 2,
-      name: '鱼香肉丝',
-      spec: '',
-      price: 26,
-      quantity: 2,
-      image: 'https://via.placeholder.com/100/FF6B35/FFFFFF?text=2'
-    }
-  ],
-  remark: '少放辣，多放葱花',
-  orderTime: '2026-03-18 12:30:25',
-  expectTime: '2026-03-18 13:00',
-  takeType: '到店自取',
-  tableNo: 'A05',
-  paymentMethod: '微信支付',
-  dishAmount: '80.00',
-  discount: '5.00',
+  id: null,
+  orderNo: '',
+  status: 0,
+  statusText: '',
+  dishes: [],
+  remark: '',
+  orderTime: '',
+  expectTime: '',
+  takeType: '',
+  tableNo: '',
+  paymentMethod: '',
+  dishAmount: '0.00',
+  discount: '0.00',
   deliveryFee: '0.00',
-  amount: '75.00',
+  amount: '0.00',
   customer: {
-    id: 1,
-    name: '张同学',
-    phone: '138****8888',
-    avatar: 'https://via.placeholder.com/60/FF6B35/FFFFFF?text=张'
+    id: null,
+    name: '',
+    phone: '',
+    avatar: ''
   }
 })
+
+// 加载与错误状态：失败时进入错误态并清空订单，绝不回退到示例数据
+const loading = ref(true)
+const loadError = ref('')
 
 // 进度步骤（5状态系统）
 const progressSteps = ref([
@@ -246,59 +241,70 @@ onMounted(() => {
  * 加载订单详情
  */
 const loadOrderDetail = async () => {
+  if (!orderId.value) {
+    loading.value = false
+    loadError.value = '缺少订单号，无法加载订单'
+    return
+  }
+
+  loading.value = true
+  loadError.value = ''
+
   try {
     // 调用API获取订单详情
     const res = await merchantApi.getOrderDetail(orderId.value)
 
-    if (res && res.success && res.data) {
-      const data = res.data
-      const normalizedStatus = normalizeOrderStatusCode(data.status)
-
-      // 获取订单菜品列表
-      const dishesRes = await merchantApi.getOrderDishes(orderId.value)
-      const dishes = dishesRes && dishesRes.success ? dishesRes.data || [] : []
-
-      // 转换订单数据格式
-      orderInfo.value = {
-        id: data.id,
-        orderNo: `OD${String(data.id).padStart(6, '0')}`,
-        status: normalizedStatus,
-        statusText: getStatusText(normalizedStatus),
-        dishes: dishes.map(dish => ({
-          id: dish.dishId || dish.id,
-          name: dish.dishName || dish.name,
-          spec: dish.spec || '',
-          price: parseFloat(dish.price || 0),
-          quantity: dish.quantity || 1,
-          image: dish.image || dish.coverImage || ''
-        })),
-        remark: data.remark || '',
-        orderTime: formatFullTime(data.createdAt),
-        expectTime: formatFullTime(data.updatedAt) || '未设置',
-        takeType: '到店自取',
-        tableNo: '',
-        paymentMethod: '微信支付',
-        dishAmount: formatAmount(data.totalAmount || 0),
-        discount: '0.00',
-        deliveryFee: '0.00',
-        amount: formatAmount(data.totalAmount || 0),
-        customer: {
-          id: data.userId,
-          name: '顾客',
-          phone: '未提供',
-          avatar: ''
-        }
-      }
-
-      // 更新进度步骤
-      updateProgressSteps(normalizedStatus)
+    if (!res || !res.success || !res.data) {
+      loadError.value = (res && res.message) || '订单不存在或已被删除'
+      return
     }
+
+    const data = res.data
+    const normalizedStatus = normalizeOrderStatusCode(data.status)
+
+    // 获取订单菜品列表
+    const dishesRes = await merchantApi.getOrderDishes(orderId.value)
+    const dishes = dishesRes && dishesRes.success ? dishesRes.data || [] : []
+
+    // 转换订单数据格式
+    orderInfo.value = {
+      id: data.id,
+      orderNo: `OD${String(data.id).padStart(6, '0')}`,
+      status: normalizedStatus,
+      statusText: getStatusText(normalizedStatus),
+      dishes: dishes.map(dish => ({
+        id: dish.dishId || dish.id,
+        name: dish.dishName || dish.name,
+        spec: dish.spec || '',
+        price: parseFloat(dish.price || 0),
+        quantity: dish.quantity || 1,
+        image: dish.image || dish.coverImage || ''
+      })),
+      remark: data.remark || '',
+      orderTime: formatFullTime(data.createdAt),
+      expectTime: formatFullTime(data.updatedAt) || '未设置',
+      takeType: '到店自取',
+      tableNo: '',
+      paymentMethod: '微信支付',
+      dishAmount: formatAmount(data.totalAmount || 0),
+      discount: '0.00',
+      deliveryFee: '0.00',
+      amount: formatAmount(data.totalAmount || 0),
+      customer: {
+        id: data.userId,
+        name: '顾客',
+        phone: '未提供',
+        avatar: ''
+      }
+    }
+
+    // 更新进度步骤
+    updateProgressSteps(normalizedStatus)
   } catch (error) {
     console.error('加载订单详情失败:', error)
-    uni.showToast({
-      title: '加载失败',
-      icon: 'none'
-    })
+    loadError.value = '加载订单失败，请稍后重试'
+  } finally {
+    loading.value = false
   }
 }
 
@@ -520,6 +526,33 @@ const sendMessage = () => {
   min-height: 100vh;
   background: #F5F5F5;
   padding-bottom: 40rpx;
+}
+
+/* 加载 / 错误态：与 statistics 页保持同一套写法 */
+.state-block {
+  @include flex-center;
+  flex-direction: column;
+  gap: 20rpx;
+  padding: 80rpx 40rpx;
+  margin: 20rpx;
+  background: #fff;
+  border-radius: 16rpx;
+}
+
+.state-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.state-btn {
+  min-width: 200rpx;
+  height: 72rpx;
+  @include flex-center;
+  background: linear-gradient(135deg, #FF6B35, #FF8F61);
+  color: #fff;
+  font-size: 28rpx;
+  border-radius: 36rpx;
+  border: none;
 }
 
 /* 状态卡片 */
