@@ -610,13 +610,28 @@ public class AddDishServiceImpl extends ServiceImpl<AddDishRequestMapper, AddDis
             vo.setRemainingTime(Math.max(0, remaining));
         }
 
-        // 解析菜品信息
+        // 解析菜品信息：request 只存 dishId 与数量，名称和单价要回查菜品表补齐
         try {
             List<CreateAddDishDTO.DishItem> items = objectMapper.readValue(
                 request.getDishInfo(),
                 objectMapper.getTypeFactory().constructCollectionType(List.class, CreateAddDishDTO.DishItem.class)
             );
-            // TODO: 转换为DishInfo并填充菜品名称、价格等
+            List<AddDishRequestVO.DishInfo> dishInfos = new ArrayList<>();
+            for (CreateAddDishDTO.DishItem item : items) {
+                AddDishRequestVO.DishInfo info = new AddDishRequestVO.DishInfo();
+                info.setDishId(item.getDishId());
+                info.setQuantity(item.getQuantity());
+                info.setCustomization(item.getCustomization());
+
+                // 菜品可能已被删除，此时无法补名称与价格，如实保留 dishId 便于排查
+                Dish dish = item.getDishId() == null ? null : dishService.getById(item.getDishId());
+                if (dish != null) {
+                    info.setDishName(dish.getName());
+                    info.setPrice(dish.getPrice());
+                }
+                dishInfos.add(info);
+            }
+            vo.setDishInfo(dishInfos);
         } catch (JsonProcessingException e) {
             log.error("解析菜品信息失败", e);
         }

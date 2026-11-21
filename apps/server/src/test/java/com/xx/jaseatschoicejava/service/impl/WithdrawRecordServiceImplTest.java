@@ -109,16 +109,22 @@ class WithdrawRecordServiceImplTest {
     }
 
     @Test
-    void approve_shouldNotMoveMoneyTwice() {
+    void approve_whenNoTransferChannel_shouldFailExplicitly() {
         WithdrawRecord record = pendingRecord();
         when(withdrawRecordMapper.selectById("withdraw-1")).thenReturn(record);
-        when(withdrawRecordMapper.updateById(any(WithdrawRecord.class))).thenReturn(1);
 
-        assertTrue(withdrawRecordService.processWithdraw("withdraw-1", "APPROVE", "审核通过", 9L));
+        // 未接入转账通道时不能把申请置为已打款，必须显式失败并说明原因（#595）
+        com.xx.jaseatschoicejava.exception.BusinessException error = assertThrows(
+            com.xx.jaseatschoicejava.exception.BusinessException.class,
+            () -> withdrawRecordService.processWithdraw("withdraw-1", "APPROVE", "审核通过", 9L));
 
-        // 资金在申请时已扣减，审核通过不能再扣一次或退款
+        assertEquals("501", error.getCode());
+        assertTrue(error.getMessage().contains("转账通道"));
+
+        // 既不能扣款也不能退款，更不能把记录改成已打款
         verify(walletService, never()).withdraw(any(), any(), any());
         verify(walletService, never()).refund(any(), any(), any());
+        verify(withdrawRecordMapper, never()).updateById(any(WithdrawRecord.class));
     }
 
     private WithdrawRecord pendingRecord() {
