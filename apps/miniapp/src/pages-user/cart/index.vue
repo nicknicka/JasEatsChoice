@@ -37,7 +37,7 @@
             v-for="item in group.items"
             :key="item.dish.id"
           >
-            <checkbox-group @change="handleDishSelect(group.merchantId, item.dish.id, $event)">
+            <checkbox-group @change="handleDishSelect(group.merchantId, item.id, $event)">
               <label class="dish-select">
                 <checkbox
                   :value="item.dish.id"
@@ -58,11 +58,11 @@
                   <text class="price-value">{{ item.dish.price }}</text>
                 </view>
                 <view class="quantity-control">
-                  <view class="quantity-btn" @click="decreaseQuantity(group.merchantId, item.dish.id)">
+                  <view class="quantity-btn" @click="decreaseQuantity(group.merchantId, item)">
                     <text>-</text>
                   </view>
                   <view class="quantity-value">{{ item.quantity }}</view>
-                  <view class="quantity-btn" @click="increaseQuantity(group.merchantId, item.dish.id)">
+                  <view class="quantity-btn" @click="increaseQuantity(group.merchantId, item)">
                     <text>+</text>
                   </view>
                 </view>
@@ -70,7 +70,7 @@
             </view>
 
             <!-- 删除按钮（编辑模式显示） -->
-            <view class="delete-btn" v-if="group.editing" @click="deleteItem(group.merchantId, item.dish.id)">
+            <view class="delete-btn" v-if="group.editing" @click="deleteItem(group.merchantId, item)">
               <text>🗑️</text>
             </view>
           </view>
@@ -120,7 +120,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useCartStore } from '@/store'
 import { createPageDebug } from '@/utils/page-debug'
 import { HOME, USER_ORDER_CONFIRM } from '@/constants/routes'
@@ -201,15 +202,43 @@ const totalPackingFee = computed(() => {
 })
 
 /**
- * 加载购物车数据
+ * 加载购物车数据：先向后端拉取，再映射成页面结构。
+ * 失败时清空列表并提示，绝不拿本地缓存冒充真实购物车。
  */
-const loadCartData = () => {
-  pageDebug.requestStart('加载购物车数据')
-  // 从store获取购物车数据
-  const carts = cartStore.carts
+const loading = ref(false)
+const loadError = ref('')
 
-  // 转换为按商家分组的格式
-  const list = carts.map((merchantData) => {
+const loadCartData = async () => {
+  pageDebug.requestStart('加载购物车数据')
+  loading.value = true
+  loadError.value = ''
+
+  const userId = uni.getStorageSync('userId')
+  const ok = await cartStore.fetchCart(userId)
+  loading.value = false
+
+  if (!ok) {
+    cartList.value = []
+    loadError.value = '购物车加载失败，请下拉重试'
+    pageDebug.requestFail('加载购物车数据', new Error('fetchCart failed'))
+    return
+  }
+
+  const carts = cartStore.carts || []
+  cartList.value = carts.map((merchantData) => {
+    const items = (merchantData.items || []).map(item => ({
+      id: item.id,
+      dish: {
+        id: item.dishId,
+        name: item.name,
+        price: item.price,
+        image: normalizeImage(item.image, DEFAULT_DISH_IMAGE)
+      },
+      quantity: item.quantity,
+      spec: item.spec || '',
+      selected: item.selected !== false,
+      available: item.available !== false
+    }))
     return {
       merchantId: merchantData.merchantId,
       merchant: {
@@ -217,23 +246,13 @@ const loadCartData = () => {
         name: merchantData.merchantName || '商家',
         logo: normalizeImage(merchantData.merchantLogo, DEFAULT_MERCHANT_IMAGE)
       },
-      selected: false,
+      // 分组选中状态由子项推导，不再单独维护一份可能不同步的布尔值
+      selected: items.length > 0 && items.every(item => item.selected),
       editing: false,
-      items: merchantData.items.map(item => ({
-        dish: {
-          id: item.dishId,
-          name: item.name,
-          price: item.price,
-          image: normalizeImage(item.image, DEFAULT_DISH_IMAGE)
-        },
-        quantity: item.quantity,
-        spec: item.spec || '',
-        selected: false
-      }))
+      items
     }
   })
 
-  cartList.value = list
   pageDebug.requestSuccess('加载购物车数据', {
     merchantCount: cartList.value.length,
     selectedCount: selectedCount.value
@@ -241,144 +260,107 @@ const loadCartData = () => {
 }
 
 /**
- * 商家选择
+ * 商家选择：勾选后把该商家下所有条目一起同步到后端
  */
-const handleMerchantSelect = (merchantId, e) => {
-  pageDebug.action('勾选商家', {
-    merchantId,
-    checked: e.detail.value.length > 0
-  })
+const handleMerchantSelect = async (merchantId, e) => {
   const checked = e.detail.value.length > 0
-  const group = cartList.value.find(g => g.merchantId === merchantId)
-
-  if (group) {
-    group.selected = checked
-    group.items.forEach(item => {
-      item.selected = checked
-    })
+  pageDebug.action('勾选商家', { merchantId, checked })
+  const ok = await cartStore.selectAll(checked, merchantId)
+  if (!ok) {
+    uni.showToast({ title: '更新选中状态失败', icon: 'none' })
+    return
   }
+  await loadCartData()
 }
 
 /**
  * 商品选择
  */
-const handleDishSelect = (merchantId, dishId, e) => {
-  pageDebug.action('勾选商品', {
-    merchantId,
-    dishId,
-    checked: e.detail.value.length > 0
-  })
+const handleDishSelect = async (merchantId, itemId, e) => {
   const checked = e.detail.value.length > 0
-  const group = cartList.value.find(g => g.merchantId === merchantId)
-
-  if (group) {
-    const item = group.items.find(i => i.dish.id === dishId)
-    if (item) {
-      item.selected = checked
-    }
-
-    // 检查是否所有商品都已选中
-    group.selected = group.items.every(i => i.selected)
+  pageDebug.action('勾选商品', { merchantId, itemId, checked })
+  const ok = await cartStore.selectItem(itemId, checked)
+  if (!ok) {
+    uni.showToast({ title: '更新选中状态失败', icon: 'none' })
+    return
   }
+  await loadCartData()
 }
 
 /**
  * 全选
  */
-const handleSelectAll = (e) => {
-  pageDebug.action('购物车全选', {
-    checked: e.detail.value.length > 0
-  })
+const handleSelectAll = async (e) => {
   const checked = e.detail.value.length > 0
-
-  cartList.value.forEach(group => {
-    group.selected = checked
-    group.items.forEach(item => {
-      item.selected = checked
-    })
-  })
+  pageDebug.action('购物车全选', { checked })
+  const ok = await cartStore.selectAll(checked)
+  if (!ok) {
+    uni.showToast({ title: '更新选中状态失败', icon: 'none' })
+    return
+  }
+  await loadCartData()
 }
 
 /**
- * 增加数量
+ * 增加数量：调接口后重载，以服务端为准
  */
-const increaseQuantity = (merchantId, dishId) => {
-  const group = cartList.value.find(g => g.merchantId === merchantId)
-  if (group) {
-    const item = group.items.find(i => i.dish.id === dishId)
-    if (item) {
-      item.quantity++
-      pageDebug.state('增加购物车商品数量', {
-        merchantId,
-        dishId,
-        quantity: item.quantity
-      })
-
-      // 更新store
-      cartStore.updateQuantity(merchantId, dishId, item.spec || '', item.quantity)
-    }
+const increaseQuantity = async (merchantId, item) => {
+  const target = item || findItem(merchantId)
+  if (!target) return
+  pageDebug.action('增加购物车商品数量', { merchantId, itemId: target.id })
+  const ok = await cartStore.updateQuantity(target.id, target.quantity + 1)
+  if (ok) {
+    await loadCartData()
+  } else {
+    uni.showToast({ title: '更新数量失败', icon: 'none' })
   }
 }
 
 /**
- * 减少数量
+ * 减少数量：数量减到 0 时后端会删除该项
  */
-const decreaseQuantity = (merchantId, dishId) => {
-  const group = cartList.value.find(g => g.merchantId === merchantId)
-  if (group) {
-    const item = group.items.find(i => i.dish.id === dishId)
-    if (item && item.quantity > 1) {
-      item.quantity--
-      pageDebug.state('减少购物车商品数量', {
-        merchantId,
-        dishId,
-        quantity: item.quantity
-      })
-
-      // 更新store
-      cartStore.updateQuantity(merchantId, dishId, item.spec || '', item.quantity)
-    }
+const decreaseQuantity = async (merchantId, item) => {
+  const target = item || findItem(merchantId)
+  if (!target || target.quantity <= 1) return
+  pageDebug.action('减少购物车商品数量', { merchantId, itemId: target.id })
+  const ok = await cartStore.updateQuantity(target.id, target.quantity - 1)
+  if (ok) {
+    await loadCartData()
+  } else {
+    uni.showToast({ title: '更新数量失败', icon: 'none' })
   }
 }
 
 /**
  * 删除商品
  */
-const deleteItem = (merchantId, dishId) => {
-  pageDebug.action('删除购物车商品', {
-    merchantId,
-    dishId
-  })
+const deleteItem = (merchantId, item) => {
+  const target = item || findItem(merchantId)
+  if (!target) return
+  pageDebug.action('删除购物车商品', { merchantId, itemId: target.id })
   uni.showModal({
     title: '提示',
     content: '确定要删除这个商品吗？',
-    success: (res) => {
-      if (res.confirm) {
-        const group = cartList.value.find(g => g.merchantId === merchantId)
-        if (group) {
-          const index = group.items.findIndex(i => i.dish.id === dishId)
-          if (index > -1) {
-            const removedItem = group.items[index]
-            group.items.splice(index, 1)
-
-            // 如果该商家没有商品了，移除整个分组
-            if (group.items.length === 0) {
-              const groupIndex = cartList.value.findIndex(g => g.merchantId === merchantId)
-              cartList.value.splice(groupIndex, 1)
-            }
-
-            // 更新store
-            cartStore.removeFromCart(merchantId, dishId, removedItem?.spec || '')
-          }
-        }
-
-        uni.showToast({
-          title: '已删除',
-          icon: 'success'
-        })
+    success: async (res) => {
+      if (!res.confirm) return
+      const ok = await cartStore.removeItem(target.id)
+      if (ok) {
+        await loadCartData()
+        uni.showToast({ title: '已删除', icon: 'success' })
+      } else {
+        uni.showToast({ title: '删除失败，请重试', icon: 'none' })
       }
     }
   })
+}
+
+/** 在当前列表里按 itemId 找条目；兼容旧调用只传 merchantId 的情况。 */
+function findItem(itemId) {
+  for (const group of cartList.value) {
+    const hit = group.items.find(i => i.id === itemId)
+    if (hit) return hit
+  }
+  return null
 }
 
 /**
@@ -468,9 +450,9 @@ const submitOrder = () => {
   }
 }
 
-// 组件挂载时加载数据
-onMounted(() => {
-  pageDebug.lifecycle('页面挂载')
+// 每次显示都重新拉取：从商品页加购后返回本页必须能看到最新购物车
+onShow(() => {
+  pageDebug.lifecycle('页面显示')
   loadCartData()
 })
 </script>

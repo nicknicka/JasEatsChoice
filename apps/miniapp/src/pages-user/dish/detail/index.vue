@@ -212,6 +212,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useCartStore, useUserStore } from '@/store'
 import { cartApi, dishApi, favoriteApi, reviewApi } from '@/api'
 import { createPageDebug } from '@/utils/page-debug'
@@ -713,8 +714,8 @@ const addToCart = async () => {
       dishId: dishId.value,
       quantity: quantity.value
     })
-    // 调用后端购物车API
-    await cartApi.add({
+    // 只走后端购物车，不再另写一份本地 store（两份状态必然对不上）
+    const res = await cartApi.add({
       dishId: dishId.value,
       merchantId: dishDetail.value.merchant.id,
       quantity: quantity.value,
@@ -722,18 +723,13 @@ const addToCart = async () => {
       remark: ''
     })
 
-    // 同时更新本地store以保持一致性
-    cartStore.addToCart({
-      merchantId: dishDetail.value.merchant.id,
-      merchantName: dishDetail.value.merchant.name,
-      dish: {
-        id: dishDetail.value.id,
-        name: dishDetail.value.name,
-        price: parseFloat(dishDetail.value.price),
-        image: dishDetail.value.images[0]
-      },
-      quantity: quantity.value
-    })
+    if (!res || !res.success) {
+      uni.showToast({
+        title: (res && res.message) || '加入购物车失败',
+        icon: 'none'
+      })
+      return
+    }
 
     uni.showToast({
       title: '已加入购物车',
@@ -758,6 +754,11 @@ const addToCart = async () => {
 }
 
 // 组件挂载时加载数据
+onShow(() => {
+  // 角标取真实购物车数量，从购物车页返回时同步
+  cartStore.fetchCart()
+})
+
 onMounted(() => {
   pageDebug.lifecycle('页面挂载')
   // 获取页面参数

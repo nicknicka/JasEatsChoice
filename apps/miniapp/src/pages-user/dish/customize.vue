@@ -248,60 +248,18 @@ const addToCart = async () => {
         uni.navigateBack()
       }, 1000)
     } else {
-      // 如果后端API调用失败，使用本地存储作为后备方案
-      console.warn('购物车API调用失败，使用本地存储')
-
-      let cart = uni.getStorageSync('cart') || []
-      const cartItem = {
-        userId,
-        dishId: dish.value.id,
-        dishName: dish.value.name,
-        image: dish.value.image,
-        price: parseFloat(totalPrice.value),
-        quantity: quantity.value,
-        spec,
-        optionalIngredients,
-        remark: remark.value
-      }
-      cart.push(cartItem)
-      uni.setStorageSync('cart', cart)
-
+      // 接口明确失败：如实告知，不往本地写假购物车
       uni.showToast({
-        title: '已加入购物车（本地）',
-        icon: 'success'
-      })
-
-      setTimeout(() => {
-        uni.navigateBack()
-      }, 1000)
-    }
-  } catch (error) {
-    console.error('加入购物车失败:', error)
-
-    // 错误时使用本地存储
-    try {
-      let cart = uni.getStorageSync('cart') || []
-      const cartItem = {
-        dishId: dish.value.id,
-        dishName: dish.value.name,
-        price: parseFloat(totalPrice.value),
-        quantity: quantity.value,
-        spec: sizeOptions.value.find(o => o.id === selectedOptions.value.size)?.name,
-        remark: remark.value
-      }
-      cart.push(cartItem)
-      uni.setStorageSync('cart', cart)
-
-      uni.showToast({
-        title: '已加入购物车（离线）',
-        icon: 'success'
-      })
-    } catch (e) {
-      uni.showToast({
-        title: '操作失败，请重试',
+        title: (res && res.message) || '加入购物车失败',
         icon: 'none'
       })
     }
+  } catch (error) {
+    console.error('加入购物车失败:', error)
+    uni.showToast({
+      title: '加入购物车失败，请重试',
+      icon: 'none'
+    })
   }
 }
 
