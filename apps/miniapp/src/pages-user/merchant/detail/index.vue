@@ -242,6 +242,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useCartStore, useUserStore } from '@/store'
 import { merchantApi, dishApi, couponApi } from '@/api'
 import config from '@/config'
@@ -744,18 +745,20 @@ const quickAdd = async (dish) => {
       dishId: dish.id,
       dishName: dish.name
     })
-    // 使用store添加到购物车
-    cartStore.addToCart({
+    // 走真实购物车接口；失败如实提示，不本地假加
+    const ok = await cartStore.addToCart({
+      dishId: dish.id,
       merchantId: merchantId.value,
-      merchantName: merchantDetail.value.name,
-      dish: {
-        id: dish.id,
-        name: dish.name,
-        price: parseFloat(dish.price),
-        image: dish.image
-      },
       quantity: 1
     })
+
+    if (!ok) {
+      uni.showToast({
+        title: '加入购物车失败，请重试',
+        icon: 'none'
+      })
+      return
+    }
 
     uni.showToast({
       title: '已加入购物车',
@@ -905,6 +908,11 @@ const startOrder = () => {
     })
   }
 }
+
+// 每次显示时刷新购物车角标：从本页加购或从购物车页返回都要反映真实数量
+onShow(() => {
+  cartStore.fetchCart()
+})
 
 // 组件挂载时加载数据
 onMounted(() => {

@@ -254,7 +254,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
 import { API_CONFIG } from '../../config'
 import { ElMessage } from 'element-plus'
@@ -282,7 +282,6 @@ import AppEmptyState from '../../components/common/AppEmptyState.vue'
 import StatusTag from '../../components/common/StatusTag.vue'
 
 const route = useRoute()
-const router = useRouter()
 const dishId = ref(route.params.dishId)
 const dish = ref(null)
 const loading = ref(true)
@@ -434,34 +433,38 @@ const toggleOptionalIngredient = (ingredient) => {
   // TODO: 可以添加到购物车时自动计算价格差
 }
 
-// 加入购物车：后端没有购物车接口，购物车状态由商家详情页维护。
-// 这里把菜品与数量打包成 query 跳到商家详情页，复用其 addToCart 通路落库到页面购物车。
+// 加入购物车：走真实接口 /v1/cart/items（#603 起后端已实现）
 const addToCart = async () => {
   try {
-    const cartPayload = {
+    const response = await axios.post(`${API_CONFIG.baseURL}/v1/cart/items`, {
       dishId: dishId.value,
-      dishName: dish.value?.name || '',
-      price: dish.value?.price || 0,
+      merchantId: dish.value?.merchantId,
       quantity: quantity.value,
-      customization: ''
-    }
-    await router.push({
-      path: '/user/home/merchant-detail',
-      query: {
-        id: dish.value?.merchantId,
-        addToCart: JSON.stringify(cartPayload)
-      }
+      spec: '',
+      remark: ''
     })
+
+    if (response.data?.success) {
+      ElMessage.success('已加入购物车')
+      isInCart.value = true
+    } else {
+      ElMessage.error(response.data?.message || '加入购物车失败')
+    }
   } catch (error) {
     console.error('加入购物车失败:', error)
     ElMessage.error('加入购物车失败')
   }
 }
 
-// 移出购物车
+// 移出购物车：按 merchantId + dishId 删除该菜品在购物车中的全部规格
 const removeFromCart = async () => {
   try {
-    const response = await axios.delete(`${API_CONFIG.baseURL}/cart/remove/${dishId.value}`)
+    const response = await axios.delete(`${API_CONFIG.baseURL}/v1/cart/items`, {
+      params: {
+        merchantId: dish.value?.merchantId,
+        dishId: dishId.value
+      }
+    })
 
     if (response.data?.success) {
       ElMessage.success('已移出购物车')

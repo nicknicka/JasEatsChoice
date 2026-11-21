@@ -147,11 +147,14 @@ export const ORDER_API = {
 
 // ==================== 购物车相关 ====================
 export const CART_API = {
-  GET_CART: '/v1/cart/:userId',                           // GET - 获取购物车
+  GET_CART: '/v1/cart/:userId',                           // GET - 获取购物车（按商家分组）
   ADD_ITEM: '/v1/cart/items',                             // POST - 添加商品到购物车
-  UPDATE_ITEM: '/v1/cart/items/:itemId',                 // PUT - 更新购物车商品
-  DELETE_ITEM: '/v1/cart/items/:itemId',                 // DELETE - 删除购物车商品
-  CLEAR_CART: '/v1/cart/:userId/clear'                   // DELETE - 清空购物车
+  UPDATE_ITEM: '/v1/cart/items/:itemId',                  // PUT - 更新购物车商品
+  DELETE_ITEM: '/v1/cart/items/:itemId',                  // DELETE - 删除购物车商品（可带 merchantId+dishId 按菜品删）
+  BATCH_DELETE: '/v1/cart/batch-delete',                  // POST - 批量删除
+  CLEAR_CART: '/v1/cart/:userId/clear',                   // DELETE - 清空购物车（可限定 merchantId）
+  SELECT: '/v1/cart/:itemId/select',                      // PUT - 选中/取消选中
+  SELECT_ALL: '/v1/cart/select-all'                       // PUT - 全选/取消全选
 }
 
 // ==================== 评价相关 ====================

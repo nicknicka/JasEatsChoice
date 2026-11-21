@@ -193,7 +193,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { toSearch, toMerchantDetail, toDishDetail, toRecipeDetail } from '@/utils/router'
 import { useLocationStore, useUserStore } from '@/store'
-import { recommendationApi, merchantApi, bannerApi, categoryApi, dishApi } from '@/api'
+import { recommendationApi, merchantApi, bannerApi, categoryApi, dishApi, cartApi } from '@/api'
 import { processImageUrl } from '@/utils/helper'
 import { createPageDebug } from '@/utils/page-debug'
 import { normalizeCategories } from '@/config/category-icons'
@@ -812,7 +812,7 @@ const handleDishClick = async (dish) => {
 /**
  * 添加到购物车
  */
-const addToCart = (dish) => {
+const addToCart = async (dish) => {
   if (!dish) return
   pageDebug.action('首页加入购物车', {
     dishId: dish.id,
@@ -820,12 +820,22 @@ const addToCart = (dish) => {
     price: dish.price
   })
 
-  // TODO: 实现添加到购物车逻辑
-  uni.showToast({
-    title: '已加入购物车',
-    icon: 'success'
-  })
-
+  // 真实加入后端购物车；失败如实提示，不再假装成功
+  try {
+    const res = await cartApi.add({
+      dishId: dish.id,
+      merchantId: dish.merchantId,
+      quantity: 1
+    })
+    if (res && res.success) {
+      uni.showToast({ title: '已加入购物车', icon: 'success' })
+    } else {
+      uni.showToast({ title: (res && res.message) || '加入购物车失败', icon: 'none' })
+    }
+  } catch (error) {
+    console.error('加入购物车失败:', error)
+    uni.showToast({ title: '加入购物车失败，请重试', icon: 'none' })
+  }
 }
 
 /**

@@ -1079,8 +1079,8 @@ const scrollToCategory = (category) => {
   }
 }
 
-// 添加菜单项到购物车
-const addMenuItem = (item) => {
+// 添加菜单项到购物车：先落库到 /v1/cart，再更新页面展示
+const addMenuItem = async (item) => {
   // 计算选中的可选食材
   const selectedOptionalIngredients = item.optionalIngredients.filter(
     (ingredient) => ingredient.selected
@@ -1099,17 +1099,36 @@ const addMenuItem = (item) => {
     isEditingNote: false // Add editing state
   }
 
-  updateCart(cartItem)
-  ElMessage.success(`${item.name} 已加入购物车`)
+  try {
+    // 规格用选中的可选食材拼出来，保证与后端「同菜品同规格合并」的去重口径一致
+    const spec = selectedOptionalIngredients.map((ingredient) => ingredient.name).join('+')
+    const response = await axios.post(`${API_CONFIG.baseURL}/v1/cart/items`, {
+      dishId: item.id,
+      merchantId: merchant.value?.merchantId,
+      quantity: item.quantity,
+      optionalIngredients: selectedOptionalIngredients.map((ingredient) => ingredient.name),
+      spec,
+      remark: ''
+    })
+
+    if (!response.data?.success) {
+      ElMessage.error(response.data?.message || '加入购物车失败')
+      return
+    }
+
+    updateCart(cartItem)
+    ElMessage.success(`${item.name} 已加入购物车`)
+  } catch (error) {
+    console.error('加入购物车失败:', error)
+    ElMessage.error('加入购物车失败，请重试')
+    return
+  }
 
   // 清空配置：重置数量为1，取消选中所有可选食材
   item.quantity = 1
   item.optionalIngredients.forEach((ingredient) => {
     ingredient.selected = false
   })
-
-  // 这里可以添加真实的购物车逻辑，比如保存到数据库或本地存储
-  console.log('加入购物车:', cartItem)
 }
 
 // 查看购物车

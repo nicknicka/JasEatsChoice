@@ -488,10 +488,8 @@ const submitOrder = async () => {
               orderId
             })
 
-            // 从购物车中移除已下单的商品
-            group.items.forEach(item => {
-              cartStore.removeItem(group.merchantId, item.dish.id)
-            })
+            // 下单成功后清空该商家在购物车中的条目（服务端为准，失败也不影响已创建的订单）
+            await cartStore.clearCart(group.merchantId).catch(() => false)
 
             uni.showToast({
               title: '订单创建成功',

@@ -1,20 +1,10 @@
 /**
  * 购物车相关API
  * 对接后端购物车功能
- * 基础路径: /api/cart 或 /v1/cart
+ * 基础路径: /v1/cart（后端 #603 实现，统一前缀）
  */
 import { get, post, put, del } from '@/utils/request'
 import { CART_API, buildUrl } from '../urlEnum'
-
-const shouldFallbackToLocalCart = (error) => {
-  if (!error) return false
-  if (error.statusCode === 404) return true
-
-  const code = String(error.code || error.response?.code || '')
-  const message = String(error.message || error.response?.message || '')
-
-  return code === '500' && message.includes('系统异常')
-}
 
 export const cartApi = {
   /**
@@ -24,14 +14,6 @@ export const cartApi = {
    * @returns {Promise} 返回购物车列表
    */
   getCart: (userId) => get(buildUrl(CART_API.GET_CART, { userId })),
-
-  /**
-   * 获取购物车列表（别名）
-   * @param {Object} params - 查询参数
-   * @param {string} params.userId - 用户ID
-   * @returns {Promise} 返回购物车列表
-   */
-  getList: (params) => get('/api/cart', params),
 
   /**
    * 添加到购物车
@@ -44,25 +26,7 @@ export const cartApi = {
    * @param {string} data.remark - 备注
    * @returns {Promise} 返回添加结果
    */
-  add: (data) => post(CART_API.ADD_ITEM, data).catch((error) => {
-    // 当前后端未实现购物车接口时，开发联调先回落到本地购物车。
-    if (shouldFallbackToLocalCart(error)) {
-      console.warn('⚠️ 购物车接口不可用，已回落到本地购物车', {
-        url: CART_API.ADD_ITEM,
-        error
-      })
-      return {
-        success: true,
-        code: 200,
-        message: '已回落到本地购物车',
-        data: {
-          fallbackLocal: true
-        }
-      }
-    }
-
-    throw error
-  }),
+  add: (data) => post(CART_API.ADD_ITEM, data),
 
   /**
    * 添加到购物车（别名）
@@ -93,12 +57,12 @@ export const cartApi = {
 
   /**
    * 批量删除购物车项
-   * POST /api/cart/batch-delete
+   * POST /v1/cart/batch-delete
    * @param {Object} data - 数据
    * @param {Array} data.cartIds - 购物车项ID数组
    * @returns {Promise} 返回删除结果
    */
-  batchDelete: (data) => post('/api/cart/batch-delete', data),
+  batchDelete: (data) => post(CART_API.BATCH_DELETE, data),
 
   /**
    * 清空购物车
@@ -113,34 +77,25 @@ export const cartApi = {
   },
 
   /**
-   * 清空购物车（别名）
-   * @param {Object} data - 数据
-   * @param {string} data.userId - 用户ID
-   * @param {string} data.merchantId - 商家ID（可选）
-   * @returns {Promise} 返回清空结果
-   */
-  clear: (data) => post('/api/cart/clear', data),
-
-  /**
    * 选中/取消选中购物车项
-   * PUT /api/cart/{cartId}/select
+   * PUT /v1/cart/{itemId}/select
    * @param {string} cartId - 购物车项ID
    * @param {Object} data - 数据
    * @param {boolean} data.selected - 是否选中
    * @returns {Promise} 返回更新结果
    */
-  select: (cartId, data) => put(`/api/cart/${cartId}/select`, data),
+  select: (cartId, data) => put(buildUrl(CART_API.SELECT, { itemId: cartId }), data),
 
   /**
    * 全选/取消全选
-   * PUT /api/cart/select-all
+   * PUT /v1/cart/select-all
    * @param {Object} data - 数据
    * @param {string} data.userId - 用户ID
    * @param {string} data.merchantId - 商家ID（可选）
    * @param {boolean} data.selected - 是否选中
    * @returns {Promise} 返回更新结果
    */
-  selectAll: (data) => put('/api/cart/select-all', data)
+  selectAll: (data) => put(CART_API.SELECT_ALL, data)
 }
 
 export default cartApi
