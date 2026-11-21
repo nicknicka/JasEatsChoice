@@ -200,7 +200,8 @@ const editMenu = (menu) => {
   router.push({ path: '/merchant/home/menu-edit', query: { menuId: menu.id } })
 }
 
-const deleteMenus = async (menus) => {
+// 批量操作统一走后端 /v1/menus/menu/batch，成功后重新拉取列表，失败不得提示成功
+const runBatchAction = async (menus, action, failureText) => {
   const authStore = useAuthStore()
   const merchantId = authStore.merchantId
   if (!merchantId) {
@@ -212,27 +213,33 @@ const deleteMenus = async (menus) => {
   try {
     const response = await axios.post(`${API_CONFIG.baseURL}/v1/menus/menu/batch`, {
       menuIds,
-      action: 'delete',
+      action,
       merchantId
     })
     if (!response.data?.success) {
-      ElMessage.error(response.data?.message || '删除菜单失败')
+      ElMessage.error(response.data?.message || failureText)
       return false
     }
 
     const refreshed = await fetchMenus()
     if (!refreshed) return false
     updateFilter()
-    if (menuIds.some((id) => menuList.value.some((menu) => menu.id === id))) {
-      ElMessage.error('删除后菜单仍然存在，请重试')
-      return false
-    }
     return true
   } catch (error) {
-    console.error('删除菜单失败:', error)
-    ElMessage.error('删除菜单失败')
+    console.error(`${failureText}:`, error)
+    ElMessage.error(failureText)
     return false
   }
+}
+
+const deleteMenus = async (menus) => {
+  const menuIds = menus.map((menu) => menu.id)
+  if (!(await runBatchAction(menus, 'delete', '删除菜单失败'))) return false
+  if (menuIds.some((id) => menuList.value.some((menu) => menu.id === id))) {
+    ElMessage.error('删除后菜单仍然存在，请重试')
+    return false
+  }
+  return true
 }
 
 // 删除菜单
@@ -255,7 +262,7 @@ const deleteMenu = async (menu) => {
 // 批量操作
 const selectedMenus = ref([])
 
-const batchOperation = (operation) => {
+const batchOperation = async (operation) => {
   if (selectedMenus.value.length === 0) {
     ElMessage.warning('请先选择菜单')
     return
@@ -263,36 +270,33 @@ const batchOperation = (operation) => {
 
   switch (operation) {
     case 'online':
-      selectedMenus.value.forEach((menu) => {
-        menu.status = 'online'
-      })
-      ElMessage.success('批量上架成功')
-      break
+      if (await runBatchAction(selectedMenus.value, 'activate', '批量上架失败')) {
+        selectedMenus.value = []
+        ElMessage.success('批量上架成功')
+      }
+      return
     case 'offline':
-      selectedMenus.value.forEach((menu) => {
-        menu.status = 'offline'
-      })
-      ElMessage.success('批量下架成功')
-      break
+      if (await runBatchAction(selectedMenus.value, 'deactivate', '批量下架失败')) {
+        selectedMenus.value = []
+        ElMessage.success('批量下架成功')
+      }
+      return
     case 'delete':
-      ElMessageBox.confirm('确定要删除选中的所有菜单？删除后不可恢复！', '警告', {
-        confirmButtonText: '确定删除',
-        cancelButtonText: '取消',
-        type: 'danger'
-      })
-        .then(async () => {
-          const menusToDelete = [...selectedMenus.value]
-          if (await deleteMenus(menusToDelete)) {
-            selectedMenus.value = []
-            ElMessage.success('批量删除成功')
-          }
+      try {
+        await ElMessageBox.confirm('确定要删除选中的所有菜单？删除后不可恢复！', '警告', {
+          confirmButtonText: '确定删除',
+          cancelButtonText: '取消',
+          type: 'danger'
         })
-        .catch(() => {})
+      } catch {
+        return
+      }
+      if (await deleteMenus([...selectedMenus.value])) {
+        selectedMenus.value = []
+        ElMessage.success('批量删除成功')
+      }
       return
   }
-
-  updateFilter()
-  selectedMenus.value = []
 }
 
 // 导出菜单为CSV格式

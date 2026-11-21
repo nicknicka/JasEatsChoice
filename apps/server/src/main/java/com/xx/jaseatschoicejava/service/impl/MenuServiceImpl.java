@@ -46,18 +46,19 @@ public class MenuServiceImpl extends ServiceImpl<MenuMapper, Menu> implements Me
         if (menuIds == null || menuIds.isEmpty() || action == null) {
             return false;
         }
+        if (merchantId == null || merchantId.isBlank()) {
+            return false;
+        }
+
+        // 所有批量动作都要先确认这批菜单全部属于该商家，避免越权改动或删除他人菜单
+        List<Menu> menus = list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Menu>()
+                .in(Menu::getId, menuIds)
+                .eq(Menu::getMerchantId, merchantId));
+        if (menus.size() != menuIds.stream().distinct().count()) {
+            return false;
+        }
 
         if ("delete".equals(action)) {
-            if (merchantId == null || merchantId.isBlank()) {
-                return false;
-            }
-            List<Menu> menus = list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Menu>()
-                    .in(Menu::getId, menuIds)
-                    .eq(Menu::getMerchantId, merchantId));
-            if (menus.size() != menuIds.stream().distinct().count()) {
-                return false;
-            }
-
             com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MenuDish> menuDishWrapper =
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
             menuDishWrapper.in(MenuDish::getMenuId, menuIds);

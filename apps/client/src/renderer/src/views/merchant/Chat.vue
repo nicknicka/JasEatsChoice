@@ -20,6 +20,7 @@ import {
   handleApiError
 } from '../../utils/chat/chatApi'
 import { cleanMessage, sortConversationsByUnread } from '../../utils/chat/messageUtils'
+import chatApi from '../../api/chat'
 
 // ==================== 数据定义 ====================
 
@@ -288,15 +289,75 @@ const handleSearch = (keyword) => {
   searchKeyword.value = keyword
 }
 
-// 上传文件
-const handleUploadFile = (file) => {
-  ElMessage.info('文件上传功能开发中...')
+// 上传文件 / 图片：先传到 /v1/chat/upload-file|upload-image，再按真实返回发消息
+// 失败不提示成功，也不伪造本地消息
+const sendAttachment = async (file, kind) => {
+  if (!file || !selectedConversation.value) {
+    return
+  }
+  if (sending.value) return
+
+  const toId = selectedConversation.value.type === 'group'
+    ? selectedConversation.value.groupId
+    : selectedConversation.value.targetId || selectedConversation.value.userId
+  if (!toId) {
+    ElMessage.error('无法获取接收者ID')
+    return
+  }
+
+  sending.value = true
+  try {
+    const upload = kind === 'image'
+      ? await chatApi.uploadChatImage(file)
+      : await chatApi.uploadChatFile(file)
+    const uploaded = upload?.data || upload
+    if (!upload?.success || !uploaded?.fileUrl) {
+      ElMessage.error(upload?.message || `${kind === 'image' ? '图片' : '文件'}上传失败`)
+      return
+    }
+
+    const payload = {
+      fromId: String(currentUserId.value),
+      toId: String(toId),
+      msgType: selectedConversation.value.type === 'group' ? 'group' : 'private',
+      sessionType: selectedConversation.value.type === 'group' ? 'group' : 'single',
+      fileUrl: uploaded.fileUrl,
+      fileName: uploaded.fileName,
+      fileSize: uploaded.fileSize,
+      fileType: uploaded.fileType
+    }
+    const result = kind === 'image'
+      ? await chatApi.sendImageMessage(payload)
+      : await chatApi.sendFileMessage(payload)
+
+    const message = result?.data || result
+    if (!result?.success) {
+      ElMessage.error(result?.message || '发送附件失败')
+      return
+    }
+
+    chatMessages.value.push({
+      id: message?.msgId || message?.id || Date.now(),
+      sender: selectedConversation.value.type === 'private' ? 'merchant' : '我',
+      msgType: kind,
+      content: kind === 'image' ? '[图片]' : `[文件] ${uploaded.fileName}`,
+      fileUrl: uploaded.fileUrl,
+      fileName: uploaded.fileName,
+      time: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    })
+    ElMessage.success(kind === 'image' ? '图片已发送' : '文件已发送')
+  } catch (error) {
+    handleApiError(error, kind === 'image' ? '图片发送失败' : '文件发送失败')
+  } finally {
+    sending.value = false
+  }
 }
 
+// 上传文件
+const handleUploadFile = (file) => sendAttachment(file, 'file')
+
 // 上传图片
-const handleUploadImage = (file) => {
-  ElMessage.info('图片上传功能开发中...')
-}
+const handleUploadImage = (file) => sendAttachment(file, 'image')
 
 // ==================== 拖拽调整宽度 ====================
 

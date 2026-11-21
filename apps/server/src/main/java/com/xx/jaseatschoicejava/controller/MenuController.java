@@ -40,6 +40,9 @@ public class MenuController {
     @Autowired
     private DishService dishService;
 
+    @Autowired
+    private com.xx.jaseatschoicejava.security.CurrentIdentityResolver identityResolver;
+
     /**
      * 根据商家ID获取菜单列表
      */
@@ -356,7 +359,8 @@ public class MenuController {
      * 菜单批量操作
      */
     @PostMapping("/menu/batch")
-    public ResponseResult<?> batchOperateMenus(@RequestBody Map<String, Object> params) {
+    public ResponseResult<?> batchOperateMenus(@RequestBody Map<String, Object> params,
+                                               jakarta.servlet.http.HttpServletRequest request) {
         Object menuIdsValue = params.get("menuIds");
         if (!(menuIdsValue instanceof List<?> ids) || ids.isEmpty()) {
             return ResponseResult.fail("400", "菜单ID不能为空");
@@ -367,6 +371,13 @@ public class MenuController {
             .collect(java.util.stream.Collectors.toList());
         String action = (String) params.get("action");
         String merchantId = params.get("merchantId") == null ? null : params.get("merchantId").toString();
+        if (merchantId == null || merchantId.isBlank()) {
+            return ResponseResult.fail("400", "商家ID不能为空");
+        }
+        // 请求体里的 merchantId 不可信，必须由登录身份证明调用者能管理该商家
+        if (!identityResolver.canManageMerchant(request, merchantId)) {
+            return ResponseResult.fail("403", "无权操作该商家的菜单");
+        }
         boolean success = menuService.batchOperateMenus(menuIds, action, merchantId);
         if (success) {
             return ResponseResult.success("批量操作成功");

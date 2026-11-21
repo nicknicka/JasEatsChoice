@@ -84,12 +84,17 @@ const shareHotTopic = async () => {
 }
 
 // 打开热点关联链接：http 走外部浏览器，站内路径走路由（契约同旧实现）
-const openRedirect = () => {
+const openRedirect = async () => {
   if (!hotTopic.value.redirectUrl) return
-  if (hotTopic.value.redirectUrl.startsWith('http')) {
-    window.api?.openExternal(hotTopic.value.redirectUrl)
-  } else {
+  if (!hotTopic.value.redirectUrl.startsWith('http')) {
     router.push(hotTopic.value.redirectUrl)
+    return
+  }
+  // 可选链只护住 window.api，护不住方法本身；取到方法再调，缺失时给出明确提示
+  const openExternal = window.api?.openExternal
+  const opened = typeof openExternal === 'function' && (await openExternal(hotTopic.value.redirectUrl))
+  if (!opened) {
+    ElMessage.error('打开链接失败，请复制地址到浏览器访问')
   }
 }
 
