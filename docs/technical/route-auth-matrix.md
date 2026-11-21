@@ -7,12 +7,12 @@
 **按「方法 + 路径」归档**：`GET /v1/recipe/**` 放行只覆盖读，
 `POST /v1/recipe`、`PUT /v1/recipe/toggle-favorite/{id}` 等写接口仍要求登录。
 
-本轮共 **547** 条：
+本轮共 **555** 条：
 
 | 档位 | 条数 | 含义 |
 |---|---:|---|
 | 公开 | 18 | 匿名可调（显式登记在 `SecurityConfig`） |
-| 登录 | 406 | 默认拒绝覆盖，匿名返回 401 |
+| 登录 | 414 | 默认拒绝覆盖，匿名返回 401 |
 | 管理员 | 123 | 需 `ROLE_ADMIN` 或 `admin:*` 权限 |
 
 改路由或改 `SecurityConfig` 后重跑本脚本即可，勿手改下表。
@@ -168,7 +168,7 @@
 | `PUT` | `/v1/admin/hot-topic/update/{id}` |
 | `PUT` | `/v1/tutorial/admin/{id}/featured` |
 
-## 登录（406 条）
+## 登录（414 条）
 
 | 方法 | 路径 |
 |---|---|
@@ -181,6 +181,8 @@
 | `DELETE` | `/v1/addresses/{userId}/addresses/{addressId}` |
 | `DELETE` | `/v1/ai/chat/clear` |
 | `DELETE` | `/v1/banners/{bannerId}` |
+| `DELETE` | `/v1/cart/items/{itemId}` |
+| `DELETE` | `/v1/cart/{userId}/clear` |
 | `DELETE` | `/v1/chat/sessions/{sessionId}` |
 | `DELETE` | `/v1/collections` |
 | `DELETE` | `/v1/contacts/friends` |
@@ -239,6 +241,7 @@
 | `GET` | `/v1/ai/health` |
 | `GET` | `/v1/banners` |
 | `GET` | `/v1/banners/{bannerId}` |
+| `GET` | `/v1/cart/{userId}` |
 | `GET` | `/v1/category/common` |
 | `GET` | `/v1/category/list` |
 | `GET` | `/v1/chat/users/{userId}/chat-sessions` |
@@ -406,6 +409,8 @@
 | `POST` | `/v1/ai/recipe-upload` |
 | `POST` | `/v1/ai/recipe/stream` |
 | `POST` | `/v1/banners` |
+| `POST` | `/v1/cart/batch-delete` |
+| `POST` | `/v1/cart/items` |
 | `POST` | `/v1/chat/messages` |
 | `POST` | `/v1/chat/messages/{messageId}/recall` |
 | `POST` | `/v1/chat/sessions` |
@@ -536,6 +541,9 @@
 | `PUT` | `/v1/addresses/{userId}/addresses/{addressId}` |
 | `PUT` | `/v1/banners/{bannerId}` |
 | `PUT` | `/v1/banners/{bannerId}/status` |
+| `PUT` | `/v1/cart/items/{itemId}` |
+| `PUT` | `/v1/cart/select-all` |
+| `PUT` | `/v1/cart/{itemId}/select` |
 | `PUT` | `/v1/chat/messages/{messageId}/read` |
 | `PUT` | `/v1/content-extraction/extraction` |
 | `PUT` | `/v1/dishes/batch` |
