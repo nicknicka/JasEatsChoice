@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -184,9 +185,33 @@ public class GroupOrderChatServiceImpl extends ServiceImpl<ChatSessionMapper, Ch
 
     @Override
     public List<Map<String, Object>> getPendingSyncMessages(String merchantId, String sessionType) {
-        // TODO: 实现从商家专属会话获取未同步消息
-        // 这需要查询消息表并过滤未同步的消息
-        return List.of();
+        if (merchantId == null || merchantId.isBlank()) {
+            return List.of();
+        }
+
+        // 待同步 = 发给该商家、且尚未同步到群的消息（ChatMsg.synced 由 markMessageAsSynced 置真）
+        LambdaQueryWrapper<ChatMsg> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ChatMsg::getToId, merchantId)
+                .and(w -> w.isNull(ChatMsg::getSynced).or().eq(ChatMsg::getSynced, false));
+        if (sessionType != null && !sessionType.isBlank()) {
+            wrapper.eq(ChatMsg::getSessionType, sessionType);
+        }
+        wrapper.orderByAsc(ChatMsg::getCreatedAt);
+
+        return chatMsgService.list(wrapper).stream().map(msg -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("msgId", msg.getMsgId());
+            item.put("fromId", msg.getFromId());
+            item.put("toId", msg.getToId());
+            item.put("sessionId", msg.getSessionId());
+            item.put("sessionType", msg.getSessionType());
+            item.put("msgType", msg.getMsgType());
+            item.put("content", msg.getContent());
+            item.put("fileUrl", msg.getFileUrl());
+            item.put("fileName", msg.getFileName());
+            item.put("createdAt", msg.getCreatedAt());
+            return item;
+        }).collect(java.util.stream.Collectors.toList());
     }
 
     @Override

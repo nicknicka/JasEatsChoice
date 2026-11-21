@@ -118,7 +118,12 @@ public class AdminDishController {
         Map<String, Object> response = new HashMap<>();
         if (dish != null) {
             dish.setStatus("ACTIVE".equals(status));
-            dishService.updateById(dish);
+            // 落库失败必须如实报错，不能先返回「修改成功」
+            if (!dishService.updateById(dish)) {
+                response.put("success", false);
+                response.put("message", "状态修改失败，请稍后重试");
+                return ResponseEntity.status(500).body(response);
+            }
 
             response.put("success", true);
             response.put("message", "状态修改成功");
@@ -225,7 +230,8 @@ public class AdminDishController {
     @PreAuthorize("hasAnyAuthority('admin:dish:audit')")
     public ResponseEntity<Map<String, Object>> submitAudit(
             @PathVariable String dishId,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody Map<String, Object> request,
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
 
         String decision = (String) request.get("decision"); // approve 或 reject
         String comment = (String) request.get("comment");
@@ -245,9 +251,14 @@ public class AdminDishController {
 
             dish.setAuditComment(comment);
             dish.setAuditTime(LocalDateTime.now());
-            // auditAdminId 可以从 SecurityContext 获取，这里暂时设置为null
+            // 审核人取自验签后的 JWT subject（管理端令牌里是 adminId），保证可追溯
+            dish.setAuditAdminId(com.xx.jaseatschoicejava.util.UserIdentityUtil.extractUserIdAsLong(httpRequest));
 
-            dishService.updateById(dish);
+            if (!dishService.updateById(dish)) {
+                response.put("success", false);
+                response.put("message", "审核落库失败，请稍后重试");
+                return ResponseEntity.status(500).body(response);
+            }
 
             // 通知商家菜品审核结果
             NotificationTypeEnum notificationType = "approve".equals(decision)

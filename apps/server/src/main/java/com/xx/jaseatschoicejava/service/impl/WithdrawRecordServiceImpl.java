@@ -101,21 +101,14 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
         record.setAuditUser(adminId != null ? adminId.toString() : "SYSTEM");
 
         if ("APPROVE".equalsIgnoreCase(decision)) {
-            // 审核通过：资金已在申请时从余额扣减，这里只需推进状态
-            record.setWithdrawStatus("processing"); // 进入处理中状态
-
-            // 通知用户提现审核通过
-            NotificationUtil.createWithdrawNotification(
-                record.getUserId(),
-                NotificationTypeEnum.WITHDRAW_APPROVED,
-                record.getAmount().toString(),
-                null
-            );
-
-            // TODO: 这里可以调用第三方支付平台的转账接口
-            // 实际转账成功后再将状态改为 success
-
-            log.info("提现审核通过: {}", withdrawId);
+            // 通过意味着钱必须真的打出去。本项目未接入第三方转账能力
+            // （见 WechatPayServiceImpl 的说明：无支付权限、不接 SDK），
+            // 因此不能把记录置为已打款，只能显式拒绝并说明原因。
+            // 接入真实转账后再在此处调用转账接口，成功后才推进到 processing/success。
+            log.warn("提现审核通过被拒绝：未接入转账通道, withdrawId={}", withdrawId);
+            throw new com.xx.jaseatschoicejava.exception.BusinessException(
+                "501",
+                "当前未接入转账通道，无法自动打款。请先在支付平台完成打款，或驳回该申请让金额退回余额。");
 
         } else if ("REJECT".equalsIgnoreCase(decision)) {
             // 审核拒绝，需要退款到钱包
@@ -174,15 +167,7 @@ public class WithdrawRecordServiceImpl extends ServiceImpl<WithdrawRecordMapper,
             return false;
         }
 
-        if ("APPROVE".equalsIgnoreCase(decision)) {
-            record.setRemark(comment);
-            boolean success = this.updateById(record);
-
-            if (!success) {
-                throw new IllegalStateException("提现记录更新失败");
-            }
-        }
-
+        // 走到这里只可能是 REJECT（APPROVE 已在上面显式失败），状态已在上面原子更新
         log.info("提现审核处理成功: {}, 决定: {}", withdrawId, decision);
         return true;
     }
