@@ -1,7 +1,7 @@
 package com.xx.jaseatschoicejava.service.agent;
 
+import com.xx.jaseatschoicejava.config.DshProperties;
 import com.xx.jaseatschoicejava.exception.BusinessException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -17,8 +17,8 @@ import java.util.Map;
 /**
  * 通过 HTTP 只读访问 dsh 本地 Management API（GET state / GET sources）。
  *
- * <p>面板只监听回环地址，因此 base-url 默认指向 127.0.0.1。后端跑在容器里时要改成
- * host.docker.internal（并注意 prototype 会校验 Host 头，可能需 host 网络或 Host 改写，
+ * <p>面板只监听回环地址，因此 base-url 默认指向 127.0.0.1:3083（见 {@link DshProperties}）。
+ * 后端跑在容器里时要改成 host.docker.internal（并注意 prototype 会校验 Host 头，可能需 host 网络或 Host 改写，
  * 端到端待运行时就绪后再确认，见 issue #553）。
  */
 @Component
@@ -29,13 +29,12 @@ public class DshManagementClientHttpImpl implements DshManagementClient {
     /** 必须携带，否则 403。 */
     private static final String REQUEST_HEADER = "x-orchestrator-request";
 
-    @Value("${agent.dsh.base-url:http://127.0.0.1:8099}")
-    private String baseUrl;
-
     private final RestTemplate restTemplate;
+    private final String baseUrl;
 
-    public DshManagementClientHttpImpl(RestTemplate restTemplate) {
+    public DshManagementClientHttpImpl(RestTemplate restTemplate, DshProperties dshProperties) {
         this.restTemplate = restTemplate;
+        this.baseUrl = dshProperties.getBaseUrl();
     }
 
     @Override

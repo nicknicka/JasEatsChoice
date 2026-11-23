@@ -99,7 +99,7 @@ sudo scripts/agent-runtime/verify-isolation.sh
 
 - 反馈桥接（#536）只用专用 GitHub 账号在目标仓库开 Issue / PR，人体量的是 `dsh` 这个账号的提交与评论。
 - `ready-for-agent` 只是队列标签，不参与准入；准入与选任务由 dsh 的 Source 与 Policy 决定，起步用 `observe`。
-- dsh 不改标签、不部署、不碰生产数据；合并按 Delivery requirements 的 auto-merge 条件，由指定的 merge 账号执行，未点名或条件不满足时人工合并。
+- dsh 不改标签、不部署、不碰生产数据；合并按 Delivery requirements 的行数阈值执行，本仓不建 merge 专用账号、不设必需审批，CI 必需状态检查全绿即可合并。
 - 决策见 `docs/adr/0012-agent-admission-and-merge-follow-dsh.md`。
 
 ## 运行时状态页（#538 / #552）
@@ -111,7 +111,7 @@ sudo scripts/agent-runtime/verify-isolation.sh
 | GET | `/admin/agent/runtime` | 主机侧健康（GitHub / DSH profile / 隔离账号）+ 硬边界 |
 
 - **agent 的模型 / 密钥 / 策略配置在 DSH（另一个运行时）**，JAS 不再保存，也没有写接口；产品 AI 的模型 key 走后台「系统设置 → AI 配置」（`/admin/settings/ai`）。
-- `no-deploy` / `no-production-data` 两条硬边界固定开启，页面无法关闭；**合并按 dsh 的 Delivery requirements**（指定 merge 账号，条件为 PR 就绪 + 必需审批覆盖 head commit + 增删合计 <200 行），未点名或条件不满足时人工合并；硬边界的真实生效依赖 DSH 部署与 agent 账号权限。
+- `no-deploy` / `no-production-data` 两条硬边界固定开启，页面无法关闭；**合并按 dsh 的 Delivery requirements 的行数阈值**（增删合计 <200 行）执行，本仓不建 merge 专用账号、不设必需审批，CI 必需状态检查全绿即可合并；硬边界的真实生效依赖 DSH 部署与 agent 账号权限。
 
 ## 版本锁定与升级 / 回退（#541）
 
@@ -134,3 +134,15 @@ sudo scripts/agent-runtime/restore-config.sh /var/log/dsh-agent/config-snapshots
 - 升级、模型切换、回退都有可执行脚本；验证记录写到 `$DSH_LOG_DIR/upgrade-records/`，
   模板见 `docs/agent-runtime/upgrade-record-template.md`。
 - 升级只在无开放 Ticket、无进行中派单的维护窗口进行。
+
+### 脚本默认值只对 Linux 目标形态成立
+
+`upgrade.sh` / `rollback.sh` 里 `DSH_USER`、`DSH_HOME`、`DSH_LOG_DIR`、`DSH_STATE_DIR`、
+`DSH_PROFILE_DIR`、`DSH_REPO` 的默认值（`dsh`、`/var/lib/dsh-agent`、`/var/log/dsh-agent`、
+`/srv/dsh-agent/repo`）是**目标部署形态**的路径，本机（macOS 按账号分实例，检出在
+`/Users/<账号>/src/dsh-superagent`，端口 3083）不适用。
+
+本机要跑必须**整组覆盖**，只改 `DSH_REPO` 不够——备份步骤会因 `DSH_STATE_DIR` 不存在而先失败。
+2026-11-23 实测：按默认值直接执行，在第一步 `sudo mkdir` 处因需要终端密码退出（exit 1，无副作用）；
+即使能输入密码，后续也会因上述五个路径全部不存在而失败。**该脚本至今未在 Linux 目标形态上实际执行过**，
+首次使用请先在维护窗口按记录模板逐项核对。
