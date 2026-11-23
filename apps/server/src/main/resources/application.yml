@@ -168,7 +168,7 @@ agent:
     enabled: ${AGENT_BRIDGE_ENABLED:false}
     poll-interval-ms: ${AGENT_BRIDGE_POLL_INTERVAL_MS:60000}
   dsh:
-    base-url: ${DSH_MANAGEMENT_BASE_URL:http://127.0.0.1:8099}
+    base-url: ${DSH_MANAGEMENT_BASE_URL:http://127.0.0.1:3083}
 
 # 文件上传配置
 file:

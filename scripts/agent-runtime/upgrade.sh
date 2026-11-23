@@ -11,6 +11,11 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=versions.env
 source "$HERE/versions.env"
 
+# 下面这组默认值面向「Linux 目标形态」：专用账号 dsh、家目录 /var/lib/dsh-agent、
+# 仓库 /srv/dsh-agent/repo。本机（macOS 按账号分实例）不适用，需整组覆盖——
+# 只改 DSH_REPO 不够，备份步骤会因 DSH_STATE_DIR 不存在而先失败：
+#   DSH_USER DSH_HOME DSH_LOG_DIR DSH_STATE_DIR DSH_PROFILE_DIR DSH_REPO
+# 各变量的本机实际值以部署为准，见 docs/agent-runtime/README.md「版本锁定与升级 / 回退」。
 DSH_USER="${DSH_USER:-dsh}"
 DSH_HOME="${DSH_HOME:-/var/lib/dsh-agent}"
 DSH_LOG_DIR="${DSH_LOG_DIR:-/var/log/dsh-agent}"

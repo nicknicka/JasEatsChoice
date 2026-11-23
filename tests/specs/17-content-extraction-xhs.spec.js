@@ -2,7 +2,7 @@ const { test, expect, loginAsUser } = require('../fixtures/test-base')
 const { markRunning, markPassed, markFailed, updateSummary } = require('../utils/progress')
 
 // 依赖 #196 的后端接口（GET/POST/DELETE /v1/content-extraction/xhs-session）。
-// #196 合入前本 spec 会失败；PR 冒烟只跑 01/04/10，不会覆盖到它。
+// #196 合入前本 spec 会失败；PR 冒烟跑 01/04/08/10/16，不会覆盖到它。
 const SESSION_PATH = '/api/v1/content-extraction/xhs-session'
 const AUTH_SOURCE_ID = 'e2e-xhs-auth-source'
 const AUTH_SOURCE_TITLE = 'E2E 需要登录小红书'
